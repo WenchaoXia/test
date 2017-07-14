@@ -1,0 +1,99 @@
+
+UMyValueIdMapWrapCpp::UMyValueIdMapWrapCpp(const FObjectInitializer& ObjectInitializer) :
+    m_cMap(), Super(ObjectInitializer)
+{
+
+}
+
+void
+UMyValueIdMapWrapCpp::clear()
+{
+    m_cMap.clear();
+}
+
+bool
+UMyValueIdMapWrapCpp::insert(int32 id, int32 value)
+{
+    return m_cMap.insert(id, value);
+}
+
+bool
+UMyValueIdMapWrapCpp::remove(int32 id, int32 value)
+{
+    return m_cMap.remove(id, value);
+
+}
+
+void
+UMyValueIdMapWrapCpp::copyDeep(const UMyValueIdMapWrapCpp *other)
+{
+    m_cMap.copyDeep(&(other->m_cMap));
+}
+
+void
+UMyValueIdMapWrapCpp::collectByValue(int32 value, int32 numReq, TArray<int32>& outIDs) const
+{
+    m_cMap.collectByValue(value, numReq, outIDs);
+}
+
+void
+UMyValueIdMapWrapCpp::collectAll(TArray<int32>& outIDs)
+{
+    m_cMap.collectAll(outIDs);
+}
+
+int32
+UMyValueIdMapWrapCpp::getCountByValue(int32 value) const
+{
+    return m_cMap.getCountByValue(value);
+}
+
+
+bool
+UMyValueIdMapWrapCpp::contains(int32 id, int32 value)
+{
+    return m_cMap.contains(id, value);
+}
+
+
+bool
+UMyValueIdMapWrapCpp::getOneIdValue(int32 &outId, int32 &outValue) const
+{
+    return m_cMap.getOneIdValue(outId, outValue);
+}
+
+int32
+UMyValueIdMapWrapCpp::getCount() const
+{
+    return m_cMap.getCount();
+}
+
+void
+UMyValueIdMapWrapCpp::keys(TArray<int32>& outKeys)
+{
+    return m_cMap.keys(outKeys);
+}
+
+
+/*
+void UMyMJGameCoreObjFullCpp::testLocalInit()
+{
+
+    m_pIOGroupAll = MakeShareable<FMyMJGameIOGroupAllCpp>(new FMyMJGameIOGroupAllCpp());
+
+    int32 iSeed = UMyMJUtilsLibrary::nowAsMsFromTick();
+    //int32 iSeed = 11180997;
+    m_pCore = MakeShareable<FMyMJGameCoreCpp>(StaticCast<FMyMJGameCoreCpp *>(new FMyMJGameCoreLocalCSCpp(MyMJGameCoreWorkModeCpp::Full, iSeed)));
+    m_pCore->initFullMode(m_pCore, m_pIOGroupAll.Get());
+
+    
+    FMyMJGameCmdRestartGameCpp *pCmdReset = new FMyMJGameCmdRestartGameCpp();
+    pCmdReset->m_iAttenderRandomSelectMask = 0x0f;
+    UMyMJUtilsLocalCSLibrary::genDefaultCfg(pCmdReset->m_cGameCfg);
+    m_pIOGroupAll->m_aGroups[(uint8)MyMJGameRoleTypeCpp::SysKeeper].getCmdInputQueue().Enqueue(pCmdReset);
+
+    m_pCore->tryProgress();
+    //m_pCore = MakeShared<FMyMJGameCoreCpp>();
+}
+*/
+

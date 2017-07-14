@@ -1,0 +1,152 @@
+
+/**
+*
+*/
+UCLASS(BlueprintType, Blueprintable, meta = (ShortTooltip = "An value-idArray map, commonly used in card game."))
+class MYONLINECARDGAME_API UMyValueIdMapWrapCpp : public UObject
+{
+    //GENERATED_BODY()
+    GENERATED_UCLASS_BODY()
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    void clear();
+
+    /**
+    * @return false if duplicated one found
+    */
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    bool insert(int32 id, int32 value);
+
+    /*
+     * @return false if not found
+     */
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    bool remove(int32 id, int32 value);
+
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    void copyDeep(const UMyValueIdMapWrapCpp *other);
+
+    /*
+    * collect IDs by value, order is not guareenteed
+    * @param numReq	num to collect, if <= 0, collect every thing
+    */
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    void collectByValue(int32 value, int32 numReq, TArray<int32>& outIDs) const;
+
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    void collectAll(TArray<int32>& outIDs);
+
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    int32 getCountByValue(int32 value) const;
+
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    bool contains(int32 id, int32 value);
+
+    /*
+    * try find one elem, return false if not found
+    */
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    bool getOneIdValue(int32 &outId, int32 &outValue) const;
+
+    /**
+    * return the elem count
+    * @return the count in map
+    */
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    int32 getCount() const;
+
+    /*
+    * return the keys of map, correspond the the "value" part of insert API
+    * @param outKeys the keys
+    */
+    UFUNCTION(BlueprintCallable, Category = "MyValueIdMapCpp")
+    void keys(TArray<int32>& outKeys);
+
+
+protected:
+
+    FMyValueIdMapCpp m_cMap;
+};
+
+
+/*
+USTRUCT(BlueprintType)
+struct FMyMJHuCardTypeCfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+    FMyMJHuCardTypeCfgCpp()
+    {
+        m_eType = MyMJHuCardTypeCpp::Invalid;
+
+        m_iScoreDirectPay = 0;
+        m_bContinueGame = false;
+    };
+
+    //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Actor Hidden In Game", SequencerTrackClass = "MovieSceneVisibilityTrack"))
+    //UFUNCTION(BlueprintCallable, meta=(BlueprintInternalUseOnly="true", HideSelfPin="true", HidePin="InputAxisName"))
+    //UFUNCTION(BlueprintCallable, meta=(BlueprintProtected = "true"), Category="Game")
+    
+    // the card combination type
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Type"))
+    MyMJHuCardTypeCpp m_eType;
+
+    // the priority when checking hu, let's write it dead in code
+    //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Priority"))
+    //int32 m_iPriority;
+
+    // if hu, the score sure to win per attender, even when game end the attender didn't hu, used in some local MJ 
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Score Direct Pay"))
+    int32 m_iScoreDirectPay;
+
+    // if true, when hu with it, continue game instead of end game
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Continue Game"))
+    bool m_bContinueGame;
+};
+*/
+
+
+    /* whether menqing is required for ZuHeLong */
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Req MenQing for ZuHeLong"))
+    bool m_bReqMenQingForZuHeLong;
+    ¡¢
+
+
+    
+/*
+UCLASS(BlueprintType, Blueprintable)
+class MYONLINECARDGAME_API UMyMJGameCoreObjCpp : public UObject
+{
+    GENERATED_BODY()
+
+public:
+
+
+};
+
+
+UCLASS(BlueprintType, Blueprintable)
+class MYONLINECARDGAME_API UMyMJGameCoreObjFullCpp : public UMyMJGameCoreObjCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    void pushCmd(const FMyMJGameCmdBaseCpp *pIn);
+    FMyMJGameCmdBaseCpp* pullCmdResp();
+
+    UFUNCTION(BlueprintCallable, Category = "UMyMJGameCoreObjFullCpp")
+    void testLocalInit();
+
+
+    TSharedPtr<FMyMJGameCoreCpp> m_pCore;
+    TSharedPtr<FMyMJGameIOGroupAllCpp> m_pIOGroupAll;
+
+    //return whether mode is changed to target type
+    bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType);
+
+    TSharedPtr<FMyMJGameCOreThreadControlCpp> m_pCoreFullWithThread;
+
+};
+*/
