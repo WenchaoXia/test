@@ -104,7 +104,7 @@ struct FMyMJCardCpp : public FMyIdValuePair
 };
 
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJCardPackCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -119,8 +119,14 @@ public:
 
     };
 
+    void reset(int32 iCardNum)
+    {
+        m_aCards.Reset(iCardNum);
+        m_aCards.AddDefaulted(iCardNum);
+    };
 
-    void reset(TArray<int32> m_aShuffledValues);
+    void reset(const TArray<int32> &aShuffledValues);
+    void reset(const TArray<FMyIdValuePair> &aShuffledIdValues);
 
     void getValuesByIds(const TArray<int32> &aIds, TArray<int32> &outaValues) const;
 
@@ -177,6 +183,7 @@ public:
 
 protected:
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "cards"))
     TArray<FMyMJCardCpp> m_aCards;
 
 };

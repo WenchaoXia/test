@@ -12,6 +12,10 @@
 
 //#include "Queue.h"
 #include "GameFramework/Actor.h"
+#include "UnrealNetwork.h"
+
+#include "MyMJGameAttenderBP.h"
+
 #include "MJLocalCS/MyMJGameCoreLocalCS.h"
 
 #include "MyMJGameCoreBP.generated.h"
@@ -113,9 +117,10 @@ protected:
     TSharedPtr<FMyMJGameCoreCpp> *m_ppCoreInRun;
 };
 
-typedef class AMyMJCoreFullCpp AMyMJCoreFullCpp;
+typedef class UMyMJCoreFullCpp UMyMJCoreFullCpp;
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FMJGameCmdMultcastDelegate, TSharedPtr<FMyMJGameCmdBaseCpp>);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FMJGamePusherSegmentMultcastDelegate, int32, const FMyMJGamePusherPointersCpp&);
+DECLARE_MULTICAST_DELEGATE_OneParam(FMJGameCmdSegmentMultcastDelegate, const FMyMJGameCmdPointersCpp&);
 
 UCLASS(BlueprintType, Blueprintable)
 class MYONLINECARDGAME_API UMyMJIONodeCpp : public UObject
@@ -123,6 +128,13 @@ class MYONLINECARDGAME_API UMyMJIONodeCpp : public UObject
     GENERATED_BODY()
 
 public:
+
+    /*
+    UMyMJIONodeCpp::UMyMJIONodeCpp(const class FObjectInitializer & PCIP) : Super(PCIP)
+    {
+        bReplicates = true;
+    }
+    */
 
     UMyMJIONodeCpp()
     {
@@ -136,52 +148,35 @@ public:
 
     void clearUp()
     {
-        m_pPrevCoreFull = NULL;
-        m_pPrevIONode = NULL;
-        m_apNextNodes.Reset();
         m_eRoleType = MyMJGameRoleTypeCpp::Max;
         m_cPusherBuffer.clear();
     };
 
-    inline void setPrev(AMyMJCoreFullCpp* pPrev, MyMJGameRoleTypeCpp eRoleType)
-    {
-        MY_VERIFY(m_pPrevIONode == NULL);
-        MY_VERIFY(eRoleType != MyMJGameRoleTypeCpp::Max);
-        m_pPrevCoreFull = pPrev;
-        m_eRoleType = eRoleType;
-    };
-
-    inline void setPrev(UMyMJIONodeCpp* pPrevIONode)
-    {
-        MY_VERIFY(m_pPrevCoreFull == NULL);
-        m_pPrevIONode = pPrevIONode;
-    };
-
-    void pullPushersAndCmdRespFromPrevCoreVerified();
+    void pullPushersAndCmdRespFromPrevCoreVerified(FMyMJGameIOGroupCpp *pGroup);
 
     void pullPushersFromPrevNodeVerified();
 
-    void pulledcmdRespFromPrevNode(TSharedPtr<FMyMJGameCmdBaseCpp> pCmdShared);
+    void onPusherUpdated(int32 iGameIdSegment, const FMyMJGamePusherPointersCpp &cSegment)
+    {
+        m_cPusherUpdatedDelegate.Broadcast(iGameIdSegment, cSegment);
 
-    FMJGameCmdMultcastDelegate m_cCmdRespDelegate;
+    };
+
+    void onCmdUpdated(const FMyMJGameCmdPointersCpp &cSegment)
+    {
+        m_cCmdUpdatedDelegate.Broadcast(cSegment);
+    };
+
+
+    FMJGamePusherSegmentMultcastDelegate  m_cPusherUpdatedDelegate;
+    FMJGameCmdSegmentMultcastDelegate     m_cCmdUpdatedDelegate;
 
     //following is the buffer, need to replic
     FMyMJGamePusherPointersCpp m_cPusherBuffer;
 
-    //If set, IO/data with it as previous
-    UPROPERTY()
-    AMyMJCoreFullCpp* m_pPrevCoreFull;
-
     //only used when contacting with core full
     UPROPERTY()
     MyMJGameRoleTypeCpp m_eRoleType;
-
-    //otherwise
-    UPROPERTY()
-    UMyMJIONodeCpp* m_pPrevIONode;
-
-    UPROPERTY()
-    TArray<UMyMJIONodeCpp*> m_apNextNodes;
 };
 
 
@@ -190,23 +185,28 @@ public:
 */
 //notplaceable
 UCLASS(BlueprintType, Blueprintable, notplaceable, meta = (ShortTooltip = "The full game core with sub thread, should only exist on server"))
-class MYONLINECARDGAME_API AMyMJCoreFullCpp : public AActor
+class MYONLINECARDGAME_API UMyMJCoreFullCpp : public UObject
 {
     GENERATED_BODY()
 
 public:
 
-    //test with a full mode core created and run in sub thread, and a mirror mode core in game core 
-    //UFUNCTION(BlueprintCallable, Category = "AMyMJCoreFullCpp")
-    void testFullMode(bool bOverWriteSeed, int32 iSeed2OverWrite);
+    UMyMJCoreFullCpp() {
+        m_iSeed2OverWrite = 0;
+    };
 
-    bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType, bool bOverWriteSeed, int32 iSeed2OverWrite);
+    //test with a full mode core created and run in sub thread, and a mirror mode core in game core 
+    //UFUNCTION(BlueprintCallable, Category = "UMyMJCoreFullCpp")
+    void testFullMode();
+
+    bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType);
     bool startGame();
 
     void loop();
 
     void clearUp();
 
+    /*
     inline FMyMJGameIOGroupAllCpp* getpIOGourpAll()
     {
         if (m_pCoreFullWithThread.IsValid()) {
@@ -215,12 +215,23 @@ public:
 
         return NULL;
     };
+    */
+
+    inline TArray<UMyMJIONodeCpp*>& getIONodes()
+    {
+        return m_apNextNodes;
+    };
 
 protected:
     virtual void PostInitProperties() override;
 
+    
     //It seems timer automaticallly check object's validation, but for safe I still stop it manually here
-    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+    //virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+    //if not 0, it will be used as seed of random
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "seed overwrite"))
+    int32 m_iSeed2OverWrite;
 
     UPROPERTY()
     TArray<UMyMJIONodeCpp*> m_apNextNodes;
@@ -230,17 +241,185 @@ protected:
 };
 
 
+USTRUCT(BlueprintType)
+struct FMyMJCoreDataDirectForBPCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJCoreDataDirectForBPCpp()
+    {
+        m_iCardNumCanBeTakenAll = 0;
+        m_iActionGroupId = 0;
+        m_eGameState = MyMJGameStateCpp::Invalid;
+        m_eActionLoopState = MyMJActionLoopStateCpp::Invalid;
+        m_iDiceNumberNow0 = m_iDiceNumberNow1 = 0;
+        m_iIdHelperLastCardTakenInGame = -1;
+        m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
+    };
+
+    virtual ~FMyMJCoreDataDirectForBPCpp()
+    {
+
+    };
+
+    void reset()
+    {
+        m_iCardNumCanBeTakenAll = 0;
+    };
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Card Num Left"))
+        int32 m_iCardNumCanBeTakenAll;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UnTaken Card Stacks"))
+        TArray<FMyIdCollectionCpp> m_aUntakenCardStacks; //Always start from attender 0 to 3
+
+                                                         //Cfg
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game Cfg"))
+        FMyMJGameCfgCpp m_cGameCfg;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game RunData"))
+        FMyMJGameRunDataCpp m_cGameRunData;
+
+    //int32 m_iGameId;
+    //int32 m_iPusherId; //the last pusher id we got
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Group Id"))
+        int32 m_iActionGroupId;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game State"))
+        MyMJGameStateCpp m_eGameState;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Loop State"))
+        MyMJActionLoopStateCpp m_eActionLoopState;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number 0"))
+        int32 m_iDiceNumberNow0;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number 1"))
+        int32 m_iDiceNumberNow1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
+        TArray<int32> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hai Di Card Id"))
+        int32 m_iIdHelperLastCardTakenInGame;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Rule Type"))
+        MyMJGameRuleTypeCpp m_eRuleType;//also distinguish sub type
+};
+
+#define MY_EXPECTED_MJ_PAWN_NUM ((uint8)MyMJGameRoleTypeCpp::Max)
+
 UCLASS(BlueprintType, Blueprintable)
-class MYONLINECARDGAME_API UMyMJCoreMirrorCpp : public UObject
+class MYONLINECARDGAME_API AMyMJCoreMirrorCpp : public AInfo
 {
     GENERATED_BODY()
 
 public:
 
-    void tryProgressInMirrorMode();
+    AMyMJCoreMirrorCpp() : Super()
+    {
+        m_bHaltForGraphic = false;
+        m_iSeed2OverWrite = 0;
+    }
 
-    UPROPERTY()
-    UMyMJIONodeCpp* m_pPrevIONode;
+
+    void change2PlayMode(UMyMJCoreFullCpp *pCoreFull)
+    {
+        bool bRet = resetSettings();
+        MY_VERIFY(bRet);
+
+        TArray<UMyMJIONodeCpp*> &apIONodes = pCoreFull->getIONodes();
+        int32 l0, l1;
+        l0 = apIONodes.Num();
+        l1 = m_aAttenderPawns.Num();
+
+        if (l0 == (uint8)MyMJGameRoleTypeCpp::Max && l1 <= l0 ) {
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("incorrect state when setup: IONodes %d, attenderPawns %d"), l0, l1);
+            MY_VERIFY(false);
+        }
+
+        for (int32 i = 0; i < l1; i++) {
+            m_aAttenderPawns[i]->setup(i, apIONodes[i]);
+        }
+
+        if (l1 >= (uint8)MyMJGameRoleTypeCpp::SysKeeper) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("l1 is greater than expected, %d, pls check!"), l1);
+        }
+
+        m_pIONodeAsSys = apIONodes[(uint8)MyMJGameRoleTypeCpp::SysKeeper];
+        m_pIONodeAsSys->m_cPusherUpdatedDelegate.Clear();
+        m_pIONodeAsSys->m_cPusherUpdatedDelegate.AddUObject(this, &AMyMJCoreMirrorCpp::onPusherUpdated);
+    };
+
+    void change2RePlayMode();
+
+    bool resetSettings()
+    {
+        bool bRet = checkLevelSettings();
+
+        m_pIONodeAsSys = NULL;
+
+        int32 l = m_aAttenderPawns.Num();
+        for (int32 i = 0; i < l; i++) {
+            m_aAttenderPawns[i]->resetSettings();
+        }
+
+        return bRet;
+    };
+
+    inline bool checkLevelSettings()
+    {
+        int32 l = m_aAttenderPawns.Num();
+
+        if (l != MY_EXPECTED_MJ_PAWN_NUM) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("mirror actor have not set attneder pawns correctly, only %d were set, expect %d, check you level!"), l, MY_EXPECTED_MJ_PAWN_NUM);
+            return false;
+        }
+
+        return true;
+    };
+
+    void onPusherUpdated(int32 iGameIdSegment, const FMyMJGamePusherPointersCpp &cSegment)
+    {
+        //
+        loop();
+    };
+
+
+    void loop();
+
+    void notifyBluePrintPusherApplied(FMyMJGamePusherBaseCpp *pPusher);
+
+    virtual void PostInitProperties() override;
+
+    //Returns whether halt progress for graphic, and m_bHaltForGraphic will be set then
+    //UFUNCTION(BlueprintImplementableEvent)
+    //bool onVisiblePusherApplied(FMyMJGamePusherBaseCpp *pPusher);
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "core data direct"))
+    FMyMJCoreDataDirectForBPCpp m_cCoreDataDirect;
+
+    //setttings:
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "IO Node As Sys"))
+    UMyMJIONodeCpp* m_pIONodeAsSys;
+
+    //the level should prepare this data
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "attender pawns"))
+    TArray<AMyMJAttenderPawnBPCpp *> m_aAttenderPawns;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "seed overwrite"))
+    int32 m_iSeed2OverWrite;
+
+protected:
+
+    FMyMJGamePusherBaseCpp* tryCheckAndGetNextPusher();
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "halt for graphic"))
+    bool m_bHaltForGraphic;
 
     TSharedPtr<FMyMJGameCoreCpp> m_pCoreMirror;
 };

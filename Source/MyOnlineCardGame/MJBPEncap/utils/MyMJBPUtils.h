@@ -17,20 +17,25 @@ class MYONLINECARDGAME_API AMyTestActorBaseCpp : public AActor
 
 public:
     UFUNCTION(BlueprintCallable, Client, unreliable)
-        void ClientRPCFunction0(float v1);
-
+    void ClientRPCFunction0(float v1);
 
     UFUNCTION(BlueprintCallable, Server, unreliable, WithValidation)
-        void ServerRPCFunction0(float v1);
+    void ServerRPCFunction0(float v1);
 
     UFUNCTION(BlueprintCallable, NetMulticast, unreliable)
-        void MulticastRPCFunction0(float v1);
+    void MulticastRPCFunction0(float v1);
 
     UFUNCTION(BlueprintCallable)
     void genPusherPointers(FMyMJGamePusherPointersCpp &pusherPointers);
 
     UFUNCTION(BlueprintCallable, Client, unreliable)
     void testRPCWithPusherPointers(const FMyMJGamePusherPointersCpp &pusherPointers);
+
+    UFUNCTION(BlueprintCallable, Client, unreliable)
+    void testRPCWithPusherNotify(const FMyMJGamePusherMadeChoiceNotifyCpp &pusherNotify);
+
+    UFUNCTION(BlueprintCallable, Client, unreliable)
+    void testRPCWithPusherFillIn(const FMyMJGamePusherFillInActionChoicesCpp &pusherFillIn);
 };
 
 UCLASS()

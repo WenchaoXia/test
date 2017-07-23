@@ -133,7 +133,11 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
 
             FMyMJGamePusherResetGameCpp p, *pPusherReset = &p;
             FRandomStream * pRS = m_pResManager->getpRandomStream();
-            pPusherReset->init(m_iGameId + 1, pRS, pCmdRestartGame->m_cGameCfg, pCmdRestartGame->m_cGameRunData, pCmdRestartGame->m_iAttenderRandomSelectMask);
+            int32 iGameId = m_iGameId + 1;
+            if (iGameId < 0) {
+                iGameId = 0;
+            }
+            pPusherReset->init(iGameId, pRS, pCmdRestartGame->m_cGameCfg, pCmdRestartGame->m_cGameRunData, pCmdRestartGame->m_iAttenderRandomSelectMask);
 
             m_pPusherIO->EnqueuePusher(*pPusherReset);
 
@@ -254,7 +258,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
     *m_pGameCfg = pPusher->m_cGameCfg;
     *m_pGameRunData = pPusher->m_cGameRunData;
 
-    m_cCardPack.reset(pPusher->m_aShuffledValues);
+    m_cCardPack.reset(pPusher->m_aShuffledIdValues);
 
 
     //move into untaken slots
@@ -341,21 +345,16 @@ void FMyMJGameCoreLocalCSCpp::applyPusherUpdateCards(FMyMJGamePusherUpdateCardsC
     FMyMJGameCoreCpp *pCore = this;
     FMyMJCardPackCpp *pCardPack = pCore->getpCardPack();
 
-    int32 l = pPusher->m_aCardsTargetState.Num();
+    int32 l = pPusher->m_aIdValues.Num();
     for (int32 i = 0; i < l; i++) {
-        FMyMJCardCpp *pTargetState = &pPusher->m_aCardsTargetState[i];
-        FMyMJCardCpp *pCard = pCardPack->getCardByIdx(pTargetState->m_iId);
+        FMyIdValuePair *pTargetIdValue = &pPusher->m_aIdValues[i];
+        FMyMJCardCpp *pCard = pCardPack->getCardByIdx(pTargetIdValue->m_iId);
 
-        if (!pCard->m_cPosi.equal(pTargetState->m_cPosi)) {
-            //in local CS game, we don't update card's position in this way
-            MY_VERIFY(false);
+        if (pCard->m_eFlipState != pPusher->m_eTargetState) {
+            pCard->m_eFlipState = pPusher->m_eTargetState;
         }
 
-        if (pCard->m_eFlipState != pTargetState->m_eFlipState) {
-            pCard->m_eFlipState = pTargetState->m_eFlipState;
-        }
-
-        pCardPack->revealCardValue(pTargetState->m_iId, pTargetState->m_iValue);
+        pCardPack->revealCardValue(pTargetIdValue->m_iId, pTargetIdValue->m_iValue);
     }
 
     if (pPusher->m_iIdxAttender >= 0) {

@@ -3,11 +3,9 @@
 #include "MyMJCardPack.h"
 #include "utils/CommonUtils/MyCardUtils.h"
 
-
-void
-FMyMJCardPackCpp::reset(TArray<int32> m_aShuffledValues)
+void FMyMJCardPackCpp::reset(const TArray<int32> &aShuffledValues)
 {
-    int32 l = m_aShuffledValues.Num();
+    int32 l = aShuffledValues.Num();
 
     m_aCards.Reset(l);
     for (int32 i = 0; i < l; i++) {
@@ -16,9 +14,25 @@ FMyMJCardPackCpp::reset(TArray<int32> m_aShuffledValues)
         FMyMJCardCpp *pCard = &m_aCards[i];
         pCard->resetExceptValue();
         pCard->m_iId = i;
-        pCard->m_iValue = m_aShuffledValues[i];
+        pCard->m_iValue = aShuffledValues[i];
     }
-};
+}
+
+void FMyMJCardPackCpp::reset(const TArray<FMyIdValuePair> &aShuffledIdValues)
+{
+    int32 l = aShuffledIdValues.Num();
+
+    m_aCards.Reset(l);
+    for (int32 i = 0; i < l; i++) {
+        int32 idx = m_aCards.Emplace();
+        MY_VERIFY(i == idx);
+        FMyMJCardCpp *pCard = &m_aCards[i];
+        pCard->resetExceptValue();
+        //*pCard = aShuffledIdValues[i];
+        pCard->m_iId = aShuffledIdValues[i].m_iId;
+        pCard->m_iValue = aShuffledIdValues[i].m_iValue;
+    }
+}
 
 void
 FMyMJCardPackCpp::getValuesByIds(const TArray<int32> &aIds, TArray<int32> &outaValues) const

@@ -44,10 +44,22 @@ public:
     virtual ~FMyMJGameCmdBaseCpp()
     {};
 
+    virtual FString genDebugString() const
+    {
+        FString ret = FString::Printf(TEXT("type %s, ret %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCmdType"), (uint8)m_eType), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameErrorCodeCpp"), (uint8)m_eRespErrorCode));
+        return ret;
+    };
 
+    inline MyMJGameCmdType getType() const
+    {
+        return m_eType;
+    };
+
+    UPROPERTY()
     MyMJGameCmdType m_eType;
     //int32 m_iIdxAttender; //see MyMJGameRoleTypeCpp
 
+    UPROPERTY()
     MyMJGameErrorCodeCpp m_eRespErrorCode;
 };
 
@@ -66,11 +78,133 @@ public:
     virtual ~FMyMJGameCmdRestartGameCpp()
     {};
 
-
+    UPROPERTY()
     FMyMJGameCfgCpp     m_cGameCfg;
+
+    UPROPERTY()
     FMyMJGameRunDataCpp m_cGameRunData;
+
+    UPROPERTY()
     int32 m_iAttenderRandomSelectMask;
 };
+
+
+//never use it across thread
+USTRUCT(BlueprintType)
+struct FMyMJGameCmdPointersCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGameCmdPointersCpp()
+    {
+    };
+
+    virtual ~FMyMJGameCmdPointersCpp()
+    {
+        clear();
+    };
+
+    void clear()
+    {
+        m_aCmdSharedPtr.Reset();
+    };
+
+    FMyMJGameCmdPointersCpp& operator = (const FMyMJGameCmdPointersCpp& rhs)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameCmdPointersCpp::operator =  , %p, %p."), this, &rhs);
+
+        this->m_aCmdSharedPtr = rhs.m_aCmdSharedPtr;
+
+        return *this;
+    };
+
+
+
+    bool operator == (const FMyMJGameCmdPointersCpp& rhs) const
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameCmdPointersCpp::operator ==  , %p, %p."), this, &rhs);
+        return false;
+    };
+
+
+    inline
+    int32 giveInLocalThread(const TSharedPtr<FMyMJGameCmdBaseCpp> pCmd)
+    {
+        return m_aCmdSharedPtr.Emplace(pCmd);
+    };
+
+    //input must be allocated on heap, and this function will take ownership
+    inline
+    int32 giveInLocalThread(const FMyMJGameCmdBaseCpp *pCmd)
+    {
+        return giveInLocalThread(MakeShareable<FMyMJGameCmdBaseCpp>((FMyMJGameCmdBaseCpp *)pCmd));
+    };
+
+    //can only be called on consumer thread if consumer thread != producer thread, otherwise random crash
+    inline
+    TSharedPtr<FMyMJGameCmdBaseCpp> getSharedPtrAt(int32 idx)
+    {
+
+        return ConstCastSharedPtr<FMyMJGameCmdBaseCpp>(getSharedPtrAtConst(idx));
+    };
+
+    inline
+    const TSharedPtr<FMyMJGameCmdBaseCpp> getSharedPtrAtConst(int32 idx) const
+    {
+
+        MY_VERIFY(idx >= 0 && idx < m_aCmdSharedPtr.Num());
+
+        return m_aCmdSharedPtr[idx];
+    };
+
+ 
+
+    inline int32 getCount() const
+    {
+        return m_aCmdSharedPtr.Num();
+    };
+
+    FString genDebugString() const
+    {
+        int32 l = getCount();
+        FString str = FString::Printf(TEXT("count: %d."), l);
+        for (int32 i = 0; i < l; i++) {
+            str += FString::Printf(TEXT(" idx %d: "), i) + getSharedPtrAtConst(i)->genDebugString();
+        }
+
+        return str;
+    };
+
+    bool helperFillAsSegmentFromIOGroup(FMyMJGameIOGroupCpp *pIOGroup);
+
+    bool trySerializeWithTag(FArchive &Ar);
+
+    bool Serialize(FArchive& Ar);
+    bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
+    //bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms);
+
+
+protected:
+
+    TArray<TSharedPtr<FMyMJGameCmdBaseCpp>> m_aCmdSharedPtr;
+};
+
+template<>
+struct TStructOpsTypeTraits<FMyMJGameCmdPointersCpp> : public TStructOpsTypeTraitsBase2<FMyMJGameCmdPointersCpp>
+{
+    enum
+    {
+        //WithExportTextItem = true, // struct has an ExportTextItem function used to serialize its state into a string.
+        //WithImportTextItem = true, // struct has an ImportTextItem function used to deserialize a string into an object of that class.
+        WithSerializer = true,
+        WithNetSerializer = true,
+        //WithNetDeltaSerializer = true,
+        WithIdenticalViaEquality = true,
+        //WithSerializeFromMismatchedTag = true,
+    };
+};
+
 
 
 USTRUCT()

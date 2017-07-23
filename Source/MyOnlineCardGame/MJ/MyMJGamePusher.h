@@ -8,6 +8,7 @@
 #include "CoreUObject.h"
 
 #include "UObject/Object.h"
+#include "UObject/Class.h"
 #include "UObject/NoExportTypes.h"
 
 #include "Utils/MyMJUtils.h"
@@ -119,6 +120,12 @@ public:
 
     };
 
+    //@outiRoleMask = 0 in return means no value will be updated
+    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues)
+    {
+        outiRoleMask = 0;
+    };
+
     inline
     MyMJGamePusherTypeCpp getType() const
     {
@@ -135,17 +142,18 @@ protected:
 
     friend class FMyMJGamePusherIOComponentFullCpp;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "type"))
     MyMJGamePusherTypeCpp m_eType;
 
     //pusher id, reset game is always ID 0
-    UPROPERTY()
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "id"))
     int32 m_iId;
 };
 
 //A custom struct which we will implement serialize (default UE4 did not support TArray<struct *>)
 //FIFO,like a queue, can transfer over thread, but never used it by multiple thread at one time
 //two mode at runtime: canProduceAcrossThread() distinguish them
+//two content mode: full sequence or segment
 USTRUCT(BlueprintType)
 struct FMyMJGamePusherPointersCpp
 {
@@ -154,10 +162,16 @@ struct FMyMJGamePusherPointersCpp
 public:
     FMyMJGamePusherPointersCpp()
     {
+        //m_iCount = 0;
+        m_iTestCount = 0;
+        m_bSegmentClearTarget = false;
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("create  FMyMJGamePusherPointersCpp  %p."), this);
     };
 
     virtual ~FMyMJGamePusherPointersCpp()
     {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("destroy FMyMJGamePusherPointersCpp  %p, %d."), this, m_iTestCount);
         clear();
     };
 
@@ -166,12 +180,34 @@ public:
 
     FMyMJGamePusherPointersCpp& operator = (const FMyMJGamePusherPointersCpp& rhs)
     {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGamePusherPointersCpp::operator = before , %p, %p; %d, %d."), this, &rhs, m_iTestCount, rhs.m_iTestCount);
         if (this == &rhs) {
-        return *this;
+            return *this;
         }
 
         copyDeepWithRoleType(&rhs, MyMJGameRoleTypeCpp::SysKeeper);
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGamePusherPointersCpp::operator = after, %p, %d."), this, m_iTestCount);
         return *this;
+    };
+
+    bool operator== (const FMyMJGamePusherPointersCpp& rhs) const
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGamePusherPointersCpp::operator == , %p, %p; %d, %d."), this, &rhs, m_iTestCount, rhs.m_iTestCount);
+
+        if (this == &rhs) {
+            return true;
+        }
+
+        int32 l1 = this->m_aPushersSharedPtr.Num();
+        int32 l2 = rhs.m_aPushersSharedPtr.Num();
+        bool bCheck = false;
+        if (l1 > 0 && l2 > 0) {
+            bCheck = this->getGameIdVerified() == rhs.getGameIdVerified();
+        }
+        else {
+            bCheck = l1 == 0;
+        }
+        return (bCheck && l1 == l2 && this->m_iTestCount == rhs.m_iTestCount && this->m_bSegmentClearTarget == rhs.m_bSegmentClearTarget);// && this->m_iCount == rhs.m_iCount);
     };
 
     void clear()
@@ -187,6 +223,9 @@ public:
 
         m_aPushers.Empty();
         m_aPushersSharedPtr.Empty();
+
+        //m_iCount = 0;
+        m_iTestCount = 0;
     };
 
     void prepareForConsume()
@@ -211,25 +250,36 @@ public:
         return (m_aPushers.Num() <= 0);
     }
 
+    //if empty, also return true
+    bool isStartsAsFullSequence() const;
+
     //@pPusher must be created on heap, and its ownership will be transfered to this, can only be called on producer thread if consumer thread != producer thread
     //Can only be called before consume
     void give(FMyMJGamePusherBaseCpp *pPusher)
     {
         MY_VERIFY(canProduceAcrossThread());
         m_aPushers.Emplace(pPusher);
+
+        //m_iCount++;
     };
 
-    int32 giveInLocalThread(const TSharedPtr<FMyMJGamePusherBaseCpp> pPusher)
+    int32 insertInLocalThread(const TSharedPtr<FMyMJGamePusherBaseCpp> pPusher)
     {
         MY_VERIFY(canProduceInLocalThreadSafely());
         return m_aPushersSharedPtr.Emplace(pPusher);
+
+        //m_iCount++;
     };
 
     inline
     int32 giveInLocalThread(const FMyMJGamePusherBaseCpp *pPusher)
     {
-        return giveInLocalThread(MakeShareable<FMyMJGamePusherBaseCpp>((FMyMJGamePusherBaseCpp *)pPusher));
+        return insertInLocalThread(MakeShareable<FMyMJGamePusherBaseCpp>((FMyMJGamePusherBaseCpp *)pPusher));
     };
+
+    //Possible not inserted, return < 0 means skipped, usually used in Full Sequence Mode
+    //@iGameId < 0 means not checking it
+    int32 insertInLocalThreadWithLogicChecked(int32 iGameId, const TSharedPtr<FMyMJGamePusherBaseCpp> pPusher);
 
     //can only be called on consumer thread if consumer thread != producer thread, otherwise random crash
     TSharedPtr<FMyMJGamePusherBaseCpp> getSharedPtrAt(int32 idx)
@@ -287,7 +337,7 @@ public:
     FString genDebugString() const
     {
         int32 l = getCount();
-        FString str = FString::Printf(TEXT("count: %d."), l);
+        FString str = FString::Printf(TEXT("count: %d, %d."), l, m_iTestCount);
         for (int32 i = 0; i < l; i++) {
             str += FString::Printf(TEXT(" idx %d: "), i) + peekAt(i)->genDebugString();
         }
@@ -297,16 +347,22 @@ public:
 
     int32 getGameIdVerified() const;
 
+    //@pOutPusherIdLast, its value < 0 means not filled with valid pusher sequence
+    void getGameIdAndPusherIdLast(int32 *pOutGameId, int32 *pOutPusherIdLast) const;
+
     //Simple check if it is the same head, so we can append new
     bool isSamePusherSequenceSimple(const FMyMJGamePusherPointersCpp &other) const;
 
     //simple copy other's data and may simple append data since the game logic ensure if head match it would be OK
     //return whether updated
-    bool copyShallowAndLogicOptimized(const FMyMJGamePusherPointersCpp &other);
+    bool copyShallowAndLogicOptimized(const FMyMJGamePusherPointersCpp &other, bool bKeepDataIfOtherIsShorterWithSameSequence);
 
 
     //return whether updated
-    bool helperTrySyncDataFromCoreIOGroup(FMyMJGameIOGroupCpp *IOGroup);
+    bool helperFillAsSegmentFromIOGroup(FMyMJGameIOGroupCpp *IOGroup);
+    bool helperTryFillDataFromSegment(int32 iGameIdOfSegment, const FMyMJGamePusherPointersCpp &segment, bool bVerifyAllInserted);
+    bool helperGenDeltaSegment(int32 iGameIdBase, int32 iPusherIdBase, int32 &outGameId, FMyMJGamePusherPointersCpp &outDeltaSegment);
+
     TSharedPtr<FMyMJGamePusherBaseCpp> helperTryPullPusher(int32 iGameId, int32 iPusherId);
 
     bool trySerializeWithTag(FArchive &Ar);
@@ -315,6 +371,10 @@ public:
     bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
     bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms);
 
+    //bool ExportTextItem(FString& ValueStr, FMyMJGamePusherPointersCpp const& DefaultValue, UObject* Parent, int32 PortFlags, UObject* ExportRootScope) const;
+    //bool ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UObject* OwnerObject, FOutputDevice* ErrorText);
+    bool SerializeFromMismatchedTag(FPropertyTag const& Tag, FArchive& Ar);
+
 protected:
 
     //Only one member could be not full at one time, m_aPushers.Num() > 0 tips it is in produce mode,  m_aPushersSharedPtr.Num() > 0 tips it is in consume mode
@@ -322,18 +382,32 @@ protected:
                                                 //Because TSharedPtr is not thread safe, we assume one thread only consume it, and when it is used, it will not transfer over thread any more
 
     TArray<TSharedPtr<FMyMJGamePusherBaseCpp>> m_aPushersSharedPtr;
+
+    //UPROPERTY()
+    //int32 m_iCount; //also use it to trigger serilaize
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "test Count"))
+    int32 m_iTestCount; //also use it to trigger serilaize
+
+    UPROPERTY()
+    int32 m_bSegmentClearTarget;
 };
 
 template<>
-struct TStructOpsTypeTraits< FMyMJGamePusherPointersCpp > : public TStructOpsTypeTraitsBase2<FMyMJGamePusherPointersCpp>
+struct TStructOpsTypeTraits<FMyMJGamePusherPointersCpp> : public TStructOpsTypeTraitsBase2<FMyMJGamePusherPointersCpp>
 {
     enum
     {
+        //WithExportTextItem = true, // struct has an ExportTextItem function used to serialize its state into a string.
+        //WithImportTextItem = true, // struct has an ImportTextItem function used to deserialize a string into an object of that class.
         WithSerializer = true,
         WithNetSerializer = true,
-        WithNetDeltaSerializer = true
+        //WithNetDeltaSerializer = true,
+        WithIdenticalViaEquality = true,
+        //WithSerializeFromMismatchedTag = true,
     };
 };
+
 
 USTRUCT(BlueprintType)
 struct FMyMJGamePusherFillInActionChoicesCpp : public FMyMJGamePusherBaseCpp
@@ -386,15 +460,15 @@ public:
 public:
 
     //Warn, this struct used FMyMJGamePusherPointersCpp, so use custom code for deep copy instead of operator =, so you need always modify the code when when add memebers
-    UPROPERTY()
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "action Choices"))
     FMyMJGamePusherPointersCpp m_cActionChoices;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "action Group Id"))
     int32 m_iActionGroupId;
 
 protected:
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "idx Attender"))
     int32 m_iIdxAttender;
 
 };
@@ -449,19 +523,19 @@ public:
 
 public:
     // < 0 means unknown, the system have made it mask
-    UPROPERTY()
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "selection"))
     int32 m_iSelection;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "sub Selections"))
     TArray<int32> m_aSubSelections;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "action Group Id"))
     int32 m_iActionGroupId;
 
 
 protected:
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "idx Attender"))
     int32 m_iIdxAttender;
 };
 
@@ -535,6 +609,12 @@ public:
         return str;
     };
 
+    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
+    {
+        outiRoleMask = (1 << (uint8)MyMJGameRoleTypeCpp::SysKeeper);
+        outaRevealedCardValues = m_aShuffledIdValues;
+    };
+
     //call this only when m_cGameCfg is set
     void init(int32 iGameId, FRandomStream *pRandomStream, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData, int32 iAttenderBehaviorRandomSelectMask);
 
@@ -548,7 +628,7 @@ public:
     FMyMJGameRunDataCpp m_cGameRunData;
 
     UPROPERTY()
-    TArray<int32> m_aShuffledValues;
+    TArray<FMyIdValuePair> m_aShuffledIdValues;
 
 
     UPROPERTY()
@@ -568,6 +648,9 @@ public:
     {
         m_eType = MyMJGamePusherTypeCpp::PusherUpdateCards;
         m_iIdxAttender = -1;
+        m_eCurrentState = MyMJCardFlipStateCpp::Invalid;
+        m_eTargetState = MyMJCardFlipStateCpp::Invalid;
+        m_iMaskAttenderDataReset = 0;
     };
 
     virtual ~FMyMJGamePusherUpdateCardsCpp()
@@ -588,18 +671,48 @@ public:
     virtual FString genDebugString() const override
     {
         FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_iIdxAttender: %d, mask 0x%x"), m_iIdxAttender, m_iMaskAttenderDataReset);
-        int32 l = m_aCardsTargetState.Num();
+        str += FString::Printf(TEXT(" m_iIdxAttender: %d, %s->%s, mask 0x%x"), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eCurrentState), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eTargetState), m_iMaskAttenderDataReset);
+        int32 l = m_aIdValues.Num();
         for (int32 i = 0; i < l; i++) {
-            str += m_aCardsTargetState[i].genDebugStr();
+            str += m_aIdValues[i].genDebugStr();
         }
         return str;
     };
 
-    void initWithCardsTargetStateAlreadyInited(int32 idxAttender, int32 iMaskAttenderDataReset)
+    void initWithCardsTargetStateAlreadyInited(int32 idxAttender, MyMJCardFlipStateCpp eCurrentState, MyMJCardFlipStateCpp eTargetState, int32 iMaskAttenderDataReset)
     {
         m_iIdxAttender = idxAttender;
+        m_eCurrentState = eCurrentState;
+        m_eTargetState = eTargetState;
         m_iMaskAttenderDataReset = iMaskAttenderDataReset;
+    };
+
+    //@outiRoleMask return 0 means not update any one's
+    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
+    {
+        outiRoleMask = 0;
+        outaRevealedCardValues.Reset();
+
+        if (m_eTargetState == MyMJCardFlipStateCpp::Up) {
+            if (m_eCurrentState == MyMJCardFlipStateCpp::Up) {
+                return;
+            }
+            else {
+                //we need to show everyone
+                outiRoleMask = 0x0f | (1 << (uint8)MyMJGameRoleTypeCpp::Observer);
+            }
+        }
+        else if (m_eTargetState == MyMJCardFlipStateCpp::Stand) {
+            if (m_eCurrentState == MyMJCardFlipStateCpp::Down) {
+                //we need to show owner and keeper
+                outiRoleMask = (1 << m_iIdxAttender) | (1 << (uint8)MyMJGameRoleTypeCpp::Observer);
+            }
+            else {
+                return;
+            }
+        }
+        
+        outaRevealedCardValues = m_aIdValues;
     };
 
     //Possible -1, means update cards only
@@ -607,11 +720,17 @@ public:
     int32 m_iIdxAttender;
 
     UPROPERTY()
+    MyMJCardFlipStateCpp m_eCurrentState;
+
+    UPROPERTY()
+    MyMJCardFlipStateCpp m_eTargetState;
+
+    UPROPERTY()
     int32 m_iMaskAttenderDataReset;
 
     //possible empty when apply
     UPROPERTY()
-    TArray<FMyMJCardCpp> m_aCardsTargetState;
+    TArray<FMyIdValuePair> m_aIdValues;
 
 };
 
@@ -982,6 +1101,12 @@ public:
         m_bLastCard = bLastCard;
     };
 
+    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
+    {
+        outiRoleMask = (1 << m_iIdxAttender);
+        outaRevealedCardValues = m_aIdValues;
+    };
+
     UPROPERTY()
     TArray<FMyIdValuePair> m_aIdValues;
 
@@ -1057,6 +1182,12 @@ public:
         m_eTakenOrder = eTakenOrder;
     };
 
+    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
+    {
+        outiRoleMask = (1 << m_iIdxAttender);
+        outaRevealedCardValues = m_aIdValuePairs;
+    };
+
 
     UPROPERTY()
     TArray<FMyIdValuePair> m_aIdValuePairs;
@@ -1117,6 +1248,12 @@ public:
             MY_VERIFY(countAll > 0);
             return countAll;
         }
+    };
+
+    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
+    {
+        outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
+        outaRevealedCardValues = m_aIdValuePairsSelected;
     };
 
     //subSelection here contains card Id
@@ -1200,6 +1337,16 @@ public:
         return true;
     };
 
+    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
+    {
+        outiRoleMask = 0;
+
+        if (m_eTargetFlipState == MyMJCardFlipStateCpp::Up) {
+            outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
+            outaRevealedCardValues = m_cWeave.getIdValuesRef();
+        }
+    };
+
     void initWithWeaveAlreadyInited(int32 idxAttender, MyMJCardFlipStateCpp eTargetFlipState)
     {
         m_iIdxAttender = idxAttender;
@@ -1267,6 +1414,13 @@ public:
     };
 
     virtual void resolveActionResult(FMyMJGameAttenderCpp &attender) override;
+
+    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
+    {
+        outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
+        outaRevealedCardValues = m_aRevealingCards;
+    };
+
 
     void init(int32 idxAttender, bool bEndGame, FMyMJHuScoreResultFinalGroupCpp &finalGroup)
     {
@@ -1338,6 +1492,12 @@ public:
         return str;
     };
 
+    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
+    {
+        outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
+        outaRevealedCardValues = m_aShowOutIdValues;
+    };
+
     inline
     void init(int32 idxAttender, const TArray<FMyMJHuScoreResultItemCpp> &aHuScoreResultItems, const TArray<FMyIdValuePair> &aShowOutIdValues)
     {
@@ -1387,6 +1547,12 @@ public:
         str += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aPickedIdValues);
 
         return str;
+    };
+
+    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
+    {
+        outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
+        outaRevealedCardValues = m_aPickedIdValues;
     };
 
     inline

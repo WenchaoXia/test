@@ -15,7 +15,16 @@ class MYONLINECARDGAME_API AMyOnlineCardGameStateCpp : public AGameState
 {
 	GENERATED_BODY()
 	
-	
-	
-    TSharedPtr<FMyMJGameCoreCpp> m_pCoreMirror;
+public:
+
+    //@&aAttenderPawns must equal (uint8)MyMJGameRoleTypeCpp::Max
+    UFUNCTION(BlueprintCallable)
+    void setup(AMyMJCoreMirrorCpp *pCoreMirror) {
+        if (pCoreMirror->checkLevelSettings()) {
+            m_pCoreMirror = pCoreMirror;
+        }
+    }
+
+    UPROPERTY()
+    AMyMJCoreMirrorCpp *m_pCoreMirror;
 };

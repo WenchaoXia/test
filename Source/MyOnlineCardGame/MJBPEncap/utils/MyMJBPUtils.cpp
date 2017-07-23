@@ -45,14 +45,23 @@ void AMyTestActorBaseCpp::genPusherPointers(FMyMJGamePusherPointersCpp &pusherPo
     pPusherUpdate->m_bActionGroupIncrease = true;
     cPushersIn.giveInLocalThread(pPusherUpdate);
 
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("before Ser In : %s"), *cPushersIn.genDebugString());
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("genPusherPointers : %s"), *cPushersIn.genDebugString());
 }
 
 void AMyTestActorBaseCpp::testRPCWithPusherPointers_Implementation(const FMyMJGamePusherPointersCpp &pusherPointers)
 {
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("called : %s"), *pusherPointers.genDebugString());
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherPointers_Implementation called : %p, %s"), &pusherPointers, *pusherPointers.genDebugString());
 }
 
+void AMyTestActorBaseCpp::testRPCWithPusherNotify_Implementation(const FMyMJGamePusherMadeChoiceNotifyCpp &pusherNotify)
+{
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherNotify called : %s"), *pusherNotify.genDebugString());
+}
+
+void AMyTestActorBaseCpp::testRPCWithPusherFillIn_Implementation(const FMyMJGamePusherFillInActionChoicesCpp &pusherFillIn)
+{
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherFillIn called : %s"), *pusherFillIn.genDebugString());
+}
 
 void
 UMyMJBPUtilsLibrary::testArrayPointerSerialize(AMyTestParentClass0 *pInParent, AMyTestChildClass0 *pInChild, AMyTestParentClass0 *pOutParent, int32 param)

@@ -15,7 +15,22 @@ class MYONLINECARDGAME_API AMyOnlineCardGameModeCpp : public AGameMode
 {
     GENERATED_BODY()
 
-    FTimerHandle m_cLoopTimerHandle;
-    TSharedPtr<FMyMJGameCOreThreadControlCpp> m_pCoreFull;
+public:
+    AMyOnlineCardGameModeCpp()
+    {
+        m_bReplayMode = false;
+    };
+
+    virtual ~AMyOnlineCardGameModeCpp()
+    {
+
+    };
+
+    bool changeMode(bool bIsReplay);
+
+    UPROPERTY()
+    UMyMJCoreFullCpp *m_pCoreFull;
+
+    bool m_bReplayMode;
 	
 };

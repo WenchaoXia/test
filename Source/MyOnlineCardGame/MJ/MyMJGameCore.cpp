@@ -223,22 +223,20 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
    
 
     //this is the end of pusher's life cycle
-    TSharedPtr<FMyMJGamePusherBaseCpp> pPusherShared = m_pPusherIO->tryPullPusher(m_iGameId, m_iPusherId);
-    FMyMJGamePusherBaseCpp *pPusher = pPusherShared.Get();
+    int32 iGameId, iPusherIdLast;
+    getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
 
-    while (pPusher != NULL) {
-        if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
-            m_iGameId = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher)->m_iGameId;
-            m_iPusherId = 0;
-        }
+    TSharedPtr<FMyMJGamePusherBaseCpp> pPusherShared = m_pPusherIO->tryPullPusher(iGameId, iPusherIdLast + 1);
+
+
+    while (pPusherShared.IsValid()) {
 
         bRet = true;
 
-        makeProgressByPusher(pPusher);
+        makeProgressByPusher(pPusherShared.Get());
 
-        m_iPusherId++;
-        pPusherShared = m_pPusherIO->tryPullPusher(m_iGameId, m_iPusherId);
-        pPusher = pPusherShared.Get();
+        getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
+        pPusherShared = m_pPusherIO->tryPullPusher(iGameId, iPusherIdLast + 1);
     }
 
     return bRet;

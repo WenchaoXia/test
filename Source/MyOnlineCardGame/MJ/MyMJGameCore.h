@@ -17,7 +17,7 @@
 
 #include "MyMJGamePushersIO.h"
 #include "MyMJGameCmd.h"
-#include "MyMJGameCmd.h"
+
 #include "MyMJGameAttender.h"
 
 #include "MyMJGameResManager.h"
@@ -241,8 +241,8 @@ public:
     FMyMJGameCoreCpp(MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed) : FMyMJGameCoreBaseCpp()
     {
         m_iActionGroupId = 0;
-        m_iGameId = 0;
-        m_iPusherId = 0;
+        m_iGameId = -1;
+        m_iPusherId = -1;
         //m_iTurnId = 0;
         m_eGameState = MyMJGameStateCpp::Invalid;
         m_eActionLoopState = MyMJActionLoopStateCpp::Invalid;
@@ -330,6 +330,7 @@ public:
         return m_aHelperLastCardsGivenOutOrWeave;
     };
 
+    
     inline const FMyIdValuePair& getHelperLastCardTakenInGameRef() const
     {
         return m_cHelperLastCardTakenInGame;
@@ -399,8 +400,27 @@ public:
     inline
     void makeProgressByPusher(FMyMJGamePusherBaseCpp *pPusher)
     {
+        if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
+            m_iGameId = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher)->m_iGameId;
+            m_iPusherId = -1;
+        }
+
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), m_iActionGroupId, m_iPusherId, *pPusher->genDebugString());
         applyPusher(pPusher);
+
+        m_iPusherId++;
+        MY_VERIFY(m_iPusherId == pPusher->getId());
+    };
+
+    inline
+    void getGameIdAndPusherIdLast(int32 *pOutGameId, int32 *pOutPusherIdLast)
+    {
+        if (pOutGameId) {
+            *pOutGameId = m_iGameId;
+        }
+        if (*pOutPusherIdLast) {
+            *pOutPusherIdLast = m_iPusherId;
+        }
     };
 
     //@idxBase can be a empty slot, will return the first one found valid, return < 0 means no one found
@@ -473,9 +493,9 @@ protected:
     //Running state
     //Model is pusher->action->turn
     int32 m_iGameId;
-    int32 m_iPusherId;
+    int32 m_iPusherId; //the last pusher id we got
     int32 m_iActionGroupId;
-    //int32 m_iTurnId;
+
     MyMJGameStateCpp m_eGameState;
     MyMJActionLoopStateCpp m_eActionLoopState;
     int64 m_iMsLast;
@@ -485,7 +505,7 @@ protected:
     FMyMJGameUntakenSlotInfoCpp m_cUntakenSlotInfo;
 
     TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
-    FMyIdValuePair m_cHelperLastCardTakenInGame;
+    FMyIdValuePair m_cHelperLastCardTakenInGame; //hai di card if id >= 0
     FMyMJValueIdMapCpp m_cHelperShowedOut2AllCards; //used to calculate how many cards left possible hu
 
 

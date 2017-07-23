@@ -29,7 +29,66 @@ FMyMJGamePusherPointersCpp::copyDeepWithRoleType(const FMyMJGamePusherPointersCp
         //TSharedPtr<FMyMJGamePusherBaseCpp> pNew = MakeShared<>
     }
 
-    MY_VERIFY(getCount() > 0);
+    //m_iCount = pOther->m_iCount;
+    m_iTestCount = pOther->m_iTestCount;
+    m_bSegmentClearTarget = pOther->m_bSegmentClearTarget;
+    //MY_VERIFY(getCount() > 0);
+}
+
+bool FMyMJGamePusherPointersCpp::isStartsAsFullSequence() const
+{
+    MY_VERIFY(canProduceInLocalThreadSafely());
+
+    int32 l = getCount();
+    if (l > 0) {
+        TSharedPtr<FMyMJGamePusherBaseCpp> pPusherShared0 = m_aPushersSharedPtr[0];
+        if (pPusherShared0->getType() == MyMJGamePusherTypeCpp::PusherResetGame && m_aPushersSharedPtr[l - 1]->getId() == (l - 1)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+
+    }
+
+    return true;
+
+}
+
+//Possible not inserted, return < 0 means skipped
+int32 FMyMJGamePusherPointersCpp::insertInLocalThreadWithLogicChecked(int32 iGameId, const TSharedPtr<FMyMJGamePusherBaseCpp> pPusher)
+{
+    int32 idx = -1;
+    int32 iGameIdSelf = -1;
+    int32 iPusherIdLastSelf = -1;
+    MY_VERIFY(canProduceInLocalThreadSafely());
+
+    MyMJGamePusherTypeCpp eType = pPusher->getType();
+
+    if (eType == MyMJGamePusherTypeCpp::PusherResetGame) {
+        clear();
+        idx = insertInLocalThread(pPusher);
+    }
+    else {
+        getGameIdAndPusherIdLast(&iGameIdSelf, &iPusherIdLastSelf);
+
+        if (iPusherIdLastSelf >= 0 && (iPusherIdLastSelf + 1) == pPusher->getId() && (iGameId < 0 || (iGameId >= 0 && iGameId == iGameIdSelf))) {
+            idx = insertInLocalThread(pPusher);
+        }
+
+    }
+
+    if (idx > 0) {
+        if (idx != pPusher->getId()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("insertInLocalThreadWithLogicChecked(), pusher id not equal: %d, %d!"), idx, pPusher->getId());
+        }
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("insertInLocalThreadWithLogicChecked(), pusher skipped: %d:%d, %d:%d."), iGameIdSelf, iPusherIdLastSelf, iGameId, pPusher->getId());
+    }
+
+
+    return idx;
 }
 
 int32 FMyMJGamePusherPointersCpp::getGameIdVerified() const
@@ -45,6 +104,41 @@ int32 FMyMJGamePusherPointersCpp::getGameIdVerified() const
     return pPusherResetGame->m_iGameId;
 }
 
+void FMyMJGamePusherPointersCpp::getGameIdAndPusherIdLast(int32 *pOutGameId, int32 *pOutPusherIdLast) const
+{
+    MY_VERIFY(canProduceInLocalThreadSafely());
+    int32 gameId = -1, pusherIdLast = -1;
+    int32 l = getCount();
+
+    if (l > 0) {
+        TSharedPtr<FMyMJGamePusherBaseCpp> pPusherShared0 = m_aPushersSharedPtr[0];
+        if (pPusherShared0->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
+
+            if (m_aPushersSharedPtr[l - 1]->getId() == (l - 1)) {
+                FMyMJGamePusherResetGameCpp* pPusherResetGame = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusherShared0.Get());
+                gameId = pPusherResetGame->m_iGameId;
+                pusherIdLast = l - 1;
+            }
+            else {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getGameIdAndPusherId(), last element's id is not equal to its idx!"));
+            }
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getGameIdAndPusherId(), first element is not a reset game one!"));
+        }
+    }
+
+
+    if (pOutGameId) {
+        *pOutGameId = gameId;
+    }
+
+    if (pOutPusherIdLast) {
+        *pOutPusherIdLast = pusherIdLast;
+    }
+}
+
+
 bool FMyMJGamePusherPointersCpp::isSamePusherSequenceSimple(const FMyMJGamePusherPointersCpp &other) const
 {
     MY_VERIFY(canProduceInLocalThreadSafely());
@@ -57,7 +151,7 @@ bool FMyMJGamePusherPointersCpp::isSamePusherSequenceSimple(const FMyMJGamePushe
     return false;
 }
 
-bool FMyMJGamePusherPointersCpp::copyShallowAndLogicOptimized(const FMyMJGamePusherPointersCpp &other)
+bool FMyMJGamePusherPointersCpp::copyShallowAndLogicOptimized(const FMyMJGamePusherPointersCpp &other, bool bKeepDataIfOtherIsShorterWithSameSequence)
 {
     bool bRet = true;
     int32 l0 = this->getCount();
@@ -66,14 +160,19 @@ bool FMyMJGamePusherPointersCpp::copyShallowAndLogicOptimized(const FMyMJGamePus
 
         if (l1 > l0) {
             for (int32 i = l0; i < l1; i++) {
-                this->giveInLocalThread(other.getSharedPtrAtConst(i));
+                this->insertInLocalThread(other.getSharedPtrAtConst(i));
             }
         }
         else if (l1 == l0) {
             bRet = false;
         }
         else {
-            this->m_aPushersSharedPtr = other.m_aPushersSharedPtr;
+            if (bKeepDataIfOtherIsShorterWithSameSequence) {
+                bRet = false;
+            }
+            else {
+                this->m_aPushersSharedPtr = other.m_aPushersSharedPtr;
+            }
         }
 
     }
@@ -87,12 +186,15 @@ bool FMyMJGamePusherPointersCpp::copyShallowAndLogicOptimized(const FMyMJGamePus
     }
 
     MY_VERIFY(this->getCount() == other.getCount());
+    this->m_iTestCount = other.m_iTestCount;
+    this->m_bSegmentClearTarget = other.m_bSegmentClearTarget;
 
     return bRet;
 }
 
-bool FMyMJGamePusherPointersCpp::helperTrySyncDataFromCoreIOGroup(FMyMJGameIOGroupCpp *IOGroup)
+bool FMyMJGamePusherPointersCpp::helperFillAsSegmentFromIOGroup(FMyMJGameIOGroupCpp *IOGroup)
 {
+    clear();
     MY_VERIFY(canProduceInLocalThreadSafely());
 
     TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>& pusherQueue = IOGroup->getPusherOutputQueue();
@@ -102,19 +204,112 @@ bool FMyMJGamePusherPointersCpp::helperTrySyncDataFromCoreIOGroup(FMyMJGameIOGro
     while (pusherQueue.Dequeue(pPusherGot)) {
         bRet = true;
         pPusherGot->onReachedConsumeThread();
-        MyMJGamePusherTypeCpp eType = pPusherGot->getType();
-        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("trySyncBufferFromPrev(), got type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)eType));
+        int32 idx = giveInLocalThread(pPusherGot);
+    }
+
+    return bRet;
+}
+
+
+bool FMyMJGamePusherPointersCpp::helperTryFillDataFromSegment(int32 iGameIdOfSegment, const FMyMJGamePusherPointersCpp &segment, bool bVerifyAllInserted)
+{
+    bool bRet = false;
+
+    if (segment.m_bSegmentClearTarget) {
+        clear();
+        return true;
+    }
+
+    int32 countSegment = segment.getCount();
+    if (countSegment <= 0) {
+        return false;
+    }
+
+    int32 iPusherIdStartSegment = segment.getSharedPtrAtConst(0)->getId();
+    int32 idxSupposed = iPusherIdStartSegment;
+    for (int32 i = 0; i < countSegment; i++) {
+        MyMJGamePusherTypeCpp eType = segment.getSharedPtrAtConst(i)->getType();
         if (eType == MyMJGamePusherTypeCpp::PusherResetGame) {
-            clear();
+            idxSupposed = 0;
         }
 
-        int32 idx = giveInLocalThread(MakeShareable<FMyMJGamePusherBaseCpp>(pPusherGot));
-
-        if (idx != pPusherGot->getId()) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("helperTrySyncDataFromCore(), pusher id not equal: %d, %d"), idx, pPusherGot->getId());
-            MY_VERIFY(false);
-            break;
+        if (!segment.getSharedPtrAtConst(i)->getId() == idxSupposed) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("helperTryFillDataFromSegment(), segment id not continues at idx %d."), i);
+            if (bVerifyAllInserted) {
+                MY_VERIFY(false);
+            }
+            return false;
         }
+
+        idxSupposed++;
+    }
+
+    MY_VERIFY(canProduceInLocalThreadSafely());
+
+    int32 iGameIdLatest = iGameIdOfSegment;
+
+    for (int32 i = 0; i < countSegment; i++) {
+        const TSharedPtr<FMyMJGamePusherBaseCpp> pPusher = segment.getSharedPtrAtConst(i);
+        MyMJGamePusherTypeCpp eType = pPusher->getType();
+        if (eType == MyMJGamePusherTypeCpp::PusherResetGame) {
+            iGameIdLatest = StaticCastSharedPtr<FMyMJGamePusherResetGameCpp>(pPusher)->m_iGameId;
+        }
+
+        int32 idx = insertInLocalThreadWithLogicChecked(iGameIdLatest, pPusher);
+        if (idx >= 0) {
+            bRet = true;
+        }
+        else {
+            if (bVerifyAllInserted) {
+                MY_VERIFY(false);
+            }
+        }
+    }
+    
+    return bRet;
+}
+
+bool FMyMJGamePusherPointersCpp::helperGenDeltaSegment(int32 iGameIdBase, int32 iPusherIdBase, int32 &outGameId, FMyMJGamePusherPointersCpp &outDeltaSegment)
+{
+    outGameId = -1;
+    outDeltaSegment.clear();
+    bool bRet = false;
+
+    MY_VERIFY(canProduceInLocalThreadSafely());
+
+    if (!isStartsAsFullSequence()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("helperGenDeltaSegment() but the source seems not in full sequence mode!"));
+        return false;
+    }
+
+    int32 l = getCount();
+    if (l <= 0) {
+        if (iPusherIdBase < 0) {
+            return false;
+        }
+        else {
+            outDeltaSegment.m_bSegmentClearTarget = true;
+            return true;
+        }
+    }
+
+    //OK, we have content, tell the delta
+    outDeltaSegment.m_bSegmentClearTarget = false;
+    int32 iGameIdSelf;
+    getGameIdAndPusherIdLast(&iGameIdSelf, NULL);
+    outGameId = iGameIdSelf;
+
+    if (iGameIdSelf == iGameIdBase && iPusherIdBase >= 0) {
+        //the target have same sequence and contains some data, let's gen delta
+        for (int32 i = (iPusherIdBase + 1); i < l; i++) {
+            bRet = true;
+            outDeltaSegment.insertInLocalThread(getSharedPtrAtConst(i));
+        }
+    }
+    else {
+        //target have different sequence or emty
+        outDeltaSegment.copyShallowAndLogicOptimized(*this, false);
+        bRet = true;
     }
 
     return bRet;
@@ -156,6 +351,9 @@ bool FMyMJGamePusherPointersCpp::trySerializeWithTag(FArchive &Ar)
         return false;
     }
 
+    UScriptStruct *pSC = StaticStruct();
+    pSC->SerializeTaggedProperties(Ar, (uint8*)this, pSC, NULL);
+
     int32 l;
     bool bIsLoading;
     if (Ar.IsLoading()) {
@@ -163,7 +361,10 @@ bool FMyMJGamePusherPointersCpp::trySerializeWithTag(FArchive &Ar)
         bIsLoading = true;
     }
     else {
-        check(Ar.IsSaving());
+        if (!Ar.IsSaving()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("FMyMJGamePusherPointersCpp::trySerializeWithTag(): neither save or load"));
+            return false;
+        }
         l = m_aPushersSharedPtr.Num();
         bIsLoading = false;
     }
@@ -440,6 +641,27 @@ bool FMyMJGamePusherPointersCpp::NetDeltaSerialize(FNetDeltaSerializeInfo & Delt
     return false;
 }
 
+bool FMyMJGamePusherPointersCpp::SerializeFromMismatchedTag(FPropertyTag const& Tag, FArchive& Ar)
+{
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("SerializeFromMismatchedTag %s"), *Tag.Name.ToString());
+    return trySerializeWithTag(Ar);
+}
+
+
+/*
+bool FMyMJGamePusherPointersCpp::ExportTextItem(FString& ValueStr, FMyMJGamePusherPointersCpp const& DefaultValue, UObject* Parent, int32 PortFlags, UObject* ExportRootScope) const
+{
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ExportTextItem"));
+    return false;
+}
+
+bool FMyMJGamePusherPointersCpp::ImportTextItem(const TCHAR*& Buffer, int32 PortFlags, UObject* OwnerObject, FOutputDevice* ErrorText)
+{
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ImportTextItem"));
+    return false;
+}
+*/
+
 
 FMyMJGamePusherBaseCpp*
 FMyMJGamePusherFillInActionChoicesCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
@@ -494,9 +716,9 @@ FMyMJGamePusherResetGameCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType
     *pRet = *this;
 
     if (eRoleType != MyMJGameRoleTypeCpp::SysKeeper) {
-        int l = pRet->m_aShuffledValues.Num();
+        int l = pRet->m_aShuffledIdValues.Num();
         for (int i = 0; i < l; i++) {
-            pRet->m_aShuffledValues[i] = 0; //0 means unknown
+            pRet->m_aShuffledIdValues[i].m_iValue = 0; //0 means unknown
         }
     }
 
@@ -513,7 +735,7 @@ FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream *pRandomStream, F
     m_cGameRunData = cGameRunData;
     m_iAttenderBehaviorRandomSelectMask = iAttenderBehaviorRandomSelectMask;
 
-    TArray<int32> &outValues = m_aShuffledValues;
+    TArray<int32> outValues;
     outValues.Reset(160);
 
 
@@ -582,6 +804,14 @@ FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream *pRandomStream, F
         outValues[remainingCards - 1] = tempCardValue;
 
         remainingCards--;
+    }
+
+    int32 l = outValues.Num();
+    m_aShuffledIdValues.Reset(l);
+    for (int32 i = 0; i < l; i++) {
+        int32 idx = m_aShuffledIdValues.Emplace();
+        m_aShuffledIdValues[idx].m_iId = i;
+        m_aShuffledIdValues[idx].m_iValue = outValues[i];
     }
 
 }

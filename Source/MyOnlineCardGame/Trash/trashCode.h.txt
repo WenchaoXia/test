@@ -150,3 +150,38 @@ public:
 
 };
 */
+
+
+USTRUCT(BlueprintType)
+struct FMyMJGamePusherPointersCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+    bool Serialize(FArchive& Ar);
+    bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
+    bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms);
+
+}
+
+template<>
+struct TStructOpsTypeTraits<FMyMJGamePusherPointersCpp> : public TStructOpsTypeTraitsBase2<FMyMJGamePusherPointersCpp>
+{
+    enum
+    {
+
+        WithSerializer = true,
+        WithNetSerializer = true,
+        //WithNetDeltaSerializer = true,  //If true, none of serialize funtion got called during RPC
+    };
+};
+
+
+UCLASS(BlueprintType, Blueprintable)
+class MYONLINECARDGAME_API AMyTestActorBaseCpp : public AActor
+{
+    GENERATED_BODY()
+
+public:
+    UFUNCTION(BlueprintCallable, Client, unreliable)
+    void testRPCWithPusherPointers(const FMyMJGamePusherPointersCpp &pusherPointers);
+}

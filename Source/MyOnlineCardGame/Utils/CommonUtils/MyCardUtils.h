@@ -124,7 +124,7 @@ struct FMyIdValuePair
     int32 m_iValue; // > 0 means valid
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyIdCollectionCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -133,7 +133,7 @@ struct FMyIdCollectionCpp
     {};
 
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "IDs"))
     TArray<int32> m_aIds;
 
 };

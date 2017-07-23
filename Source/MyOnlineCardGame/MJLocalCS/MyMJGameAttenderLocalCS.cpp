@@ -533,13 +533,13 @@ void FMyMJGameAttenderLocalCSCpp::onNewTurn(bool bIsWeave)
                 FMyMJCardCpp *pCard = pCardPack->getCardByIdx(idCard);
                 if (pCard->m_cPosi.m_eSlot == MyMJCardSlotTypeCpp::InHand && pCard->m_eFlipState != MyMJCardFlipStateCpp::Up) {
 
-                    int32 idx = pPusher->m_aCardsTargetState.Emplace();
-                    pPusher->m_aCardsTargetState[idx] = *pCard;
-                    pPusher->m_aCardsTargetState[idx].m_eFlipState = MyMJCardFlipStateCpp::Up;
+                    int32 idx = pPusher->m_aIdValues.Emplace();
+                    pPusher->m_aIdValues[idx] = *pCard;
+
                 }
             }
 
-            pPusher->initWithCardsTargetStateAlreadyInited(m_iIdx, MaskAttenderDataResetIdHandCardShowedOutLocalCS | 0);
+            pPusher->initWithCardsTargetStateAlreadyInited(m_iIdx, MyMJCardFlipStateCpp::Up, MyMJCardFlipStateCpp::Stand, MaskAttenderDataResetIdHandCardShowedOutLocalCS | 0);
             pCore->getpPusherIOFull()->EnqueuePusher(*pPusher);
         }
 
