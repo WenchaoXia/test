@@ -270,7 +270,7 @@ void AMyMJCoreMirrorCpp::loop()
                 FMyMJGamePusherResetGameCpp* pPusherResetGame = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher);
                 int32 l = m_aAttenderPawns.Num();
                 for (int32 i = 0; i < l; i++) {
-                    m_aAttenderPawns[i]->m_cAttenderDataDirectPrivate.reset(pPusherResetGame->m_aShuffledIdValues.Num());
+                    m_aAttenderPawns[i]->m_cAttenderDataDirectPrivate.reset(pPusherResetGame->m_aShuffledValues.Num());
                 }
             }
           
@@ -286,7 +286,7 @@ void AMyMJCoreMirrorCpp::loop()
                         continue;
                     }
                     //need update
-                    m_aAttenderPawns[i]->m_cAttenderDataDirectPrivate.m_cCardPackForValue.revealCardValueByIdValuePairs(aRevealedCardValues);
+                    //m_aAttenderPawns[i]->m_cAttenderDataDirectPrivate.m_cCardPackForValue.revealCardValueByIdValuePairs(aRevealedCardValues);
                 }
 
             }

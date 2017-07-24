@@ -612,11 +612,14 @@ public:
         return str;
     };
 
+    //we do reset game special in code
+    /*
     virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
     {
         outiRoleMask = (1 << (uint8)MyMJGameRoleTypeCpp::SysKeeper);
         outaRevealedCardValues = m_aShuffledIdValues;
     };
+    */
 
     //call this only when m_cGameCfg is set
     void init(int32 iGameId, FRandomStream *pRandomStream, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData, int32 iAttenderBehaviorRandomSelectMask);
@@ -631,7 +634,7 @@ public:
     FMyMJGameRunDataCpp m_cGameRunData;
 
     UPROPERTY()
-    TArray<FMyIdValuePair> m_aShuffledIdValues;
+    TArray<int32> m_aShuffledValues;
 
 
     UPROPERTY()

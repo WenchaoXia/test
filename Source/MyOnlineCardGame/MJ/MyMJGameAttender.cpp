@@ -15,21 +15,25 @@
 
 void FMyMJGameAttenderCpp::removeCard(int32 id)
 {
-    FMyMJCardPackCpp *pCardPack = m_pCore.Pin()->getpCardPack();
-    FMyMJCardCpp *pCard = pCardPack->getCardByIdx(id);
-    MyMJCardSlotTypeCpp eType = pCard->m_cPosi.m_eSlot;
+    FMyMJGameCoreCpp *pCore = m_pCore.Pin().Get();
+    FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = pCore->getpCardValuePack();
+
+    FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
+    MyMJCardSlotTypeCpp eType = pCardInfo->m_cPosi.m_eSlot;
 
 
     if (eType == MyMJCardSlotTypeCpp::JustTaken) {
-        FMyMJCardPackCpp::helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(*pCardPack, m_aIdJustTakenCards, id);
+        pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(m_aIdJustTakenCards, id);
     }
     else if (eType == MyMJCardSlotTypeCpp::InHand) {
-        MY_VERIFY(pCard->m_iValue > 0);
-        bool bRemoved = m_cHandCards.remove(id, pCard->m_iValue);
+        int32 value = pCardValuePack->getByIdx(id);
+        MY_VERIFY(value> 0);
+        bool bRemoved = m_cHandCards.remove(id, value);
         MY_VERIFY(bRemoved);
     }
     else if (eType == MyMJCardSlotTypeCpp::GivenOut) {
-        FMyMJCardPackCpp::helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(*pCardPack, m_aIdGivenOutCards, id);
+        pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(m_aIdGivenOutCards, id);
     }
     else if (eType == MyMJCardSlotTypeCpp::Weaved) {
         bool bWeavesDeleted;
@@ -41,7 +45,7 @@ void FMyMJGameAttenderCpp::removeCard(int32 id)
         }
     }
     else if (eType == MyMJCardSlotTypeCpp::WinSymbol) {
-        FMyMJCardPackCpp::helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(*pCardPack, m_aIdWinSymbolCards, id);
+        pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(m_aIdWinSymbolCards, id);
         //m_cHandCards.remove(id, pCard->m_iValue);
     }
     else
@@ -50,40 +54,44 @@ void FMyMJGameAttenderCpp::removeCard(int32 id)
         MY_VERIFY(false);
     }
 
-    pCard->m_cPosi.reset();
+    pCardInfo->m_cPosi.reset();
 
 }
 
 void FMyMJGameAttenderCpp::insertCard(int32 id, MyMJCardSlotTypeCpp eTargetSlot)
 {
-    FMyMJCardPackCpp *pCardPack = m_pCore.Pin()->getpCardPack();
-    FMyMJCardCpp *pCard = pCardPack->getCardByIdx(id);
+    FMyMJGameCoreCpp *pCore = m_pCore.Pin().Get();
+    FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = pCore->getpCardValuePack();
+
+    FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
     MyMJCardSlotTypeCpp eType = eTargetSlot;
 
-    pCard->m_cPosi.m_iIdxAttender = m_iIdx;
-    pCard->m_cPosi.m_eSlot = eType;
+    pCardInfo->m_cPosi.m_iIdxAttender = m_iIdx;
+    pCardInfo->m_cPosi.m_eSlot = eType;
 
 
     if (eType == MyMJCardSlotTypeCpp::JustTaken) {
-        FMyMJCardPackCpp::helperInsertCardUniqueToIdArrayWithMinorPosiCalced(*pCardPack, m_aIdJustTakenCards, id);
+        pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(m_aIdJustTakenCards, id);
     }
     else if (eType == MyMJCardSlotTypeCpp::InHand) {
-        MY_VERIFY(pCard->m_iValue > 0); //If it is inserted into hand, its value must be revealed first
-        bool bInserted = m_cHandCards.insert(id, pCard->m_iValue);
+        int32 value = pCardValuePack->getByIdx(id);
+        MY_VERIFY(value> 0);
+        bool bInserted = m_cHandCards.insert(id, value);
         MY_VERIFY(bInserted);
 
-        pCard->m_cPosi.resetMinorData();
+        pCardInfo->m_cPosi.resetMinorData();
 
     }
     else if (eType == MyMJCardSlotTypeCpp::GivenOut) {
-        FMyMJCardPackCpp::helperInsertCardUniqueToIdArrayWithMinorPosiCalced(*pCardPack, m_aIdGivenOutCards, id);
+        pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(m_aIdGivenOutCards, id);
     }
     else if (eType == MyMJCardSlotTypeCpp::Weaved) {
         //We don't directly insert here, instead, operate weaves later in applyActionWeave
 
     }
     else if (eType == MyMJCardSlotTypeCpp::WinSymbol) {
-        FMyMJCardPackCpp::helperInsertCardUniqueToIdArrayWithMinorPosiCalced(*pCardPack, m_aIdWinSymbolCards, id);
+        pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(m_aIdWinSymbolCards, id);
     }
     else
     {
@@ -96,7 +104,8 @@ void FMyMJGameAttenderCpp::insertCard(int32 id, MyMJCardSlotTypeCpp eTargetSlot)
 
 void FMyMJGameAttenderCpp::recalcMinorPosiOfCardsInShowedOutWeaves()
 {
-    FMyMJCardPackCpp *pCardPack = getpCore()->getpCardPack();
+    FMyMJGameCoreCpp *pCore = m_pCore.Pin().Get();
+    FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
 
     //fix helper posi in all weaves
     int32 l0 = m_aShowedOutWeaves.Num();
@@ -105,9 +114,9 @@ void FMyMJGameAttenderCpp::recalcMinorPosiOfCardsInShowedOutWeaves()
         const TArray<FMyIdValuePair>& aT = pWeave->getIdValuesRef();
         int32 l1 = aT.Num();
         for (int32 j = 0; j < l1; j++) {
-            FMyMJCardCpp *pCard = pCardPack->getCardByIdx(aT[j].m_iId);
-            pCard->m_cPosi.m_iIdxInSlot0 = i;
-            pCard->m_cPosi.m_iIdxInSlot1 = j;
+            FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(aT[j].m_iId);
+            pCardInfo->m_cPosi.m_iIdxInSlot0 = i;
+            pCardInfo->m_cPosi.m_iIdxInSlot1 = j;
         }
     }
 }

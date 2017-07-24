@@ -409,18 +409,21 @@ void FMyMJGameCoreCpp::tryCollectCardsFromUntakenSlot(int32 idxBase, uint32 len,
 
 void FMyMJGameCoreCpp::moveCardFromOldPosi(int32 id)
 {
-    FMyMJCardCpp *pCard = m_cCardPack.getCardByIdx(id);
-    MyMJCardSlotTypeCpp eSlotSrc = pCard->m_cPosi.m_eSlot;
-    int32 idxAttender = pCard->m_cPosi.m_iIdxAttender;
+    FMyMJCardInfoPackCpp  *pCardInfoPack =  getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = getpCardValuePack();
+
+    FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
+    MyMJCardSlotTypeCpp eSlotSrc = pCardInfo->m_cPosi.m_eSlot;
+    int32 idxAttender = pCardInfo->m_cPosi.m_iIdxAttender;
     if (eSlotSrc == MyMJCardSlotTypeCpp::Untaken) {
-        MY_VERIFY(pCard->m_cPosi.m_iIdxInSlot0 >= 0 && pCard->m_cPosi.m_iIdxInSlot0 < m_aUntakenCardStacks.Num());
-        int32 idx = pCard->m_cPosi.m_iIdxInSlot0;
+        MY_VERIFY(pCardInfo->m_cPosi.m_iIdxInSlot0 >= 0 && pCardInfo->m_cPosi.m_iIdxInSlot0 < m_aUntakenCardStacks.Num());
+        int32 idx = pCardInfo->m_cPosi.m_iIdxInSlot0;
         FMyIdCollectionCpp *pCollection = &m_aUntakenCardStacks[idx];
         //MY_VERIFY(pCard->m_cPosi.m_iIdxInSlot1 >= 0 && pCard->m_cPosi.m_iIdxInSlot1 < pCollection->m_aIds.Num());
         
         MY_VERIFY(pCollection->m_aIds.Pop() == id);
 
-        pCard->m_cPosi.reset();
+        pCardInfo->m_cPosi.reset();
 
         if (isIdxUntakenSlotInKeptFromTailSegment(idx)) {
             m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail--;
@@ -428,7 +431,8 @@ void FMyMJGameCoreCpp::moveCardFromOldPosi(int32 id)
         else {
             m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead--;
             if (m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead == 0) {
-                m_cHelperLastCardTakenInGame = *m_cCardPack.getCardByIdx(id);
+                m_cHelperLastCardTakenInGame.m_iId = id;
+                m_cHelperLastCardTakenInGame.m_iValue = pCardValuePack->getByIdx(id);
             }
         }
         m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal--;
@@ -445,7 +449,6 @@ void FMyMJGameCoreCpp::moveCardFromOldPosi(int32 id)
 
 void FMyMJGameCoreCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSlotTypeCpp eSlotDst)
 {
-    FMyMJCardCpp *pCard = m_cCardPack.getCardByIdx(id);
 
     if (eSlotDst == MyMJCardSlotTypeCpp::Untaken) {
         MY_VERIFY(false);

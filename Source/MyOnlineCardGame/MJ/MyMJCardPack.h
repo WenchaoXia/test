@@ -12,134 +12,107 @@
 
 #include "MyMJCardPack.generated.h"
 
-UENUM(BlueprintType)
-enum class MyMJCardFlipStateCpp : uint8
-{
-    Invalid = 0                    UMETA(DisplayName = "Invalid"),
-
-    Down = 1                       UMETA(DisplayName = "Down"),
-    Stand = 2                      UMETA(DisplayName = "Stand"),
-    Up = 3                        UMETA(DisplayName = "Up")
-
-};
-
-UENUM(BlueprintType)
-enum class MyMJCardSlotTypeCpp : uint8
-{
-    Invalid = 0                    UMETA(DisplayName = "Invalid"),
-
-    //Keeper = 1                       UMETA(DisplayName = "Keeper"),
-    Untaken = 2                      UMETA(DisplayName = "Untaken"),
-    JustTaken = 3                      UMETA(DisplayName = "JustTaken"),
-    InHand = 4                        UMETA(DisplayName = "InHand"),
-    GivenOut = 5                        UMETA(DisplayName = "GivenOut"),
-    Weaved = 6                        UMETA(DisplayName = "Weaved"),
-    WinSymbol = 7                        UMETA(DisplayName = "WinSymbol")
-};
-
 USTRUCT(BlueprintType)
-struct FMyMJCardPosiCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-    FMyMJCardPosiCpp() {
-        reset();
-
-    };
-
-    void reset() {
-        m_iIdxAttender = -1;
-        m_eSlot = MyMJCardSlotTypeCpp::Invalid;
-        resetMinorData();
-    };
-
-    void resetMinorData() {
-        m_iIdxInSlot0 = -1;
-        m_iIdxInSlot1 = -1;
-    };
-    
-    bool equal(const FMyMJCardPosiCpp &other)
-    {
-        return m_iIdxAttender == other.m_iIdxAttender && m_eSlot == other.m_eSlot && m_iIdxInSlot0 == other.m_iIdxInSlot0 && m_iIdxInSlot1 == other.m_iIdxInSlot1;
-    };
-
-    UPROPERTY()
-    int32 m_iIdxAttender;
-
-    UPROPERTY()
-    MyMJCardSlotTypeCpp m_eSlot;
-
-    // < 0 means invalid
-    UPROPERTY()
-    int32 m_iIdxInSlot0;
-
-    // < 0 means invalid
-    UPROPERTY()
-    int32 m_iIdxInSlot1;
-
-};
-
-USTRUCT()
-struct FMyMJCardCpp : public FMyIdValuePair
-{
-    GENERATED_USTRUCT_BODY()
-
-    FMyMJCardCpp() : Super()
-    {
-        resetExceptValue();
-    };
-
-    void resetExceptValue() {
-        FMyIdValuePair::reset(false);
-
-        m_eFlipState = MyMJCardFlipStateCpp::Invalid;
-        m_cPosi.reset();
-    };
-
-    UPROPERTY()
-    MyMJCardFlipStateCpp m_eFlipState;
-
-    UPROPERTY()
-    FMyMJCardPosiCpp m_cPosi;
-};
-
-
-USTRUCT(BlueprintType)
-struct FMyMJCardPackCpp
+struct FMyMJCardInfoPackCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJCardPackCpp()
+    FMyMJCardInfoPackCpp()
     {
     };
 
-    virtual ~FMyMJCardPackCpp()
+    virtual ~FMyMJCardInfoPackCpp()
     {
 
     };
 
     void reset(int32 iCardNum)
     {
-        m_aCards.Reset(iCardNum);
-        m_aCards.AddDefaulted(iCardNum);
+        m_aCardInfos.Reset(iCardNum);
+        m_aCardInfos.AddDefaulted(iCardNum);
     };
-
-    void reset(const TArray<int32> &aShuffledValues);
-    void reset(const TArray<FMyIdValuePair> &aShuffledIdValues);
-
-    void getValuesByIds(const TArray<int32> &aIds, TArray<int32> &outaValues) const;
-
-    void getIdValuePairsByIds(const TArray<int32> &aIds, TArray<FMyIdValuePair> &outaIdValuePairs) const;
 
     inline
-    FMyMJCardCpp *getCardByIdx(int32 idx)
+    int32 getLength() const
     {
-        return const_cast<FMyMJCardCpp *>(getCardByIdxConst(idx));
+        return m_aCardInfos.Num();
     };
 
-    const FMyMJCardCpp *getCardByIdxConst(int32 idx) const;
+    inline
+    FMyMJCardInfoCpp *getByIdx(int32 idx)
+    {
+        return const_cast<FMyMJCardInfoCpp *>(getByIdxConst(idx));
+    };
 
+    const FMyMJCardInfoCpp *getByIdxConst(int32 idx) const;
+
+    void helperVerifyInfos() const;
+
+    //this function will insert @id into @aIds, and update correspond info in self's m_aCardInfos
+    void helperInsertCardUniqueToIdArrayWithMinorPosiCalced(TArray<int32> &aIds, int32 id);
+
+    //return true if a recalc of cards with Id in whole array @aIds, happend
+    bool helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(TArray<int32> &aIds, int32 id);
+
+    void helperRecalcMinorPosiIfCardsInIdArray(const TArray<int32> &aIds);
+
+protected:
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card infos"))
+    TArray<FMyMJCardInfoCpp> m_aCardInfos;
+
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJCardValuePackCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJCardValuePackCpp()
+    {
+    };
+
+    virtual ~FMyMJCardValuePackCpp()
+    {
+
+    };
+
+    void reset(int32 iCardNum)
+    {
+        MY_VERIFY(iCardNum >= 0);
+        m_aCardValues.Reset(iCardNum);
+        m_aCardValues.AddZeroed(iCardNum);
+    };
+
+    void reset(const TArray<int32> &aShuffledValues)
+    {
+        m_aCardValues = aShuffledValues;
+    };
+
+    inline
+    int32 getLength() const
+    {
+        return m_aCardValues.Num();
+    };
+
+    inline
+    int32 getByIdx(int32 idx) const
+    {
+        MY_VERIFY(idx >= 0 && idx < m_aCardValues.Num());
+        return m_aCardValues[idx];
+    };
+
+    inline
+    int32 &getByIdxRef(int32 idx)
+    {
+        MY_VERIFY(idx >= 0 && idx < m_aCardValues.Num());
+        return m_aCardValues[idx];
+    };
+
+    //this function will check values, and assert if error happens
+    void helperVerifyValues() const;
 
     void revealCardValue(int32 id, int32 value);
 
@@ -156,15 +129,10 @@ public:
         }
     };
 
-    //void updateCardData(int32 id, int32 value);
 
-    inline
-    int32 getLength() {
-        return m_aCards.Num();
-    };
+    void getValuesByIds(const TArray<int32> &aIds, TArray<int32> &outaValues) const;
 
-    //this function will check values, and assert if error happens
-    void helperVerifyValues();
+    void getIdValuePairsByIds(const TArray<int32> &aIds, TArray<FMyIdValuePair> &outaIdValuePairs) const;
 
     //will fiill in with card value
     void helperIds2IdValuePairs(const TArray<int32> &aIds, TArray<FMyIdValuePair> &aIdValuePairs);
@@ -174,16 +142,9 @@ public:
     void helperResolveValues(TArray<FMyIdValuePair> &aPairs);
 
 
-    static void helperInsertCardUniqueToIdArrayWithMinorPosiCalced(FMyMJCardPackCpp &cardPack, TArray<int32> &aIds, int32 id);
-
-    //return true if a recalc of cards with Id in whole array @aIds, happend
-    static bool helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(FMyMJCardPackCpp &cardPack, TArray<int32> &aIds, int32 id);
-
-    static void helperRecalcMinorPosiIfCardsInIdArray(FMyMJCardPackCpp &cardPack, const TArray<int32> &aIds);
 
 protected:
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "cards"))
-    TArray<FMyMJCardCpp> m_aCards;
-
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card values"))
+    TArray<int32> m_aCardValues;
 };

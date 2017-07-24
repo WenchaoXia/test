@@ -56,7 +56,7 @@ public:
     //return whether ting, it simply consider card type, the caller may check extra conditions such as either card left in game, and set it in @outResultTingGroup later
     //@handCardsMapExcludeTriggerCard must not include trigger card
     static bool checkTingsLocalCSInGame(const FMyMJGameCfgCpp &gameCfg,
-                                        const FMyMJCardPackCpp &cardPack,
+                                        const FMyMJCardValuePackCpp &cardValuePack,
                                         const TArray<FMyMJWeaveCpp> &weavesShowedOut,
                                         const FMyMJValueIdMapCpp &handCardsMapExcludeTriggerCard,
                                         FMyMJHuScoreResultTingGroupCpp &outResultTingGroup);

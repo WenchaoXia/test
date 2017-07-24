@@ -783,6 +783,9 @@ FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream *pRandomStream, F
         remainingCards--;
     }
 
+    m_aShuffledValues = outValues;
+
+    /*
     int32 l = outValues.Num();
     m_aShuffledIdValues.Reset(l);
     for (int32 i = 0; i < l; i++) {
@@ -790,7 +793,7 @@ FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream *pRandomStream, F
         m_aShuffledIdValues[idx].m_iId = i;
         m_aShuffledIdValues[idx].m_iValue = outValues[i];
     }
-
+    */
 }
 
 FMyMJGamePusherBaseCpp*
@@ -906,7 +909,7 @@ void FMyMJGameActionGiveOutCardsCpp::resolveActionResult(FMyMJGameAttenderCpp &a
 {
     MY_VERIFY(m_aIdValuePairsSelected.Num() > 0);
 
-    attender.getpCore()->getpCardPack()->helperResolveValues(m_aIdValuePairsSelected);
+    attender.getpCore()->getpCardValuePack()->helperResolveValues(m_aIdValuePairsSelected);
 
     TArray<FMyIdValuePair>& aTargets = m_aIdValuePairsSelected;
     int32 l = aTargets.Num();
@@ -923,18 +926,19 @@ void FMyMJGameActionHuCpp::resolveActionResult(FMyMJGameAttenderCpp &attender)
 {
     m_aRevealingCards.Reset();
 
-    FMyMJCardPackCpp *pCardPack = attender.getpCore()->getpCardPack();
-    int32 l = pCardPack->getLength();
+    FMyMJCardInfoPackCpp  *pCardInfoPack  = attender.getpCore()->getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = attender.getpCore()->getpCardValuePack();
+    int32 l = pCardValuePack->getLength();
     for (int32 i = 0; i < l; i++) {
-        FMyMJCardCpp *pCard = pCardPack->getCardByIdx(i);
-        if (pCard->m_eFlipState == MyMJCardFlipStateCpp::Up) {
+        FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(i);
+        if (pCardInfo->m_eFlipState == MyMJCardFlipStateCpp::Up) {
             //already revealed
             continue;
         }
 
         int32 idx = m_aRevealingCards.Emplace();
-        m_aRevealingCards[idx].m_iId = pCard->m_iId;
-        pCardPack->helperResolveValue(m_aRevealingCards[idx]);
+        m_aRevealingCards[idx].m_iId = pCardInfo->m_iId;
+        pCardValuePack->helperResolveValue(m_aRevealingCards[idx]);
 
     }
 

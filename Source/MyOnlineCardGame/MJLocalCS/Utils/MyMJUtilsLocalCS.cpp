@@ -636,7 +636,7 @@ UMyMJUtilsLocalCSLibrary::calcScoreFinalLocalCSInGame(const FMyMJHuCfgCpp &huCfg
 
 bool
 UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJGameCfgCpp &gameCfg,
-                                             const FMyMJCardPackCpp &cardPack,
+                                            const FMyMJCardValuePackCpp &cardValuePack,
                                              const TArray<FMyMJWeaveCpp> &weavesShowedOut,
                                              const FMyMJValueIdMapCpp &handCardsMapExcludeTriggerCard,
                                              FMyMJHuScoreResultTingGroupCpp &outResultTingGroup)
@@ -676,7 +676,7 @@ UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJGameCfgCpp &gameCfg
         TArray<int32> aIds;
         checkingHandCards.collectAll(aIds);
 
-        cardPack.getValuesByIds(aIds, outResultTingGroup.m_aValuesHandCardWhenChecking);
+        cardValuePack.getValuesByIds(aIds, outResultTingGroup.m_aValuesHandCardWhenChecking);
 
         return true;
     }

@@ -201,6 +201,10 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
 {
     //Stateless, never judge condition of previous state, just reset the whole core
 
+    FMyMJCardInfoPackCpp  *pCardInfoPack  = getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = getpCardValuePack();
+
+
     for (int i = 0; i < 4; i++) {
         m_aAttendersAll[i]->reset(false);
     }
@@ -258,14 +262,15 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
     *m_pGameCfg = pPusher->m_cGameCfg;
     *m_pGameRunData = pPusher->m_cGameRunData;
 
-    m_cCardPack.reset(pPusher->m_aShuffledIdValues);
+    pCardInfoPack->reset(pPusher->m_aShuffledValues.Num());
+    pCardValuePack->reset(pPusher->m_aShuffledValues);
 
 
     //move into untaken slots
     int32 perStack = m_pGameCfg->m_cTrivialCfg.m_iCardNumPerStackInUntakenSlot;
     MY_VERIFY(perStack > 0);
 
-    const int32 cardCount = m_cCardPack.getLength();
+    const int32 cardCount = pCardInfoPack->getLength();
 
 
 
@@ -317,12 +322,12 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
             for (int32 idxInStack = 0; idxInStack < pC->m_aIds.Num(); idxInStack++) {
                 int32 idxCard = pC->m_aIds[idxInStack];
 
-                FMyMJCardCpp *pCard = m_cCardPack.getCardByIdx(idxCard);
-                pCard->m_eFlipState = MyMJCardFlipStateCpp::Down;
-                pCard->m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::Untaken;
-                pCard->m_cPosi.m_iIdxAttender = i;
-                pCard->m_cPosi.m_iIdxInSlot0 = idxUntaken;
-                pCard->m_cPosi.m_iIdxInSlot1 = idxInStack;
+                FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(idxCard);
+                pCardInfo->m_eFlipState = MyMJCardFlipStateCpp::Down;
+                pCardInfo->m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::Untaken;
+                pCardInfo->m_cPosi.m_iIdxAttender = i;
+                pCardInfo->m_cPosi.m_iIdxInSlot0 = idxUntaken;
+                pCardInfo->m_cPosi.m_iIdxInSlot1 = idxInStack;
 
             }
         }
@@ -331,7 +336,8 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
     m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal = cardCount;
 
     if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
-        m_cCardPack.helperVerifyValues();
+        pCardInfoPack->helperVerifyInfos();
+        pCardValuePack->helperVerifyValues();
     }
 
 
@@ -343,18 +349,20 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
 void FMyMJGameCoreLocalCSCpp::applyPusherUpdateCards(FMyMJGamePusherUpdateCardsCpp *pPusher)
 {
     FMyMJGameCoreCpp *pCore = this;
-    FMyMJCardPackCpp *pCardPack = pCore->getpCardPack();
+
+    FMyMJCardInfoPackCpp  *pCardInfoPack = getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = getpCardValuePack();
 
     int32 l = pPusher->m_aIdValues.Num();
     for (int32 i = 0; i < l; i++) {
         FMyIdValuePair *pTargetIdValue = &pPusher->m_aIdValues[i];
-        FMyMJCardCpp *pCard = pCardPack->getCardByIdx(pTargetIdValue->m_iId);
+        FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(pTargetIdValue->m_iId);
 
-        if (pCard->m_eFlipState != pPusher->m_eTargetState) {
-            pCard->m_eFlipState = pPusher->m_eTargetState;
+        if (pCardInfo->m_eFlipState != pPusher->m_eTargetState) {
+            pCardInfo->m_eFlipState = pPusher->m_eTargetState;
         }
 
-        pCardPack->revealCardValue(pTargetIdValue->m_iId, pTargetIdValue->m_iValue);
+        pCardValuePack->revealCardValue(*pTargetIdValue);
     }
 
     if (pPusher->m_iIdxAttender >= 0) {
@@ -427,6 +435,9 @@ void FMyMJGameCoreLocalCSCpp::applyActionThrowDices(FMyMJGameActionThrowDicesCpp
 
 void FMyMJGameCoreLocalCSCpp::applyActionDistCardsAtStart(FMyMJGameActionDistCardAtStartCpp *pAction)
 {
+    FMyMJCardInfoPackCpp  *pCardInfoPack = getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = getpCardValuePack();
+
     int32 idxAttender = pAction->getIdxAttender();
 
     int32 l = pAction->m_aIdValues.Num();
@@ -435,7 +446,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionDistCardsAtStart(FMyMJGameActionDistCar
         //1, reveal value
         int32 id = pAction->m_aIdValues[i].m_iId;
         int32 value = pAction->m_aIdValues[i].m_iValue;
-        m_cCardPack.revealCardValue(id, value);
+        pCardValuePack->revealCardValue(id, value);
 
         //2, move card
         moveCardFromOldPosi(id);
@@ -480,19 +491,22 @@ void FMyMJGameCoreLocalCSCpp::applyActionDistCardsAtStart(FMyMJGameActionDistCar
 
 void FMyMJGameCoreLocalCSCpp::applyActionTakeCards(FMyMJGameActionTakeCardsCpp *pAction)
 {
+    FMyMJCardInfoPackCpp  *pCardInfoPack = getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = getpCardValuePack();
+
     int32 idxAttender = pAction->getIdxAttender();
 
     //1st, reveal value
-    m_cCardPack.revealCardValueByIdValuePairs(pAction->m_aIdValuePairs);
+    //m_cCardPack.revealCardValueByIdValuePairs(pAction->m_aIdValuePairs);
 
     //2nd, move card and flip
     int32 l = pAction->m_aIdValuePairs.Num();
     for (int32 i = 0; i < l; i++) {
-        FMyMJCardCpp *pCard = m_cCardPack.getCardByIdx(pAction->m_aIdValuePairs[i].m_iId);
-        moveCardFromOldPosi(pCard->m_iId);
-        moveCardToNewPosi(pCard->m_iId, idxAttender, MyMJCardSlotTypeCpp::JustTaken);
+        FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(pAction->m_aIdValuePairs[i].m_iId);
+        moveCardFromOldPosi(pCardInfo->m_iId);
+        moveCardToNewPosi(pCardInfo->m_iId, idxAttender, MyMJCardSlotTypeCpp::JustTaken);
 
-        pCard->m_eFlipState = MyMJCardFlipStateCpp::Stand;
+        pCardInfo->m_eFlipState = MyMJCardFlipStateCpp::Stand;
     }
 
     MyMJGameCardTakenOrderCpp eTakenOrder = pAction->m_eTakenOrder;
@@ -529,6 +543,9 @@ void FMyMJGameCoreLocalCSCpp::applyActionTakeCards(FMyMJGameActionTakeCardsCpp *
 
 void FMyMJGameCoreLocalCSCpp::applyActionGiveOutCards(FMyMJGameActionGiveOutCardsCpp *pAction)
 {
+    FMyMJCardInfoPackCpp  *pCardInfoPack = getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = getpCardValuePack();
+
     int32 idxAttender = pAction->getIdxAttender();
     MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
     TSharedPtr<FMyMJGameAttenderLocalCSCpp> pAttender = getRealAttenderByIdx(idxAttender);
@@ -538,7 +555,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionGiveOutCards(FMyMJGameActionGiveOutCard
     MY_VERIFY(selectedCount > 0);
 
     //1st, update card value
-    m_cCardPack.revealCardValueByIdValuePairs(pAction->m_aIdValuePairsSelected);
+    //m_cCardPack.revealCardValueByIdValuePairs(pAction->m_aIdValuePairsSelected);
 
     //precheck if ting update is needed
     bool bNeedUpdateTing = false;
@@ -548,7 +565,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionGiveOutCards(FMyMJGameActionGiveOutCard
     }
     else {
         MY_VERIFY(selectedCount == 1);
-        int32 valueSelected = m_cCardPack.getCardByIdx(pAction->m_aIdValuePairsSelected[0].m_iId)->m_iValue;
+        int32 valueSelected = pCardValuePack->getByIdx(pAction->m_aIdValuePairsSelected[0].m_iId);
         MY_VERIFY(valueSelected > 0);
 
 
@@ -558,7 +575,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionGiveOutCards(FMyMJGameActionGiveOutCard
             if (l > 0) {
                 MY_VERIFY(l == 1);
                 for (int32 i = 0; i < l; i++) {
-                    if (valueSelected != m_cCardPack.getCardByIdx(aIdCardsTaken[i])->m_iValue) {
+                    if (valueSelected != pCardValuePack->getByIdx(aIdCardsTaken[i])) {
                         bNeedUpdateTing = true;
                         break;
                     }
@@ -576,8 +593,8 @@ void FMyMJGameCoreLocalCSCpp::applyActionGiveOutCards(FMyMJGameActionGiveOutCard
         moveCardFromOldPosi(pair.m_iId);
         moveCardToNewPosi(pair.m_iId, pAction->getIdxAttender(), MyMJCardSlotTypeCpp::GivenOut);
 
-        FMyMJCardCpp *pCard = m_cCardPack.getCardByIdx(pair.m_iId);
-        pCard->m_eFlipState = MyMJCardFlipStateCpp::Up;
+        FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(pair.m_iId);
+        pCardInfo->m_eFlipState = MyMJCardFlipStateCpp::Up;
     }
 
     TArray<int32> aIdsJustTaken = pAttender->getIdJustTakenCardsRef(); //do a copy
@@ -699,10 +716,15 @@ void FMyMJGameCoreLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAction)
     }
 
     //extra step to setup helper data
-    FMyMJCardPackCpp *pCardPack = getpCardPack();
-    FMyMJCardCpp *pCard = pCardPack->getCardByIdx(pAction->m_cWeave.getRepresentCardId());
+    FMyMJCardInfoPackCpp  *pCardInfoPack = getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = getpCardValuePack();
+
+    FMyIdValuePair cIdValue;
+    cIdValue.m_iId = pAction->m_cWeave.getRepresentCardId();
+    cIdValue.m_iValue = pCardValuePack->getByIdx(cIdValue.m_iId);
+
     m_aHelperLastCardsGivenOutOrWeave.Reset();
-    m_aHelperLastCardsGivenOutOrWeave.Emplace(*pCard);
+    m_aHelperLastCardsGivenOutOrWeave.Emplace(cIdValue);
 
     m_eGameState = eGameStateNow;
 
@@ -716,7 +738,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionHu(FMyMJGameActionHuCpp *pAction)
 
     int32 l = pAction->m_aRevealingCards.Num();
     for (int32 i = 0; i < l; i++) {
-        getpCardPack()->revealCardValue(pAction->m_aRevealingCards[i]);
+        //getpCardPack()->revealCardValue(pAction->m_aRevealingCards[i]);
     }
 
     for (int32 i = 0; i < 4; i++) {
@@ -752,9 +774,10 @@ void FMyMJGameCoreLocalCSCpp::applyActionHu(FMyMJGameActionHuCpp *pAction)
 
 void FMyMJGameCoreLocalCSCpp::applyActionZhaNiaoLocalCS(FMyMJGameActionZhaNiaoLocalCSCpp *pAction)
 {
-    FMyMJCardPackCpp *pCardPack = getpCardPack();
+    FMyMJCardInfoPackCpp  *pCardInfoPack = getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = getpCardValuePack();
 
-    pCardPack->revealCardValueByIdValuePairs(pAction->m_aPickedIdValues);
+    //pCardPack->revealCardValueByIdValuePairs(pAction->m_aPickedIdValues);
 
     int32 idxAttenderBase = pAction->getIdxAttender();
     MY_VERIFY(idxAttenderBase >= 0 && idxAttenderBase < 4);

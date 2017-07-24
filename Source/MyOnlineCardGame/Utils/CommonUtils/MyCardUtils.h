@@ -70,19 +70,34 @@ struct FMyIdValuePair
 
     };
 
-    //will assert if m_iValue is already set and not equal to @value
-    inline void revealValue(int32 value)
+    //return false if error happens, means failed
+    static bool helperTryRevealValue(int32 &destValue, int32 value)
     {
         if (value > 0) {
-            if (m_iValue > 0) {
-                MY_VERIFY(m_iValue == value);
+            if (destValue > 0) {
+                if (destValue != value) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("destValue != value:  %d,%d."), destValue, value);
+                    return false;
+                }
             }
             else {
-                m_iValue = value;
+                destValue = value;
             }
         }
         else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Trying to resolve a card with unknown value, id %d, value %d."), m_iId, value);
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid value %d."), value);
+            return false;
+        }
+
+        return true;
+    }
+
+    inline void revealValue(int32 value)
+    {
+        bool bOK = helperTryRevealValue(m_iValue, value);
+        if (!bOK) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Trying to resolve a card value but failed: m_iId %d, m_iValue %d, value %d."), m_iId, m_iValue, value);
+            MY_VERIFY(false);
         }
     };
 

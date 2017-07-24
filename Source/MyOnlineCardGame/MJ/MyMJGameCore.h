@@ -267,10 +267,16 @@ public:
     };
 
     inline
-    FMyMJCardPackCpp *getpCardPack()
+    FMyMJCardInfoPackCpp *getpCardInfoPack()
     {
-        return &m_cCardPack;
+        return &m_cCardInfoPack;
     };
+
+    inline
+    FMyMJCardValuePackCpp *getpCardValuePack()
+    {
+        return &m_cCardValuePack;
+    }
 
     inline int32 getGameId() const
     {
@@ -483,7 +489,8 @@ protected:
     FMyMJGameIOGroupAllCpp *m_pExtIOGroupAll; //not owned by this class, also some member is used by m_pActionCollector
 
     TArray<FMyIdCollectionCpp> m_aUntakenCardStacks; //Always start from attender 0 to 3
-    FMyMJCardPackCpp m_cCardPack;
+    FMyMJCardInfoPackCpp  m_cCardInfoPack;
+    FMyMJCardValuePackCpp m_cCardValuePack;
 
     //Cfg
     TSharedPtr<FMyMJGameCfgCpp> m_pGameCfg;

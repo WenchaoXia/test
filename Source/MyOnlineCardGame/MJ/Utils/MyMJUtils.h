@@ -71,7 +71,6 @@ enum class MyMJWeaveTypeCpp : uint8
     //MTE_LAST = 0x80000000 UMETA(Hidden)
 };
 
-
 /* the hu card type is like mutex, you can only hu with one type one time.*/
 UENUM()
 enum class MyMJHuCardTypeCpp : uint8
@@ -94,6 +93,131 @@ enum class MyMJHuCardTypeCpp : uint8
     LocalCSBorn2KeZi = 152           UMETA(DisplayName = "LocalCSBorn2KeZi"),
     LocalCSBornAnGangInHand = 153            UMETA(DisplayName = "LocalCSBornAnGangInHand")
     //MTE_LAST = 0x80000000 UMETA(Hidden)
+};
+
+UENUM(BlueprintType)
+enum class MyMJCardFlipStateCpp : uint8
+{
+    Invalid = 0                    UMETA(DisplayName = "Invalid"),
+
+    Down = 1                       UMETA(DisplayName = "Down"),
+    Stand = 2                      UMETA(DisplayName = "Stand"),
+    Up = 3                        UMETA(DisplayName = "Up")
+
+};
+
+UENUM(BlueprintType)
+enum class MyMJCardSlotTypeCpp : uint8
+{
+    Invalid = 0                    UMETA(DisplayName = "Invalid"),
+
+    //Keeper = 1                       UMETA(DisplayName = "Keeper"),
+    Untaken = 2                      UMETA(DisplayName = "Untaken"),
+    JustTaken = 3                      UMETA(DisplayName = "JustTaken"),
+    InHand = 4                        UMETA(DisplayName = "InHand"),
+    GivenOut = 5                        UMETA(DisplayName = "GivenOut"),
+    Weaved = 6                        UMETA(DisplayName = "Weaved"),
+    WinSymbol = 7                        UMETA(DisplayName = "WinSymbol")
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJCardPosiCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+        FMyMJCardPosiCpp() {
+        reset();
+
+    };
+
+    void reset() {
+        m_iIdxAttender = -1;
+        m_eSlot = MyMJCardSlotTypeCpp::Invalid;
+        resetMinorData();
+    };
+
+    void resetMinorData() {
+        m_iIdxInSlot0 = -1;
+        m_iIdxInSlot1 = -1;
+    };
+
+    bool equal(const FMyMJCardPosiCpp &other)
+    {
+        return m_iIdxAttender == other.m_iIdxAttender && m_eSlot == other.m_eSlot && m_iIdxInSlot0 == other.m_iIdxInSlot0 && m_iIdxInSlot1 == other.m_iIdxInSlot1;
+    };
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx attender"))
+        int32 m_iIdxAttender;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card slot"))
+        MyMJCardSlotTypeCpp m_eSlot;
+
+    // < 0 means invalid
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx in slot 0"))
+        int32 m_iIdxInSlot0;
+
+    // < 0 means invalid
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx in slot 1"))
+        int32 m_iIdxInSlot1;
+
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJCardInfoCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+        FMyMJCardInfoCpp()
+    {
+        reset();
+    };
+
+    void reset() {
+        m_iId = -1;
+
+        m_eFlipState = MyMJCardFlipStateCpp::Invalid;
+        m_cPosi.reset();
+    };
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id"))
+        int32 m_iId; // >= 0 means valid
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "flip state"))
+        MyMJCardFlipStateCpp m_eFlipState;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "position"))
+        FMyMJCardPosiCpp m_cPosi;
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJCardCpp : public FMyMJCardInfoCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+        FMyMJCardCpp() : FMyMJCardInfoCpp()
+    {
+        m_iValue = 0;
+    };
+
+    void reset()
+    {
+        Super::reset();
+        m_iValue = 0;
+    };
+
+    void fill(const FMyMJCardInfoCpp &info)
+    {
+        *StaticCast<FMyMJCardInfoCpp *>(this) = info;
+    };
+
+    void convert2IdValuePair(FMyIdValuePair &out) const
+    {
+        out.m_iId = m_iId;
+        out.m_iValue = m_iValue;
+    };
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "value"))
+    int32 m_iValue;
 };
 
 #define FMyMJWeaveCppReserved0WhenGangValueGangYao 0
@@ -129,9 +253,12 @@ struct FMyMJWeaveCpp
 
     void addCard(const FMyIdValuePair &idValue)
     {
-        int32 idx = m_aIdValues.Emplace();
-        m_aIdValues[idx] = idValue;
+        addCard(idValue.m_iId, idValue.m_iValue);
+    };
 
+    void addCard(const FMyMJCardCpp &card)
+    {
+        addCard(card.m_iId, card.m_iValue);
     };
 
     void appendIdsValues(TArray<int32> aIds, TArray<int32> aValues)
