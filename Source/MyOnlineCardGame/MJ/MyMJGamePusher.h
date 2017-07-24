@@ -94,7 +94,7 @@ public:
 
     //Never call this directly, since UE4 struct forbid pure virtual function, let's use fake function here to test it at runtime
     //return new one alloceted on heap and neccessary transform have done on it, or NULL to tip this role doesn't need to store it
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const
     {
         MY_VERIFY(false);
         return NULL;
@@ -176,7 +176,7 @@ public:
     };
 
     //Copy everything, this make it safe whenm another thread consume it
-    void copyDeepWithRoleType(const FMyMJGamePusherPointersCpp *pOther, MyMJGameRoleTypeCpp eRoleType);
+    void copyDeep(const FMyMJGamePusherPointersCpp *pOther);
 
     FMyMJGamePusherPointersCpp& operator = (const FMyMJGamePusherPointersCpp& rhs)
     {
@@ -185,7 +185,7 @@ public:
             return *this;
         }
 
-        copyDeepWithRoleType(&rhs, MyMJGameRoleTypeCpp::SysKeeper);
+        copyDeep(&rhs);
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGamePusherPointersCpp::operator = after, %p, %d."), this, m_iTestCount);
         return *this;
     };
@@ -359,8 +359,11 @@ public:
 
 
     //return whether updated
-    bool helperFillAsSegmentFromIOGroup(FMyMJGameIOGroupCpp *IOGroup);
+    bool helperFillAsSegmentFromQueue(TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>& pusherQueue);
+
+    //@iGameIdOfSegment < 0 means not checked about gameId, always check game logic and append
     bool helperTryFillDataFromSegment(int32 iGameIdOfSegment, const FMyMJGamePusherPointersCpp &segment, bool bVerifyAllInserted);
+
     bool helperGenDeltaSegment(int32 iGameIdBase, int32 iPusherIdBase, int32 &outGameId, FMyMJGamePusherPointersCpp &outDeltaSegment);
 
     TSharedPtr<FMyMJGamePusherBaseCpp> helperTryPullPusher(int32 iGameId, int32 iPusherId);
@@ -428,7 +431,7 @@ public:
 
     };
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override;
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override;
 
     virtual FString genDebugString() const override
     {
@@ -496,7 +499,7 @@ public:
 
     };
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override;
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override;
 
     virtual FString genDebugString() const override
     {
@@ -557,7 +560,7 @@ public:
 
     };
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         FMyMJGamePusherCountUpdateCpp *pRet = NULL;
         pRet = new FMyMJGamePusherCountUpdateCpp();
@@ -599,7 +602,7 @@ public:
 
     };
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override;
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override;
 
 
     virtual FString genDebugString() const override
@@ -658,7 +661,7 @@ public:
 
     };
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         FMyMJGamePusherUpdateCardsCpp *pRet = NULL;
         pRet = new FMyMJGamePusherUpdateCardsCpp();
@@ -751,21 +754,16 @@ public:
 
     };
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         MY_VERIFY(m_iIdxAttender >= 0);
-        if (eRoleType == MyMJGameRoleTypeCpp::SysKeeper || m_iIdxAttender == (uint8)eRoleType) {
 
-            FMyMJGamePusherUpdateTingCpp *pRet = NULL;
-            pRet = new FMyMJGamePusherUpdateTingCpp();
+        FMyMJGamePusherUpdateTingCpp *pRet = NULL;
+        pRet = new FMyMJGamePusherUpdateTingCpp();
 
-            *pRet = *this;
+        *pRet = *this;
 
-            return pRet;
-        }
-        else {
-            return NULL;
-        }
+        return pRet;
 
     };
 
@@ -914,7 +912,7 @@ public:
 
     };
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         FMyMJGameActionStateUpdateCpp *pRet = NULL;
         pRet = new FMyMJGameActionStateUpdateCpp();
@@ -975,16 +973,12 @@ public:
 
     };
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         FMyMJGameActionNoActCpp *pRet = NULL;
         pRet = new FMyMJGameActionNoActCpp();
 
         *pRet = *this;
-
-        if (eRoleType != MyMJGameRoleTypeCpp::SysKeeper && (uint8)eRoleType != m_iIdxAttender) {
-            pRet->m_iReserved0 &= !MyMJGameActionNoActreserved0MaskPassPaoHu;
-        }
 
         return pRet;
     };
@@ -1036,7 +1030,7 @@ public:
     virtual ~FMyMJGameActionThrowDicesCpp()
     {};
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override;
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override;
 
     virtual FString genDebugString() const override
     {
@@ -1082,7 +1076,7 @@ public:
     virtual ~FMyMJGameActionDistCardAtStartCpp()
     {};
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override;
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override;
 
     virtual FString genDebugString() const override
     {
@@ -1143,14 +1137,10 @@ public:
     virtual ~FMyMJGameActionTakeCardsCpp()
     {};
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         FMyMJGameActionTakeCardsCpp *pRet = new FMyMJGameActionTakeCardsCpp();
         *pRet = *this;
-
-        if (eRoleType != MyMJGameRoleTypeCpp::SysKeeper && (uint8)eRoleType != m_iIdxAttender) {
-            UMyMJUtilsLibrary::resetCardValueInIdValuePairs(pRet->m_aIdValuePairs);
-        }
 
         return pRet;
     };
@@ -1219,7 +1209,7 @@ public:
     virtual ~FMyMJGameActionGiveOutCardsCpp()
     {};
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         FMyMJGameActionGiveOutCardsCpp *pRet = new FMyMJGameActionGiveOutCardsCpp();
         *pRet = *this;
@@ -1315,7 +1305,7 @@ public:
     virtual ~FMyMJGameActionWeaveCpp()
     {};
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         FMyMJGameActionWeaveCpp *pRet = new FMyMJGameActionWeaveCpp();
         *pRet = *this;
@@ -1397,7 +1387,7 @@ public:
     virtual ~FMyMJGameActionHuCpp()
     {};
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         FMyMJGameActionHuCpp *pRet = new FMyMJGameActionHuCpp();
         *pRet = *this;
@@ -1466,7 +1456,7 @@ public:
     virtual ~FMyMJGameActionHuBornLocalCSCpp()
     {};
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         FMyMJGameActionHuBornLocalCSCpp *pRet = NULL;
         pRet = new FMyMJGameActionHuBornLocalCSCpp();
@@ -1530,7 +1520,7 @@ public:
     virtual ~FMyMJGameActionZhaNiaoLocalCSCpp()
     {};
 
-    virtual FMyMJGamePusherBaseCpp* cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const override
+    virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
         FMyMJGameActionZhaNiaoLocalCSCpp *pRet = NULL;
         pRet = new FMyMJGameActionZhaNiaoLocalCSCpp();

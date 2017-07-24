@@ -226,7 +226,7 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
     int32 iGameId, iPusherIdLast;
     getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
 
-    TSharedPtr<FMyMJGamePusherBaseCpp> pPusherShared = m_pPusherIO->tryPullPusher(iGameId, iPusherIdLast + 1);
+    TSharedPtr<FMyMJGamePusherBaseCpp> pPusherShared = m_pPusherIOFull->tryPullPusherFromLocal();
 
 
     while (pPusherShared.IsValid()) {
@@ -236,7 +236,7 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
         makeProgressByPusher(pPusherShared.Get());
 
         getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
-        pPusherShared = m_pPusherIO->tryPullPusher(iGameId, iPusherIdLast + 1);
+        pPusherShared = m_pPusherIOFull->tryPullPusherFromLocal();
     }
 
     return bRet;
@@ -249,7 +249,7 @@ bool FMyMJGameCoreCpp::findAndHandleCmd()
     }
 
     MY_VERIFY(m_pCmdIO.IsValid());
-    MY_VERIFY(m_pPusherIO.IsValid());
+    MY_VERIFY(m_pPusherIOFull.IsValid());
     bool bNewCmdGot = false;
 
 

@@ -62,15 +62,11 @@ public:
 
     void reset() {
         FMyMJGameCmdBaseCpp *pCmd;
-        FMyMJGamePusherBaseCpp *pPusher;
         while (m_cCmdInputQueue.Dequeue(pCmd)) {
             delete(pCmd);
         }
         while (m_cCmdOutputQueue.Dequeue(pCmd)) {
             delete(pCmd);
-        }
-        while (m_cPusherOutputQueue.Dequeue(pPusher)) {
-            delete(pPusher);
         }
 
     };
@@ -85,26 +81,12 @@ public:
         return m_cCmdOutputQueue;
     };
 
-    inline TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>& getPusherOutputQueue()
-    {
-        return m_cPusherOutputQueue;
-    };
-
-    /*
-    inline FMyMJGamePusherPointersCpp& getPusherBuffer()
-    {
-        return m_cPusherBuffer;
-    };
-    */
-
 protected:
 
 
     //foloowing is the bridges, the model all like : produce£º allocate on heap, prducer: take ownership
     TQueue<FMyMJGameCmdBaseCpp *, EQueueMode::Spsc> m_cCmdInputQueue;
     TQueue<FMyMJGameCmdBaseCpp *, EQueueMode::Spsc> m_cCmdOutputQueue;
-
-    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> m_cPusherOutputQueue;
 
     //FMyMJGamePusherPointersCpp m_cPusherBuffer;
 
@@ -113,7 +95,22 @@ protected:
 struct FMyMJGameIOGroupAllCpp
 {
 public:
+    FMyMJGameIOGroupAllCpp()
+    {
+
+    };
+
+    virtual ~FMyMJGameIOGroupAllCpp()
+    {
+        FMyMJGamePusherBaseCpp *pPusher = NULL;
+        while (m_cPusherQueue.Dequeue(pPusher)) {
+            delete(pPusher);
+        }
+    };
+
     FMyMJGameIOGroupCpp m_aGroups[(uint8)MyMJGameRoleTypeCpp::Max];
+
+    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> m_cPusherQueue;
 };
 
 
@@ -178,7 +175,7 @@ class FMyMJGameCoreBaseCpp
 public:
     FMyMJGameCoreBaseCpp()
     {
-        m_pPusherIO = NULL;
+        m_pPusherIOFull = NULL;
         m_pCmdIO = NULL;
         //m_pExtIOGroupAll = NULL;
     };
@@ -219,7 +216,7 @@ protected:
 
     //Basic facilities
     TSharedPtr<FMyMJGameAttenderCpp> m_aAttendersAll[4]; //always 4, note this should be a fixed structure, means don't change it after init()
-    TSharedPtr<FMyMJGamePusherIOComponentCpp>  m_pPusherIO; //IO resource orgnize for pusher
+    TSharedPtr<FMyMJGamePusherIOComponentFullCpp>  m_pPusherIOFull; //only used in full mode
     TSharedPtr<FMyMJGameCmdIOComponentCpp> m_pCmdIO;
 
     //FMyMJGameIOGroupAllCpp *m_pExtIOGroupAll; //This is the fundermental IO resource, for simple, directly use it to process cmd
@@ -308,6 +305,10 @@ public:
         return m_cUntakenSlotInfo;
     };
 
+    const TArray<FMyIdCollectionCpp>& getUntakenCardStacksRef() const
+    {
+        return m_aUntakenCardStacks;
+    }
 
     inline TSharedPtr<FMyMJGameCfgCpp> getpGameCfg()
     {
@@ -359,24 +360,22 @@ public:
         MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Full);
         initBase(pSelf);
 
-        TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *ppPusherOutputQueues[(uint8)MyMJGameRoleTypeCpp::Max];
         TQueue<FMyMJGameCmdBaseCpp *, EQueueMode::Spsc> *ppCmdInputQueues[(uint8)MyMJGameRoleTypeCpp::Max], *ppCmdOutputQueues[(uint8)MyMJGameRoleTypeCpp::Max];
 
         for (int32 i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
-            ppPusherOutputQueues[i] = &pIOGroupAll->m_aGroups[i].getPusherOutputQueue();
             ppCmdInputQueues[i] = &pIOGroupAll->m_aGroups[i].getCmdInputQueue();
             ppCmdOutputQueues[i] = &pIOGroupAll->m_aGroups[i].getCmdOutputQueue();
         }
 
-        TSharedPtr<FMyMJGamePusherIOComponentFullCpp> pPusherIO = MakeShareable(new FMyMJGamePusherIOComponentFullCpp());
+        TSharedPtr<FMyMJGamePusherIOComponentFullCpp>  pPusherIOFull = MakeShareable<FMyMJGamePusherIOComponentFullCpp>(new FMyMJGamePusherIOComponentFullCpp());
 
         //setup pusher output path, which will link to @ppPusherOutputQueues as remote outputs
-        pPusherIO->init(ppPusherOutputQueues, (uint8)MyMJGameRoleTypeCpp::Max);
-        m_pPusherIO = pPusherIO;
+        pPusherIOFull->init(&pIOGroupAll->m_cPusherQueue);
+        m_pPusherIOFull = pPusherIOFull;
 
 
         m_pActionCollector = MakeShareable(new FMyMJGameActionCollectorCpp(pSelf));
-        m_pActionCollector->init(pPusherIO);
+        m_pActionCollector->init(pPusherIOFull);
 
         //setup cmd in and out path
         m_pCmdIO = MakeShareable(new FMyMJGameCmdIOComponentCpp());

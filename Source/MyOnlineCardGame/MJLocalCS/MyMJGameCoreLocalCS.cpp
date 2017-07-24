@@ -139,7 +139,7 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
             }
             pPusherReset->init(iGameId, pRS, pCmdRestartGame->m_cGameCfg, pCmdRestartGame->m_cGameRunData, pCmdRestartGame->m_iAttenderRandomSelectMask);
 
-            m_pPusherIO->EnqueuePusher(*pPusherReset);
+            m_pPusherIOFull->EnqueuePusher(*pPusherReset);
 
             pCmd->m_eRespErrorCode = MyMJGameErrorCodeCpp::None;
         }

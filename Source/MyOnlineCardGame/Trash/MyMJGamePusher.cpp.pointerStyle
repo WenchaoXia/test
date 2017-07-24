@@ -12,7 +12,7 @@ FMyMJGamePusherPointersCpp::copyDeepWithRoleType(const FMyMJGamePusherPointersCp
     //MY_VERIFY(l > 0);
 
     for (int i = 0; i < l; i++) {
-        FMyMJGamePusherBaseCpp *pNewRaw = pOther->m_aPushers[i]->cloneDeepWithRoleType(eRoleType);
+        FMyMJGamePusherBaseCpp *pNewRaw = pOther->m_aPushers[i]->cloneDeep(eRoleType);
         if (pNewRaw) {
             this->m_aPushers.Emplace(pNewRaw);
         }
@@ -22,7 +22,7 @@ FMyMJGamePusherPointersCpp::copyDeepWithRoleType(const FMyMJGamePusherPointersCp
     l = pOther->m_aPushersSharedPtr.Num();;
     //MY_VERIFY(l > 0);
     for (int i = 0; i < l; i++) {
-        FMyMJGamePusherBaseCpp *pNewRaw = pOther->m_aPushersSharedPtr[i]->cloneDeepWithRoleType(eRoleType);
+        FMyMJGamePusherBaseCpp *pNewRaw = pOther->m_aPushersSharedPtr[i]->cloneDeep(eRoleType);
         if (pNewRaw) {
             this->m_aPushersSharedPtr.Emplace(pNewRaw);
         }
@@ -33,7 +33,7 @@ FMyMJGamePusherPointersCpp::copyDeepWithRoleType(const FMyMJGamePusherPointersCp
 }
 
 FMyMJGamePusherBaseCpp*
-FMyMJGamePusherFillInActionChoicesCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+FMyMJGamePusherFillInActionChoicesCpp::cloneDeep() const
 {
     //First, attender only knows himself's choices
     FMyMJGamePusherFillInActionChoicesCpp *pRet = NULL;
@@ -56,7 +56,7 @@ FMyMJGamePusherFillInActionChoicesCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp
 }
 
 FMyMJGamePusherBaseCpp*
-FMyMJGamePusherMadeChoiceNotifyCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+FMyMJGamePusherMadeChoiceNotifyCpp::cloneDeep() const
 {
     FMyMJGamePusherMadeChoiceNotifyCpp *pRet = NULL;
     if (eRoleType == MyMJGameRoleTypeCpp::SysKeeper) {
@@ -76,7 +76,7 @@ FMyMJGamePusherMadeChoiceNotifyCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eR
 }
 
 FMyMJGamePusherBaseCpp* 
-FMyMJGamePusherResetGameCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+FMyMJGamePusherResetGameCpp::cloneDeep() const
 {
     FMyMJGamePusherResetGameCpp *pRet = new FMyMJGamePusherResetGameCpp();
     *pRet = *this;
@@ -175,7 +175,7 @@ FMyMJGamePusherResetGameCpp::init(FRandomStream *pRandomStream, FMyMJGameCfgCpp 
 }
 
 FMyMJGamePusherBaseCpp*
-FMyMJGameActionThrowDicesCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+FMyMJGameActionThrowDicesCpp::cloneDeep() const
 {
     FMyMJGameActionThrowDicesCpp *pRet = NULL;
     pRet = new FMyMJGameActionThrowDicesCpp();
@@ -208,7 +208,7 @@ MyMJGameActionThrowDicesSubTypeCpp FMyMJGameActionThrowDicesCpp::getSubType() co
 }
 
 FMyMJGamePusherBaseCpp*
-FMyMJGameActionDistCardAtStartCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+FMyMJGameActionDistCardAtStartCpp::cloneDeep() const
 {
     FMyMJGameActionDistCardAtStartCpp *pRet = NULL;
     pRet = new FMyMJGameActionDistCardAtStartCpp();

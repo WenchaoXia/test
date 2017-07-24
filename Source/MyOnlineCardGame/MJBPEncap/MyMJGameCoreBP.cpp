@@ -24,6 +24,24 @@
 //#include "Misc/ITransaction.h"
 //#include "Engine/Level.h"
 
+void UMyMJPusherBufferCpp::trySyncDataFromCoreFull()
+{
+    MY_VERIFY(m_pConnectedCoreFull);
+    if (!IsValid(m_pConnectedCoreFull)) {
+        return;
+    }
+    
+    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>* pPusherQueue = m_pConnectedCoreFull->getPusherQueue();
+    MY_VERIFY(pPusherQueue);
+
+    FMyMJGamePusherPointersCpp cPusherSegment;
+    if (cPusherSegment.helperFillAsSegmentFromQueue(*pPusherQueue)) {
+        m_cPusherBuffer.helperTryFillDataFromSegment(-1, cPusherSegment, true);
+        m_cPusherUpdatedMultcastDelegate.Broadcast();
+    }
+
+};
+
 void UMyMJCoreFullCpp::testFullMode()
 {
 
@@ -105,7 +123,7 @@ bool UMyMJCoreFullCpp::startGame()
     
     if (IsValid(world)) {
         world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
-        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &UMyMJCoreFullCpp::loop, ((float)My_MJ_GAME_IO_LOOP_TIME_MS) / 1000, true);
+        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &UMyMJCoreFullCpp::loop, ((float)My_MJ_GAME_IO_LOOP_TIME_MS) / (float)1000, true);
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid!"));
@@ -122,19 +140,29 @@ void UMyMJCoreFullCpp::loop()
         return;
     }
 
+    MY_VERIFY(m_pPusherBuffer);
+    if (IsValid(m_pPusherBuffer)) {
+        m_pPusherBuffer->trySyncDataFromCoreFull();
+    }
+
     int32 l = m_apNextNodes.Num();
     if (l != (uint8)MyMJGameRoleTypeCpp::Max) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("not enough nodes next were set, only %d got!"), l);
         return;
     }
 
+    FMyMJGameCmdPointersCpp cCmdSegment;
     for (int32 i = 0; i < l; i++) {
         FMyMJGameIOGroupCpp *pGroup = &m_pCoreFullWithThread->getIOGourpAll().m_aGroups[i];
         UMyMJIONodeCpp *pNode = m_apNextNodes[i];
         MY_VERIFY(pNode->m_eRoleType == (MyMJGameRoleTypeCpp)i);
         //pNode->pushPushers(pGroup);
         if (IsValid(pNode)) {
-            pNode->pullPushersAndCmdRespFromPrevCoreVerified(pGroup);
+
+            bool bHaveNew = cCmdSegment.helperFillAsSegmentFromIOGroup(pGroup);
+            if (bHaveNew) {
+                pNode->onCmdUpdated(cCmdSegment);
+            }
         }
     }
 
@@ -142,6 +170,7 @@ void UMyMJCoreFullCpp::loop()
 
 void UMyMJCoreFullCpp::clearUp()
 {
+    m_pPusherBuffer = NULL;
     m_apNextNodes.Reset();
     if (m_pCoreFullWithThread.IsValid()) {
         m_pCoreFullWithThread->Stop();
@@ -159,6 +188,9 @@ void UMyMJCoreFullCpp::PostInitProperties()
 {
     Super::PostInitProperties();
 
+    m_pPusherBuffer = NewObject<UMyMJPusherBufferCpp>(this);
+    m_pPusherBuffer->m_pConnectedCoreFull = this;
+
     m_apNextNodes.Reset();
 
     for (int32 i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
@@ -169,51 +201,19 @@ void UMyMJCoreFullCpp::PostInitProperties()
     }
 }
 
-//It seems timer automaticallly check object's validation, but for safe I still stop it manually here
-//void UMyMJCoreFullCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
-//{
-//    Super::EndPlay(EndPlayReason);
-//    clearUp();
-//}
 
-
-void UMyMJIONodeCpp::pullPushersAndCmdRespFromPrevCoreVerified(FMyMJGameIOGroupCpp *pGroup)
-{
-    bool bHaveNew = false;
-    //MY_VERIFY(pPrevCoreFull);
-
-    //if (IsValid(pPrevCoreFull)) {
-        MY_VERIFY((uint8)m_eRoleType >= 0 && (uint8)m_eRoleType < (uint8)MyMJGameRoleTypeCpp::Max);
-        //FMyMJGameIOGroupCpp *pGroup = &(pPrevCoreFull->getpIOGourpAll()->m_aGroups[(uint8)m_eRoleType]);
-
-        FMyMJGamePusherPointersCpp cPusherSegment;
-
-        bHaveNew = cPusherSegment.helperFillAsSegmentFromIOGroup(pGroup);
-        if (bHaveNew) {
-            m_cPusherBuffer.helperTryFillDataFromSegment(-1, cPusherSegment, true);
-            onPusherUpdated(-1, cPusherSegment);
-        }
-
-        FMyMJGameCmdPointersCpp cCmdSegment;
-        bHaveNew = cCmdSegment.helperFillAsSegmentFromIOGroup(pGroup);
-        if (bHaveNew) {
-            onCmdUpdated(cCmdSegment);
-        }
-    //}
-
-}
 
 FMyMJGamePusherBaseCpp* AMyMJCoreMirrorCpp::tryCheckAndGetNextPusher()
 {
     int32 iGameId = -1, iPusherIdLast = -1;
 
-    if (IsValid(m_pIONodeAsSys)) {
+    if (IsValid(m_pPusherBuffer)) {
 
         if (!m_bHaltForGraphic) {
             if (m_pCoreMirror.IsValid()) {
                 m_pCoreMirror->getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
             }
-            return m_pIONodeAsSys->m_cPusherBuffer.helperTryPullPusher(iGameId, iPusherIdLast + 1).Get();
+            return m_pPusherBuffer->m_cPusherBuffer.helperTryPullPusher(iGameId, iPusherIdLast + 1).Get();
         }
         else {
         }
@@ -294,7 +294,7 @@ void AMyMJCoreMirrorCpp::loop()
             //3.2 set other 
 
 
-            //4th, try notify for graphic, and this function may update blue print state
+            //4th, try notify for graphic, and this function may update blue print state before call blueprint
             notifyBluePrintPusherApplied(pPusher);
         }
         else {
@@ -321,6 +321,11 @@ void AMyMJCoreMirrorCpp::notifyBluePrintPusherApplied(FMyMJGamePusherBaseCpp *pP
         FMyMJGamePusherMadeChoiceNotifyCpp *pPusherMadeChoiceNotify = StaticCast<FMyMJGamePusherMadeChoiceNotifyCpp *>(pPusher);
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherResetGame) {
+
+        //reflect data
+        m_cCoreDataDirect.m_iCardNumCanBeTakenNormally = m_pCoreMirror->getUntakenSlotInfoRef().getCardNumCanBeTakenNormally();
+        m_cCoreDataDirect.m_aUntakenCardStacks = m_pCoreMirror->getUntakenCardStacksRef();
+        m_cCoreDataDirect.m_cGameCfg = *m_pCoreMirror->getpGameCfg();
         FMyMJGamePusherResetGameCpp *pPusherResetGame = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher);
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherUpdateTing) {

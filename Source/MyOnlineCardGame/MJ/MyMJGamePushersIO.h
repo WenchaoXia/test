@@ -17,355 +17,93 @@
 
 #include "MyMJGamePusher.h"
 
-#include "MyMJGamePushersIO.generated.h"
+//#include "MyMJGamePushersIO.generated.h"
 
 
-//contains 1 local queue, 1 remote queue, and all can only have one consumer
-USTRUCT()
-struct FMyMJGamePushersIOCpp
+//both producer and consumer, consume itself, and produce to external unit
+class FMyMJGamePusherIOComponentFullCpp
 {
-    GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGamePushersIOCpp()
+    FMyMJGamePusherIOComponentFullCpp()
     {
-        m_pQueueLocal = NULL;
         m_pQueueRemote = NULL;
-        m_eDataRoleType = MyMJGameRoleTypeCpp::Max;
+        m_iEnqueuePusherCount = 0;
     };
 
-    virtual ~FMyMJGamePushersIOCpp()
+    virtual ~FMyMJGamePusherIOComponentFullCpp()
     {
         reset();
-        if (m_pQueueLocal) {
-            delete(m_pQueueLocal);
-            m_pQueueLocal = NULL;
-        }
-
-        if (m_pQueueRemote) {
-            //not touching it
-            m_pQueueRemote = NULL;
-        }
+        m_pQueueRemote = NULL;
     };
 
     void reset()
     {
+        m_iEnqueuePusherCount = 0;
+
         //clear what it owns, here it is the local queue that can work in produce mode
-        if (m_pQueueLocal) {
-            FMyMJGamePusherBaseCpp *pRet = NULL;
-            while (m_pQueueLocal->Dequeue(pRet)) {
-                delete(pRet);
-            };
-        }
+        FMyMJGamePusherBaseCpp *pRet = NULL;
+        while (m_cQueueLocal.Dequeue(pRet)) {
+            delete(pRet);
+        };
+
     };
 
-    void init(MyMJGameRoleTypeCpp eDataType, bool bEnableLocal, TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *pQueueRemoteThread)
+    void init(TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *pQueueRemote)
     {
-        m_eDataRoleType = eDataType;
+        reset();
+        m_pQueueRemote = pQueueRemote;
 
-        if (bEnableLocal) {
-            m_pQueueLocal = new TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>();
-        }
-
-        if (pQueueRemoteThread) {
-            m_pQueueRemote = pQueueRemoteThread;
-        }
     };
 
-    //Can only be called in local thread, it copies data and enqueue
-    inline
-    void Enqueue(const FMyMJGamePusherBaseCpp &pusher)
+    TSharedPtr<FMyMJGamePusherBaseCpp> tryPullPusherFromLocal();
+
+    void EnqueuePusher(FMyMJGamePusherBaseCpp &pusher)
     {
+        if (pusher.getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
+            m_iEnqueuePusherCount = 0;
+        }
+
+        pusher.m_iId = m_iEnqueuePusherCount;
+
         FMyMJGamePusherBaseCpp *pNew;
-        if (m_pQueueLocal) {
-            pNew = pusher.cloneDeepWithRoleType(m_eDataRoleType);
+        {
+            pNew = pusher.cloneDeep();
             if (pNew) {
-                m_pQueueLocal->Enqueue(pNew);
+                m_cQueueLocal.Enqueue(pNew);
             }
             else {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone, pusher type %s, roleType %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRoleTypeCpp"), (uint8)m_eDataRoleType));
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone, pusher type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()));
                 MY_VERIFY(false);
             }
         }
 
         if (m_pQueueRemote) {
-            pNew = pusher.cloneDeepWithRoleType(m_eDataRoleType);
+            pNew = pusher.cloneDeep();
             if (pNew) {
                 m_pQueueRemote->Enqueue(pNew);
             }
             else {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone, pusher type %s, roleType %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRoleTypeCpp"), (uint8)m_eDataRoleType));
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone, pusher type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()));
                 MY_VERIFY(false);
             }
         }
 
+        m_iEnqueuePusherCount++;
     };
-
-    inline
-    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>* getQueueLocal()
-    {
-        return m_pQueueLocal;
-    };
-
 
 protected:
 
-    MyMJGameRoleTypeCpp m_eDataRoleType;
-
     //owned by this class, can only be used in one thread, so it is safe to clear by either producer or consumer
-    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *m_pQueueLocal;
+    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> m_cQueueLocal;
 
     //owned by other, never managed by this class
     //Note, only consume thread can clear it, and this is always created by main thread, destroy by main thread. destroy only happen after sub thread stopped/killed, after then, parent thread can clear() also
     TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *m_pQueueRemote;
 
-};
-
-
-USTRUCT()
-struct FMyMJGamePushersIOOutputsCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyMJGamePushersIOOutputsCpp()
-    {
-
-    };
-
-    virtual ~FMyMJGamePushersIOOutputsCpp()
-    {
-
-    };
-
-    void reset()
-    {
-        int32 l = m_aIOs.Num();
-        for (int32 i = 0; i < l; i++) {
-            m_aIOs[i].reset();
-        }
-    };
-
-    void init(TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> **ppRemoteQueues, int32 iRemoteQueuesCount)
-    {
-        m_aIOs.Empty();
-
-        for (uint8 i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
-            int32 idx = m_aIOs.Emplace();
-            MY_VERIFY(i == idx);
-            FMyMJGamePushersIOCpp &IO = m_aIOs[i];
-
-            MyMJGameRoleTypeCpp eDataType = (MyMJGameRoleTypeCpp)i;
-            bool bEnableLocal = false;
-            if (eDataType == MyMJGameRoleTypeCpp::SysKeeper) {
-                bEnableLocal = true;
-            }
-
-            TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *pRemoteQueue = NULL;
-            if (i < iRemoteQueuesCount) {
-                pRemoteQueue = ppRemoteQueues[i];
-            }
-
-            IO.init(eDataType, bEnableLocal, pRemoteQueue);
-        }
-
-    };
-
-    inline
-    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>* getSysKeeperQueueLocal()
-    {
-        TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *pRet = m_aIOs[(uint8)MyMJGameRoleTypeCpp::SysKeeper].getQueueLocal();
-        MY_VERIFY(pRet != NULL);
-        return pRet;
-    };
-
-    inline
-    void Enqueue(const FMyMJGamePusherBaseCpp &pusher)
-    {
-        int l = m_aIOs.Num();
-        for (int32 i = 0; i < l; i++) {
-            m_aIOs[i].Enqueue(pusher);
-        }
-    };
-
-protected:
-    TArray<FMyMJGamePushersIOCpp> m_aIOs;
-};
-
-//one input queue, multiple output queue, which will be part of the core
-class FMyMJGamePusherIOComponentCpp
-{
-public:
-    FMyMJGamePusherIOComponentCpp()
-    {
-
-    };
-
-    virtual ~FMyMJGamePusherIOComponentCpp()
-    {
-
-    };
-
-    //this may delete pushers, so don't call it when game reset
-    //virtual void reset() = NULL;
-
-    //warn: when caller destruct the shared_ptr, it is possible make data deleted, so keep one sharedPtr while using it!
-    virtual TSharedPtr<FMyMJGamePusherBaseCpp> tryPullPusher(int32 iGameId, int32 iPusherId) = NULL;
-
-    virtual void EnqueuePusher(FMyMJGamePusherBaseCpp &pusher) = NULL;
-};
-
-//both producer and consumer, consume itself, and produce to external unit
-class FMyMJGamePusherIOComponentFullCpp : public FMyMJGamePusherIOComponentCpp
-{
-
-public:
-    FMyMJGamePusherIOComponentFullCpp() : FMyMJGamePusherIOComponentCpp()
-    {
-        m_pInputQueueBridged = NULL;
-        m_iPusherCount = 0;
-    };
-
-    virtual ~FMyMJGamePusherIOComponentFullCpp()
-    {
-
-    };
-
-    void init(TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> **ppRemoteQueues, int32 iRemoteQueuesCount)
-    {
-        m_cOutputs.init(ppRemoteQueues, iRemoteQueuesCount);
-        m_pInputQueueBridged = m_cOutputs.getSysKeeperQueueLocal();
-
-    };
-
-    //virtual void reset() override
-    //{
-       //m_cOutputs.reset();
-       // m_iPusherCount = 0;
-    //};
-
-    virtual TSharedPtr<FMyMJGamePusherBaseCpp> tryPullPusher(int32 iGameId, int32 iPusherId) override;
-
-    virtual void EnqueuePusher(FMyMJGamePusherBaseCpp &pusher) override
-    {
-        if (pusher.getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
-            m_iPusherCount = 0;
-        }
-
-        pusher.m_iId = m_iPusherCount;
-        m_cOutputs.Enqueue(pusher);
-
-        m_iPusherCount++;
-    };
-
-protected:
-
-    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>* m_pInputQueueBridged; //Don't create it, instead point it to another created one
-    FMyMJGamePushersIOOutputsCpp m_cOutputs;
-
-    int32 m_iPusherCount;
+    int32 m_iEnqueuePusherCount;
 
 };
-
-/*
-typedef class FMyMJGamePusherIOComponentConsumerCpp FMyMJGamePusherIOComponentConsumerCpp;
-
-//for safe we should build a link class, but for sumple we simpley do all the recusive check only in buffer class
-class FMyMJGamePusherIOBuffer
-{
-public:
-    FMyMJGamePusherIOBuffer()
-    {
-        m_pProducerPrev = NULL;
-        m_pConsumerNext = NULL;
-    };
-
-    virtual ~FMyMJGamePusherIOBuffer()
-    {
-        MY_VERIFY(m_pProducerPrev == NULL);
-        cleanUp();
-    };
-
-    void cleanUp()
-    {
-        checkAndChangeProducerPrev(NULL);
-        checkAndChangeConsumerNext(NULL);
-    };
-
-    void checkAndChangeProducerPrev(FMyMJGameIOGroupCpp *pProducerPrev);
-
-    void checkAndChangeConsumerNext(FMyMJGamePusherIOComponentConsumerCpp *pConsumerNext);
-
-    void trySyncBufferFromPrev();
-
-    TSharedPtr<FMyMJGamePusherBaseCpp> tryPullPusherFromBuffer(int32 iGameId, int32 iPusherId);
-
-protected:
-
-    FMyMJGameIOGroupCpp *m_pProducerPrev;
-    FMyMJGamePusherIOComponentConsumerCpp *m_pConsumerNext;
-
-
-    //following is the buffer
-    TArray<TSharedPtr<FMyMJGamePusherBaseCpp>> m_aPusherBuffer;
-};
-
-//used to pull data from external source, may across thread
-class FMyMJGamePusherIOComponentConsumerCpp : public FMyMJGamePusherIOComponentCpp
-{
-
-public:
-    FMyMJGamePusherIOComponentConsumerCpp() : FMyMJGamePusherIOComponentCpp()
-    {
-        m_pProducerPrev = NULL;
-    };
-
-    virtual ~FMyMJGamePusherIOComponentConsumerCpp()
-    {
-
-    };
-
-    //virtual void reset() override
-    //{
-    //
-    //};
-
-    virtual TSharedPtr<FMyMJGamePusherBaseCpp> tryPullPusher(int32 iGameId, int32 iPusherId) override
-    {
-        if (m_pProducerPrev == NULL) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("tryPullPusher(), m_pProducerPrev is NULL!"));
-            return NULL;
-        }
-        m_pProducerPrev->trySyncBufferFromPrev();
-        return m_pProducerPrev->tryPullPusherFromBuffer(iGameId, iPusherId);
-    };
-
-    virtual void EnqueuePusher(FMyMJGamePusherBaseCpp &pusher) override
-    {
-        MY_VERIFY(false);
-    };
-
-
-
-
-protected:
-
-    friend void FMyMJGamePusherIOBuffer::checkAndChangeConsumerNext(FMyMJGamePusherIOComponentConsumerCpp *pConsumerNext);
-
-    void changeProducerPrev(FMyMJGamePusherIOBuffer *pProducerPrev)
-    {
-        if (m_pProducerPrev == pProducerPrev) {
-            return;
-        }
-
-        m_pProducerPrev = pProducerPrev;
-    };
-
-
-    FMyMJGamePusherIOBuffer* m_pProducerPrev;
-    //TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>* m_pInputQueue;
-};
-*/
 
 #define ActionCollectOK 0
 #define ActionCollectEmpty 1

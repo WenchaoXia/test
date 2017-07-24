@@ -4,7 +4,7 @@
 #include "MyMJGameCore.h"
 
 void
-FMyMJGamePusherPointersCpp::copyDeepWithRoleType(const FMyMJGamePusherPointersCpp *pOther, MyMJGameRoleTypeCpp eRoleType)
+FMyMJGamePusherPointersCpp::copyDeep(const FMyMJGamePusherPointersCpp *pOther)
 {
     clear();
 
@@ -12,7 +12,7 @@ FMyMJGamePusherPointersCpp::copyDeepWithRoleType(const FMyMJGamePusherPointersCp
     //MY_VERIFY(l > 0);
 
     for (int i = 0; i < l; i++) {
-        FMyMJGamePusherBaseCpp *pNewRaw = pOther->m_aPushers[i]->cloneDeepWithRoleType(eRoleType);
+        FMyMJGamePusherBaseCpp *pNewRaw = pOther->m_aPushers[i]->cloneDeep();
         if (pNewRaw) {
             this->m_aPushers.Emplace(pNewRaw);
         }
@@ -22,7 +22,7 @@ FMyMJGamePusherPointersCpp::copyDeepWithRoleType(const FMyMJGamePusherPointersCp
     l = pOther->m_aPushersSharedPtr.Num();;
     //MY_VERIFY(l > 0);
     for (int i = 0; i < l; i++) {
-        FMyMJGamePusherBaseCpp *pNewRaw = pOther->m_aPushersSharedPtr[i]->cloneDeepWithRoleType(eRoleType);
+        FMyMJGamePusherBaseCpp *pNewRaw = pOther->m_aPushersSharedPtr[i]->cloneDeep();
         if (pNewRaw) {
             this->m_aPushersSharedPtr.Emplace(pNewRaw);
         }
@@ -192,12 +192,11 @@ bool FMyMJGamePusherPointersCpp::copyShallowAndLogicOptimized(const FMyMJGamePus
     return bRet;
 }
 
-bool FMyMJGamePusherPointersCpp::helperFillAsSegmentFromIOGroup(FMyMJGameIOGroupCpp *IOGroup)
+bool FMyMJGamePusherPointersCpp::helperFillAsSegmentFromQueue(TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>& pusherQueue)
 {
     clear();
     MY_VERIFY(canProduceInLocalThreadSafely());
 
-    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>& pusherQueue = IOGroup->getPusherOutputQueue();
     FMyMJGamePusherBaseCpp* pPusherGot = NULL;
 
     bool bRet = false;
@@ -664,43 +663,30 @@ bool FMyMJGamePusherPointersCpp::ImportTextItem(const TCHAR*& Buffer, int32 Port
 
 
 FMyMJGamePusherBaseCpp*
-FMyMJGamePusherFillInActionChoicesCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+FMyMJGamePusherFillInActionChoicesCpp::cloneDeep() const
 {
     //First, attender only knows himself's choices
     FMyMJGamePusherFillInActionChoicesCpp *pRet = new FMyMJGamePusherFillInActionChoicesCpp();
-    bool bFillIn = false;
-    if (eRoleType == MyMJGameRoleTypeCpp::SysKeeper) {
-        bFillIn = true;
-    }
-    else if ((uint8)eRoleType < 4) {
-        if (m_iIdxAttender == (uint8)eRoleType) {
-            bFillIn = true;
-        }
-    }
+
+
 
     *StaticCast<FMyMJGamePusherBaseCpp *>(pRet) = *StaticCast<const FMyMJGamePusherBaseCpp *>(this);
     pRet->m_iActionGroupId = m_iActionGroupId;
     pRet->m_iIdxAttender = m_iIdxAttender;
 
-    if (bFillIn) {
-        pRet->m_cActionChoices.copyDeepWithRoleType(&m_cActionChoices, MyMJGameRoleTypeCpp::SysKeeper); //If datastream contains choice info(attender matches), always keep max info
-    }
+
+    pRet->m_cActionChoices.copyDeep(&m_cActionChoices); //If datastream contains choice info(attender matches), always keep max info
+
 
     return pRet;
 }
 
 FMyMJGamePusherBaseCpp*
-FMyMJGamePusherMadeChoiceNotifyCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+FMyMJGamePusherMadeChoiceNotifyCpp::cloneDeep() const
 {
     FMyMJGamePusherMadeChoiceNotifyCpp *pRet = NULL;
-    if (eRoleType == MyMJGameRoleTypeCpp::SysKeeper) {
-        pRet = new FMyMJGamePusherMadeChoiceNotifyCpp();
-    }
-    else if ((uint8)eRoleType < 4) {
-        if (m_iIdxAttender == (uint8)eRoleType) {
-            pRet = new FMyMJGamePusherMadeChoiceNotifyCpp();
-        }
-    }
+ 
+    pRet = new FMyMJGamePusherMadeChoiceNotifyCpp();
 
     if (pRet) {
         *pRet = *this;
@@ -710,19 +696,10 @@ FMyMJGamePusherMadeChoiceNotifyCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eR
 }
 
 FMyMJGamePusherBaseCpp* 
-FMyMJGamePusherResetGameCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+FMyMJGamePusherResetGameCpp::cloneDeep() const
 {
     FMyMJGamePusherResetGameCpp *pRet = new FMyMJGamePusherResetGameCpp();
     *pRet = *this;
-
-    if (eRoleType != MyMJGameRoleTypeCpp::SysKeeper) {
-        int l = pRet->m_aShuffledIdValues.Num();
-        for (int i = 0; i < l; i++) {
-            pRet->m_aShuffledIdValues[i].m_iValue = 0; //0 means unknown
-        }
-    }
-
-    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyMJGamePusherResetGameCpp clones with roleType %d"), (uint8)eRoleType);
 
     return pRet;
 }
@@ -817,7 +794,7 @@ FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream *pRandomStream, F
 }
 
 FMyMJGamePusherBaseCpp*
-FMyMJGameActionThrowDicesCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+FMyMJGameActionThrowDicesCpp::cloneDeep() const
 {
     FMyMJGameActionThrowDicesCpp *pRet = NULL;
     pRet = new FMyMJGameActionThrowDicesCpp();
@@ -850,26 +827,12 @@ MyMJGameActionThrowDicesSubTypeCpp FMyMJGameActionThrowDicesCpp::getSubType() co
 }
 
 FMyMJGamePusherBaseCpp*
-FMyMJGameActionDistCardAtStartCpp::cloneDeepWithRoleType(MyMJGameRoleTypeCpp eRoleType) const
+FMyMJGameActionDistCardAtStartCpp::cloneDeep() const
 {
     FMyMJGameActionDistCardAtStartCpp *pRet = NULL;
     pRet = new FMyMJGameActionDistCardAtStartCpp();
 
     *pRet = *this;
-
-    if (eRoleType == MyMJGameRoleTypeCpp::SysKeeper) {
-
-    }
-    else if ((uint8)eRoleType < 4 && m_iIdxAttender == (uint8)eRoleType) {
-        //himself's data
-    }
-    else {
-        //erase the value data
-        int32 l = pRet->m_aIdValues.Num();
-        for (int32 i = 0; i < l; i++) {
-            pRet->m_aIdValues[i].m_iValue = 0;
-        }
-    }
 
     return pRet;
 }

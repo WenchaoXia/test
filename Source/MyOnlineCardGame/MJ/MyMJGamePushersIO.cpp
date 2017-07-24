@@ -5,14 +5,13 @@
 #include "MyMJGameCore.h"
 
 
-TSharedPtr<FMyMJGamePusherBaseCpp> FMyMJGamePusherIOComponentFullCpp::tryPullPusher(int32 iGameId, int32 iPusherId)
+TSharedPtr<FMyMJGamePusherBaseCpp> FMyMJGamePusherIOComponentFullCpp::tryPullPusherFromLocal()
 {
-    //TSharedPtr<FMyMJGamePusherBaseCpp> pRet;
-    FMyMJGamePusherBaseCpp *pTaken = NULL;
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("IOComponentFull try dequeue, empty: %d"), m_pInputQueueBridged->IsEmpty());
 
-    if (m_pInputQueueBridged->Dequeue(pTaken)) {
-        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("dequeued pusher type %d"), (uint8)pTaken->getType());
+    FMyMJGamePusherBaseCpp *pTaken = NULL;
+
+    if (m_cQueueLocal.Dequeue(pTaken)) {
+
         //Take onwership, for full mode IO Component, we directly done it here
         pTaken->onReachedConsumeThread();
         return MakeShareable<FMyMJGamePusherBaseCpp>(pTaken);
@@ -21,93 +20,8 @@ TSharedPtr<FMyMJGamePusherBaseCpp> FMyMJGamePusherIOComponentFullCpp::tryPullPus
         return NULL;
     }
 };
-/*
-void FMyMJGamePusherIOBuffer::checkAndChangeProducerPrev(FMyMJGameIOGroupCpp *pProducerPrev)
-{
-    if (m_pProducerPrev == pProducerPrev) {
-        return;
-    }
-
-    if (m_pProducerPrev) {
-        m_pProducerPrev->ChangeConsumerNext(NULL);
-    }
-
-    m_pProducerPrev = pProducerPrev;
-    if (m_pProducerPrev) {
-        m_pProducerPrev->ChangeConsumerNext(this);
-    }
-};
-
-void FMyMJGamePusherIOBuffer::checkAndChangeConsumerNext(FMyMJGamePusherIOComponentConsumerCpp *pConsumerNext)
-{
-    if (m_pConsumerNext == pConsumerNext) {
-        return;
-    }
-
-    if (m_pConsumerNext) {
-        m_pConsumerNext->changeProducerPrev(NULL);
-    }
-
-    m_pConsumerNext = pConsumerNext;
-    if (m_pConsumerNext) {
-        m_pConsumerNext->changeProducerPrev(this);
-    }
-};
 
 
-void FMyMJGamePusherIOBuffer::trySyncBufferFromPrev()
-{
-    if (m_pProducerPrev == NULL) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("trySyncBufferFromPrev(), m_pProducerPrev is NULL!"));
-        return;
-    }
-
-    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>& pusherQueue = m_pProducerPrev->getPusherOutputQueue();
-    FMyMJGamePusherBaseCpp* pPusherGot = NULL;
-
-
-    while (pusherQueue.Dequeue(pPusherGot)) {
-        MyMJGamePusherTypeCpp eType = pPusherGot->getType();
-        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("trySyncBufferFromPrev(), got type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)eType));
-        if (eType == MyMJGamePusherTypeCpp::PusherResetGame) {
-            m_aPusherBuffer.Reset();
-        }
-
-        int32 idx = m_aPusherBuffer.Emplace(pPusherGot);
-        if (idx != pPusherGot->getId()) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("trySyncBufferFromPrev(), pusher id not equal: %d, %d"), idx, pPusherGot->getId());
-            MY_VERIFY(false);
-            break;
-        }
-    }
-}
-
-
-//try to find one matching the pusherId and gameId, if no then try any new game started
-TSharedPtr<FMyMJGamePusherBaseCpp> FMyMJGamePusherIOBuffer::tryPullPusherFromBuffer(int32 iGameId, int32 iPusherId)
-{
-    MY_VERIFY(iPusherId >= 0);
-    int32 l = m_aPusherBuffer.Num();
-    if (l > 0) {
-        FMyMJGamePusherBaseCpp* pPusher0 = m_aPusherBuffer[0].Get();
-        MY_VERIFY(pPusher0->getType() == MyMJGamePusherTypeCpp::PusherResetGame);
-        FMyMJGamePusherResetGameCpp* pPusherResetGame = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher0);
-        if (iGameId == pPusherResetGame->m_iGameId) {
-            if (iPusherId < l) {
-                return m_aPusherBuffer[iPusherId];
-            }
-            else {
-                return NULL;
-            }
-        }
-        else {
-            return m_aPusherBuffer[0];
-        }
-    }
-
-    return NULL;
-}
-*/
 
 int32
 FMyMJGameActionContainorCpp::collectAction(int64 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections)
