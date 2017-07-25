@@ -323,9 +323,9 @@ void AMyMJCoreMirrorCpp::notifyBluePrintPusherApplied(FMyMJGamePusherBaseCpp *pP
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherResetGame) {
 
         //reflect data
-        m_cCoreDataDirect.m_iCardNumCanBeTakenNormally = m_pCoreMirror->getUntakenSlotInfoRef().getCardNumCanBeTakenNormally();
-        m_cCoreDataDirect.m_aUntakenCardStacks = m_pCoreMirror->getUntakenCardStacksRef();
-        m_cCoreDataDirect.m_cGameCfg = *m_pCoreMirror->getpGameCfg();
+       // m_cCoreDataDirect.m_iCardNumCanBeTakenNormally = m_pCoreMirror->getUntakenSlotInfoRef().getCardNumCanBeTakenNormally();
+        //m_cCoreDataDirect.m_aUntakenCardStacks = m_pCoreMirror->getUntakenCardStacksRef();
+        //m_cCoreDataDirect.m_cGameCfg = *m_pCoreMirror->getpGameCfg();
         FMyMJGamePusherResetGameCpp *pPusherResetGame = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher);
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherUpdateTing) {

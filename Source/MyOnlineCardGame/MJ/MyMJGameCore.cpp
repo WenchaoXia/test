@@ -106,9 +106,12 @@ int32 FMyMJGameCoreBaseCpp::genIdxAttenderStillInGameMaskAll()
 
 int32 FMyMJGameCoreCpp::calcUntakenSlotCardsLeftNumKeptFromTail()
 {
-    FMyMJGameUntakenSlotInfoCpp *pInfo = &m_cUntakenSlotInfo;
+    FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+    MY_VERIFY(pD);
 
-    int32 keptCount = m_pGameCfg->m_cTrivialCfg.m_iStackNumKeptFromTail;
+    FMyMJGameUntakenSlotInfoCpp *pInfo = &pD->m_cUntakenSlotInfo;
+
+    int32 keptCount = pD->m_cGameCfg.m_cTrivialCfg.m_iStackNumKeptFromTail;
     int32 idxTail = pInfo->m_iIdxUntakenSlotTailAtStart;
     int32 totalL = pInfo->m_iUntakenSlotCardsLeftNumTotal;
 
@@ -123,7 +126,7 @@ int32 FMyMJGameCoreCpp::calcUntakenSlotCardsLeftNumKeptFromTail()
 
     while (stack2check > 0) {
 
-        ret += m_aUntakenCardStacks[idxWorking].m_aIds.Num();
+        ret += pD->m_aUntakenCardStacks[idxWorking].m_aIds.Num();
 
 
         idxWorking = (idxWorking - 1 + totalL) % totalL;
@@ -135,9 +138,12 @@ int32 FMyMJGameCoreCpp::calcUntakenSlotCardsLeftNumKeptFromTail()
 
 bool FMyMJGameCoreCpp::isIdxUntakenSlotInKeptFromTailSegment(int32 idx)
 {
-    FMyMJGameUntakenSlotInfoCpp *pInfo = &m_cUntakenSlotInfo;
+    FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+    MY_VERIFY(pD);
 
-    int32 keptCount = m_pGameCfg->m_cTrivialCfg.m_iStackNumKeptFromTail;
+    FMyMJGameUntakenSlotInfoCpp *pInfo = &pD->m_cUntakenSlotInfo;
+
+    int32 keptCount = pD->m_cGameCfg.m_cTrivialCfg.m_iStackNumKeptFromTail;
     int32 idxTail = pInfo->m_iIdxUntakenSlotLengthAtStart;
     int32 totalL = pInfo->m_iIdxUntakenSlotLengthAtStart;
 
@@ -173,6 +179,9 @@ bool FMyMJGameCoreCpp::isIdxUntakenSlotInKeptFromTailSegment(int32 idx)
 //don't reenter this func, this may result stack overflow
 bool FMyMJGameCoreCpp::actionLoop()
 {
+    FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+    MY_VERIFY(pD);
+
     bool bRet = false;
     int64 iMsLast = UMyMJUtilsLibrary::nowAsMsFromTick();
     int64 iTimePassedMs = iMsLast - m_iMsLast;
@@ -186,7 +195,7 @@ bool FMyMJGameCoreCpp::actionLoop()
         bRet |= findAndApplyPushers();
     }
 
-    MyMJActionLoopStateCpp &eActionLoopState = m_eActionLoopState;
+    MyMJActionLoopStateCpp &eActionLoopState = pD->m_eActionLoopState;
 
     TSharedPtr<FMyMJGameActionCollectorCpp>  &pCollector = m_pActionCollector;
 
@@ -301,11 +310,8 @@ bool FMyMJGameCoreCpp::findAndHandleCmd()
 
 void FMyMJGameCoreCpp::tryProgressInFullMode()
 {
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("tryProgress"));
-    
-    //FString testS = TEXT("aa");
-    //FString tests1 = { testS; testS.Left(3); };
-    //FString(TEXT("aa")).FindLastChar();
+    FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+    MY_VERIFY(pD);
 
     //the sequence ensure pusher is drained out clean before cmd applies
     findAndApplyPushers();
@@ -315,12 +321,12 @@ void FMyMJGameCoreCpp::tryProgressInFullMode()
 
     if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
 
-        bool bIsInGameState = isInGameState();
+        bool bIsInGameState = pD->isInGameState();
         bool bHaveProgress = true;
 
         while (bIsInGameState && bHaveProgress) {
             bHaveProgress = actionLoop();
-            bIsInGameState = isInGameState();
+            bIsInGameState = pD->isInGameState();
         }
     }
     else {
@@ -330,12 +336,15 @@ void FMyMJGameCoreCpp::tryProgressInFullMode()
 
 int32 FMyMJGameCoreCpp::getIdxOfUntakenSlotHavingCard(int32 idxBase, uint32 delta, bool bReverse)
 {
-    int32 l = m_aUntakenCardStacks.Num();
+    FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+    MY_VERIFY(pD);
+
+    int32 l = pD->m_aUntakenCardStacks.Num();
     MY_VERIFY(idxBase >= 0 && idxBase < l);
 
     int32 idxChecking = idxBase;
     for (int32 i = 0; i < l; i++) {
-        FMyIdCollectionCpp *pC = &m_aUntakenCardStacks[idxChecking];
+        FMyIdCollectionCpp *pC = &pD->m_aUntakenCardStacks[idxChecking];
         int32 l2 = pC->m_aIds.Num();
 
         if (l2 > 0) {
@@ -368,7 +377,10 @@ int32 FMyMJGameCoreCpp::getIdxOfUntakenSlotHavingCard(int32 idxBase, uint32 delt
 
 void FMyMJGameCoreCpp::collectCardsFromUntakenSlot(int32 idxBase, uint32 len, bool bReverse, TArray<int32> &outIds)
 {
-    int32 l = m_aUntakenCardStacks.Num();
+    FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+    MY_VERIFY(pD);
+
+    int32 l = pD->m_aUntakenCardStacks.Num();
     MY_VERIFY(idxBase >= 0 && idxBase < l);
     MY_VERIFY(len > 0 && len < 20);
     outIds.Empty();
@@ -377,7 +389,7 @@ void FMyMJGameCoreCpp::collectCardsFromUntakenSlot(int32 idxBase, uint32 len, bo
 
     //loop limited cycle
     for (int32 i = 0; i < l && idxChecking >= 0; i++) {
-        FMyIdCollectionCpp *pC = &m_aUntakenCardStacks[idxChecking];
+        FMyIdCollectionCpp *pC = &pD->m_aUntakenCardStacks[idxChecking];
 
         int32 l2 = pC->m_aIds.Num();
         int32 Num2Collect = l2 < (int32)len ? l2 : (int32)len;
@@ -402,23 +414,32 @@ void FMyMJGameCoreCpp::collectCardsFromUntakenSlot(int32 idxBase, uint32 len, bo
 
 void FMyMJGameCoreCpp::tryCollectCardsFromUntakenSlot(int32 idxBase, uint32 len, bool bReverse, TArray<int32> &outIds)
 {
-    int32 cardsleftAll = getUntakenSlotInfoRef().getCardNumCanBeTakenAll();
+    FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+    MY_VERIFY(pD);
+
+    int32 cardsleftAll = pD->m_cUntakenSlotInfo.getCardNumCanBeTakenAll();
     int32 l = (int32)len < cardsleftAll ? (int32)len : cardsleftAll;
     return collectCardsFromUntakenSlot(idxBase, l, bReverse, outIds);
 }
 
 void FMyMJGameCoreCpp::moveCardFromOldPosi(int32 id)
 {
+    FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+    MY_VERIFY(pD);
+
     FMyMJCardInfoPackCpp  *pCardInfoPack =  getpCardInfoPack();
     FMyMJCardValuePackCpp *pCardValuePack = getpCardValuePack();
+
+    MY_VERIFY(pCardInfoPack);
+    MY_VERIFY(pCardValuePack);
 
     FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
     MyMJCardSlotTypeCpp eSlotSrc = pCardInfo->m_cPosi.m_eSlot;
     int32 idxAttender = pCardInfo->m_cPosi.m_iIdxAttender;
     if (eSlotSrc == MyMJCardSlotTypeCpp::Untaken) {
-        MY_VERIFY(pCardInfo->m_cPosi.m_iIdxInSlot0 >= 0 && pCardInfo->m_cPosi.m_iIdxInSlot0 < m_aUntakenCardStacks.Num());
+        MY_VERIFY(pCardInfo->m_cPosi.m_iIdxInSlot0 >= 0 && pCardInfo->m_cPosi.m_iIdxInSlot0 < pD->m_aUntakenCardStacks.Num());
         int32 idx = pCardInfo->m_cPosi.m_iIdxInSlot0;
-        FMyIdCollectionCpp *pCollection = &m_aUntakenCardStacks[idx];
+        FMyIdCollectionCpp *pCollection = &pD->m_aUntakenCardStacks[idx];
         //MY_VERIFY(pCard->m_cPosi.m_iIdxInSlot1 >= 0 && pCard->m_cPosi.m_iIdxInSlot1 < pCollection->m_aIds.Num());
         
         MY_VERIFY(pCollection->m_aIds.Pop() == id);
@@ -426,16 +447,16 @@ void FMyMJGameCoreCpp::moveCardFromOldPosi(int32 id)
         pCardInfo->m_cPosi.reset();
 
         if (isIdxUntakenSlotInKeptFromTailSegment(idx)) {
-            m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail--;
+            pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail--;
         }
         else {
-            m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead--;
-            if (m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead == 0) {
-                m_cHelperLastCardTakenInGame.m_iId = id;
-                m_cHelperLastCardTakenInGame.m_iValue = pCardValuePack->getByIdx(id);
+            pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead--;
+            if (pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead == 0) {
+                pD->m_cHelperLastCardTakenInGame.m_iId = id;
+                pD->m_cHelperLastCardTakenInGame.m_iValue = pCardValuePack->getByIdx(id);
             }
         }
-        m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal--;
+        pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal--;
 
     }
     else if (idxAttender >= 0 && idxAttender < 4) {
@@ -463,18 +484,21 @@ void FMyMJGameCoreCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSl
 
 void FMyMJGameCoreCpp::updateUntakenInfoHeadOrTail(bool bUpdateHead, bool bUpdateTail)
 {
-    if (m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal <= 0) {
+    FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+    MY_VERIFY(pD);
+
+    if (pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal <= 0) {
         return;
     }
 
     if (bUpdateHead) {
-        int32 idx = getIdxOfUntakenSlotHavingCard(m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow, 0, false);
+        int32 idx = getIdxOfUntakenSlotHavingCard(pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow, 0, false);
         MY_VERIFY(idx >= 0);
-        m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow = idx;
+        pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow = idx;
     }
     if (bUpdateTail) {
-        int32 idx = getIdxOfUntakenSlotHavingCard(m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow, 0, true);
+        int32 idx = getIdxOfUntakenSlotHavingCard(pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow, 0, true);
         MY_VERIFY(idx >= 0);
-        m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow = idx;
+        pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow = idx;
     }
 }

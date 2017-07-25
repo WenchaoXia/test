@@ -21,6 +21,7 @@ enum class MyMJGameErrorCodeCpp : uint8
     None = 0                     UMETA(DisplayName = "None"),
     NotHandled = 1               UMETA(DisplayName = "NotHandled"),
     HaveNoAuthority = 10         UMETA(DisplayName = "HaveNoAuthority"),
+    GameRuleTypeNotEqual = 20    UMETA(DisplayName = "GameRuleTypeNotEqual"),
     pusherIdNotEqual = 100       UMETA(DisplayName = "pusherIdNotEqual"),
     choicesEmpty = 120           UMETA(DisplayName = "choicesEmpty"),
     choiceAlreadyMade = 121      UMETA(DisplayName = "choiceAlreadyMade"),
@@ -85,19 +86,24 @@ struct FMyMJGameCardPackCfgCpp
 public:
     FMyMJGameCardPackCfgCpp()
     {
+        reset();
+    };
+
+    void reset()
+    {
         m_bHaveWordCards = false;
         m_bHaveHuaCards = false;
         m_bHaveZhongCards = false;
     };
 
     UPROPERTY()
-        bool m_bHaveWordCards;
+    bool m_bHaveWordCards;
 
     UPROPERTY()
-        bool m_bHaveHuaCards;
+    bool m_bHaveHuaCards;
 
     UPROPERTY()
-        bool m_bHaveZhongCards;
+    bool m_bHaveZhongCards;
 };
 
 USTRUCT()
@@ -107,6 +113,11 @@ struct FMyMJGameTrivialCfgCpp
 
 public:
     FMyMJGameTrivialCfgCpp()
+    {
+        reset();
+    };
+
+    void reset()
     {
         m_iGameAttenderNum = 4;
         m_iCardNumPerStackInUntakenSlot = 2;
@@ -137,9 +148,12 @@ struct FMyMJGameSubGuoBiaoCfgCpp
 public:
     FMyMJGameSubGuoBiaoCfgCpp()
     {
+        reset();
+    };
+
+    void reset()
+    {
         m_bReqMenQingForZuHeLong = false;
-
-
     };
 
 
@@ -154,6 +168,11 @@ struct FMyMJGameSubLocalCSCfgCpp
 
 public:
     FMyMJGameSubLocalCSCfgCpp()
+    {
+        reset();
+    };
+
+    void reset()
     {
         m_bHuBornAllowMultiple = false;
         m_bHuBornShowAllCards = false;
@@ -224,6 +243,16 @@ public:
 
     };
 
+    void reset()
+    {
+        m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
+        m_cCardPackCfg.reset();
+        m_cTrivialCfg.reset();
+        m_cHuCfg.reset();
+        m_cSubGuoBiaoCfg.reset();
+        m_cSubLocalCSCfg.reset();
+    };
+
     UPROPERTY()
     MyMJGameRuleTypeCpp m_eRuleType;
 
@@ -251,6 +280,11 @@ struct FMyMJGameRunDataCpp
 
 public:
     FMyMJGameRunDataCpp()
+    {
+        reset();
+    };
+
+    void reset()
     {
         m_iIdxAttenderQuanFeng = 0;
         m_iIdxAttenderMenFeng = 0;

@@ -250,75 +250,6 @@ protected:
 
 };
 
-
-USTRUCT(BlueprintType)
-struct FMyMJCoreDataDirectForBPCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-
-    FMyMJCoreDataDirectForBPCpp()
-    {
-        m_iCardNumCanBeTakenNormally = 0;
-        m_iActionGroupId = 0;
-        m_eGameState = MyMJGameStateCpp::Invalid;
-        m_eActionLoopState = MyMJActionLoopStateCpp::Invalid;
-        m_iDiceNumberNow0 = m_iDiceNumberNow1 = 0;
-        m_iIdHelperLastCardTakenInGame = -1;
-        m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
-    };
-
-    virtual ~FMyMJCoreDataDirectForBPCpp()
-    {
-
-    };
-
-    void reset()
-    {
-        m_iCardNumCanBeTakenNormally = 0;
-    };
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Card Num Left"))
-    int32 m_iCardNumCanBeTakenNormally;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UnTaken Card Stacks"))
-    TArray<FMyIdCollectionCpp> m_aUntakenCardStacks; //Always start from attender 0 to 3
-
-                                                         //Cfg
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game Cfg"))
-    FMyMJGameCfgCpp m_cGameCfg;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game RunData"))
-    FMyMJGameRunDataCpp m_cGameRunData;
-
-    //int32 m_iGameId;
-    //int32 m_iPusherId; //the last pusher id we got
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Group Id"))
-    int32 m_iActionGroupId;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game State"))
-    MyMJGameStateCpp m_eGameState;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Loop State"))
-    MyMJActionLoopStateCpp m_eActionLoopState;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number 0"))
-    int32 m_iDiceNumberNow0;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number 1"))
-    int32 m_iDiceNumberNow1;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
-    TArray<int32> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hai Di Card Id"))
-    int32 m_iIdHelperLastCardTakenInGame;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Rule Type"))
-    MyMJGameRuleTypeCpp m_eRuleType;//also distinguish sub type
-};
-
 #define MY_EXPECTED_MJ_PAWN_NUM ((uint8)MyMJGameRoleTypeCpp::Max)
 
 UCLASS(BlueprintType, Blueprintable)
@@ -409,8 +340,8 @@ public:
     //UFUNCTION(BlueprintImplementableEvent)
     //bool onVisiblePusherApplied(FMyMJGamePusherBaseCpp *pPusher);
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "core data direct"))
-    FMyMJCoreDataDirectForBPCpp m_cCoreDataDirect;
+    //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "core data direct"))
+    //FMyMJCoreDataDirectForBPCpp m_cCoreDataDirect;
 
     //setttings:
     UPROPERTY()

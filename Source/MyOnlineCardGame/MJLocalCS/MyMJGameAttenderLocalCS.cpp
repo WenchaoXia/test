@@ -9,19 +9,21 @@
 void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFullCpp *pPusherIO)
 {
     FMyMJGameCoreCpp *pCore = getpCore();
-    if (pCore == NULL) {
-        return;
-    }
+    MY_VERIFY(pCore);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
     FMyMJCardValuePackCpp *pCardValuePack = pCore->getpCardValuePack();
 
+    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    MY_VERIFY(pD);
+    MY_VERIFY(pCardInfoPack);
+    MY_VERIFY(pCardValuePack);
 
-    MyMJGameStateCpp eGameState = *pCore->getpGameState();
-    TSharedPtr<FMyMJGameCfgCpp> pGameCfg = pCore->getpGameCfg();
+    MyMJGameStateCpp eGameState = pD->m_eGameState;
+    FMyMJGameCfgCpp  *pGameCfg = &pD->m_cGameCfg;
 
     FMyMJGamePusherFillInActionChoicesCpp iFillInPusher, *pFillInPusher = &iFillInPusher;
-    pFillInPusher->init(pCore->getActionGroupId(), m_iIdx);
+    pFillInPusher->init(pD->m_iActionGroupId, m_iIdx);
 
     if (eGameState == MyMJGameStateCpp::CardsShuffled) {
         FMyMJGameActionThrowDicesCpp *pAction = new FMyMJGameActionThrowDicesCpp();
@@ -33,14 +35,14 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
         int32 idxHeadNow;
         TArray<int32> aIds;
         bool bIsLast = false;
-        idxHeadNow = pCore->getUntakenSlotInfoRef().m_iIdxUntakenSlotHeadNow;
+        idxHeadNow = pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow;
 
         int32 handCardCount = m_cHandCards.getCount();
         if (handCardCount < 12) {
             pCore->collectCardsFromUntakenSlot(idxHeadNow, 4, false, aIds);
         }
         else {
-            int32 idxAttenderZhuang = pCore->getpGameRunData()->m_iIdxAttenderMenFeng;
+            int32 idxAttenderZhuang = pD->m_cGameRunData.m_iIdxAttenderMenFeng;
             int32 idxAttenderZhuangPre = pCore->findIdxAttenderStillInGame(idxAttenderZhuang, 1, true);
             MY_VERIFY(idxAttenderZhuang != idxAttenderZhuangPre);
             if (m_iIdx == idxAttenderZhuang) {
@@ -96,7 +98,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
         pFillInPusher->m_cActionChoices.give(genActionChoiceGiveOutCards(false, false));
     }
     else if (eGameState == MyMJGameStateCpp::JustHu) {
-        int32 idxHeadNow = pCore->getUntakenSlotInfoRef().m_iIdxUntakenSlotHeadNow;
+        int32 idxHeadNow = pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow;
         TArray<int32> aIds;
 
         int32 c = pGameCfg->m_cSubLocalCSCfg.m_iZhaNiaoCount;
@@ -119,7 +121,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
         }
         else {
             //this is the last card
-            const FMyIdValuePair& lastCard = pCore->getHelperLastCardTakenInGameRef();
+            const FMyIdValuePair& lastCard = pD->m_cHelperLastCardTakenInGame;
             MY_VERIFY(lastCard.m_iId >= 0);
 
             int32 idx = pAction->m_aPickedIdValues.Emplace();
@@ -132,7 +134,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
     }
     else if (eGameState == MyMJGameStateCpp::WaitingForTakeCard) {
 
-        const FMyMJGameUntakenSlotInfoCpp *pUntakenInfo = &pCore->getUntakenSlotInfoRef();
+        const FMyMJGameUntakenSlotInfoCpp *pUntakenInfo = &pD->m_cUntakenSlotInfo;
         int32 cardNumNormal = pUntakenInfo->getCardNumCanBeTakenNormally();
         if (cardNumNormal > 0) {
             FMyMJGameActionTakeCardsCpp *pAction = new FMyMJGameActionTakeCardsCpp();
@@ -160,8 +162,6 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
             pCore->getpPusherIOFull()->EnqueuePusher(*pActionUpdate);
         }
 
-
-
     }
     else if (eGameState == MyMJGameStateCpp::TakenCard) {
         FMyMJHuActionAttrCpp huActionAttr;
@@ -177,7 +177,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
             pFillInPusher->m_cActionChoices.give(pAction);
         }
 
-        bool bLastCardOfGame = (pCore->getUntakenSlotInfoRef().m_iUntakenSlotCardsLeftNumNormalFromHead <= 0);
+        bool bLastCardOfGame = (pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead <= 0);
 
         if (bLastCardOfGame) {
             pFillInPusher->m_cActionChoices.give(genActionChoiceGiveOutCards(true, false));
@@ -201,7 +201,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
 
     }
     else if (eGameState == MyMJGameStateCpp::WeavedNotGang) {
-        bool bLastCardOfGame = (pCore->getUntakenSlotInfoRef().m_iUntakenSlotCardsLeftNumNormalFromHead <= 0);
+        bool bLastCardOfGame = (pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead <= 0);
         MY_VERIFY(!bLastCardOfGame);
         MY_VERIFY(!m_bGangYaoedLocalCS);
 
@@ -211,7 +211,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
 
         //check whether can qiang gang hu
 
-        const TArray<FMyIdValuePair>& lastCards = pCore->getHelperLastCardsGivenOutOrWeaveRef();
+        const TArray<FMyIdValuePair>& lastCards = pD->m_aHelperLastCardsGivenOutOrWeave;
         MY_VERIFY(lastCards.Num() > 0);
         int32 idxAttenderTrigger = pCardInfoPack->getByIdx(lastCards[0].m_iId)->m_cPosi.m_iIdxAttender;
         FMyMJHuActionAttrCpp huActionAttr;
@@ -267,7 +267,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
         TArray<FMyMJHuScoreResultItemCpp> huScoreResultItems;
         TArray<int32> aIdsShowOutCards;
 
-        TSharedPtr<FMyMJGameCfgCpp> pCfg = pCore->getpGameCfg();
+        FMyMJGameCfgCpp *pCfg = &pD->m_cGameCfg;
         bool bHu = UMyMJUtilsLocalCSLibrary::checkHuLocalCSBorn(pCfg->m_cSubLocalCSCfg,
                                                             m_cHandCards, huScoreResultItems, aIdsShowOutCards);
         if (bHu) {
@@ -284,7 +284,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
 
     }
     else if (eGameState == MyMJGameStateCpp::WeavedGangSpBuZhangLocalCS) {
-        const FMyMJGameUntakenSlotInfoCpp *pUntakenInfo = &pCore->getUntakenSlotInfoRef();
+        const FMyMJGameUntakenSlotInfoCpp *pUntakenInfo = &pD->m_cUntakenSlotInfo;
         int32 cardLeftNum = pUntakenInfo->getCardNumCanBeTakenAll();
         MY_VERIFY(cardLeftNum > 0);
 
@@ -301,7 +301,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
     }
     else if (eGameState == MyMJGameStateCpp::WeavedGangDicesThrownLocalCS) {
 
-        const FMyMJGameUntakenSlotInfoCpp *pUntakenInfo = &pCore->getUntakenSlotInfoRef();
+        const FMyMJGameUntakenSlotInfoCpp *pUntakenInfo = &pD->m_cUntakenSlotInfo;
         int32 cardLeftNum = pUntakenInfo->getCardNumCanBeTakenAll();
         MY_VERIFY(cardLeftNum > 0);
 
@@ -329,6 +329,11 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
 bool FMyMJGameAttenderLocalCSCpp::tryGenAndEnqueueUpdateTingPusher()
 {
     FMyMJGameCoreCpp* pCore = getpCore();
+    MY_VERIFY(pCore);
+
+    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    MY_VERIFY(pD);
+
 
     int32 handCardCount = m_cHandCards.getCount();
     if ((handCardCount % 3) != 1) {
@@ -337,14 +342,14 @@ bool FMyMJGameAttenderLocalCSCpp::tryGenAndEnqueueUpdateTingPusher()
     }
 
     FMyMJGamePusherUpdateTingCpp pusherUpdateTing;
-    bool bTing = UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(*pCore->getpGameCfg(), *pCore->getpCardValuePack(), m_aShowedOutWeaves, m_cHandCards, pusherUpdateTing.m_cTingGroup);
+    bool bTing = UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(pD->m_cGameCfg, *pCore->getpCardValuePack(), m_aShowedOutWeaves, m_cHandCards, pusherUpdateTing.m_cTingGroup);
 
     if (m_cHuScoreResultTingGroup.getCount() == pusherUpdateTing.m_cTingGroup.getCount() && m_cHuScoreResultTingGroup.getCount() == 0) {
         //not ting yet, we don't need to gen pusher
         return bTing;
     }
 
-    const FMyMJValueIdMapCpp *pHelperShowedOut2AllCards = &pCore->getHelperShowedOut2AllCardsRef();
+    const FMyMJValueIdMapCpp *pHelperShowedOut2AllCards = &pD->m_cHelperShowedOut2AllCards;
 
     for (auto It = pusherUpdateTing.m_cTingGroup.m_mValueTingMap.CreateIterator(); It; ++It)
     {
@@ -376,9 +381,17 @@ void FMyMJGameAttenderLocalCSCpp::applyActionNoAct(FMyMJGameActionNoActCpp *pAct
 
 void FMyMJGameAttenderLocalCSCpp::applyActionHuBornLocalCS(FMyMJGameActionHuBornLocalCSCpp *pAction)
 {
-    TSharedPtr<FMyMJGameCoreCpp> pCore = m_pCore.Pin();
+    FMyMJGameCoreCpp* pCore = getpCore();
+    MY_VERIFY(pCore);
+
+    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    MY_VERIFY(pD);
+
     FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
     FMyMJCardValuePackCpp *pCardValuePack = pCore->getpCardValuePack();
+
+    MY_VERIFY(pCardInfoPack);
+    MY_VERIFY(pCardValuePack);
 
     int32 l = pAction->m_aShowOutIdValues.Num();
 
@@ -516,11 +529,19 @@ void FMyMJGameAttenderLocalCSCpp::onNewTurn(bool bIsWeave)
     m_iTurn++;
 
     FMyMJGameCoreCpp* pCore = getpCore();
+    MY_VERIFY(pCore);
+
+    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    MY_VERIFY(pD);
+
     FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
     FMyMJCardValuePackCpp *pCardValuePack = pCore->getpCardValuePack();
 
+    MY_VERIFY(pCardInfoPack);
+    MY_VERIFY(pCardValuePack);
+
     if (bIsWeave) {
-        if (pCore->getpGameCfg()->m_cSubLocalCSCfg.m_bResetAttenderPaoHuBanStateAfterWeave) {
+        if (pD->m_cGameCfg.m_cSubLocalCSCfg.m_bResetAttenderPaoHuBanStateAfterWeave) {
             m_bBanPaoHuLocalCS = false;
         }
     }
@@ -556,13 +577,21 @@ void FMyMJGameAttenderLocalCSCpp::onNewTurn(bool bIsWeave)
 
 void FMyMJGameAttenderLocalCSCpp::genActionAfterGivenOutCards(FMyMJGamePusherFillInActionChoicesCpp *pFillInPusher, bool bIsGang)
 {
-    FMyMJGameCoreCpp *pCore = getpCore();
-    const FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
-    const FMyMJCardValuePackCpp *pCardValuePack = pCore->getpCardValuePack();
+    FMyMJGameCoreCpp* pCore = getpCore();
+    MY_VERIFY(pCore);
 
-    const FMyMJGameCfgCpp *pGameCfg = pCore->getpGameCfg().Get();
+    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    MY_VERIFY(pD);
 
-    const TArray<FMyIdValuePair>& lastCards = pCore->getHelperLastCardsGivenOutOrWeaveRef();
+    FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = pCore->getpCardValuePack();
+
+    MY_VERIFY(pCardInfoPack);
+    MY_VERIFY(pCardValuePack);
+
+    const FMyMJGameCfgCpp *pGameCfg = &pD->m_cGameCfg;
+
+    const TArray<FMyIdValuePair>& lastCards = pD->m_aHelperLastCardsGivenOutOrWeave;
     MY_VERIFY(lastCards.Num() > 0);
     int32 idxAttenderTrigger = pCardInfoPack->getByIdxConst(lastCards[0].m_iId)->m_cPosi.m_iIdxAttender;
     FMyMJHuActionAttrCpp huActionAttr;
@@ -656,9 +685,14 @@ FMyMJGameActionGiveOutCardsCpp* FMyMJGameAttenderLocalCSCpp::genActionChoiceGive
 
 void FMyMJGameAttenderLocalCSCpp::assembleHuActionAttr(int32 iIdxAttenderLoseOnlyOne, const TArray<FMyIdValuePair> *pTriggerCards, MyMJHuTriggerCardSrcTypeCpp eTriggerCardSrcType, FMyMJHuActionAttrCpp &outHuActionAttr)
 {
-    TSharedPtr<FMyMJGameCoreCpp> pCore = m_pCore.Pin();
-    TSharedPtr<FMyMJGameRunDataCpp> pGameRunData = pCore->getpGameRunData();
-    const FMyMJValueIdMapCpp *pHelperShowedOutCards = &pCore->getHelperShowedOut2AllCardsRef();
+    FMyMJGameCoreCpp* pCore = getpCore();
+    MY_VERIFY(pCore);
+
+    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    MY_VERIFY(pD);
+
+    FMyMJGameRunDataCpp *pGameRunData = &pD->m_cGameRunData;
+    const FMyMJValueIdMapCpp *pHelperShowedOutCards = &pD->m_cHelperShowedOut2AllCards;
 
     outHuActionAttr.reset();
 
@@ -697,7 +731,7 @@ void FMyMJGameAttenderLocalCSCpp::assembleHuActionAttr(int32 iIdxAttenderLoseOnl
         outHuActionAttr.m_aTriggerDatas.Reset();
     }
 
-    outHuActionAttr.m_iCardNumCanBeTakenNormally = pCore->getUntakenSlotInfoRef().getCardNumCanBeTakenNormally();
+    outHuActionAttr.m_iCardNumCanBeTakenNormally = pD->m_cUntakenSlotInfo.getCardNumCanBeTakenNormally();
     outHuActionAttr.m_iAttenderTurn = m_iTurn;
 
     outHuActionAttr.m_iHuaCount = m_aIdWinSymbolCards.Num();
@@ -720,9 +754,15 @@ void FMyMJGameAttenderLocalCSCpp::assembleHuActionAttr(int32 iIdxAttenderLoseOnl
 
 bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bool bLimited2TriggerCard, TArray<FMyMJGameActionWeaveCpp> &outActionWeaves0)
 {
+    FMyMJGameCoreCpp* pCore = getpCore();
+    MY_VERIFY(pCore);
+
+    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    MY_VERIFY(pD);
+
     outActionWeaves0.Reset();
-    FMyMJGameCoreCpp *pCore = getpCore();
-    int32 iCardLeftNum = pCore->getUntakenSlotInfoRef().getCardNumCanBeTakenAll();
+
+    int32 iCardLeftNum = pD->m_cUntakenSlotInfo.getCardNumCanBeTakenAll();
 
     //haidi can't gang
     if (iCardLeftNum <= 0) {
@@ -733,7 +773,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
     if (m_bGangYaoedLocalCS) {
         //special local CS rule, which ban card switch after GangYao
         bAllowBuZhangLocalCS = false;
-        if (!pCore->getpGameCfg()->m_cSubLocalCSCfg.m_bAllowGangYaoAfterGangYao) {
+        if (!pD->m_cGameCfg.m_cSubLocalCSCfg.m_bAllowGangYaoAfterGangYao) {
             return false;
         }
     }
@@ -859,7 +899,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
             handCardValueTemp.removeAllByValue(cardValue, aPairsTemp);
             weavesShowedOutTemp.Push(*pWeave);
 
-            bool bTing = UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(*pCore->getpGameCfg(), *pCore->getpCardValuePack(), weavesShowedOutTemp, handCardValueTemp, tingGroup);
+            bool bTing = UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(pD->m_cGameCfg, *pCore->getpCardValuePack(), weavesShowedOutTemp, handCardValueTemp, tingGroup);
             if (bTing) {
                 bool bIsRealTingWhenZiMo;
                 tingGroup.isRealTing(&bIsRealTingWhenZiMo, NULL);
@@ -890,9 +930,14 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
 
 bool FMyMJGameAttenderLocalCSCpp::checkPeng(const FMyMJCardCpp &triggerCard, TArray<FMyMJGameActionWeaveCpp> &outActionWeaves)
 {
+    FMyMJGameCoreCpp* pCore = getpCore();
+    MY_VERIFY(pCore);
+
+    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    MY_VERIFY(pD);
+
     outActionWeaves.Reset();
-    FMyMJGameCoreCpp *pCore = getpCore();
-    int32 iCardLeftNum = pCore->getUntakenSlotInfoRef().getCardNumCanBeTakenAll();
+    int32 iCardLeftNum = pD->m_cUntakenSlotInfo.getCardNumCanBeTakenAll();
 
     //Haidi can't peng
     if (iCardLeftNum <= 0) {
@@ -934,9 +979,15 @@ bool FMyMJGameAttenderLocalCSCpp::checkPeng(const FMyMJCardCpp &triggerCard, TAr
 
 bool FMyMJGameAttenderLocalCSCpp::checkChi(const FMyMJCardCpp &triggerCard, TArray<FMyMJGameActionWeaveCpp> &outActionWeaves)
 {
+    FMyMJGameCoreCpp* pCore = getpCore();
+    MY_VERIFY(pCore);
+
+    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    MY_VERIFY(pD);
+
     outActionWeaves.Reset();
-    FMyMJGameCoreCpp *pCore = getpCore();
-    int32 iCardLeftNum = pCore->getUntakenSlotInfoRef().getCardNumCanBeTakenAll();
+
+    int32 iCardLeftNum = pD->m_cUntakenSlotInfo.getCardNumCanBeTakenAll();
 
     //Haidi can't peng
     if (iCardLeftNum <= 0) {

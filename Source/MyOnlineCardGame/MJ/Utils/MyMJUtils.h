@@ -1128,30 +1128,10 @@ public:
 
     };
 
-    /*
-    void rebuildMap()
+    void reset()
     {
-        m_mpHuScoreAttrsCfg.Reset();
-        int32 l = m_aHuScoreAttrsCfg.Num();
-        for (int32 i = 0; i < l; i++) {
-            FMyMJHuScoreAttrCpp *&pAttr = m_mpHuScoreAttrsCfg.Emplace(m_aHuScoreAttrsCfg[i].m_eType);
-            pAttr = &m_aHuScoreAttrsCfg[i];
-        }
+        m_mHuScoreAttrsCfg.Reset();
     };
-
-    void trySyncMap()
-    {
-        if (m_mpHuScoreAttrsCfg.Num() != m_aHuScoreAttrsCfg.Num()) {
-            rebuildMap();
-        }
-    };
-
-    inline
-    TArray<FMyMJHuScoreAttrCpp>& getAHuScoreAttrsCfgRef()
-    {
-        return m_aHuScoreAttrsCfg;
-    };
-    */
 
     inline
     const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& getHuScoreAttrsCfgRef() const

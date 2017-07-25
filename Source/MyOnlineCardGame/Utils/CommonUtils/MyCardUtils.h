@@ -50,11 +50,6 @@ struct FMyIdValuePair
         reset(true);
     };
 
-    virtual ~FMyIdValuePair()
-    {
-
-    };
-
     void reset(bool bResetValue)
     {
         m_iId = -1;
@@ -138,6 +133,17 @@ struct FMyIdValuePair
     UPROPERTY()
     int32 m_iValue; // > 0 means valid
 };
+
+/*
+template<>
+struct TIsTriviallyCopyConstructible<FMyIdValuePair>
+{
+    enum
+    {
+        value = false
+    };
+};
+*/
 
 USTRUCT(BlueprintType)
 struct FMyIdCollectionCpp

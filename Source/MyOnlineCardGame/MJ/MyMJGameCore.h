@@ -22,6 +22,9 @@
 
 #include "MyMJGameResManager.h"
 
+
+//#include "GameFramework/Actor.h"
+
 #include "MyMJGameCore.generated.h"
 
 
@@ -167,6 +170,135 @@ public:
 
 };
 
+
+USTRUCT(BlueprintType)
+struct FMyMJCoreDataDirectPublicCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJCoreDataDirectPublicCpp()
+    {
+        reinit(MyMJGameRuleTypeCpp::Invalid);
+    };
+
+    virtual ~FMyMJCoreDataDirectPublicCpp()
+    {
+
+    };
+
+    void reinit(MyMJGameRuleTypeCpp eRuleType)
+    {
+        m_eRuleType = eRuleType;
+        reset();
+    };
+
+    void reset()
+    {
+        //some data does not need to reset since reset pusher will overwrite them all
+        m_aUntakenCardStacks.Reset();
+        m_cCardInfoPack.reset(0);
+
+        m_cGameCfg.reset();
+        m_cGameRunData.reset();
+
+        m_iGameId = -1;
+        m_iPusherIdLast = -1;
+        m_iActionGroupId = -1;
+        m_eGameState = MyMJGameStateCpp::Invalid;
+        m_eActionLoopState = MyMJActionLoopStateCpp::Invalid;
+
+        m_iDiceNumberNow0 = -1;
+        m_iDiceNumberNow1 = -1;
+
+        m_cUntakenSlotInfo.reset();
+
+        m_aHelperLastCardsGivenOutOrWeave.Reset();
+        m_cHelperLastCardTakenInGame.reset(true);
+        m_cHelperShowedOut2AllCards.clear();
+
+    };
+
+    inline bool isInGameState()
+    {
+        return (!(m_eGameState == MyMJGameStateCpp::Invalid || m_eGameState == MyMJGameStateCpp::GameEnd));
+    };
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UnTaken Card Stacks"))
+    TArray<FMyIdCollectionCpp> m_aUntakenCardStacks; //Always start from attender 0 to 3
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card info pack"))
+    FMyMJCardInfoPackCpp  m_cCardInfoPack;
+
+    //FMyMJCardValuePackCpp m_cCardValuePack;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game Cfg"))
+    FMyMJGameCfgCpp m_cGameCfg;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game RunData"))
+    FMyMJGameRunDataCpp m_cGameRunData;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game Id"))
+    int32 m_iGameId;
+
+    //the last pusher id we got
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Pusher Id Last"))
+    int32 m_iPusherIdLast;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Group Id"))
+    int32 m_iActionGroupId;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game State"))
+    MyMJGameStateCpp m_eGameState;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Loop State"))
+    MyMJActionLoopStateCpp m_eActionLoopState;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number 0"))
+    int32 m_iDiceNumberNow0;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number 1"))
+    int32 m_iDiceNumberNow1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Untaken Slot Info"))
+    FMyMJGameUntakenSlotInfoCpp m_cUntakenSlotInfo;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
+    TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hai Di Card Id"))
+    FMyIdValuePair m_cHelperLastCardTakenInGame; //hai di card if id >= 0
+
+    //used to calculate how many cards left possible hu
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Cards Showed Out to All"))
+    FMyMJValueIdMapCpp m_cHelperShowedOut2AllCards;
+
+    //used to tell what rule this core is fixed to, not game cfg's type can be invalid, which means not started yet
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Rule Type"))
+    MyMJGameRuleTypeCpp m_eRuleType;
+
+};
+
+
+UCLASS(BlueprintType, Blueprintable)
+class UMyMJCoreDataForFullModeCpp : public UObject
+{
+    GENERATED_BODY()
+
+public:
+    FMyMJCoreDataDirectPublicCpp m_cDataDirectPubic;
+};
+
+USTRUCT()
+struct FMyMJCoreDataForMirrorModeCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJCoreDataDirectPublicCpp m_cDataDirectPubic;
+};
+
 //Base class ii used to ensure basic facility create/destory sequence
 //Although we place some basic facilites here as bas class member, which ensured the dependence is OK in delete(), but for simple let's use smart pointer here
 //Remember: sequence is 1 allocate all mem -> call member () -> call self ()
@@ -237,20 +369,15 @@ public:
 
     FMyMJGameCoreCpp(MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed) : FMyMJGameCoreBaseCpp()
     {
-        m_iActionGroupId = 0;
-        m_iGameId = -1;
-        m_iPusherId = -1;
-        //m_iTurnId = 0;
-        m_eGameState = MyMJGameStateCpp::Invalid;
-        m_eActionLoopState = MyMJActionLoopStateCpp::Invalid;
-        m_aHelperLastCardsGivenOutOrWeave.Reset();
+        m_pDataForFullMode = NULL;
+        m_pDataForMirrorMode = NULL;
+
+        m_pActionCollector = NULL;
+        m_pExtIOGroupAll = NULL;
+        m_pResManager = MakeShareable<FMyMJGameResManager>(new FMyMJGameResManager(iSeed));
+
         m_iMsLast = 0;
 
-        m_iDiceNumberNow0 = -1;
-        m_iDiceNumberNow1 = -1;
-
-
-        m_pResManager = MakeShareable<FMyMJGameResManager>(new FMyMJGameResManager(iSeed));
         m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
         m_eWorkMode = eWorkMode;
     };
@@ -258,94 +385,58 @@ public:
     virtual ~FMyMJGameCoreCpp()
     {};
 
+    FMyMJCoreDataDirectPublicCpp* getDataDirectPublic()
+    {
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+            if (IsValid(m_pDataForMirrorMode)) {
+                return &m_pDataForMirrorMode->m_cDataDirectPubic;
+            }
+            else {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataForMirrorMode Invalid!"));
+                return NULL;
+            }
+        }
+        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+            MY_VERIFY(m_pDataForFullMode.IsValid());
+            return &m_pDataForFullMode->m_cDataDirectPubic;
+        }
+        else {
+            MY_VERIFY(false);
+            return NULL;
+        }
+    };
+
     inline MyMJGameRuleTypeCpp getRuleType() const
     {
-        if (m_pGameCfg.IsValid()) {
-            MY_VERIFY(m_pGameCfg->m_eRuleType == m_eRuleType);
+        if (IsValid(m_pDataForMirrorMode)) {
+            MY_VERIFY(m_pDataForMirrorMode->m_cDataDirectPubic.m_eRuleType == m_eRuleType);
         }
+
+        if (m_pDataForFullMode.IsValid()) {
+            MY_VERIFY(m_pDataForFullMode->m_cDataDirectPubic.m_eRuleType == m_eRuleType);
+        }
+
         return m_eRuleType;
     };
 
     inline
     FMyMJCardInfoPackCpp *getpCardInfoPack()
     {
-        return &m_cCardInfoPack;
+        FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+        return &pD->m_cCardInfoPack;
     };
 
     inline
     FMyMJCardValuePackCpp *getpCardValuePack()
     {
-        return &m_cCardValuePack;
+        return NULL;
     }
 
-    inline int32 getGameId() const
-    {
-        return m_iGameId;
-    };
-
-    inline int32 getPusherId() const
-    {
-        return m_iPusherId;
-    };
-
-    inline
-    int32 getActionGroupId() const
-    {
-        return m_iActionGroupId;
-    };
-
-    inline
-    MyMJGameStateCpp* getpGameState()
-    {
-        return &m_eGameState;
-    };
 
     inline
     TSharedPtr<FMyMJGameResManager> getpResManager()
     {
         return m_pResManager;
-    };
-
-    const FMyMJGameUntakenSlotInfoCpp& getUntakenSlotInfoRef() const
-    {
-        return m_cUntakenSlotInfo;
-    };
-
-    const TArray<FMyIdCollectionCpp>& getUntakenCardStacksRef() const
-    {
-        return m_aUntakenCardStacks;
-    }
-
-    inline TSharedPtr<FMyMJGameCfgCpp> getpGameCfg()
-    {
-        return m_pGameCfg;
-    };
-
-    inline TSharedPtr<FMyMJGameRunDataCpp> getpGameRunData()
-    {
-        return m_pGameRunData;
-    };
-
-
-    inline bool isInGameState()
-    {
-        return (!(m_eGameState == MyMJGameStateCpp::Invalid || m_eGameState == MyMJGameStateCpp::GameEnd));
-    };
-
-    inline const TArray<FMyIdValuePair>& getHelperLastCardsGivenOutOrWeaveRef() const
-    {
-        return m_aHelperLastCardsGivenOutOrWeave;
-    };
-
-    
-    inline const FMyIdValuePair& getHelperLastCardTakenInGameRef() const
-    {
-        return m_cHelperLastCardTakenInGame;
-    };
-
-    inline const FMyMJValueIdMapCpp& getHelperShowedOut2AllCardsRef() const
-    {
-        return m_cHelperShowedOut2AllCards;
     };
 
 
@@ -405,26 +496,42 @@ public:
     inline
     void makeProgressByPusher(FMyMJGamePusherBaseCpp *pPusher)
     {
-        if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
-            m_iGameId = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher)->m_iGameId;
-            m_iPusherId = -1;
+        FMyMJCoreDataDirectPublicCpp* pCoreData = getDataDirectPublic();
+        if (pCoreData == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCoreData is invalid!"));
+            return;
         }
 
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), m_iActionGroupId, m_iPusherId, *pPusher->genDebugString());
+        if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
+            pCoreData->m_iGameId = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher)->m_iGameId;
+            pCoreData->m_iPusherIdLast = -1;
+        }
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), pCoreData->m_iActionGroupId, pCoreData->m_iPusherIdLast, *pPusher->genDebugString());
         applyPusher(pPusher);
 
-        m_iPusherId++;
-        MY_VERIFY(m_iPusherId == pPusher->getId());
+        pCoreData->m_iPusherIdLast++;
+        MY_VERIFY(pCoreData->m_iPusherIdLast == pPusher->getId());
     };
 
     inline
     void getGameIdAndPusherIdLast(int32 *pOutGameId, int32 *pOutPusherIdLast)
     {
+        int32 iGameId = -1, iPusherIdLast = -1;
+        FMyMJCoreDataDirectPublicCpp* pCoreData = getDataDirectPublic();
+        if (pCoreData == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCoreData is invalid!"));
+        }
+        else {
+            iGameId = pCoreData->m_iGameId;
+            iPusherIdLast = pCoreData->m_iPusherIdLast;
+        }
+
         if (pOutGameId) {
-            *pOutGameId = m_iGameId;
+            *pOutGameId = iGameId;
         }
         if (*pOutPusherIdLast) {
-            *pOutPusherIdLast = m_iPusherId;
+            *pOutPusherIdLast = iPusherIdLast;
         }
     };
 
@@ -468,10 +575,11 @@ protected:
     inline
     void initBase(TWeakPtr<FMyMJGameCoreCpp> pSelf)
     {
-        MY_VERIFY(m_pGameCfg.IsValid() == false);
-
-        m_pGameCfg = MakeShared<FMyMJGameCfgCpp>();
-        m_pGameRunData = MakeShared<FMyMJGameRunDataCpp>();
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+            MY_VERIFY(!m_pDataForFullMode.IsValid());
+            m_pDataForFullMode = MakeShareable<FMyMJCoreDataForMirrorModeCpp>(new FMyMJCoreDataForMirrorModeCpp());
+            m_pDataForFullMode->m_cDataDirectPubic.reinit(m_eRuleType);
+        }
 
         for (int i = 0; i < 4; i++) {
             MY_VERIFY(m_aAttendersAll[i].IsValid() == false);
@@ -481,41 +589,21 @@ protected:
         }
     };
 
+    //data
+    TSharedPtr<FMyMJCoreDataForMirrorModeCpp> m_pDataForFullMode;
+
+    UPROPERTY()
+    UMyMJCoreDataForFullModeCpp *m_pDataForMirrorMode; //Warn: this can't be used in sub thread
 
     //Anything may change in subclass, should be defined as pointer, otherwise direct a member. we don't use pointer for only reason about destruction sequence
     //Basic facilities
 
     TSharedPtr<FMyMJGameActionCollectorCpp>    m_pActionCollector;
     FMyMJGameIOGroupAllCpp *m_pExtIOGroupAll; //not owned by this class, also some member is used by m_pActionCollector
+    TSharedPtr<FMyMJGameResManager> m_pResManager;
 
-    TArray<FMyIdCollectionCpp> m_aUntakenCardStacks; //Always start from attender 0 to 3
-    FMyMJCardInfoPackCpp  m_cCardInfoPack;
-    FMyMJCardValuePackCpp m_cCardValuePack;
-
-    //Cfg
-    TSharedPtr<FMyMJGameCfgCpp> m_pGameCfg;
-    TSharedPtr<FMyMJGameRunDataCpp> m_pGameRunData;
-
-    //Running state
-    //Model is pusher->action->turn
-    int32 m_iGameId;
-    int32 m_iPusherId; //the last pusher id we got
-    int32 m_iActionGroupId;
-
-    MyMJGameStateCpp m_eGameState;
-    MyMJActionLoopStateCpp m_eActionLoopState;
     int64 m_iMsLast;
 
-    int32 m_iDiceNumberNow0;
-    int32 m_iDiceNumberNow1;
-    FMyMJGameUntakenSlotInfoCpp m_cUntakenSlotInfo;
-
-    TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
-    FMyIdValuePair m_cHelperLastCardTakenInGame; //hai di card if id >= 0
-    FMyMJValueIdMapCpp m_cHelperShowedOut2AllCards; //used to calculate how many cards left possible hu
-
-
-    TSharedPtr<FMyMJGameResManager> m_pResManager;
     MyMJGameRuleTypeCpp m_eRuleType;//also distinguish sub type
     MyMJGameCoreWorkModeCpp m_eWorkMode;
 };
