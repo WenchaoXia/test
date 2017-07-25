@@ -399,7 +399,7 @@ void FMyMJGameAttenderLocalCSCpp::applyActionHuBornLocalCS(FMyMJGameActionHuBorn
         //1, reveal value
         int32 id = pAction->m_aShowOutIdValues[i].m_iId;
         int32 value = pAction->m_aShowOutIdValues[i].m_iValue;
-        pCardValuePack->revealCardValue(id, value);
+        //pCardValuePack->revealCardValue(id, value);
 
         //2, make it stand
         FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
@@ -430,7 +430,7 @@ void FMyMJGameAttenderLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAct
     int32 l = aIdValuePairs.Num();
     for (int32 i = 0; i < l; i++) {
         const FMyIdValuePair *pPair = &aIdValuePairs[i];
-        pCardValuePack->revealCardValue(*pPair);
+        //pCardValuePack->revealCardValue(*pPair);
 
         pCore->moveCardFromOldPosi(pPair->m_iId);
         pCore->moveCardToNewPosi(pPair->m_iId, getIdx(), MyMJCardSlotTypeCpp::Weaved);

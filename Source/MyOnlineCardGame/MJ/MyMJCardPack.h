@@ -114,18 +114,18 @@ public:
     //this function will check values, and assert if error happens
     void helperVerifyValues() const;
 
-    void revealCardValue(int32 id, int32 value);
+    void tryRevealCardValue(int32 id, int32 value);
 
-    inline void revealCardValue(const FMyIdValuePair &idValuePair)
+    inline void tryRevealCardValue(const FMyIdValuePair &idValuePair)
     {
-        revealCardValue(idValuePair.m_iId, idValuePair.m_iValue);
+        tryRevealCardValue(idValuePair.m_iId, idValuePair.m_iValue);
     };
 
-    inline void revealCardValueByIdValuePairs(const TArray<FMyIdValuePair> &aIdValuePairs)
+    inline void tryRevealCardValueByIdValuePairs(const TArray<FMyIdValuePair> &aIdValuePairs)
     {
         int32 l = aIdValuePairs.Num();
         for (int32 i = 0; i < l; i++) {
-            revealCardValue(aIdValuePairs[i]);
+            tryRevealCardValue(aIdValuePairs[i]);
         }
     };
 

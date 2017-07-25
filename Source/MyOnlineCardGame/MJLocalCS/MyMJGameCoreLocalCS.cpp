@@ -378,7 +378,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusherUpdateCards(FMyMJGamePusherUpdateCardsC
             pCardInfo->m_eFlipState = pPusher->m_eTargetState;
         }
 
-        pCardValuePack->revealCardValue(*pTargetIdValue);
+        //pCardValuePack->revealCardValue(*pTargetIdValue);
     }
 
     if (pPusher->m_iIdxAttender >= 0) {
@@ -474,7 +474,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionDistCardsAtStart(FMyMJGameActionDistCar
         //1, reveal value
         int32 id = pAction->m_aIdValues[i].m_iId;
         int32 value = pAction->m_aIdValues[i].m_iValue;
-        pCardValuePack->revealCardValue(id, value);
+        //pCardValuePack->revealCardValue(id, value);
 
         //2, move card
         moveCardFromOldPosi(id);

@@ -141,7 +141,7 @@ void FMyMJCardValuePackCpp::helperVerifyValues() const
     }
 }
 
-void FMyMJCardValuePackCpp::revealCardValue(int32 id, int32 value)
+void FMyMJCardValuePackCpp::tryRevealCardValue(int32 id, int32 value)
 {
     if (value > 0) {
         int32 &destV = getByIdxRef(id);
