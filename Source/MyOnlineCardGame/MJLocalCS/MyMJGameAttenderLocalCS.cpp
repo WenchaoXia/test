@@ -28,7 +28,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
     if (eGameState == MyMJGameStateCpp::CardsShuffled) {
         FMyMJGameActionThrowDicesCpp *pAction = new FMyMJGameActionThrowDicesCpp();
         pFillInPusher->m_cActionChoices.give(pAction);
-        pAction->init(MyMJGameActionThrowDicesSubTypeCpp::GameStart, m_iIdx, pCore->getpResManager()->getpRandomStream());
+        pAction->init(MyMJGameActionThrowDicesSubTypeCpp::GameStart, m_iIdx, pCore->getpResManager()->getpRandomStream(), pCore->m_bForceActionGenTimeLeft2AutoChooseMsZero);
     }
     else if (eGameState == MyMJGameStateCpp::CardsWaitingForDistribution)
     {
@@ -225,7 +225,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
             pFillInPusher->m_cActionChoices.give(pAction);
 
             FMyMJGameActionNoActCpp *pActionNoAct = new FMyMJGameActionNoActCpp();
-            pActionNoAct->init(m_iIdx, MyMJGameActionNoActreserved0MaskPassPaoHu);
+            pActionNoAct->init(m_iIdx, 0 | (uint8)EMyMJGameActionReserved0Mask::PassPaoHu, ActionGenTimeLeft2AutoChooseMsForImportant, pCore->m_bForceActionGenTimeLeft2AutoChooseMsZero);
             pFillInPusher->m_cActionChoices.give(pActionNoAct);
         }
 
@@ -234,7 +234,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
     else if (eGameState == MyMJGameStateCpp::WeavedGangQiangGangChecked) {
         FMyMJGameActionThrowDicesCpp *pAction = new FMyMJGameActionThrowDicesCpp();
         pFillInPusher->m_cActionChoices.give(pAction);
-        pAction->init(MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS, m_iIdx, pCore->getpResManager()->getpRandomStream());
+        pAction->init(MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS, m_iIdx, pCore->getpResManager()->getpRandomStream(), pCore->m_bForceActionGenTimeLeft2AutoChooseMsZero);
     }
     else if (eGameState == MyMJGameStateCpp::WeavedGangTakenCards) {
         //Check hu
@@ -278,7 +278,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
             pFillInPusher->m_cActionChoices.give(pAction);
 
             FMyMJGameActionNoActCpp *pActionNoAct = new FMyMJGameActionNoActCpp();
-            pActionNoAct->init(m_iIdx, 0);
+            pActionNoAct->init(m_iIdx, 0, 0, pCore->m_bForceActionGenTimeLeft2AutoChooseMsZero);
             pFillInPusher->m_cActionChoices.give(pActionNoAct);
         }
 
@@ -374,7 +374,7 @@ void FMyMJGameAttenderLocalCSCpp::applyPusherUpdateTing(FMyMJGamePusherUpdateTin
 
 void FMyMJGameAttenderLocalCSCpp::applyActionNoAct(FMyMJGameActionNoActCpp *pAction)
 {
-    if ((pAction->m_iReserved0 & MyMJGameActionNoActreserved0MaskPassPaoHu) > 0) {
+    if ((pAction->m_iReserved0 & (uint8)EMyMJGameActionReserved0Mask::PassPaoHu) > 0) {
         m_bBanPaoHuLocalCS = true;
     }
 }
@@ -465,14 +465,15 @@ void FMyMJGameAttenderLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAct
     if (eType == MyMJWeaveTypeCpp::GangAn || eType == MyMJWeaveTypeCpp::GangMing) {
 
         int32 reserved0 = pAction->m_cWeave.getReserved0();
+        bool bIsBuZhang = (reserved0 & (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang) > 0;
         if (pCore->getWorkMode() == MyMJGameCoreWorkModeCpp::Full) {
             bool bTIngNow = tryGenAndEnqueueUpdateTingPusher();
-            if (reserved0 == FMyMJWeaveCppReserved0WhenGangValueGangYao) {
+            if (!bIsBuZhang) {
                 MY_VERIFY(bTIngNow);
             }
         }
 
-        if (reserved0 == FMyMJWeaveCppReserved0WhenGangValueGangYao) {
+        if (!bIsBuZhang) {
             m_bGangYaoedLocalCS = true;
         }
 
@@ -660,7 +661,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionAfterGivenOutCards(FMyMJGamePusherFil
 
     if (bHaveValidAction) {
         FMyMJGameActionNoActCpp *pActionNoAct = new FMyMJGameActionNoActCpp();
-        pActionNoAct->init(m_iIdx, bCanHu ? MyMJGameActionNoActreserved0MaskPassPaoHu : 0);
+        pActionNoAct->init(m_iIdx, bCanHu ? (0 | ((uint8)EMyMJGameActionReserved0Mask::PassPaoHu)) : 0, 0, pCore->m_bForceActionGenTimeLeft2AutoChooseMsZero);
         pFillInPusher->m_cActionChoices.give(pActionNoAct);
     }
 }
@@ -824,7 +825,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
                 pWeaveInAction->appendIdVakuePairs(pWeave->getIdValuesRef());
                 pWeaveInAction->addCard(cardIdFound, cardValue);
 
-                pWeaveInAction->initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp::GangMing, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::KeZiMing, FMyMJWeaveCppReserved0WhenGangValueBuZhang);
+                pWeaveInAction->initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp::GangMing, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::KeZiMing, 0 | (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang);
                 pAction->initWithWeaveAlreadyInited(idxAttenderSelf, MyMJCardFlipStateCpp::Up);
             }
         }
@@ -872,7 +873,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
                 pWeaveInAction->addCard(*pTriggerCard);
             }
 
-            pWeaveInAction->initWitIdValuesAlreadyInited(eType, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::Invalid, FMyMJWeaveCppReserved0WhenGangValueBuZhang);
+            pWeaveInAction->initWitIdValuesAlreadyInited(eType, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::Invalid, 0 | (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang);
             pAction->initWithWeaveAlreadyInited(idxAttenderSelf, eTargetFlipState);
         }
     }
@@ -908,7 +909,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
                     int32 idx = actionWeavesGangYao.Emplace();
                     FMyMJGameActionWeaveCpp *pActionNew = &actionWeavesGangYao[idx];
                     *pActionNew = *pAction;
-                    pActionNew->m_cWeave.getReserved0Ref() = FMyMJWeaveCppReserved0WhenGangValueGangYao;
+                    pActionNew->m_cWeave.getReserved0Ref() = 0 & (!(uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang);
                 }
             }
 

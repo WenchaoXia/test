@@ -17,7 +17,7 @@
 
 #include "MyMJGamePusher.h"
 
-//#include "MyMJGamePushersIO.generated.h"
+#include "MyMJGamePushersIO.generated.h"
 
 
 //both producer and consumer, consume itself, and produce to external unit
@@ -53,7 +53,6 @@ public:
     {
         reset();
         m_pQueueRemote = pQueueRemote;
-
     };
 
     TSharedPtr<FMyMJGamePusherBaseCpp> tryPullPusherFromLocal();
@@ -109,20 +108,30 @@ protected:
 #define ActionCollectEmpty 1
 #define ActionCollectWaiting 2
 
-
-class FMyMJGameActionContainorCpp
+USTRUCT(BlueprintType)
+struct FMyMJGameActionContainorCpp
 {
+    GENERATED_USTRUCT_BODY()
 
 public:
+    FMyMJGameActionContainorCpp()
+    {
+        FMyMJGameActionContainorCpp(NULL);
+    };
+
     FMyMJGameActionContainorCpp(FMyMJGameAttenderCpp *pParentAttender)
     {
-        m_pParentAttender = pParentAttender;
+        setup(pParentAttender);
         reinit(false);
     };
 
     virtual ~FMyMJGameActionContainorCpp()
     {};
 
+    void setup(FMyMJGameAttenderCpp *pParentAttender)
+    {
+        m_pParentAttender = pParentAttender;
+    };
 
     void reinit(bool bRandomSelect)
     {
@@ -264,7 +273,7 @@ public:
         }
     }
 
-    int32 collectAction(int64 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections);
+    int32 collectAction(int32 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections);
 
     inline
     int32 getPriorityMax() {
@@ -292,8 +301,10 @@ protected:
 
     TSharedPtr<FMyMJGameActionBaseCpp> m_pSelected;
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "need to collect"))
     bool m_bNeed2Collect;
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "auto random select"))
     bool m_bRandomSelect; //Mainly used for test and one stupid AI
 
     FMyMJGameAttenderCpp *m_pParentAttender;
@@ -350,7 +361,7 @@ public:
     void genActionChoices();
 
     //return if all collected
-    bool collectAction(int64 iTimePassedMs, bool &outHaveProgress);
+    bool collectAction(int32 iTimePassedMs, bool &outHaveProgress);
 
 protected:
 

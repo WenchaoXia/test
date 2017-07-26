@@ -184,11 +184,12 @@ bool FMyMJGameCoreCpp::actionLoop()
 
     bool bRet = false;
     int64 iMsLast = UMyMJUtilsLibrary::nowAsMsFromTick();
-    int64 iTimePassedMs = iMsLast - m_iMsLast;
-    if (iTimePassedMs < 0) {
-        iTimePassedMs = 0;
+    int64 iTimePassedMs64 = iMsLast - m_iMsLast;
+    if (iTimePassedMs64 < 0) {
+        iTimePassedMs64 = 0;
     }
     m_iMsLast = iMsLast;
+    int32 iTimePassedMs32 = iTimePassedMs64 > MAX_int32 ? MAX_int32 : (int32)iTimePassedMs64;
 
     bRet |= findAndApplyPushers();
     if (findAndHandleCmd()) {
@@ -208,7 +209,7 @@ bool FMyMJGameCoreCpp::actionLoop()
     else if (eActionLoopState == MyMJActionLoopStateCpp::ActionGened) {
         //collect action
         bool bHaveProgres;
-        bool bAllCollected = pCollector->collectAction(iTimePassedMs, bHaveProgres);
+        bool bAllCollected = pCollector->collectAction(iTimePassedMs32, bHaveProgres);
 
         if (bAllCollected) {
             eActionLoopState = MyMJActionLoopStateCpp::ActionCollected;

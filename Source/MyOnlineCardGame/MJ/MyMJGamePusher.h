@@ -77,6 +77,9 @@ enum class MyMJGamePusherTypeCpp : uint8
 #define PriMyMJGameActionHuBornLocalCS  100
 #define PriMyMJGameActionZhaNiaoLocalCS 100
 
+#define ActionGenTimeLeft2AutoChooseMsForImportant 4000
+
+
 USTRUCT(BlueprintType)
 struct FMyMJGamePusherBaseCpp
 {
@@ -791,6 +794,8 @@ public:
 };
 
 
+typedef struct FMyMJGameActionUnfiedForBPCpp FMyMJGameActionUnfiedForBPCpp;
+
 USTRUCT(BlueprintType)
 struct FMyMJGameActionBaseCpp : public FMyMJGamePusherBaseCpp
 {
@@ -802,7 +807,7 @@ public:
         m_eType = MyMJGamePusherTypeCpp::ActionBase;
         m_iPriority = 0;
         m_iIdxAttender = 0;
-        m_iTimeLeft2AutoChoose = 0;
+        m_iTimeLeft2AutoChooseMs = 0;
     };
 
     virtual ~FMyMJGameActionBaseCpp()
@@ -812,7 +817,7 @@ public:
     virtual FString genDebugString() const override
     {
         FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_iIdxAttender: %d, m_iPriority %d, m_iTimeLeft2AutoChoose %" "lld" "."), m_iIdxAttender, m_iPriority, m_iTimeLeft2AutoChoose); //PRIu64 can't be used now since I didn't find a proper way to include the defines
+        str += FString::Printf(TEXT(" m_iIdxAttender: %d, m_iPriority %d, m_iTimeLeft2AutoChoose %d."), m_iIdxAttender, m_iPriority, m_iTimeLeft2AutoChooseMs); //PRIu64 can't be used now since I didn't find a proper way to include the defines
         return str;
     };
 
@@ -831,13 +836,19 @@ public:
     virtual int32 genRandomSubSelections(FRandomStream *pRandomStream, TArray<int32> &outSubSelections)
     {
         return 0;
-    }
+    };
 
     //called in full mode collected, before enqueue and apply this give a chance to fill in data
     virtual void resolveActionResult(FMyMJGameAttenderCpp &attender)
     {
         return;
-    }
+    };
+
+    //return true means this action have a valid represent, @poutActionUnified can be NULL fpr caller to test if this action have a valid unified form
+    virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified)
+    {
+        return false;
+    };
 
     inline
     int32 getIdxAttender()
@@ -859,15 +870,15 @@ public:
     };
 
     inline
-    int64 getTimeLeft2AutoChoose()
+    int32 getTimeLeft2AutoChoose()
     {
-        return m_iTimeLeft2AutoChoose;
+        return m_iTimeLeft2AutoChooseMs;
     };
 
     inline
-    int64& getTimeLeft2AutoChooseRef()
+    int32& getTimeLeft2AutoChooseRef()
     {
-        return m_iTimeLeft2AutoChoose;
+        return m_iTimeLeft2AutoChooseMs;
     };
 
     //used to determine priority when collect action, if return true, same action will always have only one picked as result
@@ -886,8 +897,44 @@ protected:
 
     //0 means instantly, < 0 means never
     UPROPERTY()
-    int64 m_iTimeLeft2AutoChoose; //only used in full mode, not need to serialize, < 0 means not enabled
+    int32 m_iTimeLeft2AutoChooseMs; //only used in full mode, not need to serialize, < 0 means not enabled
 };
+
+
+UENUM(Blueprintable, Meta = (Bitflags))
+enum class EMyMJGameActionReserved0Mask : uint8
+{
+    PassPaoHu,
+};
+
+//Unified action present for graphic and UI
+//If m_eType is actionBase, it means s stub to hold place
+USTRUCT(BlueprintType)
+struct FMyMJGameActionUnfiedForBPCpp : public FMyMJGameActionBaseCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGameActionUnfiedForBPCpp() : Super()
+    {
+
+    };
+
+    virtual ~FMyMJGameActionUnfiedForBPCpp()
+    {
+
+    };
+
+    UPROPERTY(BlueprintReadOnly)
+    TArray<int32> m_aCardIds;
+
+    UPROPERTY(BlueprintReadOnly)
+    FMyMJWeaveCpp m_cWeave;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "reserved0", Bitmask, BitmaskEnum = "EMyMJGameActionReserved0Mask"))
+    int32 m_iReserved0;
+};
+
 
 #define MyMJGameActionStateUpdateMaskNotResetHelperLastCardsGivenOutOrWeave 0x01
 
@@ -954,8 +1001,6 @@ public:
     int32 m_iMask;
 };
 
-#define MyMJGameActionNoActreserved0MaskPassPaoHu 0x01
-
 USTRUCT(BlueprintType)
 struct FMyMJGameActionNoActCpp : public FMyMJGameActionBaseCpp
 {
@@ -994,14 +1039,29 @@ public:
         return str;
     };
 
+    virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
+    {
+        if (poutActionUnified) {
+            FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
+            *pBase = *this;
+            poutActionUnified->m_iReserved0 = m_iReserved0;
+        }
+
+        return true;
+    };
+
     inline
-    void init(int32 idxAttender, int32 iReserved0)
+    void init(int32 idxAttender, int32 iReserved0, int32 iTimeLeft2AutoChooseMs, bool bForceActionGenTimeLeft2AutoChooseMsZero)
     {
         m_iIdxAttender = idxAttender;
         m_iReserved0 = iReserved0;
+
+        if (!bForceActionGenTimeLeft2AutoChooseMsZero) {
+            m_iTimeLeft2AutoChooseMs = iTimeLeft2AutoChooseMs;
+        }
     };
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "reserved0", Bitmask, BitmaskEnum = "EMyMJGameActionReserved0Mask"))
     int32 m_iReserved0;
 };
 
@@ -1042,7 +1102,25 @@ public:
         return str;
     };
 
-    void init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream *pRandomStream);
+
+    virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
+    {
+        if (m_eSubType == MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS) {
+            if (poutActionUnified) {
+                FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
+                *pBase = *this;
+            }
+
+            return true;
+        }
+        else {
+            return false;
+        }
+
+
+    };
+
+    void init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream *pRandomStream, bool bForceActionGenTimeLeft2AutoChooseMsZero);
 
     void getDiceNumbers(int32 &outDiceNumber0, int32 &outDiceNumber1) const;
 
@@ -1238,6 +1316,7 @@ public:
             int32 count0 = m_aOptionIdsHandCard.Num();
             int32 count1 = m_aOptionIdsJustTaken.Num();
             int32 countAll = count0 + count1;
+            MY_VERIFY(count1 == 0 || count1 == 1);
             MY_VERIFY(countAll > 0);
             return countAll;
         }
@@ -1247,6 +1326,24 @@ public:
     {
         outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
         outaRevealedCardValues = m_aIdValuePairsSelected;
+    };
+
+    virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
+    {
+        if (m_bRestrict2SelectCardsJustTaken) {
+            return false;
+        }
+        else {
+            if (poutActionUnified) {
+
+                FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
+                *pBase = *this;
+                poutActionUnified->m_aCardIds = m_aOptionIdsHandCard;
+                poutActionUnified->m_aCardIds.Append(m_aOptionIdsJustTaken);
+            }
+            return true;
+        }
+
     };
 
     //subSelection here contains card Id
@@ -1340,6 +1437,16 @@ public:
         }
     };
 
+    virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
+    {
+        if (poutActionUnified) {
+            FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
+            *pBase = *this;
+            poutActionUnified->m_cWeave = m_cWeave;
+        }
+        return true;
+    };
+
     void initWithWeaveAlreadyInited(int32 idxAttender, MyMJCardFlipStateCpp eTargetFlipState)
     {
         m_iIdxAttender = idxAttender;
@@ -1414,6 +1521,14 @@ public:
         outaRevealedCardValues = m_aRevealingCards;
     };
 
+    virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
+    {
+        if (poutActionUnified) {
+            FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
+            *pBase = *this;
+        }
+        return true;
+    };
 
     void init(int32 idxAttender, bool bEndGame, FMyMJHuScoreResultFinalGroupCpp &finalGroup)
     {
@@ -1483,6 +1598,15 @@ public:
         }
 
         return str;
+    };
+
+    virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
+    {
+        if (poutActionUnified) {
+            FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
+            *pBase = *this;
+        }
+        return true;
     };
 
     virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override

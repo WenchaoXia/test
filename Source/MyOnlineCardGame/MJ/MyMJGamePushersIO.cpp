@@ -24,7 +24,7 @@ TSharedPtr<FMyMJGamePusherBaseCpp> FMyMJGamePusherIOComponentFullCpp::tryPullPus
 
 
 int32
-FMyMJGameActionContainorCpp::collectAction(int64 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections)
+FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections)
 {
     outPriorityMax = m_iPriorityMax;
     outAlwaysCheckDistWhenCalcPri = m_bAlwaysCheckDistWhenCalcPri;
@@ -40,7 +40,7 @@ FMyMJGameActionContainorCpp::collectAction(int64 iTimePassedMs, int32 &outPriori
     if (m_pSelected.Get() == NULL) {
         if (choiceCount == 1) {
             //try auto select
-            int64 timeLeft = m_aActionChoices[0]->getTimeLeft2AutoChooseRef();
+            int32 &timeLeft = m_aActionChoices[0]->getTimeLeft2AutoChooseRef();
             //1st, try calc
             if (timeLeft > 0) {
                 timeLeft -= iTimePassedMs;
@@ -48,6 +48,10 @@ FMyMJGameActionContainorCpp::collectAction(int64 iTimePassedMs, int32 &outPriori
                     timeLeft = 0;
                 }
             }
+            else {
+                timeLeft = 0;
+            }
+
             //2nd, try make choice
             if (timeLeft == 0) {
                 MyMJGameErrorCodeCpp errorCode = makeSelection(m_iActionGroupId, 0);
@@ -196,7 +200,7 @@ FMyMJGameActionCollectorCpp::genActionChoices()
 };
 
 bool
-FMyMJGameActionCollectorCpp::collectAction(int64 iTimePassedMs, bool &outHaveProgress)
+FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHaveProgress)
 {
     MY_VERIFY(m_pPusherIO.IsValid());
     outHaveProgress = false;

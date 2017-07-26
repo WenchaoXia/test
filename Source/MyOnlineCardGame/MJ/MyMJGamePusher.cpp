@@ -807,12 +807,16 @@ FMyMJGameActionThrowDicesCpp::cloneDeep() const
     return pRet;
 }
 
-void FMyMJGameActionThrowDicesCpp::init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream *pRandomStream)
+void FMyMJGameActionThrowDicesCpp::init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream *pRandomStream, bool bForceActionGenTimeLeft2AutoChooseMsZero)
 {
     m_eSubType = eSubType;
     m_iIdxAttender = idxAttender;
     m_iDiceNumber0 = pRandomStream->RandRange(1, 6);
     m_iDiceNumber1 = pRandomStream->RandRange(1, 6);
+
+    if (m_eSubType == MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS && !bForceActionGenTimeLeft2AutoChooseMsZero) {
+        m_iTimeLeft2AutoChooseMs = ActionGenTimeLeft2AutoChooseMsForImportant;
+    }
 }
 
 void FMyMJGameActionThrowDicesCpp::getDiceNumbers(int32 &outDiceNumber0, int32 &outDiceNumber1) const

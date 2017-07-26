@@ -369,6 +369,8 @@ public:
 
     FMyMJGameCoreCpp(MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed) : FMyMJGameCoreBaseCpp()
     {
+        m_bForceActionGenTimeLeft2AutoChooseMsZero = false;
+
         m_pDataForFullMode = NULL;
         m_pDataForMirrorMode = NULL;
 
@@ -548,6 +550,10 @@ public:
     void moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSlotTypeCpp eSlotDst);
     void updateUntakenInfoHeadOrTail(bool bUpdateHead, bool bUpdateTail);
 
+
+    //config
+    bool m_bForceActionGenTimeLeft2AutoChooseMsZero;
+
 protected:
 
     //return whether game have progress
@@ -606,4 +612,5 @@ protected:
 
     MyMJGameRuleTypeCpp m_eRuleType;//also distinguish sub type
     MyMJGameCoreWorkModeCpp m_eWorkMode;
+
 };

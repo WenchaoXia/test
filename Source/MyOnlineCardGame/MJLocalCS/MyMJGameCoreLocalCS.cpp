@@ -711,7 +711,9 @@ void FMyMJGameCoreLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAction)
     FMyMJGameActionStateUpdateCpp *pActionUpdatePrev = NULL;
     if (eType == MyMJWeaveTypeCpp::GangAn || eType == MyMJWeaveTypeCpp::GangMing) {
         int32 reserved0 = pAction->m_cWeave.getReserved0();
-        if (reserved0 == FMyMJWeaveCppReserved0WhenGangValueGangYao) {
+        bool bIsBuZhang = (reserved0 & (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang) > 0;
+
+        if (!bIsBuZhang) {
             if (eType == MyMJWeaveTypeCpp::GangMing && pAction->m_cWeave.getTypeConsumed() == MyMJWeaveTypeCpp::ShunZiMing) {
                 //can be qiang, check first
                 eGameStateNow = MyMJGameStateCpp::WeavedGang;
@@ -735,15 +737,12 @@ void FMyMJGameCoreLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAction)
             }
 
         }
-        else if (reserved0 == FMyMJWeaveCppReserved0WhenGangValueBuZhang) {
+        else {
             eGameStateNow = MyMJGameStateCpp::WeavedGangSpBuZhangLocalCS;
             iAttenderMaskNow = genIdxAttenderStillInGameMaskOne(idxAttender);
             bAllowSamePriActionNow = false;
             iIdxAttenderHavePriMaxNow = idxAttender;
             pActionUpdatePrev = NULL;
-        }
-        else {
-            MY_VERIFY(false);
         }
 
     }

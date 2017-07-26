@@ -220,8 +220,14 @@ struct FMyMJCardCpp : public FMyMJCardInfoCpp
     int32 m_iValue;
 };
 
-#define FMyMJWeaveCppReserved0WhenGangValueGangYao 0
-#define FMyMJWeaveCppReserved0WhenGangValueBuZhang 1
+UENUM(Blueprintable, Meta = (Bitflags))
+enum class EMyMJWeaveReserved0Mask : uint8
+{
+    LocalCSGangBuZhang, //1 means BuZhang, 0 means GangYao
+};
+
+//#define FMyMJWeaveCppReserved0WhenGangValueGangYao 0
+//#define FMyMJWeaveCppReserved0WhenGangValueBuZhang 1
 
 //Id should be unique always
 USTRUCT(BlueprintType)
@@ -436,7 +442,7 @@ protected:
 
     //in some local MJ rule, use it to distinguish weave sub type.
     //in the case of CSMJ, when type is GangAn or GangMing, 0 means it is a gangyao, 1 means a buzhang 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Reserved0"))
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "reserved0", Bitmask, BitmaskEnum = "EMyMJWeaveReserved0Mask"))
     int32 m_iReserved0;
 };
 
