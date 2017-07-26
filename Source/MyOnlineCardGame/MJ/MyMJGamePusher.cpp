@@ -705,7 +705,7 @@ FMyMJGamePusherResetGameCpp::cloneDeep() const
 }
 
 void
-FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream *pRandomStream, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData, int32 iAttenderBehaviorRandomSelectMask)
+FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream &RS, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData, int32 iAttenderBehaviorRandomSelectMask)
 {
     m_iGameId = iGameId;
     m_cGameCfg = cGameCfg;
@@ -774,7 +774,7 @@ FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream *pRandomStream, F
     int32 remainingCards = outValues.Num();
 
     while (remainingCards > 2) {
-        int32 idxPicked = pRandomStream->RandRange(0, remainingCards - 2);
+        int32 idxPicked = RS.RandRange(0, remainingCards - 2);
         int32 &pickedCardValue = outValues[idxPicked];
         int32 tempCardValue = pickedCardValue;
         outValues[idxPicked] = outValues[remainingCards - 1];
@@ -807,12 +807,12 @@ FMyMJGameActionThrowDicesCpp::cloneDeep() const
     return pRet;
 }
 
-void FMyMJGameActionThrowDicesCpp::init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream *pRandomStream, bool bForceActionGenTimeLeft2AutoChooseMsZero)
+void FMyMJGameActionThrowDicesCpp::init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream &RS, bool bForceActionGenTimeLeft2AutoChooseMsZero)
 {
     m_eSubType = eSubType;
     m_iIdxAttender = idxAttender;
-    m_iDiceNumber0 = pRandomStream->RandRange(1, 6);
-    m_iDiceNumber1 = pRandomStream->RandRange(1, 6);
+    m_iDiceNumber0 = RS.RandRange(1, 6);
+    m_iDiceNumber1 = RS.RandRange(1, 6);
 
     if (m_eSubType == MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS && !bForceActionGenTimeLeft2AutoChooseMsZero) {
         m_iTimeLeft2AutoChooseMs = ActionGenTimeLeft2AutoChooseMsForImportant;
@@ -873,7 +873,7 @@ int32 FMyMJGameActionGiveOutCardsCpp::makeSubSelection(TArray<int32> &subSelecti
     return 0;
 };
 
-int32 FMyMJGameActionGiveOutCardsCpp::genRandomSubSelections(FRandomStream *pRandomStream, TArray<int32> &outSubSelections)
+int32 FMyMJGameActionGiveOutCardsCpp::genRandomSubSelections(FRandomStream &RS, TArray<int32> &outSubSelections)
 {
     outSubSelections.Reset();
     if (m_bRestrict2SelectCardsJustTaken) {
@@ -892,7 +892,7 @@ int32 FMyMJGameActionGiveOutCardsCpp::genRandomSubSelections(FRandomStream *pRan
         int32 count1 = m_aOptionIdsJustTaken.Num();
 
         int32 retSelectedId;
-        int32 randNo = pRandomStream->RandRange(0, c - 1);
+        int32 randNo = RS.RandRange(0, c - 1);
         if (randNo < count0) {
             retSelectedId = m_aOptionIdsHandCard[randNo];
         }

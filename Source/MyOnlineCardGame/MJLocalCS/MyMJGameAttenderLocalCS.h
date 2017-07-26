@@ -12,7 +12,7 @@ class FMyMJGameAttenderLocalCSCpp : public FMyMJGameAttenderCpp
     //GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGameAttenderLocalCSCpp() : FMyMJGameAttenderCpp()
+    FMyMJGameAttenderLocalCSCpp(MyMJGameCoreWorkModeCpp eWorkMode) : FMyMJGameAttenderCpp(eWorkMode)
     {
         reset(false);
     };

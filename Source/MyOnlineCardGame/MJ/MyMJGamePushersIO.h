@@ -116,21 +116,21 @@ struct FMyMJGameActionContainorCpp
 public:
     FMyMJGameActionContainorCpp()
     {
-        FMyMJGameActionContainorCpp(NULL);
+        FMyMJGameActionContainorCpp(-1);
     };
 
-    FMyMJGameActionContainorCpp(FMyMJGameAttenderCpp *pParentAttender)
+    FMyMJGameActionContainorCpp(int32 idxAttender)
     {
-        setup(pParentAttender);
-        reinit(false);
+        setup(idxAttender);
     };
 
     virtual ~FMyMJGameActionContainorCpp()
     {};
 
-    void setup(FMyMJGameAttenderCpp *pParentAttender)
+    void setup(int32 idxAttender)
     {
-        m_pParentAttender = pParentAttender;
+        m_iIdxAttedner = idxAttender;
+        reinit(false);
     };
 
     void reinit(bool bRandomSelect)
@@ -160,17 +160,16 @@ public:
     };
 
     inline
+    int32 getIdxAttender() const
+    {
+        return m_iIdxAttedner;
+    };
+
+    inline
     bool &getNeed2Collect()
     {
         return m_bNeed2Collect;
     };
-
-    inline
-    FMyMJGameAttenderCpp *getpParentAttender()
-    {
-        return m_pParentAttender;
-    };
-
 
     int32 getActionChoiceCount()
     {
@@ -245,7 +244,7 @@ public:
         return MyMJGameErrorCodeCpp::None;
     };
 
-    void makeRandomSelection(FRandomStream *pRandomStream);
+    void makeRandomSelection(FRandomStream &RS);
 
     //this code path core dump if met any invalid request
     void showSelectionOnNotify(int32 iActionGroupId, int32 iSelection, TArray<int32> &subSelections)
@@ -273,7 +272,7 @@ public:
         }
     }
 
-    int32 collectAction(int32 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections);
+    int32 collectAction(int32 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections, FRandomStream &RS);
 
     inline
     int32 getPriorityMax() {
@@ -286,11 +285,18 @@ public:
     };
 
 protected:
-    //Also used to tip the state in UI
-    TArray<TSharedPtr<FMyMJGameActionBaseCpp>> m_aActionChoices; //Todo: War
+    //following is used to tell BP what we have
+    //< 0 means not selected yet
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx of selection"))
     int32 m_iSelectionPushed;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "sub selections"))
     TArray<int32> m_aSubSelectionsPushed;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "need to collect"))
     bool m_bNeed2CollectPushed; //can be used to tip whether waiting to choose in UI
+
+    TArray<TSharedPtr<FMyMJGameActionBaseCpp>> m_aActionChoices; //Todo: War
 
     int32 m_iSelectionInputed; //It is the easiest way to save it like this, kick the core and let the core pick it
     TArray<int32> m_aSubSelectionsInputed;
@@ -300,18 +306,17 @@ protected:
     bool  m_bAlwaysCheckDistWhenCalcPri; //the max pri action's property
 
     TSharedPtr<FMyMJGameActionBaseCpp> m_pSelected;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "need to collect"))
     bool m_bNeed2Collect;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "auto random select"))
     bool m_bRandomSelect; //Mainly used for test and one stupid AI
 
-    FMyMJGameAttenderCpp *m_pParentAttender;
+    int32 m_iIdxAttedner;
 
 };
 
 //USTRUCT()
+//only exist in full mode
 struct FMyMJGameActionCollectorCpp
 {
     //GENERATED_USTRUCT_BODY()
@@ -322,7 +327,7 @@ public:
         m_pCore = pCore;
         m_pPusherIO = NULL;
 
-        resetForNewLoop(NULL, NULL, 0, false, 0);
+        resetForNewLoopForFullMode(NULL, NULL, false, 0, -1);
         setActionGroupId(0);
     };
 
@@ -334,17 +339,12 @@ public:
         m_pPusherIO = pPusherIO;
     };
 
-    void initInMirrorMode()
-    {
-
-    };
-
     //reinit means can be called multiple times, unlike init() which is disigned to be called only one time in its life time
     void reinit(TArray<FMyMJGameActionContainorCpp *> &aActionContainors, int32 iRandomSelectMask);
 
     //Warn: @pPreAction, @pPostAction must allocated on heap and this function will take ownership
     //Warn: m_iActionGroupId will not be set, you need call setActionGroupId() for that
-    void resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, int32 iIdxAttenderMask, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax);
+    void resetForNewLoopForFullMode(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax, int32 iExpectedContainorDebug);
 
     inline
     void setActionGroupId(int32 iActionGroupId)
@@ -358,10 +358,8 @@ public:
         return m_pPusherIO;
     };
 
-    void genActionChoices();
-
     //return if all collected
-    bool collectAction(int32 iTimePassedMs, bool &outHaveProgress);
+    bool collectAction(int32 iTimePassedMs, bool &outHaveProgress, FRandomStream &RS);
 
 protected:
 
@@ -383,7 +381,7 @@ protected:
     bool m_bEnQueueDone;
 
 
-    TArray<FMyMJGameActionContainorCpp *> m_aActionContainors; //should be equal to real attender num, observer
+    TArray<FMyMJGameActionContainorCpp *> m_aActionContainors; //should be equal to real attender num, and we record it here directly since it make things simple when calculate distance
 
     TSharedPtr<FMyMJGamePusherIOComponentFullCpp> m_pPusherIO;
 

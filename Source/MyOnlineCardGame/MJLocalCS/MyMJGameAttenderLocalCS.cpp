@@ -14,7 +14,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
     FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
     FMyMJCardValuePackCpp *pCardValuePack = pCore->getpCardValuePack();
 
-    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
     MY_VERIFY(pCardInfoPack);
     MY_VERIFY(pCardValuePack);
@@ -28,7 +28,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
     if (eGameState == MyMJGameStateCpp::CardsShuffled) {
         FMyMJGameActionThrowDicesCpp *pAction = new FMyMJGameActionThrowDicesCpp();
         pFillInPusher->m_cActionChoices.give(pAction);
-        pAction->init(MyMJGameActionThrowDicesSubTypeCpp::GameStart, m_iIdx, pCore->getpResManager()->getpRandomStream(), pCore->m_bForceActionGenTimeLeft2AutoChooseMsZero);
+        pAction->init(MyMJGameActionThrowDicesSubTypeCpp::GameStart, m_iIdx, pCore->getpResManager()->getRandomStreamRef(), pCore->m_bForceActionGenTimeLeft2AutoChooseMsZero);
     }
     else if (eGameState == MyMJGameStateCpp::CardsWaitingForDistribution)
     {
@@ -234,7 +234,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
     else if (eGameState == MyMJGameStateCpp::WeavedGangQiangGangChecked) {
         FMyMJGameActionThrowDicesCpp *pAction = new FMyMJGameActionThrowDicesCpp();
         pFillInPusher->m_cActionChoices.give(pAction);
-        pAction->init(MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS, m_iIdx, pCore->getpResManager()->getpRandomStream(), pCore->m_bForceActionGenTimeLeft2AutoChooseMsZero);
+        pAction->init(MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS, m_iIdx, pCore->getpResManager()->getRandomStreamRef(), pCore->m_bForceActionGenTimeLeft2AutoChooseMsZero);
     }
     else if (eGameState == MyMJGameStateCpp::WeavedGangTakenCards) {
         //Check hu
@@ -331,7 +331,7 @@ bool FMyMJGameAttenderLocalCSCpp::tryGenAndEnqueueUpdateTingPusher()
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
 
@@ -384,7 +384,7 @@ void FMyMJGameAttenderLocalCSCpp::applyActionHuBornLocalCS(FMyMJGameActionHuBorn
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
@@ -532,7 +532,7 @@ void FMyMJGameAttenderLocalCSCpp::onNewTurn(bool bIsWeave)
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
@@ -581,7 +581,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionAfterGivenOutCards(FMyMJGamePusherFil
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = pCore->getpCardInfoPack();
@@ -689,7 +689,7 @@ void FMyMJGameAttenderLocalCSCpp::assembleHuActionAttr(int32 iIdxAttenderLoseOnl
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJGameRunDataCpp *pGameRunData = &pD->m_cGameRunData;
@@ -758,7 +758,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
     outActionWeaves0.Reset();
@@ -934,7 +934,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkPeng(const FMyMJCardCpp &triggerCard, TAr
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
     outActionWeaves.Reset();
@@ -983,7 +983,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkChi(const FMyMJCardCpp &triggerCard, TArr
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataDirectPublicCpp *pD = pCore->getDataDirectPublic();
+    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
     outActionWeaves.Reset();

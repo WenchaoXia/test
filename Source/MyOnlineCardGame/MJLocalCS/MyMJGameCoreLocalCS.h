@@ -35,9 +35,9 @@ public:
 
 protected:
 
-    virtual FMyMJGameAttenderCpp* createAndInitAttender(TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx) override
+    virtual FMyMJGameAttenderCpp* createAndInitAttender(MyMJGameCoreWorkModeCpp eWorkMode, TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx) override
     {
-        FMyMJGameAttenderLocalCSCpp *pRet = new FMyMJGameAttenderLocalCSCpp();
+        FMyMJGameAttenderLocalCSCpp *pRet = new FMyMJGameAttenderLocalCSCpp(eWorkMode);
         pRet->init(pCore, idx);
         return StaticCast<FMyMJGameAttenderCpp *>(pRet);
     };

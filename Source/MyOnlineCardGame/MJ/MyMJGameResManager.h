@@ -19,10 +19,10 @@ public:
 
     };
 
-    FRandomStream *
-    getpRandomStream()
+    FRandomStream&
+    getRandomStreamRef()
     {
-        return &m_cRandomStream;
+        return m_cRandomStream;
     };
 
 

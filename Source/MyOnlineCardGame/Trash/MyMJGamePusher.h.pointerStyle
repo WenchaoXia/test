@@ -618,7 +618,7 @@ public:
         return 0;
     };
 
-    virtual int32 genRandomSubSelections(FRandomStream *pRandomStream, TArray<int32> &outSubSelections)
+    virtual int32 genRandomSubSelections(FRandomStream &RS, TArray<int32> &outSubSelections)
     {
         return 0;
     }
@@ -1023,7 +1023,7 @@ public:
     virtual int32 makeSubSelection(TArray<int32> &subSelections) override;
 
     //subSelection here contains card Id
-    virtual int32 genRandomSubSelections(FRandomStream *pRandomStream, TArray<int32> &outSubSelections) override;
+    virtual int32 genRandomSubSelections(FRandomStream &RS, TArray<int32> &outSubSelections) override;
 
     virtual void resolveActionResult(FMyMJGameAttenderCpp &attender) override;
 

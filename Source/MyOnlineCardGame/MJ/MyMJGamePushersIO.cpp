@@ -24,7 +24,7 @@ TSharedPtr<FMyMJGamePusherBaseCpp> FMyMJGamePusherIOComponentFullCpp::tryPullPus
 
 
 int32
-FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections)
+FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections, FRandomStream &RS)
 {
     outPriorityMax = m_iPriorityMax;
     outAlwaysCheckDistWhenCalcPri = m_bAlwaysCheckDistWhenCalcPri;
@@ -66,9 +66,8 @@ FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriori
 
     //have choices, not choose yet, try random choose
     if (m_pSelected.Get() == NULL && m_bRandomSelect) {
-        FMyMJGameCoreCpp *pCore = m_pParentAttender->getpCore();
-        MY_VERIFY(pCore != NULL);
-        makeRandomSelection(pCore->getpResManager()->getpRandomStream());
+
+        makeRandomSelection(RS);
     }
 
     //check again:
@@ -83,11 +82,11 @@ FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriori
 };
 
 void
-FMyMJGameActionContainorCpp::makeRandomSelection(FRandomStream *pRandomStream)
+FMyMJGameActionContainorCpp::makeRandomSelection(FRandomStream &RS)
 {
     int32 l = m_aActionChoices.Num();
     MY_VERIFY(l > 0);
-    int32 selection0 = pRandomStream->RandRange(0, l - 1);
+    int32 selection0 = RS.RandRange(0, l - 1);
 
     TSharedPtr<FMyMJGameActionBaseCpp> pAction = m_aActionChoices[selection0];
 
@@ -101,7 +100,7 @@ FMyMJGameActionContainorCpp::makeRandomSelection(FRandomStream *pRandomStream)
     }
     
     TArray<int32> subSelections;
-    MY_VERIFY(pAction->genRandomSubSelections(pRandomStream, subSelections) == 0);
+    MY_VERIFY(pAction->genRandomSubSelections(RS, subSelections) == 0);
 
     MyMJGameErrorCodeCpp errorCode = makeSelection(m_iActionGroupId, selection0, subSelections);
     if (errorCode != MyMJGameErrorCodeCpp::None) {
@@ -120,7 +119,7 @@ FMyMJGameActionCollectorCpp::reinit(TArray<FMyMJGameActionContainorCpp *> &aActi
     int32 l = m_aActionContainors.Num();
     for (int32 i = 0; i < l; i++) {
         FMyMJGameActionContainorCpp *pContainor = m_aActionContainors[i];
-        int32 idxAttender = pContainor->getpParentAttender()->getIdx();
+        int32 idxAttender = pContainor->getIdxAttender();
         if ((iRandomSelectMask & (1 << idxAttender)) > 0) {
             pContainor->reinit(true);
         }
@@ -132,7 +131,7 @@ FMyMJGameActionCollectorCpp::reinit(TArray<FMyMJGameActionContainorCpp *> &aActi
 };
 
 void
-FMyMJGameActionCollectorCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, int32 iIdxAttenderMask, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax)
+FMyMJGameActionCollectorCpp::resetForNewLoopForFullMode(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax, int32 iExpectedContainorDebug)
 {
     m_aActionCollected.Reset();
     m_iCalcActionCollectedPriMax = 0;
@@ -165,42 +164,22 @@ FMyMJGameActionCollectorCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction
 
     FMyMJGameActionContainorCpp* pContainor;
     int l = m_aActionContainors.Num();
+    if (iExpectedContainorDebug >= 0) {
+        MY_VERIFY(iExpectedContainorDebug == l);
+    }
 
     for (int i = 0; i < l; i++) {
         pContainor = m_aActionContainors[i];
-        pContainor->resetForNewLoop();
-        int32 idxAttender = pContainor->getpParentAttender()->getIdx();
-        if ((iIdxAttenderMask & (1 << idxAttender)) > 0) {
-            pContainor->getNeed2Collect() = true;
-        }
-        else {
-            pContainor->getNeed2Collect() = false;
-        }
         
-        if (idxAttender == m_iIdxAttenderHavePriMax) {
+        if (pContainor->getIdxAttender() == m_iIdxAttenderHavePriMax) {
             m_iIdxContainorSearchStart = i;
         }
     }
 };
 
-void
-FMyMJGameActionCollectorCpp::genActionChoices()
-{
-    MY_VERIFY(m_pPusherIO.IsValid());
-    FMyMJGameActionContainorCpp* pContainor;
-    int l = m_aActionContainors.Num();
-
-    MY_VERIFY(m_pPusherIO.IsValid());
-    for (int i = 0; i < l; i++) {
-        pContainor = m_aActionContainors[i];
-        if (pContainor->getNeed2Collect() == true) {
-            pContainor->getpParentAttender()->genActionChoices(m_pPusherIO.Get());
-        }
-    }
-};
 
 bool
-FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHaveProgress)
+FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHaveProgress, FRandomStream &RS)
 {
     MY_VERIFY(m_pPusherIO.IsValid());
     outHaveProgress = false;
@@ -234,7 +213,8 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHavePro
         int32 selection;
         aSubSelections.Reset();
 
-        int32 idxAttender = pContainor->getpParentAttender()->getIdx();
+        int32 idxAttender = pContainor->getIdxAttender();
+        MY_VERIFY(idxAttender >= 0);
         //if (m_bAllowSamePriAction) {
 
         //The calculation assume: all attender's setting is setting from 1 - 4, always the next number have higher priority
@@ -243,7 +223,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHavePro
 
         //now collect all equal to m_iCalcActionCollectedPriMax
         bool bAlwaysCalcDist;
-        int ret = pContainor->collectAction(iTimePassedMs, selectionsPriMax, bAlwaysCalcDist, selected, selection, aSubSelections);
+        int ret = pContainor->collectAction(iTimePassedMs, selectionsPriMax, bAlwaysCalcDist, selected, selection, aSubSelections, RS);
 
         if (ret == ActionCollectOK) {
 
@@ -266,7 +246,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHavePro
 
             FMyMJGamePusherMadeChoiceNotifyCpp madeChoiceNotify, *pMadeChoiceNotify = &madeChoiceNotify;
 
-            idxAttender = pContainor->getpParentAttender()->getIdx();
+            idxAttender = pContainor->getIdxAttender();
             pMadeChoiceNotify->init(idxAttender, m_iActionGroupId, selection, aSubSelections);
             m_pPusherIO->EnqueuePusher(*pMadeChoiceNotify);
 
@@ -310,7 +290,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHavePro
                 continue;
             }
 
-            int32 idxAttender = pContainor->getpParentAttender()->getIdx();
+            int32 idxAttender = pContainor->getIdxAttender();
             int32 distancePri = 4 - ((idxAttender - m_iIdxAttenderHavePriMax + 4) % 4);
             
             int32 calcPriSub;

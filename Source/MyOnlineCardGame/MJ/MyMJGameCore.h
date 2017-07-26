@@ -37,14 +37,6 @@ enum class MyMJActionLoopStateCpp : uint8
     ActionCollected = 3 UMETA(DisplayName = "ActionCollected")
 };
 
-UENUM(BlueprintType)
-enum class MyMJGameCoreWorkModeCpp : uint8
-{
-    Full = 0     UMETA(DisplayName = "Full"), //Full Function mode
-    Mirror = 1   UMETA(DisplayName = "Mirror"), //Mirror mode, doesn't produce any thing, just consume the pushers
-    //MirrorAlone = 2      UMETA(DisplayName = "MirrorAlone")
-};
-
 
 //the resource group  used to prepare the core
 //inqeueed elements must be allocated on heap
@@ -172,18 +164,18 @@ public:
 
 
 USTRUCT(BlueprintType)
-struct FMyMJCoreDataDirectPublicCpp
+struct FMyMJCoreDataPublicDirectCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyMJCoreDataDirectPublicCpp()
+    FMyMJCoreDataPublicDirectCpp()
     {
         reinit(MyMJGameRuleTypeCpp::Invalid);
     };
 
-    virtual ~FMyMJCoreDataDirectPublicCpp()
+    virtual ~FMyMJCoreDataPublicDirectCpp()
     {
 
     };
@@ -282,21 +274,21 @@ public:
 
 
 UCLASS(BlueprintType, Blueprintable)
-class UMyMJCoreDataForFullModeCpp : public UObject
+class UMyMJCoreDataForMirrorModeCpp : public UObject
 {
     GENERATED_BODY()
 
 public:
-    FMyMJCoreDataDirectPublicCpp m_cDataDirectPubic;
+    FMyMJCoreDataPublicDirectCpp m_cDataDirectPubic;
 };
 
 USTRUCT()
-struct FMyMJCoreDataForMirrorModeCpp
+struct FMyMJCoreDataForFullModeCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJCoreDataDirectPublicCpp m_cDataDirectPubic;
+    FMyMJCoreDataPublicDirectCpp m_cDataDirectPubic;
 };
 
 //Base class ii used to ensure basic facility create/destory sequence
@@ -387,7 +379,7 @@ public:
     virtual ~FMyMJGameCoreCpp()
     {};
 
-    FMyMJCoreDataDirectPublicCpp* getDataDirectPublic()
+    FMyMJCoreDataPublicDirectCpp* getDataPublicDirect()
     {
         if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
             if (IsValid(m_pDataForMirrorMode)) {
@@ -424,7 +416,7 @@ public:
     inline
     FMyMJCardInfoPackCpp *getpCardInfoPack()
     {
-        FMyMJCoreDataDirectPublicCpp *pD = getDataDirectPublic();
+        FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
         return &pD->m_cCardInfoPack;
     };
 
@@ -487,8 +479,6 @@ public:
         MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror);
         initBase(pSelf);
 
-        m_pActionCollector = MakeShareable(new FMyMJGameActionCollectorCpp(pSelf));
-        m_pActionCollector->initInMirrorMode();
     };
 
     //call this only in full mode
@@ -498,7 +488,7 @@ public:
     inline
     void makeProgressByPusher(FMyMJGamePusherBaseCpp *pPusher)
     {
-        FMyMJCoreDataDirectPublicCpp* pCoreData = getDataDirectPublic();
+        FMyMJCoreDataPublicDirectCpp* pCoreData = getDataPublicDirect();
         if (pCoreData == NULL) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCoreData is invalid!"));
             return;
@@ -520,7 +510,7 @@ public:
     void getGameIdAndPusherIdLast(int32 *pOutGameId, int32 *pOutPusherIdLast)
     {
         int32 iGameId = -1, iPusherIdLast = -1;
-        FMyMJCoreDataDirectPublicCpp* pCoreData = getDataDirectPublic();
+        FMyMJCoreDataPublicDirectCpp* pCoreData = getDataPublicDirect();
         if (pCoreData == NULL) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCoreData is invalid!"));
         }
@@ -560,13 +550,14 @@ protected:
     bool actionLoop();
     bool findAndApplyPushers();
     bool findAndHandleCmd();
-
+    void genActionChoices();
+    void resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, int32 iIdxAttenderMask, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax);
 
     //following should be implemented by child class
     //start
 
     //must allocate one attender on heap and return it
-    virtual FMyMJGameAttenderCpp* createAndInitAttender(TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx) = NULL;
+    virtual FMyMJGameAttenderCpp* createAndInitAttender(MyMJGameCoreWorkModeCpp eWorkMode, TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx) = NULL;
     virtual void applyPusher(FMyMJGamePusherBaseCpp *pPusher) = NULL;
     virtual void handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, FMyMJGameCmdBaseCpp *pCmd) = NULL;
 
@@ -583,23 +574,23 @@ protected:
     {
         if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
             MY_VERIFY(!m_pDataForFullMode.IsValid());
-            m_pDataForFullMode = MakeShareable<FMyMJCoreDataForMirrorModeCpp>(new FMyMJCoreDataForMirrorModeCpp());
+            m_pDataForFullMode = MakeShareable<FMyMJCoreDataForFullModeCpp>(new FMyMJCoreDataForFullModeCpp());
             m_pDataForFullMode->m_cDataDirectPubic.reinit(m_eRuleType);
         }
 
         for (int i = 0; i < 4; i++) {
             MY_VERIFY(m_aAttendersAll[i].IsValid() == false);
             //m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(new FMyMJGameAttenderCpp());
-            m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(createAndInitAttender(pSelf, i));
+            m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(createAndInitAttender(m_eWorkMode, pSelf, i));
 
         }
     };
 
     //data
-    TSharedPtr<FMyMJCoreDataForMirrorModeCpp> m_pDataForFullMode;
+    TSharedPtr<FMyMJCoreDataForFullModeCpp> m_pDataForFullMode;
 
     UPROPERTY()
-    UMyMJCoreDataForFullModeCpp *m_pDataForMirrorMode; //Warn: this can't be used in sub thread
+    UMyMJCoreDataForMirrorModeCpp *m_pDataForMirrorMode; //Warn: this can't be used in sub thread
 
     //Anything may change in subclass, should be defined as pointer, otherwise direct a member. we don't use pointer for only reason about destruction sequence
     //Basic facilities

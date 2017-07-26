@@ -261,7 +261,7 @@ int32 FMyMJGameActionGiveOutCardsCpp::makeSubSelection(TArray<int32> &subSelecti
     return 0;
 };
 
-int32 FMyMJGameActionGiveOutCardsCpp::genRandomSubSelections(FRandomStream *pRandomStream, TArray<int32> &outSubSelections)
+int32 FMyMJGameActionGiveOutCardsCpp::genRandomSubSelections(FRandomStream &RS, TArray<int32> &outSubSelections)
 {
     outSubSelections.Reset();
     if (m_bRestrict2SelectCardsJustTaken) {

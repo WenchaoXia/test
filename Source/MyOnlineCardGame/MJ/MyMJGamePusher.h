@@ -625,7 +625,7 @@ public:
     */
 
     //call this only when m_cGameCfg is set
-    void init(int32 iGameId, FRandomStream *pRandomStream, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData, int32 iAttenderBehaviorRandomSelectMask);
+    void init(int32 iGameId, FRandomStream &RS, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData, int32 iAttenderBehaviorRandomSelectMask);
 
     UPROPERTY()
     int32 m_iGameId;
@@ -833,7 +833,7 @@ public:
         return 0;
     };
 
-    virtual int32 genRandomSubSelections(FRandomStream *pRandomStream, TArray<int32> &outSubSelections)
+    virtual int32 genRandomSubSelections(FRandomStream &RS, TArray<int32> &outSubSelections)
     {
         return 0;
     };
@@ -1120,7 +1120,7 @@ public:
 
     };
 
-    void init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream *pRandomStream, bool bForceActionGenTimeLeft2AutoChooseMsZero);
+    void init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream &RS, bool bForceActionGenTimeLeft2AutoChooseMsZero);
 
     void getDiceNumbers(int32 &outDiceNumber0, int32 &outDiceNumber1) const;
 
@@ -1350,7 +1350,7 @@ public:
     virtual int32 makeSubSelection(TArray<int32> &subSelections) override;
 
     //subSelection here contains card Id
-    virtual int32 genRandomSubSelections(FRandomStream *pRandomStream, TArray<int32> &outSubSelections) override;
+    virtual int32 genRandomSubSelections(FRandomStream &RS, TArray<int32> &outSubSelections) override;
 
     virtual void resolveActionResult(FMyMJGameAttenderCpp &attender) override;
 
