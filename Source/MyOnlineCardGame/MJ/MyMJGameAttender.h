@@ -241,6 +241,10 @@ public:
             m_pDataForFullMode->m_cDataPublicDirect.setup(idx);
             m_pDataForFullMode->m_cDataPrivateDirect.setup(idx);
         }
+        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+            MY_VERIFY(IsInGameThread());
+        }
+
 
         reset(false);
     };
@@ -258,11 +262,11 @@ public:
             }
         }
         else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
-            if (m_pDataPublicForMirrorMode) {
+            if (m_pDataPublicForMirrorMode.IsValid()) {
                 m_pDataPublicForMirrorMode->m_cDataPublicDirect.reset();
             }
 
-            if (m_pDataPrivateForMirrorMode) {
+            if (m_pDataPrivateForMirrorMode.IsValid()) {
                 m_pDataPrivateForMirrorMode->m_cDataPrivateDirect.reset();
             }
         }
@@ -297,7 +301,8 @@ public:
     FMyMJAttenderDataPublicDirectForBPCpp* getDataPublicDirect()
     {
         if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
-            if (IsValid(m_pDataPublicForMirrorMode)) {
+            MY_VERIFY(IsInGameThread());
+            if (m_pDataPublicForMirrorMode.IsValid()) {
                 return &m_pDataPublicForMirrorMode->m_cDataPublicDirect;
             }
             else {
@@ -318,7 +323,8 @@ public:
     FMyMJAttenderDataPrivateDirectForBPCpp* getDataPrivateDirect()
     {
         if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
-            if (IsValid(m_pDataPrivateForMirrorMode)) {
+            MY_VERIFY(IsInGameThread());
+            if (m_pDataPrivateForMirrorMode.IsValid()) {
                 return &m_pDataPrivateForMirrorMode->m_cDataPrivateDirect;
             }
             else {
@@ -367,11 +373,11 @@ protected:
 
     TSharedPtr<FMyMJAttenderDataForFullModeCpp> m_pDataForFullMode;
 
-    UPROPERTY()
-    UMyMJAttenderDataPublicForMirrorModeCpp  *m_pDataPublicForMirrorMode;
 
-    UPROPERTY()
-    UMyMJAttenderDataPrivateForMirrorModeCpp *m_pDataPrivateForMirrorMode;
+    TWeakObjectPtr<UMyMJAttenderDataPublicForMirrorModeCpp>  m_pDataPublicForMirrorMode;
+
+
+    TWeakObjectPtr<UMyMJAttenderDataPrivateForMirrorModeCpp> m_pDataPrivateForMirrorMode;
 
     //can be cast to MyMJGameRoleTypeCpp
     int32 m_iIdx;

@@ -385,7 +385,8 @@ public:
     FMyMJCoreDataPublicDirectCpp* getDataPublicDirect()
     {
         if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
-            if (IsValid(m_pDataForMirrorMode)) {
+            MY_VERIFY(IsInGameThread());
+            if (m_pDataForMirrorMode.IsValid()) {
                 return &m_pDataForMirrorMode->m_cDataDirectPubic;
             }
             else {
@@ -405,12 +406,16 @@ public:
 
     inline MyMJGameRuleTypeCpp getRuleType() const
     {
-        if (IsValid(m_pDataForMirrorMode)) {
-            MY_VERIFY(m_pDataForMirrorMode->m_cDataDirectPubic.m_eRuleType == m_eRuleType);
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+            MY_VERIFY(IsInGameThread());
+            if (m_pDataForMirrorMode.IsValid()) {
+                MY_VERIFY(m_pDataForMirrorMode->m_cDataDirectPubic.m_eRuleType == m_eRuleType);
+            }
         }
-
-        if (m_pDataForFullMode.IsValid()) {
-            MY_VERIFY(m_pDataForFullMode->m_cDataDirectPubic.m_eRuleType == m_eRuleType);
+        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+            if (m_pDataForFullMode.IsValid()) {
+                MY_VERIFY(m_pDataForFullMode->m_cDataDirectPubic.m_eRuleType == m_eRuleType);
+            }
         }
 
         return m_eRuleType;
@@ -615,8 +620,8 @@ protected:
     //data
     TSharedPtr<FMyMJCoreDataForFullModeCpp> m_pDataForFullMode;
 
-    UPROPERTY()
-    UMyMJCoreDataForMirrorModeCpp *m_pDataForMirrorMode; //Warn: this can't be used in sub thread
+    TWeakObjectPtr<UMyMJCoreDataForMirrorModeCpp> m_pDataForMirrorMode;
+
 
     //Anything may change in subclass, should be defined as pointer, otherwise direct a member. we don't use pointer for only reason about destruction sequence
     //Basic facilities
