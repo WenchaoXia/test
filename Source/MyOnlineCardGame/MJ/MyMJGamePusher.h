@@ -615,7 +615,7 @@ public:
         return str;
     };
 
-    //we do reset game special in code
+    //we do reset game special in code, which always set values in sysrole's value pack
     /*
     virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
     {

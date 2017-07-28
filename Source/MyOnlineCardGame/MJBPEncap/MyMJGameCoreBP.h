@@ -290,7 +290,7 @@ public:
 
     };
 
-    void change2RePlayMode();
+    void change2ReplayMode();
 
     bool resetSettings()
     {
@@ -341,6 +341,9 @@ public:
     //setttings:
     UPROPERTY()
     UMyMJPusherBufferCpp* m_pPusherBuffer;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "data"))
+    UMyMJCoreDataForMirrorModeCpp *m_pData;
 
     //the level should prepare this data
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "attender pawns"))

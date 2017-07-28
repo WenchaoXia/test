@@ -232,8 +232,6 @@ void AMyMJCoreMirrorCpp::loop()
 
     FMyMJGamePusherBaseCpp *pPusher = tryCheckAndGetNextPusher();
 
-    int32 iAttenderMask;
-    TArray<FMyIdValuePair> aRevealedCardValues;
     while (pPusher) {
         MyMJGamePusherTypeCpp ePusherType = pPusher->getType();
 
@@ -266,37 +264,7 @@ void AMyMJCoreMirrorCpp::loop()
             //2nd, apply to core in data level
             m_pCoreMirror->makeProgressByPusher(pPusher);
             
-            //3rd, set data for graphic
-            //3.1 reveal value
-            if (ePusherType == MyMJGamePusherTypeCpp::PusherResetGame) {
-                FMyMJGamePusherResetGameCpp* pPusherResetGame = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher);
-                int32 l = m_aAttenderPawns.Num();
-                for (int32 i = 0; i < l; i++) {
-                    m_aAttenderPawns[i]->m_cAttenderDataDirectPrivate.reset();
-                }
-            }
-          
-            pPusher->getRevealedCardValues(iAttenderMask, aRevealedCardValues);
-            if (iAttenderMask != 0) {
-                int32 l = m_aAttenderPawns.Num();
-                if (l < (uint8)MyMJGameRoleTypeCpp::Max) {
-                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("not enough pawn set! only %d."), l);
-                }
-
-                for (int32 i = 0; i < l; i++) {
-                    if ((iAttenderMask & (1 << i)) == 0) {
-                        continue;
-                    }
-                    //need update
-                    //m_aAttenderPawns[i]->m_cAttenderDataDirectPrivate.m_cCardPackForValue.revealCardValueByIdValuePairs(aRevealedCardValues);
-                }
-
-            }
-
-            //3.2 set other 
-
-
-            //4th, try notify for graphic, and this function may update blue print state before call blueprint
+            //3rd, try notify for graphic, and this function may update blue print state before call blueprint
             notifyBluePrintPusherApplied(pPusher);
         }
         else {
@@ -368,5 +336,6 @@ void AMyMJCoreMirrorCpp::PostInitProperties()
 
     MY_VERIFY(m_aAttenderPawns.Num() <= 0);
 
+    m_pData = NewObject<UMyMJCoreDataForMirrorModeCpp>(this);
     //pAttenderData->m_e
 }

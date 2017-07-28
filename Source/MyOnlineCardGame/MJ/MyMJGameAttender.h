@@ -228,23 +228,30 @@ public:
 
     };
 
-    void init(TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx)
+    virtual void initFullMode(TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx)
     {
         m_pCore = pCore;
         m_iIdx = idx;
 
-        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameAttenderCpp init: %d"), (uint8)m_eWorkMode);
+        MY_VERIFY(!m_pDataForFullMode.IsValid());
 
-        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
-           // UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameAttenderCpp init 2: %d"), (uint8)m_eWorkMode);
-            m_pDataForFullMode = MakeShareable<FMyMJAttenderDataForFullModeCpp>(new FMyMJAttenderDataForFullModeCpp());
-            m_pDataForFullMode->m_cDataPublicDirect.setup(idx);
-            m_pDataForFullMode->m_cDataPrivateDirect.setup(idx);
-        }
-        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
-            MY_VERIFY(IsInGameThread());
-        }
+        m_pDataForFullMode = MakeShareable<FMyMJAttenderDataForFullModeCpp>(new FMyMJAttenderDataForFullModeCpp());
+        m_pDataForFullMode->m_cDataPublicDirect.setup(idx);
+        m_pDataForFullMode->m_cDataPrivateDirect.setup(idx);
 
+        reset(false);
+    };
+
+    virtual void initMirrorMode(TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx, UMyMJAttenderDataPublicForMirrorModeCpp *pDataPublic, UMyMJAttenderDataPrivateForMirrorModeCpp *pDataPrivate)
+    {
+        m_pCore = pCore;
+        m_iIdx = idx;
+
+        MY_VERIFY(!m_pDataPublicForMirrorMode.IsValid());
+        MY_VERIFY(!m_pDataPrivateForMirrorMode.IsValid());
+
+        m_pDataPublicForMirrorMode = pDataPublic;
+        m_pDataPrivateForMirrorMode = pDataPrivate;
 
         reset(false);
     };

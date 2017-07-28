@@ -272,16 +272,6 @@ public:
 
 };
 
-
-UCLASS(BlueprintType, Blueprintable)
-class UMyMJCoreDataForMirrorModeCpp : public UObject
-{
-    GENERATED_BODY()
-
-public:
-    FMyMJCoreDataPublicDirectCpp m_cDataDirectPubic;
-};
-
 USTRUCT()
 struct FMyMJCoreDataForFullModeCpp
 {
@@ -290,6 +280,18 @@ struct FMyMJCoreDataForFullModeCpp
 public:
     FMyMJCoreDataPublicDirectCpp m_cDataDirectPubic;
 };
+
+
+UCLASS(NotBlueprintType, NotBlueprintable)
+class UMyMJCoreDataForMirrorModeCpp : public UObject
+{
+    GENERATED_BODY()
+
+public:
+    FMyMJCoreDataPublicDirectCpp m_cDataDirectPubic;
+};
+
+#define MY_GET_ARRAY_LEN(A) ( sizeof(A) / sizeof(A[0]))
 
 //Base class ii used to ensure basic facility create/destory sequence
 //Although we place some basic facilites here as bas class member, which ensured the dependence is OK in delete(), but for simple let's use smart pointer here
@@ -466,6 +468,22 @@ public:
         MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Full);
         initBase(pSelf);
 
+        //setup data members
+        MY_VERIFY(!m_pDataForFullMode.IsValid());
+        //MY_VERIFY(m_pDataForMirrorMode == NULL); //don't do this, we may across thread
+
+        m_pDataForFullMode = MakeShareable<FMyMJCoreDataForFullModeCpp>(new FMyMJCoreDataForFullModeCpp());
+        m_pDataForFullMode->m_cDataDirectPubic.reinit(m_eRuleType);
+ 
+        int32 l;
+        l = MY_GET_ARRAY_LEN(m_aAttendersAll);
+        MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+
+        for (int32 i = 0; i < l; i++) {
+            m_aAttendersAll[i]->initFullMode(pSelf, i);
+        }
+
+
         TQueue<FMyMJGameCmdBaseCpp *, EQueueMode::Spsc> *ppCmdInputQueues[(uint8)MyMJGameRoleTypeCpp::Max], *ppCmdOutputQueues[(uint8)MyMJGameRoleTypeCpp::Max];
 
         for (int32 i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
@@ -489,11 +507,29 @@ public:
     };
 
 
-    virtual void initMirrorMode(TWeakPtr<FMyMJGameCoreCpp> pSelf)
+    virtual void initMirrorMode(TWeakPtr<FMyMJGameCoreCpp> pSelf, UMyMJCoreDataForMirrorModeCpp* pCoreData, TArray<UMyMJAttenderDataPublicForMirrorModeCpp *> &apAttenderDataPublic, TArray<UMyMJAttenderDataPrivateForMirrorModeCpp *> &apAttenderDataPrivate)
     {
+
         MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror);
+        
         initBase(pSelf);
 
+        //MY_VERIFY(!m_pDataForFullMode.IsValid());
+        MY_VERIFY(m_pDataForMirrorMode == NULL);
+
+        m_pDataForMirrorMode = pCoreData;
+        m_pDataForMirrorMode->m_cDataDirectPubic.reinit(m_eRuleType);
+
+        int32 l;
+        l = MY_GET_ARRAY_LEN(m_aAttendersAll);
+        MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+
+        MY_VERIFY(l == apAttenderDataPublic.Num());
+        MY_VERIFY(l == apAttenderDataPrivate.Num());
+
+        for (int32 i = 0; i < l; i++) {
+            m_aAttendersAll[i]->initMirrorMode(pSelf, i, apAttenderDataPublic[i], apAttenderDataPrivate[i]);
+        }
     };
 
     //call this only in full mode
@@ -521,6 +557,33 @@ public:
             applyPusher(pPusher);
         }
         
+
+        //When full mode, all values revealed in system role, but when mirror mode, we need to reveal them in each role's private data
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+            int32 iAttenderMask;
+            TArray<FMyIdValuePair> aRevealedCardValues;
+
+            pPusher->getRevealedCardValues(iAttenderMask, aRevealedCardValues);
+            if (iAttenderMask != 0) {
+
+ 
+                int32 l;
+                l = MY_GET_ARRAY_LEN(m_aAttendersAll);
+
+                MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+
+                for (int32 i = 0; i < l; i++) {
+                    if ((iAttenderMask & (1 << i)) == 0) {
+                        continue;
+                    }
+                    //need update
+                    m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.tryRevealCardValueByIdValuePairs(aRevealedCardValues);
+                }
+            }
+
+        }
+
+
         if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
             //all data reseted when applyPusher(), we don't bother about it here
         }
@@ -585,7 +648,7 @@ protected:
     //start
 
     //must allocate one attender on heap and return it
-    virtual FMyMJGameAttenderCpp* createAndInitAttender(MyMJGameCoreWorkModeCpp eWorkMode, TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx) = NULL;
+    virtual FMyMJGameAttenderCpp* createAttender(MyMJGameCoreWorkModeCpp eWorkMode) = NULL;
     virtual void applyPusher(FMyMJGamePusherBaseCpp *pPusher) = NULL;
     virtual void handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, FMyMJGameCmdBaseCpp *pCmd) = NULL;
 
@@ -600,20 +663,9 @@ protected:
     inline
     void initBase(TWeakPtr<FMyMJGameCoreCpp> pSelf)
     {
-        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("initBase called"));
-        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
-            MY_VERIFY(!m_pDataForFullMode.IsValid());
-            m_pDataForFullMode = MakeShareable<FMyMJCoreDataForFullModeCpp>(new FMyMJCoreDataForFullModeCpp());
-            m_pDataForFullMode->m_cDataDirectPubic.reinit(m_eRuleType);
-        }
-
         for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
             MY_VERIFY(m_aAttendersAll[i].IsValid() == false);
-            //m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(new FMyMJGameAttenderCpp());
-
-            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("initBase: %d"), i);
-            m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(createAndInitAttender(m_eWorkMode, pSelf, i));
-
+            m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(createAttender(m_eWorkMode));
         }
     };
 

@@ -285,7 +285,32 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
     pD->m_cGameRunData = pPusher->m_cGameRunData;
 
     pCardInfoPack->reset(pPusher->m_aShuffledValues.Num());
-    pCardValuePack->reset(pPusher->m_aShuffledValues);
+
+    if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+        pCardValuePack->resetAndRevealAll(pPusher->m_aShuffledValues);
+    }
+    else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+
+        int32 l;
+        l = MY_GET_ARRAY_LEN(m_aAttendersAll);
+
+        MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+
+        int32 iCardNum = pPusher->m_aShuffledValues.Num();
+
+        for (int32 i = 0; i < l; i++) {
+            if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper) {
+                m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.resetAndRevealAll(pPusher->m_aShuffledValues);
+            }
+            else {
+                m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.reset(iCardNum);
+            }
+        }
+    }
+    else {
+        MY_VERIFY(false);
+    }
+
 
 
     //move into untaken slots
