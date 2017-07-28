@@ -146,7 +146,7 @@ public:
     //return whether mode is changed to target type
     bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType);
 
-    TSharedPtr<FMyMJGameCOreThreadControlCpp> m_pCoreFullWithThread;
+    TSharedPtr<FMyMJGameCoreThreadControlCpp> m_pCoreFullWithThread;
 
 };
 */

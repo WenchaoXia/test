@@ -18,7 +18,7 @@ FMyMJGameCoreBaseCpp::findIdxAttenderStillInGame(int32 idxAttenderBase, uint32 d
     for (int i = 0; i < 4; i++) {
         pAttender = m_aAttendersAll[idxChecking];
 
-        if (pAttender->getIsStillInGame()) {
+        if (pAttender->getIsStillInGameRef()) {
             //valid one found
             bFound = true;
             if (delta == 0) {
@@ -53,7 +53,7 @@ int32 FMyMJGameCoreBaseCpp::genIdxAttenderStillInGameMaskOne(int32 idxAttender)
         pAttender = m_aAttendersAll[i];
 
         if (idxAttender == i) {
-            MY_VERIFY(pAttender->getIsStillInGame());
+            MY_VERIFY(pAttender->getIsStillInGameRef());
             ret |= (1 << i);
             break;
         }
@@ -73,7 +73,7 @@ int32 FMyMJGameCoreBaseCpp::genIdxAttenderStillInGameMaskExceptOne(int32 idxAtte
         pAttender = m_aAttendersAll[i];
 
         if (idxAttender != i) {
-            if (pAttender->getIsStillInGame()) {
+            if (pAttender->getIsStillInGameRef()) {
                 ret |= (1 << i);
             }
         }
@@ -92,7 +92,7 @@ int32 FMyMJGameCoreBaseCpp::genIdxAttenderStillInGameMaskAll()
     for (int i = 0; i < 4; i++) {
         pAttender = m_aAttendersAll[i];
 
-        if (pAttender->getIsStillInGame()) {
+        if (pAttender->getIsStillInGameRef()) {
             ret |= (1 << i);
         }
 
@@ -295,7 +295,7 @@ void FMyMJGameCoreCpp::genActionChoices()
     for (int i = 0; i < 4; i++) {
         FMyMJGameAttenderCpp *pAttender = m_aAttendersAll[i].Get();
         MY_VERIFY(pAttender);
-        if (!pAttender->getIsStillInGame()) {
+        if (!pAttender->getIsStillInGameRef()) {
             continue;
         }
 
@@ -313,7 +313,7 @@ void FMyMJGameCoreCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyM
     for (int i = 0; i < 4; i++) {
         FMyMJGameAttenderCpp *pAttender = m_aAttendersAll[i].Get();
         MY_VERIFY(pAttender);
-        if (!pAttender->getIsStillInGame()) {
+        if (!pAttender->getIsStillInGameRef()) {
             continue;
         }
         iRealAttenderCount++;
@@ -483,11 +483,8 @@ void FMyMJGameCoreCpp::moveCardFromOldPosi(int32 id)
     FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
-    FMyMJCardInfoPackCpp  *pCardInfoPack =  getpCardInfoPack();
-    FMyMJCardValuePackCpp *pCardValuePack = getpCardValuePack();
-
-    MY_VERIFY(pCardInfoPack);
-    MY_VERIFY(pCardValuePack);
+    FMyMJCardInfoPackCpp  *pCardInfoPack =  &getCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSys();
 
     FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
     MyMJCardSlotTypeCpp eSlotSrc = pCardInfo->m_cPosi.m_eSlot;

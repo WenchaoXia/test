@@ -18,43 +18,32 @@
 
 #include "MJLocalCS/MyMJGameCoreLocalCS.h"
 
+#include "MJBPEncap/utils/MyMJBPUtils.h"
+
 #include "MyMJGameCoreBP.generated.h"
 
-class FMyMJGameCOreThreadControlCpp : public FMyThreadControlCpp
+class FMyMJGameCoreThreadControlCpp : public FMyThreadControlCpp
 {
 public:
-    FMyMJGameCOreThreadControlCpp(MyMJGameRuleTypeCpp eRuleType, int32 iSeed) : FMyThreadControlCpp(MY_MJ_GAME_CORE_LOOP_TIME_MS)
+    FMyMJGameCoreThreadControlCpp(MyMJGameRuleTypeCpp eRuleType, int32 iSeed, int32 iTrivalConfigMask) : FMyThreadControlCpp(MY_MJ_GAME_CORE_LOOP_TIME_MS)
     {
         m_eRuleType = eRuleType;
         m_iSeed.Set(iSeed);
 
         m_ppCoreInRun = NULL;
-
+        m_iTrivalConfigMask = iTrivalConfigMask;
         MY_VERIFY(start());
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameCoreThreadControlCpp create()."));
     };
 
-    virtual ~FMyMJGameCOreThreadControlCpp()
+    virtual ~FMyMJGameCoreThreadControlCpp()
     {
         //clean up ahead, otherwise it may crash since subthread may still using vtable which is cleaned here
         cleanUp();
-        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("~FMyMJGameCoreThreadControlCpp()"));
 
-    };
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("~FMyMJGameCoreThreadControlCpp destroy()."));
 
-    //create one instance on heap
-    static FMyMJGameCoreCpp* helperCreateCoreByRuleType(MyMJGameRuleTypeCpp eRuleType, MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed)
-    {
-        if (eRuleType == MyMJGameRuleTypeCpp::LocalCS) {
-            return StaticCast<FMyMJGameCoreCpp *>(new FMyMJGameCoreLocalCSCpp(eWorkMode, iSeed));
-        }
-        else if (eRuleType == MyMJGameRuleTypeCpp::GuoBiao) {
-            MY_VERIFY(false);
-        }
-        else {
-            MY_VERIFY(false);
-        }
-
-        return NULL;
     };
 
 
@@ -79,7 +68,9 @@ protected:
 
     virtual void beginInRun() override
     {
-        FMyMJGameCoreCpp *pCore = helperCreateCoreByRuleType(m_eRuleType, MyMJGameCoreWorkModeCpp::Full, m_iSeed.GetValue());
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("thread started, beginInRun()"));
+
+        FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(m_eRuleType, MyMJGameCoreWorkModeCpp::Full, m_iSeed.GetValue());
 
         if (m_ppCoreInRun) {
             delete(m_ppCoreInRun);
@@ -89,6 +80,8 @@ protected:
         m_ppCoreInRun = new TSharedPtr<FMyMJGameCoreCpp>();
         *m_ppCoreInRun = MakeShareable<FMyMJGameCoreCpp>(pCore);
         pCore->initFullMode(*m_ppCoreInRun, &m_cIOGourpAll);
+
+        pCore->m_iTrivalConfigMask = m_iTrivalConfigMask;
     };
 
     virtual void loopInRun() override
@@ -115,6 +108,8 @@ protected:
     FMyMJGameIOGroupAllCpp m_cIOGourpAll;
 
     TSharedPtr<FMyMJGameCoreCpp> *m_ppCoreInRun;
+
+    int32 m_iTrivalConfigMask;
 };
 
 typedef class UMyMJCoreFullCpp UMyMJCoreFullCpp;
@@ -197,11 +192,11 @@ public:
         m_iSeed2OverWrite = 0;
     };
 
-    //test with a full mode core created and run in sub thread, and a mirror mode core in game core 
-    //UFUNCTION(BlueprintCallable, Category = "UMyMJCoreFullCpp")
-    void testFullMode();
+    //test with a full mode core created and run in sub thread
+    UFUNCTION(BlueprintCallable, Category = "UMyMJCoreFullCpp")
+    void testGameCoreInSubThread();
 
-    bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType);
+    bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTrivalConfigMask);
     bool startGame();
 
     void loop();
@@ -245,7 +240,7 @@ protected:
     TArray<UMyMJIONodeCpp*> m_apNextNodes;
 
 
-    TSharedPtr<FMyMJGameCOreThreadControlCpp> m_pCoreFullWithThread;
+    TSharedPtr<FMyMJGameCoreThreadControlCpp> m_pCoreFullWithThread;
     FTimerHandle m_cLoopTimerHandle;
 
 };

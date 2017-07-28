@@ -7,6 +7,7 @@ void
 UMyMJUtilsLocalCSLibrary::genDefaultCfg(FMyMJGameCfgCpp &outCfg)
 {
     FMyMJGameCfgCpp defaultOne;
+    defaultOne.m_eRuleType = MyMJGameRuleTypeCpp::LocalCS;
     TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> *pScoreAttrs = &defaultOne.m_cSubLocalCSCfg.m_mHuBornScoreAttrs;
     
 

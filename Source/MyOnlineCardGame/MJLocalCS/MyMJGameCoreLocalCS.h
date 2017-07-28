@@ -37,6 +37,7 @@ protected:
 
     virtual FMyMJGameAttenderCpp* createAndInitAttender(MyMJGameCoreWorkModeCpp eWorkMode, TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx) override
     {
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameCoreLocalCSCpp createAndInitAttender."));
         FMyMJGameAttenderLocalCSCpp *pRet = new FMyMJGameAttenderLocalCSCpp(eWorkMode);
         pRet->init(pCore, idx);
         return StaticCast<FMyMJGameAttenderCpp *>(pRet);

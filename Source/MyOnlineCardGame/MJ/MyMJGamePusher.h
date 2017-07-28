@@ -169,12 +169,12 @@ public:
         m_iTestCount = 0;
         m_bSegmentClearTarget = false;
 
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("create  FMyMJGamePusherPointersCpp  %p."), this);
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("create  FMyMJGamePusherPointersCpp  %p."), this);
     };
 
     virtual ~FMyMJGamePusherPointersCpp()
     {
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("destroy FMyMJGamePusherPointersCpp  %p, %d."), this, m_iTestCount);
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("destroy FMyMJGamePusherPointersCpp  %p, %d."), this, m_iTestCount);
         clear();
     };
 

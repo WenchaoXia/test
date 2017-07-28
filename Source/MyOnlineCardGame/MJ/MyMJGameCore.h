@@ -320,7 +320,7 @@ public:
     TSharedPtr<FMyMJGameAttenderCpp> getRealAttenderByIdx(int32 idxAttender)
     {
         TSharedPtr<FMyMJGameAttenderCpp> ret = getAttenderByIdx(idxAttender);
-        if (!ret->getISRealAttender()) {
+        if (!ret->getIsRealAttenderRef()) {
             MY_VERIFY(false);
         }
 
@@ -339,12 +339,15 @@ public:
 protected:
 
     //Basic facilities
-    TSharedPtr<FMyMJGameAttenderCpp> m_aAttendersAll[4]; //always 4, note this should be a fixed structure, means don't change it after init()
+    TSharedPtr<FMyMJGameAttenderCpp> m_aAttendersAll[(uint8)MyMJGameRoleTypeCpp::Max]; //always 4, note this should be a fixed structure, means don't change it after init()
     TSharedPtr<FMyMJGamePusherIOComponentFullCpp>  m_pPusherIOFull; //only used in full mode
     TSharedPtr<FMyMJGameCmdIOComponentCpp> m_pCmdIO;
 
     //FMyMJGameIOGroupAllCpp *m_pExtIOGroupAll; //This is the fundermental IO resource, for simple, directly use it to process cmd
 };
+
+#define MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero 0x01
+#define MyMJGameCoreTrivalConfigMaskShowPusherLog 0x02
 
 /*
  * It works in two mode: full or mirror mode
@@ -361,7 +364,7 @@ public:
 
     FMyMJGameCoreCpp(MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed) : FMyMJGameCoreBaseCpp()
     {
-        m_bForceActionGenTimeLeft2AutoChooseMsZero = false;
+        m_iTrivalConfigMask = 0;
 
         m_pDataForFullMode = NULL;
         m_pDataForMirrorMode = NULL;
@@ -414,16 +417,21 @@ public:
     };
 
     inline
-    FMyMJCardInfoPackCpp *getpCardInfoPack()
+    FMyMJCardInfoPackCpp& getCardInfoPack()
     {
         FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
-        return &pD->m_cCardInfoPack;
+        MY_VERIFY(pD);
+        return pD->m_cCardInfoPack;
     };
 
     inline
-    FMyMJCardValuePackCpp *getpCardValuePack()
+    FMyMJCardValuePackCpp& getCardValuePackOfSys()
     {
-        return NULL;
+        TSharedPtr<FMyMJGameAttenderCpp> &pAttender = m_aAttendersAll[(uint8)MyMJGameRoleTypeCpp::SysKeeper];
+        MY_VERIFY(pAttender.IsValid());
+        FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = pAttender->getDataPrivateDirect();
+        MY_VERIFY(pDPriD);
+        return pDPriD->m_cCardValuePack;
     }
 
 
@@ -448,6 +456,8 @@ public:
     //@pIOGroupAll owned by external, don't manage their lifecycle inside
     virtual void initFullMode(TWeakPtr<FMyMJGameCoreCpp> pSelf, FMyMJGameIOGroupAllCpp *pIOGroupAll)
     {
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("initFullMode."));
+
         MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Full);
         initBase(pSelf);
 
@@ -494,16 +504,29 @@ public:
             return;
         }
 
+        /* this should be done by apply pusher
         if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
             pCoreData->m_iGameId = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher)->m_iGameId;
             pCoreData->m_iPusherIdLast = -1;
         }
+        */
 
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), pCoreData->m_iActionGroupId, pCoreData->m_iPusherIdLast, *pPusher->genDebugString());
-        applyPusher(pPusher);
+        if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), pCoreData->m_iActionGroupId, pCoreData->m_iPusherIdLast, *pPusher->genDebugString());
+            applyPusher(pPusher);
+        }
+        
+        if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
+            //all data reseted when applyPusher(), we don't bother about it here
+        }
+        else {
+            pCoreData->m_iPusherIdLast++;
+        }
 
-        pCoreData->m_iPusherIdLast++;
-        MY_VERIFY(pCoreData->m_iPusherIdLast == pPusher->getId());
+        if (!(pCoreData->m_iPusherIdLast == pPusher->getId())) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pusher id not equal: %d, %d."), pCoreData->m_iPusherIdLast, pPusher->getId());
+            MY_VERIFY(false);
+        }
     };
 
     inline
@@ -542,7 +565,7 @@ public:
 
 
     //config
-    bool m_bForceActionGenTimeLeft2AutoChooseMsZero;
+    int32 m_iTrivalConfigMask;
 
 protected:
 
@@ -572,15 +595,18 @@ protected:
     inline
     void initBase(TWeakPtr<FMyMJGameCoreCpp> pSelf)
     {
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("initBase called"));
         if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
             MY_VERIFY(!m_pDataForFullMode.IsValid());
             m_pDataForFullMode = MakeShareable<FMyMJCoreDataForFullModeCpp>(new FMyMJCoreDataForFullModeCpp());
             m_pDataForFullMode->m_cDataDirectPubic.reinit(m_eRuleType);
         }
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
             MY_VERIFY(m_aAttendersAll[i].IsValid() == false);
             //m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(new FMyMJGameAttenderCpp());
+
+            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("initBase: %d"), i);
             m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(createAndInitAttender(m_eWorkMode, pSelf, i));
 
         }

@@ -69,6 +69,22 @@ class UMyMJBPUtilsLibrary :
     GENERATED_BODY()
 public:
 
+    //create one instance on heap
+    static FMyMJGameCoreCpp* helperCreateCoreByRuleType(MyMJGameRuleTypeCpp eRuleType, MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed)
+    {
+        if (eRuleType == MyMJGameRuleTypeCpp::LocalCS) {
+            return StaticCast<FMyMJGameCoreCpp *>(new FMyMJGameCoreLocalCSCpp(eWorkMode, iSeed));
+        }
+        else if (eRuleType == MyMJGameRuleTypeCpp::GuoBiao) {
+            MY_VERIFY(false);
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
+        return NULL;
+    };
+
     UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
     static void testArrayPointerSerialize(AMyTestParentClass0 *pInParent, AMyTestChildClass0 *pInChild, AMyTestParentClass0 *pOutParent, int32 param);
 
@@ -76,5 +92,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
     static void testPusherSerialize0(int32 param);
 
+
+    UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
+    static void testGameCoreInLocalThread(int32 seed);
 
 };

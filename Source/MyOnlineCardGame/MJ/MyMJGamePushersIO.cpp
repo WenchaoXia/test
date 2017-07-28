@@ -128,6 +128,7 @@ FMyMJGameActionCollectorCpp::reinit(TArray<FMyMJGameActionContainorCpp *> &aActi
         }
 
     }
+
 };
 
 void
@@ -165,7 +166,10 @@ FMyMJGameActionCollectorCpp::resetForNewLoopForFullMode(FMyMJGameActionBaseCpp *
     FMyMJGameActionContainorCpp* pContainor;
     int l = m_aActionContainors.Num();
     if (iExpectedContainorDebug >= 0) {
-        MY_VERIFY(iExpectedContainorDebug == l);
+        if (iExpectedContainorDebug != l) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("expectation not eqal, expected:%d, l:%d"), iExpectedContainorDebug, l);
+            MY_VERIFY(false);
+        }
     }
 
     for (int i = 0; i < l; i++) {

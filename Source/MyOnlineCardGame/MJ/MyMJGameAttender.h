@@ -67,10 +67,8 @@ public:
 
     FMyMJAttenderDataPublicDirectForBPCpp()
     {
-        m_iIdx = -1;
-        m_iTurn = -1;
-        m_bIsRealAttender = false;
-        m_bIsStillInGame = false; //some game may put one player into observe state, this is the flag
+        m_iIdxAttender = -1;
+        reset();
     };
 
     virtual ~FMyMJAttenderDataPublicDirectForBPCpp()
@@ -78,8 +76,27 @@ public:
 
     };
 
+    void setup(int32 idxAttender)
+    {
+        m_iIdxAttender = idxAttender;
+        reset();
+    };
+
+    void reset()
+    {
+        m_aIdJustTakenCards.Reset();
+        m_aIdGivenOutCards.Reset();
+        m_aShowedOutWeaves.Reset();
+        m_aIdWinSymbolCards.Reset();
+        m_cUntakenSlotSubSegmentInfo.reset();
+        m_cHuScoreResultFinalGroup.reset();
+        m_iTurn = -1;
+        m_bIsRealAttender = false;
+        m_bIsStillInGame = false;
+    };
+
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx Attender"))
-    int32 m_iIdx; //it is the position
+    int32 m_iIdxAttender; //it is the position
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards just taken"))
     TArray<int32> m_aIdJustTakenCards;
@@ -107,8 +124,9 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "is real attender"))
     bool m_bIsRealAttender;
 
+    //some game may put one player into observe state, this is the flag
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "is still in game"))
-    bool m_bIsStillInGame; //some game may put one player into observe state, this is the flag
+    bool m_bIsStillInGame;
 };
 
 USTRUCT(BlueprintType)
@@ -128,10 +146,19 @@ public:
 
     };
 
-    void reset(int32 iCardNum)
+    void setup(int32 idxAttender)
     {
+        m_cActionContainor.setup(idxAttender);
+        m_cActionContainor.reinit(false);
+        reset();
+    };
+
+    void reset()
+    {
+        m_cHandCards.clear();
+        m_cActionContainor.resetForNewLoop();
         m_cHuScoreResultTingGroup.reset();
-        m_cCardValuePack.reset(iCardNum);
+        m_cCardValuePack.reset(0);
     };
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hand card Map"))
@@ -183,14 +210,17 @@ class FMyMJGameAttenderCpp
     //GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGameAttenderCpp(MyMJGameCoreWorkModeCpp eWorkMode) : m_cActionContainor()
+    FMyMJGameAttenderCpp(MyMJGameCoreWorkModeCpp eWorkMode)
     {
-        m_pCore = NULL;
-        m_iIdx = -1;
+        m_pDataForFullMode = NULL;
+        m_pDataPublicForMirrorMode = NULL;
+        m_pDataPrivateForMirrorMode = NULL;
 
+        m_iIdx = -1;
+        m_pCore = NULL;
         m_eWorkMode = eWorkMode;
 
-        reset(false);
+        //reset(false);
     };
 
     virtual ~FMyMJGameAttenderCpp()
@@ -198,80 +228,53 @@ public:
 
     };
 
-    //following should be implemented by child class
-    //start
-    virtual void reset(bool bIsRealAttender)
-    {
-        m_cHandCards.clear();
-        m_aIdJustTakenCards.Reset();
-        m_aIdGivenOutCards.Reset();
-        m_aShowedOutWeaves.Reset();
-        m_aIdWinSymbolCards.Reset();
-
-        m_cUntakenSlotSubSegmentInfo.reset();
-
-        m_cActionContainor.resetForNewLoop();
-
-        m_cHuScoreResultFinalGroup.reset();
-
-        //m_iScoreTotal = 0;
-        m_iTurn = 0;
-
-        m_bIsRealAttender = bIsRealAttender;
-        m_bIsStillInGame = bIsRealAttender;
-
-    };
-
-    virtual void genActionChoices(FMyMJGamePusherIOComponentFullCpp *pPusherIO) = NULL;
-    //end
-
-
     void init(TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx)
     {
         m_pCore = pCore;
         m_iIdx = idx;
 
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameAttenderCpp init: %d"), (uint8)m_eWorkMode);
+
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+           // UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameAttenderCpp init 2: %d"), (uint8)m_eWorkMode);
+            m_pDataForFullMode = MakeShareable<FMyMJAttenderDataForFullModeCpp>(new FMyMJAttenderDataForFullModeCpp());
+            m_pDataForFullMode->m_cDataPublicDirect.setup(idx);
+            m_pDataForFullMode->m_cDataPrivateDirect.setup(idx);
+        }
+
         reset(false);
-        m_cActionContainor.setup(idx);
     };
 
-    FMyMJGameActionContainorCpp* getpActionContainor()
+    virtual void reset(bool bIsRealAttender)
     {
-        return &m_cActionContainor;
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+            if (m_pDataForFullMode.IsValid()) {
+                m_pDataForFullMode->m_cDataPublicDirect.reset();
+                m_pDataForFullMode->m_cDataPrivateDirect.reset();
+            }
+            else {
+                //if code reach here, it should be calling constructor, in which case members is not created yet
+                MY_VERIFY(!m_pCore.IsValid()); //not inited yet
+            }
+        }
+        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+            if (m_pDataPublicForMirrorMode) {
+                m_pDataPublicForMirrorMode->m_cDataPublicDirect.reset();
+            }
+
+            if (m_pDataPrivateForMirrorMode) {
+                m_pDataPrivateForMirrorMode->m_cDataPrivateDirect.reset();
+            }
+        }
+        else {
+            MY_VERIFY(false);
+        }
     };
 
-    inline
-    bool getISRealAttender() const
-    {
-        return m_bIsRealAttender;
-    };
+    virtual void genActionChoices(FMyMJGamePusherIOComponentFullCpp *pPusherIO) = NULL;
+    //end
 
-    inline
-    void setIsRealAttender(bool b)
-    {
-        m_bIsRealAttender = b;
-    };
-
-
-    inline
-    bool getIsStillInGame() const
-    {
-        return m_bIsStillInGame;
-    };
-
-    inline
-    void setIsStillInGame(bool b)
-    {
-        m_bIsStillInGame = b;
-    };
-
-
-    inline
-    FMyMJGameUntakenSlotSubSegmentInfoCpp* getpUntakenSlotSubSegmentInfo()
-    {
-        return &m_cUntakenSlotSubSegmentInfo;
-    };
-
+ 
 
     inline
     int32 getIdx()
@@ -289,18 +292,6 @@ public:
         else {
             return NULL;
         }
-    };
-
-    inline
-    TArray<int32> &getIdJustTakenCardsRef()
-    {
-        return  m_aIdJustTakenCards;;
-    };
-
-    inline
-    FMyMJHuScoreResultFinalGroupCpp& getHuScoreResultFinalGroupRef()
-    {
-        return m_cHuScoreResultFinalGroup;
     };
 
     FMyMJAttenderDataPublicDirectForBPCpp* getDataPublicDirect()
@@ -345,9 +336,25 @@ public:
         }
     };
 
-    inline FMyMJGameActionContainorCpp *getActionContainor()
+    bool& getIsRealAttenderRef()
     {
-        return &m_cActionContainor;
+        FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+        MY_VERIFY(pDPubD);
+        return pDPubD->m_bIsRealAttender;
+    };
+
+    bool& getIsStillInGameRef()
+    {
+        FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+        MY_VERIFY(pDPubD);
+        return pDPubD->m_bIsStillInGame;
+    };
+
+    FMyMJGameActionContainorCpp *getActionContainor()
+    {
+        FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+        MY_VERIFY(pDPriD);
+        return &pDPriD->m_cActionContainor;
     };
 
     //Don't call following directly, instead, call pCore->moveCardFromOldPosi()
@@ -366,30 +373,10 @@ protected:
     UPROPERTY()
     UMyMJAttenderDataPrivateForMirrorModeCpp *m_pDataPrivateForMirrorMode;
 
+    //can be cast to MyMJGameRoleTypeCpp
+    int32 m_iIdx;
 
     TWeakPtr<FMyMJGameCoreCpp> m_pCore;
-    int32 m_iIdx; //it is the position
-
-
-    FMyMJValueIdMapCpp m_cHandCards;
-    TArray<int32> m_aIdJustTakenCards;
-    TArray<int32> m_aIdGivenOutCards;
-    TArray<FMyMJWeaveCpp> m_aShowedOutWeaves; //weaves showed out
-    TArray<int32> m_aIdWinSymbolCards;
-
-
-    FMyMJGameUntakenSlotSubSegmentInfoCpp m_cUntakenSlotSubSegmentInfo;
-
-    FMyMJGameActionContainorCpp m_cActionContainor;
-
-    FMyMJHuScoreResultTingGroupCpp  m_cHuScoreResultTingGroup;
-    FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroup;
-    //int32 m_iScoreTotal;
-
-    int32 m_iTurn;
-
-    bool m_bIsRealAttender;
-    bool m_bIsStillInGame; //some game may put one player into observe state, this is the flag
 
     MyMJGameCoreWorkModeCpp m_eWorkMode;
 };

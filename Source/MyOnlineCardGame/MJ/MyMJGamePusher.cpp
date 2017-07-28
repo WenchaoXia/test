@@ -78,7 +78,7 @@ int32 FMyMJGamePusherPointersCpp::insertInLocalThreadWithLogicChecked(int32 iGam
 
     }
 
-    if (idx > 0) {
+    if (idx >= 0) {
         if (idx != pPusher->getId()) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("insertInLocalThreadWithLogicChecked(), pusher id not equal: %d, %d!"), idx, pPusher->getId());
         }
@@ -913,7 +913,7 @@ void FMyMJGameActionGiveOutCardsCpp::resolveActionResult(FMyMJGameAttenderCpp &a
 {
     MY_VERIFY(m_aIdValuePairsSelected.Num() > 0);
 
-    attender.getpCore()->getpCardValuePack()->helperResolveValues(m_aIdValuePairsSelected);
+    attender.getpCore()->getCardValuePackOfSys().helperResolveValues(m_aIdValuePairsSelected);
 
     TArray<FMyIdValuePair>& aTargets = m_aIdValuePairsSelected;
     int32 l = aTargets.Num();
@@ -930,8 +930,8 @@ void FMyMJGameActionHuCpp::resolveActionResult(FMyMJGameAttenderCpp &attender)
 {
     m_aRevealingCards.Reset();
 
-    FMyMJCardInfoPackCpp  *pCardInfoPack  = attender.getpCore()->getpCardInfoPack();
-    FMyMJCardValuePackCpp *pCardValuePack = attender.getpCore()->getpCardValuePack();
+    FMyMJCardInfoPackCpp  *pCardInfoPack  = &attender.getpCore()->getCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = &attender.getpCore()->getCardValuePackOfSys();
     int32 l = pCardValuePack->getLength();
     for (int32 i = 0; i < l; i++) {
         FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(i);

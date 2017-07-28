@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MyMJBPUtils.h"
-
+#include "MJLocalCS/Utils/MyMJUtilsLocalCS.h"
 
 void AMyTestActorBaseCpp::ClientRPCFunction0_Implementation(float v1)
 {
@@ -154,3 +154,32 @@ void UMyMJBPUtilsLibrary::testPusherSerialize0(int32 param)
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("after Ser: %s"), *cPushersOut.genDebugString());
 
 }
+
+void UMyMJBPUtilsLibrary::testGameCoreInLocalThread(int32 seed)
+{
+    int32 iSeed;
+    if (seed != 0) {
+        iSeed = seed;
+    }
+    else {
+        iSeed = UMyMJUtilsLibrary::nowAsMsFromTick();
+    }
+
+    FMyMJGameCoreCpp *pCore = helperCreateCoreByRuleType(MyMJGameRuleTypeCpp::LocalCS, MyMJGameCoreWorkModeCpp::Full, iSeed);
+
+    TSharedPtr<FMyMJGameCoreCpp> p = MakeShareable<FMyMJGameCoreCpp>(pCore);
+
+    FMyMJGameIOGroupAllCpp cIOGourpAll;
+    pCore->initFullMode(p, &cIOGourpAll);
+    pCore->m_iTrivalConfigMask = MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero | MyMJGameCoreTrivalConfigMaskShowPusherLog;
+
+
+    FMyMJGameCmdRestartGameCpp *pCmdReset = new FMyMJGameCmdRestartGameCpp();
+    pCmdReset->m_iAttenderRandomSelectMask = 0x0f;
+    UMyMJUtilsLocalCSLibrary::genDefaultCfg(pCmdReset->m_cGameCfg);
+    cIOGourpAll.m_aGroups[(uint8)MyMJGameRoleTypeCpp::SysKeeper].getCmdInputQueue().Enqueue(pCmdReset);
+
+
+    pCore->tryProgressInFullMode();
+
+};

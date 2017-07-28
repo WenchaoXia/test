@@ -42,10 +42,9 @@ void UMyMJPusherBufferCpp::trySyncDataFromCoreFull()
 
 };
 
-void UMyMJCoreFullCpp::testFullMode()
+void UMyMJCoreFullCpp::testGameCoreInSubThread()
 {
-
-    while (!tryChangeMode(MyMJGameRuleTypeCpp::LocalCS)) {
+    while (!tryChangeMode(MyMJGameRuleTypeCpp::LocalCS, MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero | MyMJGameCoreTrivalConfigMaskShowPusherLog)) {
         FPlatformProcess::Sleep(0.1);
     }
 
@@ -53,7 +52,7 @@ void UMyMJCoreFullCpp::testFullMode()
 }
 
 
-bool UMyMJCoreFullCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType)
+bool UMyMJCoreFullCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTrivalConfigMask)
 {
 
     if (m_pCoreFullWithThread.IsValid()) {
@@ -63,12 +62,13 @@ bool UMyMJCoreFullCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType)
 
         if (!m_pCoreFullWithThread->isInStartState()) {
             m_pCoreFullWithThread.Reset();
-            UWorld *world = GetWorld();
+
+            UWorld *world = GetOuter()->GetWorld();
             if (IsValid(world)) {
                 world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
             }
             else {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid!"));
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
             }
         }
         else {
@@ -96,8 +96,8 @@ bool UMyMJCoreFullCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType)
         }
         //iSeed = 530820412;
 
-        FMyMJGameCOreThreadControlCpp *pCoreFull = new FMyMJGameCOreThreadControlCpp(eRuleType, iSeed);
-        m_pCoreFullWithThread = MakeShareable<FMyMJGameCOreThreadControlCpp>(pCoreFull);
+        FMyMJGameCoreThreadControlCpp *pCoreFull = new FMyMJGameCoreThreadControlCpp(eRuleType, iSeed, iTrivalConfigMask);
+        m_pCoreFullWithThread = MakeShareable<FMyMJGameCoreThreadControlCpp>(pCoreFull);
 
         return true;
     }
@@ -119,14 +119,14 @@ bool UMyMJCoreFullCpp::startGame()
 
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("startGame() called"));
 
-    UWorld *world = GetWorld();
+    UWorld *world = GetOuter()->GetWorld();
     
     if (IsValid(world)) {
         world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
         world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &UMyMJCoreFullCpp::loop, ((float)My_MJ_GAME_IO_LOOP_TIME_MS) / (float)1000, true);
     }
     else {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid!"));
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
         return false;
     }
 
@@ -176,12 +176,14 @@ void UMyMJCoreFullCpp::clearUp()
         m_pCoreFullWithThread->Stop();
     }
 
-    UWorld *world = GetWorld();
+    UWorld *world = GetOuter()->GetWorld();
 
     if (IsValid(world)) {
         world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
     }
-
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
+    }
 }
 
 void UMyMJCoreFullCpp::PostInitProperties()
@@ -254,7 +256,7 @@ void AMyMJCoreMirrorCpp::loop()
                     iSeed = UMyMJUtilsLibrary::nowAsMsFromTick();
                 }
 
-                FMyMJGameCoreCpp *pCore = FMyMJGameCOreThreadControlCpp::helperCreateCoreByRuleType(eDestType, MyMJGameCoreWorkModeCpp::Mirror, iSeed);
+                FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(eDestType, MyMJGameCoreWorkModeCpp::Mirror, iSeed);
                 m_pCoreMirror = MakeShareable<FMyMJGameCoreCpp>(pCore);
             }
         }
@@ -270,7 +272,7 @@ void AMyMJCoreMirrorCpp::loop()
                 FMyMJGamePusherResetGameCpp* pPusherResetGame = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher);
                 int32 l = m_aAttenderPawns.Num();
                 for (int32 i = 0; i < l; i++) {
-                    m_aAttenderPawns[i]->m_cAttenderDataDirectPrivate.reset(pPusherResetGame->m_aShuffledValues.Num());
+                    m_aAttenderPawns[i]->m_cAttenderDataDirectPrivate.reset();
                 }
             }
           

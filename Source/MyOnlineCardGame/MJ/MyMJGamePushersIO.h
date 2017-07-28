@@ -249,7 +249,10 @@ public:
     //this code path core dump if met any invalid request
     void showSelectionOnNotify(int32 iActionGroupId, int32 iSelection, TArray<int32> &subSelections)
     {
-        MY_VERIFY(m_iActionGroupId == iActionGroupId);
+        if (m_iActionGroupId != iActionGroupId) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action group id not equal: m_iActionGroupId %d, iActionGroupId %d."), m_iActionGroupId, iActionGroupId);
+            MY_VERIFY(false);
+        }
 
         int l = m_aActionChoices.Num();
         MY_VERIFY(iSelection >= 0 && iSelection < l);

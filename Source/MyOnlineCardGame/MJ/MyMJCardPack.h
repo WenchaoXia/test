@@ -30,7 +30,11 @@ public:
     void reset(int32 iCardNum)
     {
         m_aCardInfos.Reset(iCardNum);
-        m_aCardInfos.AddDefaulted(iCardNum);
+        for (int32 i = 0; i < iCardNum; i++) {
+            int32 idx = m_aCardInfos.Emplace();
+            m_aCardInfos[idx].m_iId = i;
+        }
+
     };
 
     inline
