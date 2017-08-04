@@ -98,6 +98,7 @@ struct FMyMJGameCmdPointersCpp
 public:
     FMyMJGameCmdPointersCpp()
     {
+        clear();
     };
 
     virtual ~FMyMJGameCmdPointersCpp()
@@ -216,6 +217,8 @@ public:
     FMyMJGameCmdIOCpp()
     {
         //m_eDataRoleType = MyMJGameRoleTypeCpp::Max;
+        m_pInputQueueRemote = NULL;
+        m_pOutputQueueRemote = NULL;
     };
 
     virtual ~FMyMJGameCmdIOCpp()
@@ -234,7 +237,7 @@ class FMyMJGameCmdIOComponentCpp
 public:
     FMyMJGameCmdIOComponentCpp()
     {
-
+        m_aIOs.Reset();
     };
 
     virtual ~FMyMJGameCmdIOComponentCpp()
@@ -244,6 +247,8 @@ public:
 
     void init(TQueue<FMyMJGameCmdBaseCpp *, EQueueMode::Spsc> **ppInputQueuesRemote, TQueue<FMyMJGameCmdBaseCpp *, EQueueMode::Spsc> **ppOutputQueuesRemote, int32 iRemoteQueuesCount)
     {
+        MY_VERIFY(m_aIOs.Num() == 0); //Verified it is inited only once
+
         for (int32 i = 0; i < iRemoteQueuesCount; i++) {
             int32 idx = m_aIOs.Emplace();
             FMyMJGameCmdIOCpp *pIO = &m_aIOs[idx];

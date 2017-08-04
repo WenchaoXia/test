@@ -263,9 +263,6 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
     }
     int32 uMask = genIdxAttenderStillInGameMaskOne(pPusher->m_cGameRunData.m_iIdxAttenderMenFeng);
     resetForNewLoop(NULL, NULL, uMask, false, pPusher->m_cGameRunData.m_iIdxAttenderMenFeng);
-    if (m_pActionCollector.IsValid()) {
-        m_pActionCollector->setActionGroupId(0);
-    }
 
     pD->reset();
     pD->m_iGameId = pPusher->m_iGameId;

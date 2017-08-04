@@ -105,9 +105,11 @@ protected:
     FThreadSafeCounter m_iSeed;
     FMyMJGameIOGroupAllCpp m_cIOGourpAll;
 
+    int32 m_iTrivalConfigMask;
+
     TSharedPtr<FMyMJGameCoreCpp> *m_ppCoreInRun;
 
-    int32 m_iTrivalConfigMask;
+
 };
 
 typedef class UMyMJCoreFullCpp UMyMJCoreFullCpp;

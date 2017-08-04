@@ -165,7 +165,9 @@ struct FMyValueIdMapCpp
     GENERATED_USTRUCT_BODY()
 
     FMyValueIdMapCpp()
-    {};
+    {
+        clear();
+    };
 
 
     FMyValueIdMapCpp& operator = (const FMyValueIdMapCpp& rhs)
@@ -267,13 +269,11 @@ public:
 
         //Initialize FEvent (as a cross platform (Confirmed Mac/Windows))
         m_pSemaphore = FGenericPlatformProcess::GetSynchEventFromPool(false);
+        m_pThread = NULL;
 
         const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
         //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyThreadControlCpp() thread id: %d"), CurrentThreadId);
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyThreadControlCpp() thread static count: %d"), FMyThreadControlCpp::s_iThreadCount.GetValue());
-
-        m_pThread = NULL;
-
     };
 
     virtual ~FMyThreadControlCpp()

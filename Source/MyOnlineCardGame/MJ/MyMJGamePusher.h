@@ -79,6 +79,7 @@ enum class MyMJGamePusherTypeCpp : uint8
 
 #define ActionGenTimeLeft2AutoChooseMsForImportant 4000
 
+//Most class is create->destroy, so they don't need reset()
 
 USTRUCT(BlueprintType)
 struct FMyMJGamePusherBaseCpp
@@ -165,9 +166,7 @@ struct FMyMJGamePusherPointersCpp
 public:
     FMyMJGamePusherPointersCpp()
     {
-        //m_iCount = 0;
-        m_iTestCount = 0;
-        m_bSegmentClearTarget = false;
+        clear();
 
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("create  FMyMJGamePusherPointersCpp  %p."), this);
     };
@@ -224,11 +223,11 @@ public:
             }
         }
 
-        m_aPushers.Empty();
-        m_aPushersSharedPtr.Empty();
+        m_aPushers.Reset();
+        m_aPushersSharedPtr.Reset();
 
-        //m_iCount = 0;
         m_iTestCount = 0;
+        m_bSegmentClearTarget = false;
     };
 
     void prepareForConsume()
@@ -489,11 +488,9 @@ public:
     FMyMJGamePusherMadeChoiceNotifyCpp() : Super()
     {
         m_eType = MyMJGamePusherTypeCpp::PusherMadeChoiceNotify;
-        m_iActionGroupId = 0;
 
         m_iSelection = 0;
-        //m_iSelectionSub = 0;
-
+        m_iActionGroupId = 0;
         m_iIdxAttender = -1;
     };
 
@@ -597,6 +594,7 @@ public:
     {
         m_eType = MyMJGamePusherTypeCpp::PusherResetGame;
 
+        m_iGameId = -1;
         m_iAttenderBehaviorRandomSelectMask = 0;
     };
 
@@ -627,6 +625,7 @@ public:
     //call this only when m_cGameCfg is set
     void init(int32 iGameId, FRandomStream &RS, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData, int32 iAttenderBehaviorRandomSelectMask);
 
+    // > 0 means valid
     UPROPERTY()
     int32 m_iGameId;
 
@@ -656,6 +655,7 @@ public:
     FMyMJGamePusherUpdateCardsCpp() : Super()
     {
         m_eType = MyMJGamePusherTypeCpp::PusherUpdateCards;
+
         m_iIdxAttender = -1;
         m_eCurrentState = MyMJCardFlipStateCpp::Invalid;
         m_eTargetState = MyMJCardFlipStateCpp::Invalid;
@@ -805,6 +805,7 @@ public:
     FMyMJGameActionBaseCpp() : Super()
     {
         m_eType = MyMJGamePusherTypeCpp::ActionBase;
+
         m_iPriority = 0;
         m_iIdxAttender = 0;
         m_iTimeLeft2AutoChooseMs = 0;
@@ -917,7 +918,7 @@ struct FMyMJGameActionUnfiedForBPCpp : public FMyMJGameActionBaseCpp
 public:
     FMyMJGameActionUnfiedForBPCpp() : Super()
     {
-
+        m_iReserved0 = 0;
     };
 
     virtual ~FMyMJGameActionUnfiedForBPCpp()
@@ -1083,9 +1084,9 @@ public:
     {
         m_eType = MyMJGamePusherTypeCpp::ActionThrowDices;
         m_iPriority = PriMyMJGameActionThrowDice;
+
         m_iDiceNumber0 = -1;
         m_iDiceNumber1 = -1;
-
         m_eSubType = MyMJGameActionThrowDicesSubTypeCpp::Invalid;
 
     };
@@ -1152,6 +1153,7 @@ public:
         m_eType = MyMJGamePusherTypeCpp::ActionDistCardsAtStart;
         m_iPriority = PriMyMJGameActionDistCardAtStart;
 
+        m_bLastCard = false;
     };
 
     virtual ~FMyMJGameActionDistCardAtStartCpp()
@@ -1491,6 +1493,7 @@ public:
     {
         m_eType = MyMJGamePusherTypeCpp::ActionHu;
         m_iPriority = PriMyMJGameActionHu;
+
         m_bEndGame = true;
     };
 

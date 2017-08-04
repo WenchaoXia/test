@@ -129,6 +129,8 @@ FMyMJGameActionCollectorCpp::reinit(TArray<FMyMJGameActionContainorCpp *> &aActi
 
     }
 
+    //reinit always happend before game start
+    setActionGroupId(0);
 };
 
 void

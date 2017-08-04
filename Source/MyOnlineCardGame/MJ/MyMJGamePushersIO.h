@@ -27,8 +27,7 @@ class FMyMJGamePusherIOComponentFullCpp
 public:
     FMyMJGamePusherIOComponentFullCpp()
     {
-        m_pQueueRemote = NULL;
-        m_iEnqueuePusherCount = 0;
+        init(NULL);
     };
 
     virtual ~FMyMJGamePusherIOComponentFullCpp()
@@ -51,8 +50,8 @@ public:
 
     void init(TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *pQueueRemote)
     {
-        reset();
         m_pQueueRemote = pQueueRemote;
+        reset();
     };
 
     TSharedPtr<FMyMJGamePusherBaseCpp> tryPullPusherFromLocal();
@@ -96,7 +95,7 @@ protected:
     //owned by this class, can only be used in one thread, so it is safe to clear by either producer or consumer
     TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> m_cQueueLocal;
 
-    //owned by other, never managed by this class
+    //owned by other, never managed by this class, don't drain it in this class!
     //Note, only consume thread can clear it, and this is always created by main thread, destroy by main thread. destroy only happen after sub thread stopped/killed, after then, parent thread can clear() also
     TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *m_pQueueRemote;
 

@@ -47,7 +47,7 @@ struct FMyMJGameIOGroupCpp
 public:
 
     FMyMJGameIOGroupCpp() {
-
+        reset();
     };
 
     virtual ~FMyMJGameIOGroupCpp() {
@@ -299,6 +299,8 @@ public:
 class FMyMJGameCoreBaseCpp
 {
 public:
+
+    //Most are settings, so don't need reset() function
     FMyMJGameCoreBaseCpp()
     {
         m_pPusherIOFull = NULL;

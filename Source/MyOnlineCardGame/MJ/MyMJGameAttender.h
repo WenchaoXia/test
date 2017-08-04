@@ -67,8 +67,7 @@ public:
 
     FMyMJAttenderDataPublicDirectForBPCpp()
     {
-        m_iIdxAttender = -1;
-        reset();
+        setup(-1);
     };
 
     virtual ~FMyMJAttenderDataPublicDirectForBPCpp()
@@ -138,7 +137,7 @@ public:
 
     FMyMJAttenderDataPrivateDirectForBPCpp()
     {
-
+        setup(-1);
     };
 
     virtual ~FMyMJAttenderDataPrivateDirectForBPCpp()
@@ -221,7 +220,7 @@ public:
         m_pCore = NULL;
         m_eWorkMode = eWorkMode;
 
-        //reset(false);
+        //reset(false); //may core dump since not setupped, for simple just don't reset here, and we need to check the code manually when adding member, and most member should goto data member which doesn't need to init manually
     };
 
     virtual ~FMyMJGameAttenderCpp()
@@ -381,6 +380,7 @@ public:
 protected:
 
     void recalcMinorPosiOfCardsInShowedOutWeaves();
+
 
     TSharedPtr<FMyMJAttenderDataForFullModeCpp> m_pDataForFullMode;
 
