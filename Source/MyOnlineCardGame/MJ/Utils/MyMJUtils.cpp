@@ -81,14 +81,6 @@ FMyMJWeaveTreeNodeCpp::convert2WeaveArrayIn(TArray<FMyMJWeaveCpp> parentWeaves, 
     }
 }
 
-
-void
-FMyStatisCountsPerCardValueTypeCpp::reset()
-{
-    m_mCountPerCardType.Empty();
-    m_iCountTotal = 0;
-}
-
 void
 FMyStatisCountsPerCardValueTypeCpp::addCountByValue(int32 value, int32 count)
 {
@@ -1223,8 +1215,10 @@ UMyMJUtilsLibrary::getStringFromEnum(const TCHAR *enumName, uint8 value)
         return FString("Invalid Enum type");
     }
 
-    return FString::Printf(TEXT("%s(%d)"), *enumPtr->GetEnumNameStringByValue(value), value);
+    //return FString::Printf(TEXT("%s(%d)"), *enumPtr->GetEnumNameStringByValue(value), value);
     //return enumPtr->GetEnumNameStringByValue(value);
+    return FString::Printf(TEXT("%s(%d)"), *enumPtr->GetNameStringByValue(value), value);
+    //GetNameStringByValue
 }
 
 int64

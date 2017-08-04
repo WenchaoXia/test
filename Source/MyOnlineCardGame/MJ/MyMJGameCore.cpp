@@ -244,6 +244,32 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
 
         bRet = true;
 
+        /*
+        MY_VERIFY(m_pCoreMirror->getWorkMode() == MyMJGameCoreWorkModeCpp::Mirror);
+
+        int32 iAttenderMask;
+        TArray<FMyIdValuePair> aRevealedCardValues;
+
+        pPusher->getRevealedCardValues(iAttenderMask, aRevealedCardValues);
+        if (iAttenderMask != 0) {
+
+
+            int32 l;
+            //l = MY_GET_ARRAY_LEN(m_aAttendersAll);
+            l = m_aAttenderPawns.Num();
+
+            MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+
+            for (int32 i = 0; i < l; i++) {
+                if ((iAttenderMask & (1 << i)) == 0) {
+                    continue;
+                }
+                //need update
+                m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.tryRevealCardValueByIdValuePairs(aRevealedCardValues);
+            }
+        }
+        */
+
         makeProgressByPusher(pPusherShared.Get());
 
         getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);

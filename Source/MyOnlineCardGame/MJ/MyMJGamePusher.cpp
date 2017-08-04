@@ -619,7 +619,7 @@ bool FMyMJGamePusherPointersCpp::trySerializeWithTag(FArchive &Ar)
 bool FMyMJGamePusherPointersCpp::Serialize(FArchive& Ar)
 {
     bool bIsLoading = Ar.IsLoading();
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Serialize called, bIsLoading: %d"), bIsLoading);
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Serialize called, bIsLoading: %d"), bIsLoading);
 
     return trySerializeWithTag(Ar);
 }
@@ -627,7 +627,7 @@ bool FMyMJGamePusherPointersCpp::Serialize(FArchive& Ar)
 bool FMyMJGamePusherPointersCpp::NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 {
     bool bIsLoading = Ar.IsLoading();
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("NetSerialize called, bIsLoading: %d"), bIsLoading);
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("NetSerialize called, bIsLoading: %d"), bIsLoading);
 
     return trySerializeWithTag(Ar);
 }
@@ -635,7 +635,7 @@ bool FMyMJGamePusherPointersCpp::NetSerialize(FArchive& Ar, class UPackageMap* M
 bool FMyMJGamePusherPointersCpp::NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
 {
     //bool bIsLoading = Ar.IsLoading();
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("NetDeltaSerialize called, W %p, R %p"), DeltaParms.Writer, DeltaParms.Reader);
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("NetDeltaSerialize called, W %p, R %p"), DeltaParms.Writer, DeltaParms.Reader);
 
     return false;
 }

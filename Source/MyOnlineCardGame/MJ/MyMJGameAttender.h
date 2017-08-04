@@ -161,6 +161,7 @@ public:
         m_cCardValuePack.reset(0);
     };
 
+    //not need to duplicate, it is only used in core logic, not graphic
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hand card Map"))
     FMyMJValueIdMapCpp m_cHandCards;
 
@@ -252,6 +253,9 @@ public:
 
         m_pDataPublicForMirrorMode = pDataPublic;
         m_pDataPrivateForMirrorMode = pDataPrivate;
+
+        m_pDataPublicForMirrorMode->m_cDataPublicDirect.setup(idx);
+        m_pDataPrivateForMirrorMode->m_cDataPrivateDirect.setup(idx);
 
         reset(false);
     };

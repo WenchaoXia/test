@@ -205,8 +205,10 @@ void FMyMJGameCoreLocalCSCpp::applyPusherCountUpdate(FMyMJGamePusherCountUpdateC
         pD->m_iActionGroupId++;
         //if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full)) {
             //MY_VERIFY(m_pActionCollector.IsValid());
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+            MY_VERIFY(m_pActionCollector.IsValid());
             m_pActionCollector->setActionGroupId(pD->m_iActionGroupId);
-        //}
+        }
     }
 }
 

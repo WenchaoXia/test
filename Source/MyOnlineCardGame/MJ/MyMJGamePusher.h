@@ -904,7 +904,7 @@ protected:
 UENUM(Blueprintable, Meta = (Bitflags))
 enum class EMyMJGameActionReserved0Mask : uint8
 {
-    PassPaoHu,
+    PassPaoHu = 0x01,
 };
 
 //Unified action present for graphic and UI

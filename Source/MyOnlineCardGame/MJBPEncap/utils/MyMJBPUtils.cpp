@@ -165,13 +165,12 @@ void UMyMJBPUtilsLibrary::testGameCoreInLocalThread(int32 seed)
         iSeed = UMyMJUtilsLibrary::nowAsMsFromTick();
     }
 
-    FMyMJGameCoreCpp *pCore = helperCreateCoreByRuleType(MyMJGameRuleTypeCpp::LocalCS, MyMJGameCoreWorkModeCpp::Full, iSeed);
+    FMyMJGameCoreCpp *pCore = helperCreateCoreByRuleType(MyMJGameRuleTypeCpp::LocalCS, MyMJGameCoreWorkModeCpp::Full, iSeed, MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero | MyMJGameCoreTrivalConfigMaskShowPusherLog);
 
     TSharedPtr<FMyMJGameCoreCpp> p = MakeShareable<FMyMJGameCoreCpp>(pCore);
 
     FMyMJGameIOGroupAllCpp cIOGourpAll;
     pCore->initFullMode(p, &cIOGourpAll);
-    pCore->m_iTrivalConfigMask = MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero | MyMJGameCoreTrivalConfigMaskShowPusherLog;
 
 
     FMyMJGameCmdRestartGameCpp *pCmdReset = new FMyMJGameCmdRestartGameCpp();

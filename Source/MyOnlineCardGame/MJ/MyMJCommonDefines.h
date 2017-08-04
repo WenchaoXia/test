@@ -6,8 +6,9 @@
 
 #include "MyMJCommonDefines.generated.h"
 
-#define MY_MJ_GAME_CORE_LOOP_TIME_MS 1000  //resolution is *ms plus parent thread kick
-#define My_MJ_GAME_IO_LOOP_TIME_MS 100
+#define MY_MJ_GAME_CORE_FULL_LOOP_TIME_MS 1000  //resolution is *ms plus parent thread kick
+#define My_MJ_GAME_IO_DRAIN_LOOP_TIME_MS 100
+#define MY_MJ_GAME_CORE_MIRROR_LOOP_TIME_MS 100
 
 typedef class FMyMJGameCoreCpp FMyMJGameCoreCpp;
 typedef class FMyMJGameAttenderCpp FMyMJGameAttenderCpp;
@@ -176,6 +177,8 @@ public:
     {
         m_bHuBornAllowMultiple = false;
         m_bHuBornShowAllCards = false;
+        m_mHuBornScoreAttrs.Reset();
+
         m_i7Dui258DuiReq = 0;
 
         m_bHuAllowMultiple = true;

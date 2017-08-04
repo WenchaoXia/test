@@ -373,12 +373,15 @@ public:
 
         m_pActionCollector = NULL;
         m_pExtIOGroupAll = NULL;
+
         m_pResManager = MakeShareable<FMyMJGameResManager>(new FMyMJGameResManager(iSeed));
 
         m_iMsLast = 0;
 
         m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
         m_eWorkMode = eWorkMode;
+
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("[%s] inited with seed: %d"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), iSeed);
     };
 
     virtual ~FMyMJGameCoreCpp()
@@ -392,7 +395,7 @@ public:
                 return &m_pDataForMirrorMode->m_cDataDirectPubic;
             }
             else {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataForMirrorMode Invalid!"));
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataForMirrorMode Invalid!"));  
                 return NULL;
             }
         }
@@ -554,35 +557,8 @@ public:
 
         if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0) {
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), pCoreData->m_iActionGroupId, pCoreData->m_iPusherIdLast, *pPusher->genDebugString());
-            applyPusher(pPusher);
         }
-        
-
-        //When full mode, all values revealed in system role, but when mirror mode, we need to reveal them in each role's private data
-        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
-            int32 iAttenderMask;
-            TArray<FMyIdValuePair> aRevealedCardValues;
-
-            pPusher->getRevealedCardValues(iAttenderMask, aRevealedCardValues);
-            if (iAttenderMask != 0) {
-
- 
-                int32 l;
-                l = MY_GET_ARRAY_LEN(m_aAttendersAll);
-
-                MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
-
-                for (int32 i = 0; i < l; i++) {
-                    if ((iAttenderMask & (1 << i)) == 0) {
-                        continue;
-                    }
-                    //need update
-                    m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.tryRevealCardValueByIdValuePairs(aRevealedCardValues);
-                }
-            }
-
-        }
-
+        applyPusher(pPusher);
 
         if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
             //all data reseted when applyPusher(), we don't bother about it here
@@ -592,7 +568,7 @@ public:
         }
 
         if (!(pCoreData->m_iPusherIdLast == pPusher->getId())) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pusher id not equal: %d, %d."), pCoreData->m_iPusherIdLast, pPusher->getId());
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s, pusher [%d] id not equal: %d, %d."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), (uint8)pPusher->getType(), pCoreData->m_iPusherIdLast, pPusher->getId());
             MY_VERIFY(false);
         }
     };

@@ -70,10 +70,11 @@ class UMyMJBPUtilsLibrary :
 public:
 
     //create one instance on heap
-    static FMyMJGameCoreCpp* helperCreateCoreByRuleType(MyMJGameRuleTypeCpp eRuleType, MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed)
+    static FMyMJGameCoreCpp* helperCreateCoreByRuleType(MyMJGameRuleTypeCpp eRuleType, MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed, int32 iTrivalConfigMask)
     {
+        FMyMJGameCoreCpp *pRet = NULL;
         if (eRuleType == MyMJGameRuleTypeCpp::LocalCS) {
-            return StaticCast<FMyMJGameCoreCpp *>(new FMyMJGameCoreLocalCSCpp(eWorkMode, iSeed));
+            pRet = StaticCast<FMyMJGameCoreCpp *>(new FMyMJGameCoreLocalCSCpp(eWorkMode, iSeed));
         }
         else if (eRuleType == MyMJGameRuleTypeCpp::GuoBiao) {
             MY_VERIFY(false);
@@ -82,7 +83,11 @@ public:
             MY_VERIFY(false);
         }
 
-        return NULL;
+        if (pRet) {
+            pRet->m_iTrivalConfigMask = iTrivalConfigMask;
+        }
+
+        return pRet;
     };
 
     UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")

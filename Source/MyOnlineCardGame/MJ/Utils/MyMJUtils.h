@@ -120,14 +120,14 @@ enum class MyMJCardSlotTypeCpp : uint8
     WinSymbol = 7                        UMETA(DisplayName = "WinSymbol")
 };
 
+//Todo, to support memset as init, use 0 as default for all to make it run faster
 USTRUCT(BlueprintType)
 struct FMyMJCardPosiCpp
 {
     GENERATED_USTRUCT_BODY()
 
-        FMyMJCardPosiCpp() {
+    FMyMJCardPosiCpp() {
         reset();
-
     };
 
     void reset() {
@@ -167,7 +167,7 @@ struct FMyMJCardInfoCpp
 {
     GENERATED_USTRUCT_BODY()
 
-        FMyMJCardInfoCpp()
+    FMyMJCardInfoCpp()
     {
         reset();
     };
@@ -194,7 +194,7 @@ struct FMyMJCardCpp : public FMyMJCardInfoCpp
 {
     GENERATED_USTRUCT_BODY()
 
-        FMyMJCardCpp() : FMyMJCardInfoCpp()
+    FMyMJCardCpp() : FMyMJCardInfoCpp()
     {
         m_iValue = 0;
     };
@@ -223,7 +223,7 @@ struct FMyMJCardCpp : public FMyMJCardInfoCpp
 UENUM(Blueprintable, Meta = (Bitflags))
 enum class EMyMJWeaveReserved0Mask : uint8
 {
-    LocalCSGangBuZhang, //1 means BuZhang, 0 means GangYao
+    LocalCSGangBuZhang = 0x01, //1 means BuZhang, 0 means GangYao
 };
 
 //#define FMyMJWeaveCppReserved0WhenGangValueGangYao 0
@@ -586,6 +586,11 @@ struct FMyMJHuCommonCfg
     FMyMJHuCommonCfg() {
 
     };
+
+    void reset()
+    {
+
+    };
 };
 
 //Here we use int, to avoid mem allocation
@@ -944,9 +949,11 @@ public:
 
     void reset()
     {
-        m_aScoreResults.Reset();
         m_iIdxAttenderWin = -1;
         m_iIdxAttenderLoseOnlyOne = -1;
+        m_aWeavesShowedOut.Reset();
+        m_aWeavesInHand.Reset();
+        m_aScoreResults.Reset();
     };
 
     FString genDebugString() const
@@ -1136,6 +1143,7 @@ public:
 
     void reset()
     {
+        m_cHuCommonCfg.reset();
         m_mHuScoreAttrsCfg.Reset();
     };
 
@@ -1177,19 +1185,23 @@ struct FMyMJWeaveArrayCpp
     FMyMJWeaveArrayCpp()
     {};
 
-    /* the Weaves */
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Weave Array"))
-    TArray<FMyMJWeaveCpp> m_aWeaves;
-
     //UFUNCTION(BlueprintCallable, Category = "My MJ Utils")
     void reset() {
         m_aWeaves.Empty();
     };
+
+    /* the Weaves */
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Weave Array"))
+    TArray<FMyMJWeaveCpp> m_aWeaves;
 };
 
 struct FMyMJWeaveTreeNodeCpp
 {
-    FMyMJWeaveTreeNodeCpp() {};
+    FMyMJWeaveTreeNodeCpp()
+    {
+        reset();
+    };
+
     virtual ~FMyMJWeaveTreeNodeCpp() {};
 
     void reset() {
@@ -1221,7 +1233,8 @@ struct FMyValueCountMapCpp
     virtual ~FMyValueCountMapCpp() {};
 
     void reset() {
-        m_mMap.Empty(); m_iCount = 0;
+        m_mMap.Empty();
+        m_iCount = 0;
     };
 
 public:
@@ -1242,7 +1255,11 @@ struct FMyStatisCountsPerCardValueTypeCpp
 
 public:
 
-    void reset();
+    void reset()
+    {
+        m_mCountPerCardType.Reset();
+        m_iCountTotal = 0;
+    };
 
     //add the count with a value used to judge card type
     void addCountByValue(int32 value, int32 count);
@@ -1285,7 +1302,7 @@ struct FMyTriggerDataCpp : public FMyIdValuePair
     };
 
     void reset() {
-        FMyIdValuePair::reset(true);
+        Super::reset(true);
         m_iValueShowedOutCountAfter = -1;
     };
 
@@ -1407,9 +1424,6 @@ public:
         m_mWeaveCounts.Empty();
     };
 
-    FMyStatisCountsPerCardValueTypeCpp m_cCardCounts;
-    TMap<MyMJWeaveTypeCpp, FMyStatisCountsPerCardValueTypeCpp> m_mWeaveCounts; //Use map instead of array for performance
-
     //Gang count as two duizi, KeZi does not count
     int32 getDuiZiOrGangTotal() {
         int32 ret = 0;
@@ -1433,6 +1447,9 @@ public:
         return ret;
     }
 
+
+    FMyStatisCountsPerCardValueTypeCpp m_cCardCounts;
+    TMap<MyMJWeaveTypeCpp, FMyStatisCountsPerCardValueTypeCpp> m_mWeaveCounts; //Use map instead of array for performance
     //TArray<FMyStatisCountsPerCardValueTypeCpp> m_aWeaveCounts;
 
 };
@@ -1443,10 +1460,12 @@ struct FMyMJCardParseResultCpp : public FMyMJCardParseResultSimpleCpp
     GENERATED_USTRUCT_BODY()
 
     FMyMJCardParseResultCpp() : Super() {
-
+        //reset is called in parent
     };
 
     virtual void reset() override {
+        Super::reset();
+
         m_cChiLit.reset();
         m_cChiMid.reset();
         m_cChiBig.reset();
@@ -1457,8 +1476,6 @@ struct FMyMJCardParseResultCpp : public FMyMJCardParseResultSimpleCpp
         m_iWeaveCountHaveYaoCard = 0;
 
         m_mDuiZiOrGangValueCountMap.Empty();
-
-        Super::reset();
     };
 
     int32 getShunZiSameGroupCount(int32 minCount);

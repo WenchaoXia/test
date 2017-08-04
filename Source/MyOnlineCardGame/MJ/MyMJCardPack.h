@@ -20,6 +20,7 @@ struct FMyMJCardInfoPackCpp
 public:
     FMyMJCardInfoPackCpp()
     {
+        reset(0);
     };
 
     virtual ~FMyMJCardInfoPackCpp()
@@ -76,6 +77,7 @@ struct FMyMJCardValuePackCpp
 public:
     FMyMJCardValuePackCpp()
     {
+        reset(0);
     };
 
     virtual ~FMyMJCardValuePackCpp()

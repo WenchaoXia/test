@@ -36,15 +36,27 @@ void UMyMJPusherBufferCpp::trySyncDataFromCoreFull()
 
     FMyMJGamePusherPointersCpp cPusherSegment;
     if (cPusherSegment.helperFillAsSegmentFromQueue(*pPusherQueue)) {
+ 
         m_cPusherBuffer.helperTryFillDataFromSegment(-1, cPusherSegment, true);
+
+        int32 iGameId, iPusherIdLast;
+        m_cPusherBuffer.getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Got puser, now iGameid %d, iPusherIdLast %d"), iGameId, iPusherIdLast);
+
         m_cPusherUpdatedMultcastDelegate.Broadcast();
+
     }
 
 };
 
-void UMyMJCoreFullCpp::testGameCoreInSubThread()
+void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog)
 {
-    while (!tryChangeMode(MyMJGameRuleTypeCpp::LocalCS, MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero | MyMJGameCoreTrivalConfigMaskShowPusherLog)) {
+    int32 iMask = MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero;
+    if (showCoreLog) {
+        iMask |= MyMJGameCoreTrivalConfigMaskShowPusherLog;
+    }
+
+    while (!tryChangeMode(MyMJGameRuleTypeCpp::LocalCS, iMask)) {
         FPlatformProcess::Sleep(0.1);
     }
 
@@ -123,7 +135,7 @@ bool UMyMJCoreFullCpp::startGame()
     
     if (IsValid(world)) {
         world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
-        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &UMyMJCoreFullCpp::loop, ((float)My_MJ_GAME_IO_LOOP_TIME_MS) / (float)1000, true);
+        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &UMyMJCoreFullCpp::loop, ((float)My_MJ_GAME_IO_DRAIN_LOOP_TIME_MS) / (float)1000, true);
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
@@ -211,7 +223,7 @@ FMyMJGamePusherBaseCpp* AMyMJCoreMirrorCpp::tryCheckAndGetNextPusher()
 
     if (IsValid(m_pPusherBuffer)) {
 
-        if (!m_bHaltForGraphic) {
+        if (!getbHaltForGraphic()) {
             if (m_pCoreMirror.IsValid()) {
                 m_pCoreMirror->getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
             }
@@ -254,34 +266,112 @@ void AMyMJCoreMirrorCpp::loop()
                     iSeed = UMyMJUtilsLibrary::nowAsMsFromTick();
                 }
 
-                FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(eDestType, MyMJGameCoreWorkModeCpp::Mirror, iSeed);
+                bool bOK = checkLevelSettings();
+                if (!bOK) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("level setting is not correct!"));
+                    MY_VERIFY(false);
+                }
+
+
+
+                FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(eDestType, MyMJGameCoreWorkModeCpp::Mirror, iSeed, MyMJGameCoreTrivalConfigMaskShowPusherLog);
                 m_pCoreMirror = MakeShareable<FMyMJGameCoreCpp>(pCore);
+
+                TArray<AMyMJAttenderPawnBPCpp *>& aAttenderPawns = getAttenderPawnsRef();
+
+                int32 l = aAttenderPawns.Num();
+                MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+                TArray<UMyMJAttenderDataPublicForMirrorModeCpp *>  apAttenderDataPublic;
+                TArray<UMyMJAttenderDataPrivateForMirrorModeCpp *> apAttenderDataPrivate;
+
+                for (int32 i = 0; i < l; i++) {
+                    apAttenderDataPublic.Emplace(aAttenderPawns[i]->m_pDataPublic);
+                    apAttenderDataPrivate.Emplace(aAttenderPawns[i]->m_pDataPrivate);
+                }
+
+                m_pCoreMirror->initMirrorMode(m_pCoreMirror, getpCoreData(), apAttenderDataPublic, apAttenderDataPrivate);
+            }
+
+            m_iPusherApplyState = 0;
+        }
+
+        if (!m_pCoreMirror.IsValid()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pCoreMirror invalid!"));
+            MY_VERIFY(false);
+            break;
+        }
+
+        //2nd, apply
+        {
+            if (m_iPusherApplyState == 0) {
+                m_iPusherApplyState = 1;
+
+                //When full mode, all values revealed in system role, but when mirror mode, we need to reveal them in each role's private data
+                MY_VERIFY(m_pCoreMirror->getWorkMode() == MyMJGameCoreWorkModeCpp::Mirror);
+
+                int32 iAttenderMask;
+                TArray<FMyIdValuePair> aRevealedCardValues;
+
+                pPusher->getRevealedCardValues(iAttenderMask, aRevealedCardValues);
+                if (iAttenderMask != 0) {
+
+
+                    int32 l;
+                    //l = MY_GET_ARRAY_LEN(m_aAttendersAll);
+
+                    TArray<AMyMJAttenderPawnBPCpp *>& aAttenderPawns = getAttenderPawnsRef();
+                    l = aAttenderPawns.Num();
+
+                    MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+
+                    for (int32 i = 0; i < l; i++) {
+                        if ((iAttenderMask & (1 << i)) == 0) {
+                            continue;
+                        }
+                        //need update
+                        aAttenderPawns[i]->m_pDataPrivate->m_cDataPrivateDirect.m_cCardValuePack.tryRevealCardValueByIdValuePairs(aRevealedCardValues);
+                        //m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.tryRevealCardValueByIdValuePairs(aRevealedCardValues);
+                    }
+                }
+
+
+                if (prePusherApplyForGraphic(pPusher)) {
+                    //we halt for graphic
+                    break;
+                }
+            }
+
+
+            if (m_iPusherApplyState == 1) {
+                m_iPusherApplyState = 2;
+                m_pCoreMirror->makeProgressByPusher(pPusher);
+            }
+            
+            if (m_iPusherApplyState == 2) {
+                m_iPusherApplyState = 0;
+                if (postPusherApplyForGraphic(pPusher)) {
+                    //we halt for graphic
+                    break;
+                }
             }
         }
 
-        if (m_pCoreMirror.IsValid()) {
-
-            //2nd, apply to core in data level
-            m_pCoreMirror->makeProgressByPusher(pPusher);
-            
-            //3rd, try notify for graphic, and this function may update blue print state before call blueprint
-            notifyBluePrintPusherApplied(pPusher);
-        }
-        else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pCoreMirror invalid!"));
-            MY_VERIFY(false);
-        }
 
 
         pPusher = tryCheckAndGetNextPusher();
     }
 }
 
-void AMyMJCoreMirrorCpp::notifyBluePrintPusherApplied(FMyMJGamePusherBaseCpp *pPusher)
+bool AMyMJCoreBaseForBpCpp::prePusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher)
+{
+    return false;
+}
+
+bool AMyMJCoreBaseForBpCpp::postPusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher)
 {
     //let's filter out important pusher and notify blueprint
     MyMJGamePusherTypeCpp ePusherType = pPusher->getType();
-    bool bHaltForGraphic = false;
+    bool ret = false;
 
 
     if (ePusherType == MyMJGamePusherTypeCpp::PusherFillInActionChoices) {
@@ -297,6 +387,7 @@ void AMyMJCoreMirrorCpp::notifyBluePrintPusherApplied(FMyMJGamePusherBaseCpp *pP
         //m_cCoreDataDirect.m_aUntakenCardStacks = m_pCoreMirror->getUntakenCardStacksRef();
         //m_cCoreDataDirect.m_cGameCfg = *m_pCoreMirror->getpGameCfg();
         FMyMJGamePusherResetGameCpp *pPusherResetGame = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher);
+        ret = postPusherApplyResetGame(*pPusherResetGame);
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherUpdateTing) {
         FMyMJGamePusherUpdateTingCpp *pPusherUpdateTing = StaticCast<FMyMJGamePusherUpdateTingCpp *>(pPusher);
@@ -328,14 +419,6 @@ void AMyMJCoreMirrorCpp::notifyBluePrintPusherApplied(FMyMJGamePusherBaseCpp *pP
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionZhaNiaoLocalCS) {
         FMyMJGameActionZhaNiaoLocalCSCpp *pActionZhaNiaoLocalCS = StaticCast<FMyMJGameActionZhaNiaoLocalCSCpp *>(pPusher);
     }
-}
 
-void AMyMJCoreMirrorCpp::PostInitProperties()
-{
-    Super::PostInitProperties();
-
-    MY_VERIFY(m_aAttenderPawns.Num() <= 0);
-
-    m_pData = NewObject<UMyMJCoreDataForMirrorModeCpp>(this);
-    //pAttenderData->m_e
+    return ret;
 }
