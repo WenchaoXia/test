@@ -12,7 +12,6 @@
 
 #include "Queue.h"
 
-#include "Utils/MyMJUtils.h"
 #include "MyMJCardPack.h"
 
 #include "MyMJGamePushersIO.h"
@@ -23,19 +22,9 @@
 #include "MyMJGameResManager.h"
 
 
-//#include "GameFramework/Actor.h"
+#include "MyMJGameData.h"
 
-#include "MyMJGameCore.generated.h"
-
-
-UENUM()
-enum class MyMJActionLoopStateCpp : uint8
-{
-    Invalid = 0 UMETA(DisplayName = "Invalid"),
-    WaitingToGenAction = 1 UMETA(DisplayName = "WaitingToGenAction"),
-    ActionGened = 2 UMETA(DisplayName = "ActionGened"),
-    ActionCollected = 3 UMETA(DisplayName = "ActionCollected")
-};
+//#include "MyMJGameCore.generated.h"
 
 
 //the resource group  used to prepare the core
@@ -107,191 +96,6 @@ public:
 
     TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> m_cPusherQueue;
 };
-
-
-USTRUCT()
-struct FMyMJGameUntakenSlotInfoCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyMJGameUntakenSlotInfoCpp()
-    {
-        reset();
-    };
-
-    virtual ~FMyMJGameUntakenSlotInfoCpp()
-    {
-
-    };
-
-    void reset()
-    {
-        m_iIdxUntakenSlotHeadNow = -1;
-        m_iIdxUntakenSlotTailNow = -1;
-        m_iIdxUntakenSlotTailAtStart = -1;
-        m_iIdxUntakenSlotLengthAtStart = 0;
-
-        m_iUntakenSlotCardsLeftNumTotal = 0;
-        m_iUntakenSlotCardsLeftNumKeptFromTail = 0;
-        m_iUntakenSlotCardsLeftNumNormalFromHead = 0;
-    };
-
-    inline
-    int32 getCardNumCanBeTakenNormally() const
-    {
-        return m_iUntakenSlotCardsLeftNumNormalFromHead;
-    };
-
-    inline
-    int32 getCardNumCanBeTakenAll() const
-    {
-        return m_iUntakenSlotCardsLeftNumTotal;
-    };
-
-
-
-    //reflect the untaken state on desktop, not how mnay/or where attender can take card
-    int32 m_iIdxUntakenSlotHeadNow;
-    int32 m_iIdxUntakenSlotTailNow;
-    int32 m_iIdxUntakenSlotTailAtStart;
-    int32 m_iIdxUntakenSlotLengthAtStart; //Note this never change in game
-    int32 m_iUntakenSlotCardsLeftNumTotal; //simply reflect how many cards present on dest as untaken, doesn't mean how many you can take it which should be decided by rule
-    int32 m_iUntakenSlotCardsLeftNumKeptFromTail;
-    int32 m_iUntakenSlotCardsLeftNumNormalFromHead;
-
-};
-
-
-USTRUCT(BlueprintType)
-struct FMyMJCoreDataPublicDirectCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-
-    FMyMJCoreDataPublicDirectCpp()
-    {
-        reinit(MyMJGameRuleTypeCpp::Invalid);
-    };
-
-    virtual ~FMyMJCoreDataPublicDirectCpp()
-    {
-
-    };
-
-    void reinit(MyMJGameRuleTypeCpp eRuleType)
-    {
-        m_eRuleType = eRuleType;
-        reset();
-    };
-
-    void reset()
-    {
-        //some data does not need to reset since reset pusher will overwrite them all
-        m_aUntakenCardStacks.Reset();
-        m_cCardInfoPack.reset(0);
-
-        m_cGameCfg.reset();
-        m_cGameRunData.reset();
-
-        m_iGameId = -1;
-        m_iPusherIdLast = -1;
-        m_iActionGroupId = -1;
-        m_eGameState = MyMJGameStateCpp::Invalid;
-        m_eActionLoopState = MyMJActionLoopStateCpp::Invalid;
-
-        m_iDiceNumberNow0 = -1;
-        m_iDiceNumberNow1 = -1;
-
-        m_cUntakenSlotInfo.reset();
-
-        m_aHelperLastCardsGivenOutOrWeave.Reset();
-        m_cHelperLastCardTakenInGame.reset(true);
-        m_cHelperShowedOut2AllCards.clear();
-
-    };
-
-    inline bool isInGameState()
-    {
-        return (!(m_eGameState == MyMJGameStateCpp::Invalid || m_eGameState == MyMJGameStateCpp::GameEnd));
-    };
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UnTaken Card Stacks"))
-    TArray<FMyIdCollectionCpp> m_aUntakenCardStacks; //Always start from attender 0 to 3
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card info pack"))
-    FMyMJCardInfoPackCpp  m_cCardInfoPack;
-
-    //FMyMJCardValuePackCpp m_cCardValuePack;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game Cfg"))
-    FMyMJGameCfgCpp m_cGameCfg;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game RunData"))
-    FMyMJGameRunDataCpp m_cGameRunData;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game Id"))
-    int32 m_iGameId;
-
-    //the last pusher id we got
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Pusher Id Last"))
-    int32 m_iPusherIdLast;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Group Id"))
-    int32 m_iActionGroupId;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game State"))
-    MyMJGameStateCpp m_eGameState;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Loop State"))
-    MyMJActionLoopStateCpp m_eActionLoopState;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number 0"))
-    int32 m_iDiceNumberNow0;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number 1"))
-    int32 m_iDiceNumberNow1;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Untaken Slot Info"))
-    FMyMJGameUntakenSlotInfoCpp m_cUntakenSlotInfo;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
-    TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hai Di Card Id"))
-    FMyIdValuePair m_cHelperLastCardTakenInGame; //hai di card if id >= 0
-
-    //used to calculate how many cards left possible hu
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Cards Showed Out to All"))
-    FMyMJValueIdMapCpp m_cHelperShowedOut2AllCards;
-
-    //used to tell what rule this core is fixed to, not game cfg's type can be invalid, which means not started yet
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Rule Type"))
-    MyMJGameRuleTypeCpp m_eRuleType;
-
-};
-
-USTRUCT()
-struct FMyMJCoreDataForFullModeCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyMJCoreDataPublicDirectCpp m_cDataDirectPubic;
-};
-
-
-UCLASS(NotBlueprintType, NotBlueprintable)
-class UMyMJCoreDataForMirrorModeCpp : public UObject
-{
-    GENERATED_BODY()
-
-public:
-    FMyMJCoreDataPublicDirectCpp m_cDataDirectPubic;
-};
-
-#define MY_GET_ARRAY_LEN(A) ( sizeof(A) / sizeof(A[0]))
 
 //Base class ii used to ensure basic facility create/destory sequence
 //Although we place some basic facilites here as bas class member, which ensured the dependence is OK in delete(), but for simple let's use smart pointer here
@@ -378,54 +182,72 @@ public:
 
         m_pResManager = MakeShareable<FMyMJGameResManager>(new FMyMJGameResManager(iSeed));
 
-        m_iMsLast = 0;
+        m_cDataLogic.m_eWorkMode = eWorkMode;
 
-        m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
-        m_eWorkMode = eWorkMode;
-
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("[%s] inited with seed: %d"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), iSeed);
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("[%s] inited with seed: %d"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)eWorkMode), iSeed);
     };
 
     virtual ~FMyMJGameCoreCpp()
     {};
 
-    FMyMJCoreDataPublicDirectCpp* getDataPublicDirect()
+    inline MyMJGameCoreWorkModeCpp getWorkMode() const
     {
-        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+        return m_cDataLogic.m_eWorkMode;
+    };
+
+    inline MyMJGameRuleTypeCpp getRuleType() const
+    {
+        MyMJGameRuleTypeCpp eRuleType = m_cDataLogic.m_eRuleType;
+        MyMJGameCoreWorkModeCpp eWorkMode = getWorkMode();
+
+        if (eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
             MY_VERIFY(IsInGameThread());
             if (m_pDataForMirrorMode.IsValid()) {
-                return &m_pDataForMirrorMode->m_cDataDirectPubic;
+                MyMJGameRuleTypeCpp eRuleType2 = m_pDataForMirrorMode->m_cDataPubicDirect.m_cGameCfg.m_eRuleType;
+                if (eRuleType2 != MyMJGameRuleTypeCpp::Invalid) {
+                    MY_VERIFY(eRuleType2 == eRuleType); //If set, they must equal
+                }
+            }
+        }
+        else if (eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+            if (m_pDataForFullMode.IsValid()) {
+                MyMJGameRuleTypeCpp eRuleType2 = m_pDataForFullMode->m_cDataPubicDirect.m_cGameCfg.m_eRuleType;
+                if (eRuleType2 != MyMJGameRuleTypeCpp::Invalid) {
+                    MY_VERIFY(eRuleType2 == eRuleType); //If set, they must equal
+                }
+                //MY_VERIFY(m_pDataForFullMode->m_cDataPubicDirect.m_eRuleType == m_eRuleType);
+            }
+        }
+
+        return eRuleType;
+    };
+
+    const FMyMJCoreDataLogicOnlyCpp& getDataLogicRef() const
+    {
+        return m_cDataLogic;
+    };
+
+    FMyMJCoreDataPublicDirectCpp* getDataPublicDirect()
+    {
+        MyMJGameCoreWorkModeCpp eWorkMode = getWorkMode();
+        if (eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+            MY_VERIFY(IsInGameThread());
+            if (m_pDataForMirrorMode.IsValid()) {
+                return &m_pDataForMirrorMode->m_cDataPubicDirect;
             }
             else {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataForMirrorMode Invalid!"));  
                 return NULL;
             }
         }
-        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+        else if (eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
             MY_VERIFY(m_pDataForFullMode.IsValid());
-            return &m_pDataForFullMode->m_cDataDirectPubic;
+            return &m_pDataForFullMode->m_cDataPubicDirect;
         }
         else {
             MY_VERIFY(false);
             return NULL;
         }
-    };
-
-    inline MyMJGameRuleTypeCpp getRuleType() const
-    {
-        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
-            MY_VERIFY(IsInGameThread());
-            if (m_pDataForMirrorMode.IsValid()) {
-                MY_VERIFY(m_pDataForMirrorMode->m_cDataDirectPubic.m_eRuleType == m_eRuleType);
-            }
-        }
-        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
-            if (m_pDataForFullMode.IsValid()) {
-                MY_VERIFY(m_pDataForFullMode->m_cDataDirectPubic.m_eRuleType == m_eRuleType);
-            }
-        }
-
-        return m_eRuleType;
     };
 
     inline
@@ -460,17 +282,13 @@ public:
         return m_pActionCollector->getpPusherIO();
     };
 
-    inline MyMJGameCoreWorkModeCpp getWorkMode()
-    {
-        return m_eWorkMode;
-    }
 
     //@pIOGroupAll owned by external, don't manage their lifecycle inside
     virtual void initFullMode(TWeakPtr<FMyMJGameCoreCpp> pSelf, FMyMJGameIOGroupAllCpp *pIOGroupAll)
     {
         //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("initFullMode."));
 
-        MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Full);
+        MY_VERIFY(getWorkMode() == MyMJGameCoreWorkModeCpp::Full);
         initBase(pSelf);
 
         //setup data members
@@ -478,7 +296,7 @@ public:
         //MY_VERIFY(m_pDataForMirrorMode == NULL); //don't do this, we may across thread
 
         m_pDataForFullMode = MakeShareable<FMyMJCoreDataForFullModeCpp>(new FMyMJCoreDataForFullModeCpp());
-        m_pDataForFullMode->m_cDataDirectPubic.reinit(m_eRuleType);
+        m_pDataForFullMode->m_cDataPubicDirect.reinit(getRuleType());
  
         int32 l;
         l = MY_GET_ARRAY_LEN(m_aAttendersAll);
@@ -512,28 +330,29 @@ public:
     };
 
 
-    virtual void initMirrorMode(TWeakPtr<FMyMJGameCoreCpp> pSelf, UMyMJCoreDataForMirrorModeCpp* pCoreData, TArray<UMyMJAttenderDataPublicForMirrorModeCpp *> &apAttenderDataPublic, TArray<UMyMJAttenderDataPrivateForMirrorModeCpp *> &apAttenderDataPrivate)
+    virtual void initMirrorMode(TWeakPtr<FMyMJGameCoreCpp> pSelf, UMyMJDataForMirrorModeCpp *pMJData)
     {
 
-        MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror);
+        MY_VERIFY(getWorkMode() == MyMJGameCoreWorkModeCpp::Mirror);
         
         initBase(pSelf);
 
         //MY_VERIFY(!m_pDataForFullMode.IsValid());
         MY_VERIFY(m_pDataForMirrorMode == NULL);
 
-        m_pDataForMirrorMode = pCoreData;
-        m_pDataForMirrorMode->m_cDataDirectPubic.reinit(m_eRuleType);
+        m_pDataForMirrorMode = pMJData->m_pCoreData;
+        MY_VERIFY(m_pDataForMirrorMode.IsValid());
+        //m_pDataForMirrorMode->m_cDataPubicDirect.m_cGameCfg.m_eRuleType
+        m_pDataForMirrorMode->m_cDataPubicDirect.reinit(getRuleType());
 
         int32 l;
         l = MY_GET_ARRAY_LEN(m_aAttendersAll);
         MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
 
-        MY_VERIFY(l == apAttenderDataPublic.Num());
-        MY_VERIFY(l == apAttenderDataPrivate.Num());
+        MY_VERIFY(l == pMJData->m_aAttenderDatas.Num());
 
         for (int32 i = 0; i < l; i++) {
-            m_aAttendersAll[i]->initMirrorMode(pSelf, i, apAttenderDataPublic[i], apAttenderDataPrivate[i]);
+            m_aAttendersAll[i]->initMirrorMode(pSelf, i, pMJData->m_aAttenderDatas[i]->m_pDataPublic, pMJData->m_aAttenderDatas[i]->m_pDataPrivate);
         }
     };
 
@@ -558,7 +377,7 @@ public:
         */
 
         if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0) {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), pCoreData->m_iActionGroupId, pCoreData->m_iPusherIdLast, *pPusher->genDebugString());
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)getWorkMode()), pCoreData->m_iActionGroupId, m_cDataLogic.m_iPusherIdLast, *pPusher->genDebugString());
         }
         applyPusher(pPusher);
 
@@ -566,11 +385,11 @@ public:
             //all data reseted when applyPusher(), we don't bother about it here
         }
         else {
-            pCoreData->m_iPusherIdLast++;
+            m_cDataLogic.m_iPusherIdLast++;
         }
 
-        if (!(pCoreData->m_iPusherIdLast == pPusher->getId())) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s, pusher [%d] id not equal: %d, %d."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)m_eWorkMode), (uint8)pPusher->getType(), pCoreData->m_iPusherIdLast, pPusher->getId());
+        if (!(m_cDataLogic.m_iPusherIdLast == pPusher->getId())) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s, pusher [%d] id not equal: %d, %d."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)getWorkMode()), (uint8)pPusher->getType(), m_cDataLogic.m_iPusherIdLast, pPusher->getId());
             MY_VERIFY(false);
         }
     };
@@ -584,8 +403,8 @@ public:
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCoreData is invalid!"));
         }
         else {
-            iGameId = pCoreData->m_iGameId;
-            iPusherIdLast = pCoreData->m_iPusherIdLast;
+            iGameId = m_cDataLogic.m_iGameId;
+            iPusherIdLast = m_cDataLogic.m_iPusherIdLast;
         }
 
         if (pOutGameId) {
@@ -643,7 +462,7 @@ protected:
     {
         for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
             MY_VERIFY(m_aAttendersAll[i].IsValid() == false);
-            m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(createAttender(m_eWorkMode));
+            m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(createAttender(getWorkMode()));
         }
     };
 
@@ -652,6 +471,7 @@ protected:
 
     TWeakObjectPtr<UMyMJCoreDataForMirrorModeCpp> m_pDataForMirrorMode;
 
+    FMyMJCoreDataLogicOnlyCpp m_cDataLogic;
 
     //Anything may change in subclass, should be defined as pointer, otherwise direct a member. we don't use pointer for only reason about destruction sequence
     //Basic facilities
@@ -659,10 +479,5 @@ protected:
     TSharedPtr<FMyMJGameActionCollectorCpp>    m_pActionCollector;
     FMyMJGameIOGroupAllCpp *m_pExtIOGroupAll; //not owned by this class, also some member is used by m_pActionCollector
     TSharedPtr<FMyMJGameResManager> m_pResManager;
-
-    int64 m_iMsLast;
-
-    MyMJGameRuleTypeCpp m_eRuleType;//also distinguish sub type
-    MyMJGameCoreWorkModeCpp m_eWorkMode;
 
 };

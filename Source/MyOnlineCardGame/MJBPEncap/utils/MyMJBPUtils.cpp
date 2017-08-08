@@ -1,7 +1,50 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MyMJBPUtils.h"
+
+#include "Engine.h"
+#include "UnrealNetwork.h"
+
 #include "MJLocalCS/Utils/MyMJUtilsLocalCS.h"
+
+void AMyTestActorBaseCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    DOREPLIFETIME(AMyTestActorBaseCpp, m_pMJData);
+};
+
+bool AMyTestActorBaseCpp::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
+{
+    const TSet<UActorComponent*>& aC = GetReplicatedComponents();
+    for (UActorComponent* ActorComp : aC)
+    {
+        FString n = ActorComp->GetFName().ToString();
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("comopnent name %s."), *n);
+    };
+
+    bool bRet = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("ReplicateSubobjects done."));
+
+    return bRet;
+};
+
+
+
+void AMyTestActorBaseCpp::createMJData()
+{
+    //m_pMJData = CreateDefaultSubobject<UMyMJDataForMirrorModeCpp>(TEXT("UMyMJDataForMirrorModeCpp"));
+    if (m_pMJData) {
+        m_pMJData->DestroyComponent();
+        m_pMJData = NULL;
+    }
+
+
+    m_pMJData = NewObject<UMyMJDataForMirrorModeCpp>(this);
+    m_pMJData->createSubObjects(false, true);
+    m_pMJData->RegisterComponent();
+    m_pMJData->SetIsReplicated(true);
+};
 
 void AMyTestActorBaseCpp::ClientRPCFunction0_Implementation(float v1)
 {
@@ -23,9 +66,27 @@ void AMyTestActorBaseCpp::ServerRPCFunction0_Implementation(float v1)
 void AMyTestActorBaseCpp::MulticastRPCFunction0_Implementation(float v1)
 {
     FPlatformProcess::Sleep(v1);
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("MulticastRPCFunction0_Implementation %f"), v1);
+    UWorld *world = GetWorld();
+
+    uint8 netMode = GEngine->GetNetMode(world);
+    float timeSeconds = world-> GetTimeSeconds();
+
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("MulticastRPCFunction0_Implementation in %f, netMode %d, timeSeconds %f"), v1, netMode, timeSeconds);
 }
 
+void AMyTestActorBaseCpp::testMulticastRPCFunction0(float v1)
+{
+    UWorld *world = GetWorld();
+
+    uint8 netMode = GEngine->GetNetMode(world);
+    float timeSeconds = world->GetTimeSeconds();
+
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("before testMulticastRPCFunction0 in %f, netMode %d, timeSeconds %f"), v1, netMode, timeSeconds);
+    MulticastRPCFunction0(v1);
+
+    timeSeconds = world->GetTimeSeconds();
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("after testMulticastRPCFunction0 in %f, netMode %d, timeSeconds %f"), v1, netMode, timeSeconds);
+}
 
 void AMyTestActorBaseCpp::genPusherPointers(FMyMJGamePusherPointersCpp &pusherPointers)
 {
@@ -181,4 +242,23 @@ void UMyMJBPUtilsLibrary::testGameCoreInLocalThread(int32 seed)
 
     pCore->tryProgressInFullMode();
 
+};
+
+
+
+float UMyMJBPUtilsLibrary::testGetRealTimeSeconds(AActor *actor)
+{
+    return actor->GetWorld()->GetRealTimeSeconds();
+};
+
+
+int32 UMyMJBPUtilsLibrary::getEngineNetMode(AActor *actor)
+{
+    UWorld *world = actor->GetWorld();
+    if (world) {
+        return GEngine->GetNetMode(world);
+    }
+    else {
+        return -1;
+    }
 };

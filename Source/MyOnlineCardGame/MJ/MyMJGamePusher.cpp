@@ -819,13 +819,14 @@ void FMyMJGameActionThrowDicesCpp::init(MyMJGameActionThrowDicesSubTypeCpp eSubT
     }
 }
 
-void FMyMJGameActionThrowDicesCpp::getDiceNumbers(int32 &outDiceNumber0, int32 &outDiceNumber1) const
+void FMyMJGameActionThrowDicesCpp::getDiceNumbers(int32 &outDiceNumber0, int32 &outDiceNumber1, int32 &outDiceNumberMask) const
 {
     MY_VERIFY(m_iDiceNumber0 >= 1 && m_iDiceNumber0 < 7);
     MY_VERIFY(m_iDiceNumber1 >= 1 && m_iDiceNumber1 < 7);
 
     outDiceNumber0 = m_iDiceNumber0;
     outDiceNumber1 = m_iDiceNumber1;
+    outDiceNumberMask = (m_iDiceNumber0 & 0x0f) | (m_iDiceNumber1 & 0xf0);
 }
 
 MyMJGameActionThrowDicesSubTypeCpp FMyMJGameActionThrowDicesCpp::getSubType() const

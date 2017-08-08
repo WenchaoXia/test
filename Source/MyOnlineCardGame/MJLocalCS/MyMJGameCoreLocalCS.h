@@ -13,7 +13,7 @@ public:
 
     FMyMJGameCoreLocalCSCpp(MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed) : FMyMJGameCoreCpp(eWorkMode, iSeed)
     {
-        m_eRuleType = MyMJGameRuleTypeCpp::LocalCS;
+        m_cDataLogic.m_eRuleType = MyMJGameRuleTypeCpp::LocalCS;
     };
 
     virtual ~FMyMJGameCoreLocalCSCpp()

@@ -21,6 +21,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogMyUtilsI, Display, All);
 #define MY_PATH_SPLIT_CHAR TEXT("/")
 #endif
 
+#define MY_GET_ARRAY_LEN(A) ( sizeof(A) / sizeof(A[0]))
+
 inline FString myGetFileNameFromFullPath(FString inPath)
 {
     int32 idx = inPath.Find(MY_PATH_SPLIT_CHAR, ESearchCase::CaseSensitive, ESearchDir::FromEnd, -1);
@@ -37,7 +39,9 @@ inline FString myGetFileNameFromFullPath(FString inPath)
 
 //Fatal cause log not written to disk but core dump, so we don't use Fatal anywhere
 #define MY_VERIFY(cond) \
-     if (!(cond)) {UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false);}
+       if (!(cond)) { UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false£º (" #cond ")")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false); }
+
+       //     if (!(cond)) {UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false);}
 
 
 USTRUCT()

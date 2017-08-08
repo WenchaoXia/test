@@ -30,6 +30,23 @@ enum class MyMJGameErrorCodeCpp : uint8
     choiceSubSelectInvalid = 123 UMETA(DisplayName = "choiceSubSelectInvalid")
 };
 
+UENUM(BlueprintType)
+enum class MyMJGameCoreWorkModeCpp : uint8
+{
+    Invalid = 0  UMETA(DisplayName = "Invalid"),
+    Full = 1     UMETA(DisplayName = "Full"), //Full Function mode
+    Mirror = 2   UMETA(DisplayName = "Mirror"), //Mirror mode, doesn't produce any thing, just consume the pushers
+                                                //MirrorAlone = 2      UMETA(DisplayName = "MirrorAlone")
+};
+
+UENUM(BlueprintType)
+enum class MyMJGameRuleTypeCpp : uint8
+{
+    Invalid = 0     UMETA(DisplayName = "Invalid"),
+    GuoBiao = 1     UMETA(DisplayName = "GuoBiao"),
+    LocalCS = 20    UMETA(DisplayName = "LocalCS")
+};
+
 //Warn: code use its uint8 value, don't modify it unless checked carefully
 UENUM(BlueprintType)
 enum class MyMJGameRoleTypeCpp : uint8
@@ -71,13 +88,15 @@ enum class MyMJGameStateCpp : uint8
     WeavedGangDicesThrownLocalCS = 153 UMETA(DisplayName = "WeavedGangDicesThrownLocalCS"),
 };
 
-UENUM(BlueprintType)
-enum class MyMJGameRuleTypeCpp : uint8
+UENUM()
+enum class MyMJActionLoopStateCpp : uint8
 {
-    Invalid = 0     UMETA(DisplayName = "Invalid"),
-    GuoBiao = 1     UMETA(DisplayName = "GuoBiao"),
-    LocalCS = 20    UMETA(DisplayName = "LocalCS")
+    Invalid = 0 UMETA(DisplayName = "Invalid"),
+    WaitingToGenAction = 1 UMETA(DisplayName = "WaitingToGenAction"),
+    ActionGened = 2 UMETA(DisplayName = "ActionGened"),
+    ActionCollected = 3 UMETA(DisplayName = "ActionCollected")
 };
+
 
 USTRUCT()
 struct FMyMJGameCardPackCfgCpp

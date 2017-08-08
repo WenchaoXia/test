@@ -7,12 +7,6 @@
 #include "MyMJGameCore.h"
 
 
-//JustTaken = 3                      UMETA(DisplayName = "JustTaken"),
-//InHand = 4                        UMETA(DisplayName = "InHand"),
-//GivenOut = 5                        UMETA(DisplayName = "GivenOut"),
-//Weaved = 6                        UMETA(DisplayName = "Weaved"),
-//WinSymbol = 7                        UMETA(DisplayName = "WinSymbol")
-
 void FMyMJGameAttenderCpp::removeCard(int32 id)
 {
     FMyMJGameCoreCpp *pCore = m_pCore.Pin().Get();
@@ -33,7 +27,7 @@ void FMyMJGameAttenderCpp::removeCard(int32 id)
     else if (eType == MyMJCardSlotTypeCpp::InHand) {
         int32 value = pCardValuePack->getByIdx(id);
         MY_VERIFY(value> 0);
-        bool bRemoved = pDPriD->m_cHandCards.remove(id, value);
+        bool bRemoved = m_cDataLogic.m_cHandCards.remove(id, value);
         MY_VERIFY(bRemoved);
     }
     else if (eType == MyMJCardSlotTypeCpp::GivenOut) {
@@ -71,7 +65,7 @@ void FMyMJGameAttenderCpp::insertCard(int32 id, MyMJCardSlotTypeCpp eTargetSlot)
     FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
     MyMJCardSlotTypeCpp eType = eTargetSlot;
 
-    pCardInfo->m_cPosi.m_iIdxAttender = m_iIdx;
+    pCardInfo->m_cPosi.m_iIdxAttender = getIdx();
     pCardInfo->m_cPosi.m_eSlot = eType;
 
     FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
@@ -85,7 +79,7 @@ void FMyMJGameAttenderCpp::insertCard(int32 id, MyMJCardSlotTypeCpp eTargetSlot)
     else if (eType == MyMJCardSlotTypeCpp::InHand) {
         int32 value = pCardValuePack->getByIdx(id);
         MY_VERIFY(value> 0);
-        bool bInserted = pDPriD->m_cHandCards.insert(id, value);
+        bool bInserted = m_cDataLogic.m_cHandCards.insert(id, value);
         MY_VERIFY(bInserted);
 
         pCardInfo->m_cPosi.resetMinorData();

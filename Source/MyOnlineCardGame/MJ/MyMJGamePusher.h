@@ -936,6 +936,15 @@ public:
     int32 m_iReserved0;
 };
 
+//For visualization, we didn't need all info, but remember we don't use it for base state, only delta
+USTRUCT(BlueprintType)
+struct FMyMJGamePusherResultUnfiedForBPCpp : public FMyMJGamePusherBaseCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+};
 
 #define MyMJGameActionStateUpdateMaskNotResetHelperLastCardsGivenOutOrWeave 0x01
 
@@ -1123,7 +1132,7 @@ public:
 
     void init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream &RS, bool bForceActionGenTimeLeft2AutoChooseMsZero);
 
-    void getDiceNumbers(int32 &outDiceNumber0, int32 &outDiceNumber1) const;
+    void getDiceNumbers(int32 &outDiceNumber0, int32 &outDiceNumber1, int32 &outDiceNumberMask) const;
 
     MyMJGameActionThrowDicesSubTypeCpp getSubType() const;
 

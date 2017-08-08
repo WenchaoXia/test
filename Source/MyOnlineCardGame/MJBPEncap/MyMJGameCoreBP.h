@@ -266,25 +266,29 @@ public:
         m_pCoreMirror = NULL;
     }
 
-    virtual UMyMJCoreDataForMirrorModeCpp* getpCoreData()
+    virtual UMyMJDataForMirrorModeCpp* getpMJData()
     {
         MY_VERIFY(0 && "You must override this");
         return NULL;
     };
 
+    /*
     virtual TArray<AMyMJAttenderPawnBPCpp *>& getAttenderPawnsRef()
     {
         MY_VERIFY(0 && "You must override this");
         return *(TArray<AMyMJAttenderPawnBPCpp *>*)NULL;
     };
+    */
 
     UFUNCTION(BlueprintCallable)
     void connectToCoreFull(UMyMJCoreFullCpp *pCoreFull)
     {
-        TArray<AMyMJAttenderPawnBPCpp *>& aAttenderPawns = getAttenderPawnsRef();
+        //TArray<AMyMJAttenderPawnBPCpp *>& aAttenderPawns = getAttenderPawnsRef();
 
         MY_VERIFY(pCoreFull);
         MY_VERIFY(IsValid(pCoreFull));
+
+        /*
         TArray<UMyMJIONodeCpp*> &apIONodes = pCoreFull->getIONodes();
         int32 l0, l1;
         l0 = apIONodes.Num();
@@ -304,6 +308,7 @@ public:
         if (l1 > (uint8)MyMJGameRoleTypeCpp::Max) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("l1 is greater than expected, now %d, pls check!"), l1);
         }
+        */
 
         if (IsValid(m_pPusherBuffer)) {
             m_pPusherBuffer->m_cPusherUpdatedMultcastDelegate.RemoveAll(this);
@@ -327,14 +332,24 @@ public:
 
     };
 
+
     inline bool checkLevelSettings()
     {
-        int32 l = getAttenderPawnsRef().Num();
+        UMyMJDataForMirrorModeCpp* pMJData = getpMJData();
 
-        if (l != MY_EXPECTED_MJ_PAWN_NUM) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("mirror actor have not set attneder pawns correctly, only %d were set, expect %d, check you level!"), l, MY_EXPECTED_MJ_PAWN_NUM);
+        if (pMJData == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pMJData is NULL."));
             return false;
         }
+
+        int32 l = pMJData->m_aAttenderDatas.Num();
+
+        if (l != (uint8)MyMJGameRoleTypeCpp::Max) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender datas only %d present."), l);
+            return false;
+        }
+
+        //Todo: check more about pawns
 
         return true;
     };
@@ -397,33 +412,28 @@ public:
 
     AMyMJCoreBaseForBpCpp() : Super()
     {
-        m_pData = NULL;
+        m_pMJData = NULL;
         //m_aAttenderPawns.Reset();
         m_bHaltForGraphic = false;
     }
 
 
     //virtual void PostInitProperties() override;
-    virtual void PostInitializeComponents() override
+    virtual void PostInitializeComponents() override;
+
+    virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+
+    virtual UMyMJDataForMirrorModeCpp* getpMJData() override
     {
-        Super::PostInitializeComponents();
-
-        MY_VERIFY(m_aAttenderPawns.Num() <= 0);
-        MY_VERIFY(m_pData == NULL);
-
-        m_pData = NewObject<UMyMJCoreDataForMirrorModeCpp>(this);
+        return m_pMJData;
     };
 
-
-    virtual UMyMJCoreDataForMirrorModeCpp* getpCoreData() override
-    {
-        return m_pData;
-    };
-
+    /*
     virtual TArray<AMyMJAttenderPawnBPCpp *>& getAttenderPawnsRef() override
     {
         return m_aAttenderPawns;
     };
+    */
 
     virtual bool getbHaltForGraphic() const override
     {
@@ -437,14 +447,13 @@ public:
     virtual bool postPusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher) override;
 
 
-
     UFUNCTION(BlueprintImplementableEvent, BlueprintAuthorityOnly)
     bool postPusherApplyResetGame(const FMyMJGamePusherResetGameCpp &pusher);
 
 protected:
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "data"))
-    UMyMJCoreDataForMirrorModeCpp *m_pData;
+    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "mj data"))
+    UMyMJDataForMirrorModeCpp *m_pMJData;
 
     //the level should prepare this data
     UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "attender pawns"))

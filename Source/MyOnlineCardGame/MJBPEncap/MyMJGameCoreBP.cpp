@@ -277,19 +277,9 @@ void AMyMJCoreMirrorCpp::loop()
                 FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(eDestType, MyMJGameCoreWorkModeCpp::Mirror, iSeed, MyMJGameCoreTrivalConfigMaskShowPusherLog);
                 m_pCoreMirror = MakeShareable<FMyMJGameCoreCpp>(pCore);
 
-                TArray<AMyMJAttenderPawnBPCpp *>& aAttenderPawns = getAttenderPawnsRef();
+                UMyMJDataForMirrorModeCpp *pMJData = getpMJData();
 
-                int32 l = aAttenderPawns.Num();
-                MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
-                TArray<UMyMJAttenderDataPublicForMirrorModeCpp *>  apAttenderDataPublic;
-                TArray<UMyMJAttenderDataPrivateForMirrorModeCpp *> apAttenderDataPrivate;
-
-                for (int32 i = 0; i < l; i++) {
-                    apAttenderDataPublic.Emplace(aAttenderPawns[i]->m_pDataPublic);
-                    apAttenderDataPrivate.Emplace(aAttenderPawns[i]->m_pDataPrivate);
-                }
-
-                m_pCoreMirror->initMirrorMode(m_pCoreMirror, getpCoreData(), apAttenderDataPublic, apAttenderDataPrivate);
+                m_pCoreMirror->initMirrorMode(m_pCoreMirror, pMJData);
             }
 
             m_iPusherApplyState = 0;
@@ -316,9 +306,10 @@ void AMyMJCoreMirrorCpp::loop()
                 if (iAttenderMask != 0) {
 
 
-                    int32 l;
+                    //int32 l;
                     //l = MY_GET_ARRAY_LEN(m_aAttendersAll);
 
+                    /*
                     TArray<AMyMJAttenderPawnBPCpp *>& aAttenderPawns = getAttenderPawnsRef();
                     l = aAttenderPawns.Num();
 
@@ -332,6 +323,7 @@ void AMyMJCoreMirrorCpp::loop()
                         aAttenderPawns[i]->m_pDataPrivate->m_cDataPrivateDirect.m_cCardValuePack.tryRevealCardValueByIdValuePairs(aRevealedCardValues);
                         //m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.tryRevealCardValueByIdValuePairs(aRevealedCardValues);
                     }
+                    */
                 }
 
 
@@ -361,6 +353,31 @@ void AMyMJCoreMirrorCpp::loop()
         pPusher = tryCheckAndGetNextPusher();
     }
 }
+
+
+void AMyMJCoreBaseForBpCpp::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+
+    MY_VERIFY(m_aAttenderPawns.Num() <= 0);
+    MY_VERIFY(m_pMJData == NULL);
+
+    if (m_pMJData) {
+        m_pMJData->DestroyComponent();
+        m_pMJData = NULL;
+    }
+
+    m_pMJData = NewObject<UMyMJDataForMirrorModeCpp>(this);
+    m_pMJData->createSubObjects(false, true);
+    m_pMJData->RegisterComponent();
+    m_pMJData->SetIsReplicated(true);
+};
+
+void AMyMJCoreBaseForBpCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    DOREPLIFETIME(AMyMJCoreBaseForBpCpp, m_pMJData);
+};
 
 bool AMyMJCoreBaseForBpCpp::prePusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher)
 {

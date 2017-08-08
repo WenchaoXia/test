@@ -97,3 +97,10 @@ void UMyMJGameCoreObjFullCpp::testLocalInit()
 }
 */
 
+	for (const UAttributeSet* Set : SpawnedAttributes)
+	{
+		if (Set)
+		{
+			WroteSomething |= Channel->ReplicateSubobject(const_cast<UAttributeSet*>(Set), *Bunch, *RepFlags);
+		}
+	}

@@ -10,12 +10,27 @@
 
 #include "MyMJBPUtils.generated.h"
 
+
 UCLASS(BlueprintType, Blueprintable)
 class MYONLINECARDGAME_API AMyTestActorBaseCpp : public AActor
 {
     GENERATED_BODY()
 
 public:
+
+    AMyTestActorBaseCpp()
+    {
+        m_pMJData = NULL;
+    };
+
+
+    virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+
+    virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
+
+    UFUNCTION(BlueprintCallable)
+    void createMJData();
+
     UFUNCTION(BlueprintCallable, Client, unreliable)
     void ClientRPCFunction0(float v1);
 
@@ -24,6 +39,9 @@ public:
 
     UFUNCTION(BlueprintCallable, NetMulticast, unreliable)
     void MulticastRPCFunction0(float v1);
+
+    UFUNCTION(BlueprintCallable)
+    void testMulticastRPCFunction0(float v1);
 
     UFUNCTION(BlueprintCallable)
     void genPusherPointers(FMyMJGamePusherPointersCpp &pusherPointers);
@@ -36,6 +54,20 @@ public:
 
     UFUNCTION(BlueprintCallable, Client, unreliable)
     void testRPCWithPusherFillIn(const FMyMJGamePusherFillInActionChoicesCpp &pusherFillIn);
+
+    UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MJData, meta = (DisplayName = "mj data"))
+    UMyMJDataForMirrorModeCpp *m_pMJData;
+
+protected:
+
+    UFUNCTION(BlueprintImplementableEvent)
+        void OnRep_MJData();
+
+    /*
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("OnRep_MJData."));
+    };
+    */
 };
 
 UCLASS()
@@ -101,4 +133,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
     static void testGameCoreInLocalThread(int32 seed);
 
+    UFUNCTION(BlueprintCallable)
+    static float testGetRealTimeSeconds(AActor *actor);
+
+    UFUNCTION(BlueprintCallable)
+    static int32 getEngineNetMode(AActor *actor);
+
+
+    //float GetRealTimeSeconds() const;
 };

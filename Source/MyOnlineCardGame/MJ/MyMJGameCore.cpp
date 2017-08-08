@@ -144,8 +144,8 @@ bool FMyMJGameCoreCpp::isIdxUntakenSlotInKeptFromTailSegment(int32 idx)
     FMyMJGameUntakenSlotInfoCpp *pInfo = &pD->m_cUntakenSlotInfo;
 
     int32 keptCount = pD->m_cGameCfg.m_cTrivialCfg.m_iStackNumKeptFromTail;
-    int32 idxTail = pInfo->m_iIdxUntakenSlotLengthAtStart;
-    int32 totalL = pInfo->m_iIdxUntakenSlotLengthAtStart;
+    int32 idxTail = pInfo->m_iUntakenSlotLengthAtStart;
+    int32 totalL = pInfo->m_iUntakenSlotLengthAtStart;
 
     if (keptCount <= 0) {
         return false;
@@ -184,11 +184,11 @@ bool FMyMJGameCoreCpp::actionLoop()
 
     bool bRet = false;
     int64 iMsLast = UMyMJUtilsLibrary::nowAsMsFromTick();
-    int64 iTimePassedMs64 = iMsLast - m_iMsLast;
+    int64 iTimePassedMs64 = iMsLast - m_cDataLogic.m_iMsLast;
     if (iTimePassedMs64 < 0) {
         iTimePassedMs64 = 0;
     }
-    m_iMsLast = iMsLast;
+    m_cDataLogic.m_iMsLast = iMsLast;
     int32 iTimePassedMs32 = iTimePassedMs64 > MAX_int32 ? MAX_int32 : (int32)iTimePassedMs64;
 
     bRet |= findAndApplyPushers();
@@ -196,7 +196,7 @@ bool FMyMJGameCoreCpp::actionLoop()
         bRet |= findAndApplyPushers();
     }
 
-    MyMJActionLoopStateCpp &eActionLoopState = pD->m_eActionLoopState;
+    MyMJActionLoopStateCpp &eActionLoopState = m_cDataLogic.m_eActionLoopState;
 
     TSharedPtr<FMyMJGameActionCollectorCpp>  &pCollector = m_pActionCollector;
 
@@ -281,7 +281,7 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
 
 bool FMyMJGameCoreCpp::findAndHandleCmd()
 {
-    if (m_eWorkMode != MyMJGameCoreWorkModeCpp::Full) {
+    if (getWorkMode() != MyMJGameCoreWorkModeCpp::Full) {
         return false;
     }
 
@@ -314,7 +314,7 @@ bool FMyMJGameCoreCpp::findAndHandleCmd()
 
 void FMyMJGameCoreCpp::genActionChoices()
 {
-    MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Full);
+    MY_VERIFY(getWorkMode() == MyMJGameCoreWorkModeCpp::Full);
     MY_VERIFY(m_pPusherIOFull.IsValid());
 
 
@@ -355,7 +355,7 @@ void FMyMJGameCoreCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyM
         }
     }
 
-    if (m_eWorkMode != MyMJGameCoreWorkModeCpp::Full) {
+    if (getWorkMode() != MyMJGameCoreWorkModeCpp::Full) {
         MY_VERIFY(!m_pActionCollector.IsValid());
         return;
     }
@@ -401,7 +401,7 @@ void FMyMJGameCoreCpp::tryProgressInFullMode()
         findAndApplyPushers();
     }
 
-    if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+    if (getWorkMode() == MyMJGameCoreWorkModeCpp::Full) {
 
         bool bIsInGameState = pD->isInGameState();
         bool bHaveProgress = true;
