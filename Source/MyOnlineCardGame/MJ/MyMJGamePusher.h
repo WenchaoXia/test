@@ -136,6 +136,7 @@ public:
         return m_eType;
     };
 
+    //return the pusher id, means the base state id it should be, it must equal to core->m_iIdPusherLast, except a full state update case like game reset
     inline int32 getId() const
     {
         return m_iId;

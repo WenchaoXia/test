@@ -14,12 +14,12 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
     FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPack();
     FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSys();
 
-    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     MyMJGameStateCpp eGameState = pD->m_eGameState;
@@ -334,12 +334,12 @@ bool FMyMJGameAttenderLocalCSCpp::tryGenAndEnqueueUpdateTingPusher()
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     int32 handCardCount = m_cDataLogic.m_cHandCards.getCount();
@@ -376,7 +376,7 @@ bool FMyMJGameAttenderLocalCSCpp::tryGenAndEnqueueUpdateTingPusher()
 
 void FMyMJGameAttenderLocalCSCpp::applyPusherUpdateTing(FMyMJGamePusherUpdateTingCpp *pPusher)
 {
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     pDPriD->m_cHuScoreResultTingGroup = pPusher->m_cTingGroup;
@@ -394,7 +394,7 @@ void FMyMJGameAttenderLocalCSCpp::applyActionHuBornLocalCS(FMyMJGameActionHuBorn
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPack();
@@ -434,9 +434,9 @@ void FMyMJGameAttenderLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAct
 
     MyMJWeaveTypeCpp eType = pAction->m_cWeave.getType();
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     //1st, move and update cards
@@ -509,9 +509,9 @@ void FMyMJGameAttenderLocalCSCpp::showOutCardsAfterHu()
     FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPack();
     FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSys();
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     TArray<int32> aIdsHandCards, aIdsWeaves, aIdsTemp;
@@ -551,14 +551,14 @@ void FMyMJGameAttenderLocalCSCpp::onNewTurn(bool bIsWeave)
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPack();
     FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSys();
 
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
 
     m_cDataLogic.m_iTurn++;
@@ -604,15 +604,15 @@ void FMyMJGameAttenderLocalCSCpp::genActionAfterGivenOutCards(FMyMJGamePusherFil
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPack();
     FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSys();
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     const FMyMJGameCfgCpp *pGameCfg = &pD->m_cGameCfg;
@@ -696,9 +696,9 @@ FMyMJGameActionGiveOutCardsCpp* FMyMJGameAttenderLocalCSCpp::genActionChoiceGive
     TSharedPtr<FMyMJGameCoreCpp> pCore = m_pCore.Pin();
     MY_VERIFY(pCore.IsValid());
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     TArray<int32> aIdHandCards;
@@ -719,12 +719,12 @@ void FMyMJGameAttenderLocalCSCpp::assembleHuActionAttr(int32 iIdxAttenderLoseOnl
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     FMyMJGameRunDataCpp *pGameRunData = &pD->m_cGameRunData;
@@ -793,12 +793,12 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     outActionWeaves0.Reset();
@@ -974,10 +974,10 @@ bool FMyMJGameAttenderLocalCSCpp::checkPeng(const FMyMJCardCpp &triggerCard, TAr
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     outActionWeaves.Reset();
@@ -1026,10 +1026,10 @@ bool FMyMJGameAttenderLocalCSCpp::checkChi(const FMyMJCardCpp &triggerCard, TArr
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
-    FMyMJCoreDataPublicDirectCpp *pD = pCore->getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     outActionWeaves.Reset();

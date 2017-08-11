@@ -14,7 +14,6 @@
 
 #include "MyMJGameData.generated.h"
 
-
 USTRUCT(BlueprintType)
 struct FMyMJGameUntakenSlotInfoCpp
 {
@@ -98,9 +97,6 @@ struct FMyMJCoreDataLogicOnlyCpp
 
     void reset()
     {
-        m_iGameId = -1;
-        m_iPusherIdLast = -1;
-
         m_eActionLoopState = MyMJActionLoopStateCpp::Invalid;
         m_cHelperShowedOut2AllCards.clear();
     };
@@ -112,13 +108,6 @@ public:
     MyMJGameRuleTypeCpp m_eRuleType;//also distinguish sub type
     MyMJGameCoreWorkModeCpp m_eWorkMode;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game Id"))
-    int32 m_iGameId;
-
-    //the last pusher id we got
-    UPROPERTY(BlueprintReadWrite, NotReplicated, meta = (DisplayName = "Pusher Id Last"))
-    int32 m_iPusherIdLast;
-
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Loop State"))
     MyMJActionLoopStateCpp m_eActionLoopState;
 
@@ -127,22 +116,27 @@ public:
         FMyMJValueIdMapCpp m_cHelperShowedOut2AllCards;
 };
 
+#define FMyMJCoreDataPublicDirectMask0_UpdateActionGroupId (1 << 1)
+#define FMyMJCoreDataPublicDirectMask0_UpdateGameState (1 << 3)
+#define FMyMJCoreDataPublicDirectMask0_UpdateHelperLastCardsGivenOutOrWeave (1 << 5)
+#define FMyMJCoreDataPublicDirectMask0_UpdateHelperLastCardTakenInGame (1 << 7)
+
 //Atomic
 //Both used for logic and visualize
 //What the fuck is, UE3 network always send all structor data in one packet even some members in it haven't change, thanks to UE4 this changed, and if Atomic specified, it goes UE3's way
 USTRUCT(BlueprintType)
-struct FMyMJCoreDataPublicDirectCpp
+struct FMyMJCoreDataPublicCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyMJCoreDataPublicDirectCpp()
+    FMyMJCoreDataPublicCpp()
     {
         reinit(MyMJGameRuleTypeCpp::Invalid);
     };
 
-    virtual ~FMyMJCoreDataPublicDirectCpp()
+    virtual ~FMyMJCoreDataPublicCpp()
     {
 
     };
@@ -162,7 +156,8 @@ public:
         m_cGameCfg.reset();
         m_cGameRunData.reset();
 
-
+        m_iGameId = -1;
+        m_iPusherIdLast = -1;
         m_iActionGroupId = -1;
         m_eGameState = MyMJGameStateCpp::Invalid;
 
@@ -193,6 +188,14 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game RunData"))
         FMyMJGameRunDataCpp m_cGameRunData;
 
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game Id"))
+        int32 m_iGameId;
+
+    //the last pusher id we got
+    UPROPERTY(BlueprintReadWrite, NotReplicated, meta = (DisplayName = "Pusher Id Last"))
+        int32 m_iPusherIdLast;
+
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Action Group Id"))
         int32 m_iActionGroupId;
 
@@ -217,29 +220,40 @@ public:
     MyMJGameRuleTypeCpp m_eRuleType;
 };
 
+//if not specified in member name, they are the target state
 USTRUCT(BlueprintType)
-struct FMyMJCoreDataPublicDirectDeltaCpp
+struct FMyMJCoreDataDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
+    FMyMJCoreDataDeltaCpp()
+    {
+        m_iActionGroupId = 0;
+        m_eGameState = MyMJGameStateCpp::Invalid;
+        m_iMask0 = 0;
+    };
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card infos to update"))
+    //if not empty, update them
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card infos"))
     TArray<FMyMJCardInfoCpp> m_aCardInfos2Update;
 
-    //<= 0 means no update
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Action Group Id to update"))
-    int32 m_iActionGroupId2Update;
+    //update to, target state
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Group Id"))
+    int32 m_iActionGroupId;
 
-    //invalid means no update
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game State to update"))
-    MyMJGameStateCpp m_eGameState2Update;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game State"))
+    MyMJGameStateCpp m_eGameState;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
     TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hai Di Card Id"))
-    FMyIdValuePair m_cHelperLastCardTakenInGame; //hai di card if id >= 0
+    FMyIdValuePair m_cHelperLastCardTakenInGame;
+
+    //used for bit bool and bit tip updating as delta
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
+    int32 m_iMask0;
 };
 
 USTRUCT()
@@ -248,7 +262,7 @@ struct FMyMJCoreDataForFullModeCpp
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJCoreDataPublicDirectCpp m_cDataPubicDirect;
+    FMyMJCoreDataPublicCpp m_cDataPubicDirect;
 };
 
 
@@ -267,7 +281,7 @@ public:
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
 
     UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "data public direct"))
-    FMyMJCoreDataPublicDirectCpp m_cDataPubicDirect;
+    FMyMJCoreDataPublicCpp m_cDataPubicDirect;
 };
 
 
@@ -344,19 +358,26 @@ public:
         FMyMJGameActionContainorCpp m_cActionContainor;
 };
 
+#define FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender       (1 << 0)
+#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsRealAttender (1 << 1)
+#define FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame        (1 << 2)
+#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsStillInGame  (1 << 3)
+
+#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateHuScoreResultFinalGroup  (1 << 5)
+
 USTRUCT(BlueprintType)
-struct FMyMJAttenderDataPublicDirectForBPCpp
+struct FMyMJRoleDataAttenderPublicCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyMJAttenderDataPublicDirectForBPCpp()
+    FMyMJRoleDataAttenderPublicCpp()
     {
         setup(-1);
     };
 
-    virtual ~FMyMJAttenderDataPublicDirectForBPCpp()
+    virtual ~FMyMJRoleDataAttenderPublicCpp()
     {
 
     };
@@ -376,56 +397,78 @@ public:
         m_aIdWinSymbolCards.Reset();
         m_cUntakenSlotSubSegmentInfo.reset();
         m_cHuScoreResultFinalGroup.reset();
-        m_bIsRealAttender = false;
-        m_bIsStillInGame = false;
+
+        m_iMask0 = 0;
     };
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx Attender"))
-        int32 m_iIdxAttender; //it is the position
+    int32 m_iIdxAttender; //it is the position
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards in hand"))
     TArray<int32> m_aIdHandCards;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards just taken"))
-        TArray<int32> m_aIdJustTakenCards;
+    TArray<int32> m_aIdJustTakenCards;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards just given out"))
-        TArray<int32> m_aIdGivenOutCards;
+    TArray<int32> m_aIdGivenOutCards;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "weaves"))
-        TArray<FMyMJWeaveCpp> m_aShowedOutWeaves; //weaves showed out
+    TArray<FMyMJWeaveCpp> m_aShowedOutWeaves; //weaves showed out
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards win symbol"))
-        TArray<int32> m_aIdWinSymbolCards;
+    TArray<int32> m_aIdWinSymbolCards;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards win symbol"))
-        FMyMJGameUntakenSlotSubSegmentInfoCpp m_cUntakenSlotSubSegmentInfo;
+    FMyMJGameUntakenSlotSubSegmentInfoCpp m_cUntakenSlotSubSegmentInfo;
 
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final"))
-        FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroup;
+    FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroup;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "is real attender"))
-        bool m_bIsRealAttender;
-
-    //some game may put one player into observe state, this is the flag
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "is still in game"))
-        bool m_bIsStillInGame;
+    //used for bit bool and bit tip updating as delta
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
+    int32 m_iMask0;
 };
 
 USTRUCT(BlueprintType)
-struct FMyMJAttenderDataPrivateDirectForBPCpp
+struct FMyMJRoleDataAttenderPublicDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyMJAttenderDataPrivateDirectForBPCpp()
+    FMyMJRoleDataAttenderPublicDeltaCpp()
+    {
+        m_iMask0 = 0;
+    };
+
+    //Type valid means to add
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "weave to add"))
+    FMyMJWeaveCpp m_cWeave2Add;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final"))
+    FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroup;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
+    int32 m_iMask0;
+};
+
+#define FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateHuScoreResultTingGroup  (1 << 1)
+
+USTRUCT(BlueprintType)
+struct FMyMJRoleDataAttenderPrivateCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJRoleDataAttenderPrivateCpp()
     {
         reset();
     };
 
-    virtual ~FMyMJAttenderDataPrivateDirectForBPCpp()
+    virtual ~FMyMJRoleDataAttenderPrivateCpp()
     {
 
     };
@@ -433,7 +476,6 @@ public:
     void reset()
     {
         m_cHuScoreResultTingGroup.reset();
-        m_cCardValuePack.reset(0);
     };
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "int test"))
@@ -442,26 +484,122 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Ting"))
     FMyMJHuScoreResultTingGroupCpp  m_cHuScoreResultTingGroup;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Card Value Pack"))
-    FMyMJCardValuePackCpp m_cCardValuePack;
-
-    //Todo: action containor for visualize
 };
 
-USTRUCT()
-struct FMyMJAttenderDataForFullModeCpp
+
+USTRUCT(BlueprintType)
+struct FMyMJRoleDataAttenderPrivateDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyMJAttenderDataPublicDirectForBPCpp m_cDataPublicDirect;
-    FMyMJAttenderDataPrivateDirectForBPCpp m_cDataPrivateDirect;
+    FMyMJRoleDataAttenderPrivateDeltaCpp()
+    {
+        m_iMask0 = 0;
+    };
+
+
+    //m_iIdxAttenderWin >= 0 means update to
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Ting"))
+    FMyMJHuScoreResultTingGroupCpp  m_cHuScoreResultTingGroup;
+
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
+    int32 m_iMask0;
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJRoleDataPrivateCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJRoleDataPrivateCpp()
+    {
+        reset();
+    };
+
+    void reset()
+    {
+        m_cCardValuePack.reset(0);
+    };
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Card Value Pack"))
+        FMyMJCardValuePackCpp m_cCardValuePack;
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJRoleDataPrivateDeltaCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJRoleDataPrivateDeltaCpp()
+    {
+
+    };
+
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card id values to reveal"))
+    TArray<FMyIdValuePair> m_aIdValuePairs2Reveal;
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJRoleDataDeltaCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJRoleDataDeltaCpp()
+    {
+        m_iIdxAttender = -1;
+    };
+
+    //Num > 0 means valid, and num must equal 1 in that case
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "data public"))
+    TArray<FMyMJRoleDataAttenderPublicDeltaCpp> m_aDataAttenderPublic;
+
+    //Num > 0 means valid, and num must equal 1 in that case
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "data private"))
+    TArray<FMyMJRoleDataAttenderPrivateDeltaCpp> m_aDataAttenderPrivate;
+
+    //Num > 0 means valid, and num must equal 1 in that case
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "role data private"))
+    TArray<FMyMJRoleDataPrivateDeltaCpp> m_aDataPrivate;
+
+    //Controls which role should have @m_aDataPrivate when clone/mute for different roles
+    //when a role test return false, @m_aDataPrivate will be removed afer clone for that role
+    int32 m_iRoleMaskForDataPrivateClone;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx Attender"))
+    int32 m_iIdxAttender;
+};
+
+USTRUCT()
+struct FMyMJRoleDataForFullModeCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    void resetup(uint8 idxRole)
+    {
+        m_cDataAttenderPublic.setup(idxRole);
+    };
+
+    //although it is not every role have private data, but ususally it is not used in real time game network, so it is OK to have all for simple
+    FMyMJRoleDataAttenderPublicCpp  m_cDataAttenderPublic;
+    FMyMJRoleDataAttenderPrivateCpp m_cDataAttenderPrivate;
+    FMyMJRoleDataPrivateCpp         m_cDataPrivate;
 };
 
 
 UCLASS(BlueprintType)
-class UMyMJAttenderDataPublicForMirrorModeCpp : public UObject
+class UMyMJRoleDataAttenderPublicForMirrorModeCpp : public UObject
 {
     GENERATED_BODY()
 
@@ -474,12 +612,12 @@ public:
 
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
 
-    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "data public direct"))
-    FMyMJAttenderDataPublicDirectForBPCpp m_cDataPublicDirect;
+    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "data attender public"))
+    FMyMJRoleDataAttenderPublicCpp m_cDataAttenderPublic;
 };
 
 UCLASS(BlueprintType)
-class UMyMJAttenderDataPrivateForMirrorModeCpp : public UObject
+class UMyMJRoleDataAttenderPrivateForMirrorModeCpp : public UObject
 {
     GENERATED_BODY()
 
@@ -492,20 +630,39 @@ public:
 
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
 
-    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "data private direct"))
-    FMyMJAttenderDataPrivateDirectForBPCpp m_cDataPrivateDirect;
+    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "data attender private"))
+    FMyMJRoleDataAttenderPrivateCpp m_cDataAttenderPrivate;
 };
 
 UCLASS(BlueprintType)
-class MYONLINECARDGAME_API UMyMJAttenderDataForMirrorModeCpp : public UObject
+class UMyMJRoleDataPrivateForMirrorModeCpp : public UObject
 {
     GENERATED_BODY()
 
 public:
 
-    UMyMJAttenderDataForMirrorModeCpp()
+    virtual bool IsSupportedForNetworking() const override
     {
-        m_pDataPublic = NULL;
+        return true;
+    };
+
+    virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+
+    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "data private"))
+    FMyMJRoleDataPrivateCpp m_cDataPrivate;
+};
+
+UCLASS(BlueprintType)
+class MYONLINECARDGAME_API UMyMJRoleDataForMirrorModeCpp : public UObject
+{
+    GENERATED_BODY()
+
+public:
+
+    UMyMJRoleDataForMirrorModeCpp()
+    {
+        m_pDataAttenderPublic = NULL;
+        m_pDataAttenderPrivate = NULL;
         m_pDataPrivate = NULL;
     };
 
@@ -519,18 +676,28 @@ public:
     //virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
 
 
-    void createSubObjects(bool bBuildingDefault, bool bHavePrivate)
+    void createSubObjects(bool bBuildingDefault, bool bIsAttender, bool bHavePrivate)
     {
         if (bBuildingDefault) {
-            m_pDataPublic = CreateDefaultSubobject<UMyMJAttenderDataPublicForMirrorModeCpp>(TEXT("UMyMJAttenderDataPublicForMirrorModeCpp"));
+            if (bIsAttender) {
+                m_pDataAttenderPublic = CreateDefaultSubobject<UMyMJRoleDataAttenderPublicForMirrorModeCpp>(TEXT("UMyMJRoleDataAttenderPublicForMirrorModeCpp"));
+                if (bHavePrivate) {
+                    m_pDataAttenderPrivate = CreateDefaultSubobject<UMyMJRoleDataAttenderPrivateForMirrorModeCpp>(TEXT("UMyMJRoleDataAttenderPublicForMirrorModeCpp"));
+                }
+            }
             if (bHavePrivate) {
-                m_pDataPrivate = CreateDefaultSubobject<UMyMJAttenderDataPrivateForMirrorModeCpp>(TEXT("UMyMJAttenderDataPublicForMirrorModeCpp"));
+                m_pDataPrivate = CreateDefaultSubobject<UMyMJRoleDataPrivateForMirrorModeCpp>(TEXT("UMyMJRoleDataPrivateForMirrorModeCpp"));
             }
         }
         else {
-            m_pDataPublic = NewObject<UMyMJAttenderDataPublicForMirrorModeCpp>(this);
+            if (bIsAttender) {
+                m_pDataAttenderPublic = NewObject<UMyMJRoleDataAttenderPublicForMirrorModeCpp>(this);
+                if (bHavePrivate) {
+                    m_pDataAttenderPrivate = NewObject<UMyMJRoleDataAttenderPrivateForMirrorModeCpp>(this);
+                }
+            }
             if (bHavePrivate) {
-                m_pDataPrivate = NewObject<UMyMJAttenderDataPrivateForMirrorModeCpp>(this);
+                m_pDataPrivate = NewObject<UMyMJRoleDataPrivateForMirrorModeCpp>(this);
             }
         }
     };
@@ -538,24 +705,133 @@ public:
     //can be called multiple times
     void resetup(uint8 idxRole)
     {
-        MY_VERIFY(m_pDataPublic != NULL);
-        m_pDataPublic->m_cDataPublicDirect.setup(idxRole);
+        MY_VERIFY(m_pDataAttenderPublic != NULL);
+        m_pDataAttenderPublic->m_cDataAttenderPublic.setup(idxRole);
+
+        /*
         if (m_pDataPrivate) {
             //m_pDataPrivate->m_cDataPrivateDirect.setup(idxRole);
         }
+        */
     };
 
-    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "data public"))
-    UMyMJAttenderDataPublicForMirrorModeCpp*  m_pDataPublic;
+    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "data attender public"))
+    UMyMJRoleDataAttenderPublicForMirrorModeCpp*  m_pDataAttenderPublic;
+
+    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "data attender private"))
+    UMyMJRoleDataAttenderPrivateForMirrorModeCpp* m_pDataAttenderPrivate;
 
     UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "data private"))
-    UMyMJAttenderDataPrivateForMirrorModeCpp* m_pDataPrivate;
+    UMyMJRoleDataPrivateForMirrorModeCpp* m_pDataPrivate;
 
 protected:
 
 
 };
 
+
+USTRUCT(BlueprintType)
+struct FMyMJDataDeltaCpp : public FMyMJGamePusherBaseCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJDataDeltaCpp() : Super()
+    {
+        m_iGameId = 0;
+        m_iServerWorldTimeStamp_10Ms = 0;
+    };
+
+    //Num > 0 means valid, and num must equal 1 in that case
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "core data"))
+    TArray<FMyMJCoreDataDeltaCpp> m_aCoreData;
+
+    //Num > 0 means valid, and num must equal 1 in that case
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "role data"))
+    TArray<FMyMJRoleDataDeltaCpp> m_aRoleData;
+
+    //in a idea env, game id and pusher id is not neccessary, we put it here just to detect if data goes wrong in network case
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "game id"))
+        int32 m_iGameId;
+
+    //how many 10ms passed, it = timescond * 100
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "time"))
+        int32 m_iServerWorldTimeStamp_10Ms;
+};
+
+USTRUCT()
+struct FMyMJDataForFullModeCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJDataForFullModeCpp()
+    {
+        for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
+            int32 idx = m_aRoleDatas.Emplace();
+            FMyMJRoleDataForFullModeCpp *pD = &m_aRoleDatas[idx];
+            pD->resetup(i);
+        }
+    };
+
+    inline FMyMJCoreDataPublicCpp& getCoreDataRef()
+    {
+        return const_cast<FMyMJCoreDataPublicCpp &>(getCoreDataRefConst());
+    };
+
+    inline const FMyMJCoreDataPublicCpp& getCoreDataRefConst() const
+    {
+        return m_cCoreData;
+    };
+
+    inline FMyMJRoleDataAttenderPublicCpp& getRoleDataAttenderPublicRef(int32 idxAttender)
+    {
+        return const_cast<FMyMJRoleDataAttenderPublicCpp &>(getRoleDataAttenderPublicRefConst(idxAttender));
+    };
+
+    //@idxAttender equal to idxRole
+    inline const FMyMJRoleDataAttenderPublicCpp& getRoleDataAttenderPublicRefConst(int32 idxAttender) const
+    {
+        MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
+
+        MY_VERIFY(m_aRoleDatas.Num() == (uint8)MyMJGameRoleTypeCpp::Max);
+        return m_aRoleDatas[idxAttender].m_cDataAttenderPublic;
+    };
+
+
+    inline FMyMJRoleDataAttenderPrivateCpp& getRoleDataAttenderPrivateRef(int32 idxAttender)
+    {
+        return const_cast<FMyMJRoleDataAttenderPrivateCpp &>(getRoleDataAttenderPrivateRefConst(idxAttender));
+    };
+
+    //@idxAttender equal to idxRole
+    inline const FMyMJRoleDataAttenderPrivateCpp& getRoleDataAttenderPrivateRefConst(int32 idxAttender) const
+    {
+        MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
+
+        MY_VERIFY(m_aRoleDatas.Num() == (uint8)MyMJGameRoleTypeCpp::Max);
+        return m_aRoleDatas[idxAttender].m_cDataAttenderPrivate;
+    };
+
+    inline FMyMJRoleDataPrivateCpp& getRoleDataPrivateRef(int32 idxRole)
+    {
+        return const_cast<FMyMJRoleDataPrivateCpp &>(getRoleDataPrivateRefConst(idxRole));
+    };
+
+    //@idxAttender equal to idxRole
+    inline const FMyMJRoleDataPrivateCpp& getRoleDataPrivateRefConst(int32 idxRole) const
+    {
+        MY_VERIFY(idxRole >= 0 && idxRole < (uint8)MyMJGameRoleTypeCpp::Max);
+
+        MY_VERIFY(m_aRoleDatas.Num() == (uint8)MyMJGameRoleTypeCpp::Max);
+        return m_aRoleDatas[idxRole].m_cDataPrivate;
+    };
+
+    FMyMJCoreDataPublicCpp m_cCoreData;
+    TArray<FMyMJRoleDataForFullModeCpp> m_aRoleDatas;
+};
 
 //all mirror data doens't decide how game progress, just represent the game state
 //Note: when using component, all outer must be actor
@@ -566,25 +842,324 @@ class MYONLINECARDGAME_API UMyMJDataForMirrorModeCpp : public UActorComponent
 
 public:
 
+    //we don't create members by default, since in client replication will do it, saves a memory allocate operation
     UMyMJDataForMirrorModeCpp()
     {
         m_pCoreData = NULL;
-        m_aAttenderDatas.Reset();
+        m_aRoleDatas.Reset();
     };
 
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
 
     virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
 
+    inline FMyMJCoreDataPublicCpp& getCoreDataRef()
+    {
+        return const_cast<FMyMJCoreDataPublicCpp &>(getCoreDataRefConst());
+    };
+
+    //don't store the return, it can be invalid anytime
+    inline const FMyMJCoreDataPublicCpp& getCoreDataRefConst() const
+    {
+        //mirror mode is supposed to work in game thread
+        MY_VERIFY(IsInGameThread());
+        MY_VERIFY(IsValid(m_pCoreData));
+        return m_pCoreData->m_cDataPubicDirect;
+    };
+
+    inline FMyMJRoleDataAttenderPublicCpp& getRoleDataAttenderPublicRef(int32 idxAttender)
+    {
+        return const_cast<FMyMJRoleDataAttenderPublicCpp &>(getRoleDataAttenderPublicRefConst(idxAttender));
+    };
+
+    //@idxAttender equal to idxRole
+    //don't store the return, it can be invalid anytime
+    const FMyMJRoleDataAttenderPublicCpp& getRoleDataAttenderPublicRefConst(int32 idxAttender) const
+    {
+        MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
+
+        //mirror mode is supposed to work in game thread
+        MY_VERIFY(IsInGameThread());
+        MY_VERIFY(m_aRoleDatas.Num() == (uint8)MyMJGameRoleTypeCpp::Max);
+        UMyMJRoleDataAttenderPublicForMirrorModeCpp *pD = m_aRoleDatas[idxAttender]->m_pDataAttenderPublic;
+        MY_VERIFY(IsValid(pD));
+        return pD->m_cDataAttenderPublic;
+    };
+
+    //can return NULL
+    inline FMyMJRoleDataAttenderPrivateCpp *getRoleDataAttenderPrivate(int32 idxAttender)
+    {
+        return const_cast<FMyMJRoleDataAttenderPrivateCpp *>(getRoleDataAttenderPrivateConst(idxAttender));
+    };
+
+    //@idxAttender equal to idxRole
+    //don't store the return, it can be invalid anytime, can return NULL
+    const FMyMJRoleDataAttenderPrivateCpp *getRoleDataAttenderPrivateConst(int32 idxAttender) const
+    {
+        MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
+
+        //mirror mode is supposed to work in game thread
+        MY_VERIFY(IsInGameThread());
+        MY_VERIFY(m_aRoleDatas.Num() == (uint8)MyMJGameRoleTypeCpp::Max);
+        UMyMJRoleDataAttenderPrivateForMirrorModeCpp *pD = m_aRoleDatas[idxAttender]->m_pDataAttenderPrivate;
+        if (IsValid(pD)) {
+            return &pD->m_cDataAttenderPrivate;
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("requesting role %d 's attender private data but it is NULL, this is not supposed to happen."), idxAttender);
+            return NULL;
+        }
+
+    };
+
+    inline FMyMJRoleDataPrivateCpp* getRoleDataPrivate(int32 idxRole)
+    {
+        return const_cast<FMyMJRoleDataPrivateCpp *>(getRoleDataPrivateConst(idxRole));
+    };
+
+    //@idxAttender equal to idxRole
+    inline const FMyMJRoleDataPrivateCpp* getRoleDataPrivateConst(int32 idxRole) const
+    {
+        MY_VERIFY(idxRole >= 0 && idxRole < (uint8)MyMJGameRoleTypeCpp::Max);
+
+        MY_VERIFY(m_aRoleDatas.Num() == (uint8)MyMJGameRoleTypeCpp::Max);
+        UMyMJRoleDataPrivateForMirrorModeCpp* pD = m_aRoleDatas[idxRole]->m_pDataPrivate;
+        if (IsValid(pD)) {
+            return &pD->m_cDataPrivate;
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("requesting role %d 's private data but it is NULL, this is not supposed to happen."), idxRole);
+            return NULL;
+        }
+    };
+
+
     void createSubObjects(bool bBuildingDefault, bool bHavePrivate);
 
     UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "core data"))
     UMyMJCoreDataForMirrorModeCpp *m_pCoreData;
 
-    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "attender datas"))
-    TArray<UMyMJAttenderDataForMirrorModeCpp*>  m_aAttenderDatas;
+    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "role datas"))
+    TArray<UMyMJRoleDataForMirrorModeCpp*>  m_aRoleDatas;
 
 protected:
 
 
+};
+
+USTRUCT()
+struct FMyMJDataAccessorCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+    FMyMJDataAccessorCpp()
+    {
+        m_pDataFullMode = NULL;
+        m_pDataMirrorMode = NULL;
+        m_eWorkMode = MyMJGameCoreWorkModeCpp::Invalid;
+    };
+
+    void setupFullMode()
+    {
+        MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Invalid);
+        m_eWorkMode = MyMJGameCoreWorkModeCpp::Full;
+        m_pDataFullMode = MakeShareable<FMyMJDataForFullModeCpp>(new FMyMJDataForFullModeCpp());
+    };
+
+    //Can be called multiple times
+    void resetupMirrorMode(UMyMJDataForMirrorModeCpp *pDataMirrorMode)
+    {
+        MY_VERIFY(m_eWorkMode != MyMJGameCoreWorkModeCpp::Full);
+        m_eWorkMode = MyMJGameCoreWorkModeCpp::Mirror;
+        m_pDataMirrorMode = pDataMirrorMode;
+        MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
+    };
+
+    inline FMyMJCoreDataPublicCpp& getCoreDataRef()
+    {
+        return const_cast<FMyMJCoreDataPublicCpp &>(getCoreDataRefConst());
+    };
+
+    //don't store the return, it can be invalid anytime
+    const FMyMJCoreDataPublicCpp& getCoreDataRefConst() const
+    {
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+            return m_pDataFullMode->getCoreDataRefConst();
+        }
+        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+
+            MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
+            return m_pDataMirrorMode->getCoreDataRefConst();
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
+        return *(FMyMJCoreDataPublicCpp *)NULL;
+    };
+
+    inline FMyMJRoleDataAttenderPublicCpp& getRoleDataAttenderPublicRef(int32 idxAttender)
+    {
+        return const_cast<FMyMJRoleDataAttenderPublicCpp &>(getRoleDataAttenderPublicRefConst(idxAttender));
+    };
+
+    //@idxAttender equal to idxRole
+    //don't store the return, it can be invalid anytime
+    const FMyMJRoleDataAttenderPublicCpp& getRoleDataAttenderPublicRefConst(int32 idxAttender) const
+    {
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+            return m_pDataFullMode->getRoleDataAttenderPublicRefConst(idxAttender);
+        }
+        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+
+            MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
+            return m_pDataMirrorMode->getRoleDataAttenderPublicRefConst(idxAttender);
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
+        return *(FMyMJRoleDataAttenderPublicCpp *)NULL;
+    };
+
+    
+    inline FMyMJRoleDataAttenderPrivateCpp *getRoleDataAttenderPrivate(int32 idxAttender)
+    {
+        return const_cast<FMyMJRoleDataAttenderPrivateCpp *>(getRoleDataAttenderPrivate(idxAttender));
+    };
+
+    //@idxAttender equal to idxRole
+    //don't store the return, it can be invalid anytime, can return NULL
+    const FMyMJRoleDataAttenderPrivateCpp *getRoleDataAttenderPrivateConst(int32 idxAttender) const
+    {
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+            return &m_pDataFullMode->getRoleDataAttenderPrivateRefConst(idxAttender);
+        }
+        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+
+            MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
+            return m_pDataMirrorMode->getRoleDataAttenderPrivateConst(idxAttender);
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
+        return NULL;
+    };
+
+    inline FMyMJRoleDataPrivateCpp* getRoleDataPrivate(int32 idxRole)
+    {
+        return const_cast<FMyMJRoleDataPrivateCpp *>(getRoleDataPrivateConst(idxRole));
+    };
+
+    //@idxAttender equal to idxRole
+    inline const FMyMJRoleDataPrivateCpp* getRoleDataPrivateConst(int32 idxRole) const
+    {
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+            return &m_pDataFullMode->getRoleDataPrivateRefConst(idxRole);
+        }
+        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+
+            MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
+            return m_pDataMirrorMode->getRoleDataPrivateConst(idxRole);
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
+        return NULL;
+    };
+
+    //Note all data will be overwritten, include default values, usually used in full mode, but also possible for mirror as one way to implement replay  
+    void applyBase(const FMyMJDataForFullModeCpp &base)
+    {
+        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+            //now this is not supposed to happen unless low level replay method is used
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("apply base but mode is mirror, check it!"), );
+        }
+
+        getCoreDataRef() = base.getCoreDataRefConst();
+
+        int32 l = base.m_aRoleDatas.Num();
+        MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+        for (int i = 0; i < l; i++) {
+
+            getRoleDataAttenderPublicRef(i) = base.getRoleDataAttenderPublicRefConst(i);
+
+            {
+                FMyMJRoleDataAttenderPrivateCpp *pAttenderPrivSelf = getRoleDataAttenderPrivate(i);
+                const FMyMJRoleDataAttenderPrivateCpp *pAttenderPrivOther = &base.getRoleDataAttenderPrivateRefConst(i);
+                if (pAttenderPrivSelf && pAttenderPrivOther) {
+                    *pAttenderPrivSelf = *pAttenderPrivOther;
+                }
+                else {
+                    //it is OK, but in a fine design this should be avoid
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d 's attender private data is NULL, self %p, dest %p."), i, pAttenderPrivSelf, pAttenderPrivOther);
+                }
+            }
+
+            {
+                FMyMJRoleDataPrivateCpp *pPrivSelf = getRoleDataPrivate(i);
+                const FMyMJRoleDataPrivateCpp *pPrivOther = &base.getRoleDataPrivateRefConst(i);
+                if (pPrivSelf && pPrivOther) {
+                    *pPrivSelf = *pPrivOther;
+                }
+                else {
+                    //it is OK, but in a fine design this should be avoid
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d 's private data is NULL, self %p, dest %p."), i, pPrivSelf, pPrivOther);
+                }
+            }
+        }
+
+    }
+
+
+    void applyBase(const UMyMJDataForMirrorModeCpp &base)
+    {
+        MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror);
+
+        getCoreDataRef() = base.getCoreDataRefConst();
+
+        int32 l = base.m_aRoleDatas.Num();
+        MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+        for (int i = 0; i < l; i++) {
+
+            getRoleDataAttenderPublicRef(i) = base.getRoleDataAttenderPublicRefConst(i);
+
+            {
+                FMyMJRoleDataAttenderPrivateCpp *pAttenderPrivSelf = getRoleDataAttenderPrivate(i);
+                const FMyMJRoleDataAttenderPrivateCpp *pAttenderPrivOther = base.getRoleDataAttenderPrivateConst(i);
+                if (pAttenderPrivSelf && pAttenderPrivOther) {
+                    *pAttenderPrivSelf = *pAttenderPrivOther;
+                }
+                else {
+                    //it is OK, but in a fine design this should be avoid
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d 's attender private data is NULL, self %p, dest %p."), i, pAttenderPrivSelf, pAttenderPrivOther);
+                }
+            }
+
+            {
+                FMyMJRoleDataPrivateCpp *pPrivSelf = getRoleDataPrivate(i);
+                const FMyMJRoleDataPrivateCpp *pPrivOther = base.getRoleDataPrivateConst(i);
+                if (pPrivSelf && pPrivOther) {
+                    *pPrivSelf = *pPrivOther;
+                }
+                else {
+                    //it is OK, but in a fine design this should be avoid
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d 's private data is NULL, self %p, dest %p."), i, pPrivSelf, pPrivOther);
+                }
+            }
+        }
+    };
+
+    void applyDelta(const FMyMJDataDeltaCpp &delta);
+
+
+public:
+
+    //the really storage we point to
+    TSharedPtr<FMyMJDataForFullModeCpp> m_pDataFullMode;
+    TWeakObjectPtr<UMyMJDataForMirrorModeCpp> m_pDataMirrorMode;
+
+    MyMJGameCoreWorkModeCpp m_eWorkMode;
 };

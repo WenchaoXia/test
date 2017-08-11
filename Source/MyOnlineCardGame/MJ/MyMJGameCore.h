@@ -128,7 +128,7 @@ public:
     TSharedPtr<FMyMJGameAttenderCpp> getRealAttenderByIdx(int32 idxAttender)
     {
         TSharedPtr<FMyMJGameAttenderCpp> ret = getAttenderByIdx(idxAttender);
-        if (!ret->getIsRealAttenderRef()) {
+        if (!ret->getIsRealAttender()) {
             MY_VERIFY(false);
         }
 
@@ -227,7 +227,13 @@ public:
         return m_cDataLogic;
     };
 
-    FMyMJCoreDataPublicDirectCpp* getDataPublicDirect()
+    FMyMJCoreDataPublicCpp* getDataPublicDirect()
+    {
+        const FMyMJCoreDataPublicCpp* ret = getDataPublicDirectConst();
+        return const_cast<FMyMJCoreDataPublicCpp *>(ret);
+    };
+
+    const FMyMJCoreDataPublicCpp* getDataPublicDirectConst() const
     {
         MyMJGameCoreWorkModeCpp eWorkMode = getWorkMode();
         if (eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
@@ -253,7 +259,7 @@ public:
     inline
     FMyMJCardInfoPackCpp& getCardInfoPack()
     {
-        FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+        FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
         MY_VERIFY(pD);
         return pD->m_cCardInfoPack;
     };
@@ -263,9 +269,12 @@ public:
     {
         TSharedPtr<FMyMJGameAttenderCpp> &pAttender = m_aAttendersAll[(uint8)MyMJGameRoleTypeCpp::SysKeeper];
         MY_VERIFY(pAttender.IsValid());
-        FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = pAttender->getDataPrivateDirect();
+        FMyMJRoleDataAttenderPrivateCpp *pDPriD = pAttender->getDataPrivateDirect();
         MY_VERIFY(pDPriD);
-        return pDPriD->m_cCardValuePack;
+
+        //todo:
+        return *(FMyMJCardValuePackCpp *)NULL;
+        //return pDPriD->m_cCardValuePack;
     }
 
 
@@ -349,10 +358,10 @@ public:
         l = MY_GET_ARRAY_LEN(m_aAttendersAll);
         MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
 
-        MY_VERIFY(l == pMJData->m_aAttenderDatas.Num());
+        MY_VERIFY(l == pMJData->m_aRoleDatas.Num());
 
         for (int32 i = 0; i < l; i++) {
-            m_aAttendersAll[i]->initMirrorMode(pSelf, i, pMJData->m_aAttenderDatas[i]->m_pDataPublic, pMJData->m_aAttenderDatas[i]->m_pDataPrivate);
+            m_aAttendersAll[i]->initMirrorMode(pSelf, i, pMJData->m_aRoleDatas[i]->m_pDataAttenderPublic, pMJData->m_aRoleDatas[i]->m_pDataAttenderPrivate);
         }
     };
 
@@ -363,7 +372,7 @@ public:
     inline
     void makeProgressByPusher(FMyMJGamePusherBaseCpp *pPusher)
     {
-        FMyMJCoreDataPublicDirectCpp* pCoreData = getDataPublicDirect();
+        FMyMJCoreDataPublicCpp* pCoreData = getDataPublicDirect();
         if (pCoreData == NULL) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCoreData is invalid!"));
             return;
@@ -375,9 +384,11 @@ public:
             pCoreData->m_iPusherIdLast = -1;
         }
         */
+        int32 iGameId, iPusherIdLast;
+        getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
 
         if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0) {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)getWorkMode()), pCoreData->m_iActionGroupId, m_cDataLogic.m_iPusherIdLast, *pPusher->genDebugString());
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)getWorkMode()), pCoreData->m_iActionGroupId, iPusherIdLast, *pPusher->genDebugString());
         }
         applyPusher(pPusher);
 
@@ -385,26 +396,29 @@ public:
             //all data reseted when applyPusher(), we don't bother about it here
         }
         else {
-            m_cDataLogic.m_iPusherIdLast++;
+            //m_cDataLogic.m_iPusherIdLast++;
         }
 
+        /*
         if (!(m_cDataLogic.m_iPusherIdLast == pPusher->getId())) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s, pusher [%d] id not equal: %d, %d."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)getWorkMode()), (uint8)pPusher->getType(), m_cDataLogic.m_iPusherIdLast, pPusher->getId());
             MY_VERIFY(false);
         }
+        */
     };
 
     inline
-    void getGameIdAndPusherIdLast(int32 *pOutGameId, int32 *pOutPusherIdLast)
+    void getGameIdAndPusherIdLast(int32 *pOutGameId, int32 *pOutPusherIdLast) const
     {
         int32 iGameId = -1, iPusherIdLast = -1;
-        FMyMJCoreDataPublicDirectCpp* pCoreData = getDataPublicDirect();
+        const FMyMJCoreDataPublicCpp* pCoreData = getDataPublicDirectConst();
         if (pCoreData == NULL) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCoreData is invalid!"));
+            MY_VERIFY(false);
         }
         else {
-            iGameId = m_cDataLogic.m_iGameId;
-            iPusherIdLast = m_cDataLogic.m_iPusherIdLast;
+            iGameId = pCoreData->m_iGameId;
+            iPusherIdLast = pCoreData->m_iPusherIdLast;
         }
 
         if (pOutGameId) {

@@ -141,9 +141,26 @@ struct FMyMJCardPosiCpp
         m_iIdxInSlot1 = -1;
     };
 
-    bool equal(const FMyMJCardPosiCpp &other)
+    inline
+    bool equal(const FMyMJCardPosiCpp &other) const
     {
         return m_iIdxAttender == other.m_iIdxAttender && m_eSlot == other.m_eSlot && m_iIdxInSlot0 == other.m_iIdxInSlot0 && m_iIdxInSlot1 == other.m_iIdxInSlot1;
+    };
+
+    //Note: this may not work as expect for sub class, if you use base ponnter*: for example, class A, class B : public A, A* pA0 = new B(), *pA ==
+    //to make it work good, we need to use virtual functon as equal(), and compare double time by this->equal(other) && other.equal(*this)
+    //But for simple, we don't handle that case now, but keep in mind what should happen when programming, esp for pointer use case.
+    bool operator==(const FMyMJCardPosiCpp& other) const
+    {
+        if (this == &other) {
+            return true;
+        }
+        return equal(other);
+    };
+
+    bool operator!=(const FMyMJCardPosiCpp& other) const
+    {
+        return !(*this == other);
     };
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx attender"))
@@ -1789,6 +1806,24 @@ class UMyMJUtilsLibrary :
 
 public:
     
+    //@iMask is the storage, @iTestingBitValue is the value such as 0x02, 0x04, 0x08. multi bit such as 0xff is illegal
+    static inline
+    bool getBoolValueFromBitMask(int32 iMask, int32 iTestingBitValue)
+    {
+        return (iMask & iTestingBitValue) > 0;
+    };
+
+    static inline
+    void setBoolValueToBitMask(int32 iMask, int32 iTestingBitValue, bool bV)
+    {
+        if (bV) {
+            iMask |= iTestingBitValue;
+        }
+        else {
+            iMask &= (~iTestingBitValue);
+        }
+    };
+
     static FString getStringFromEnum(const TCHAR *enumName, uint8 value);
 
     static int64 nowAsMsFromTick();

@@ -47,14 +47,14 @@ public:
 
         m_cDataLogic.setup(idx);
 
-        m_pDataForFullMode = MakeShareable<FMyMJAttenderDataForFullModeCpp>(new FMyMJAttenderDataForFullModeCpp());
-        m_pDataForFullMode->m_cDataPublicDirect.setup(idx);
+        m_pDataForFullMode = MakeShareable<FMyMJRoleDataForFullModeCpp>(new FMyMJRoleDataForFullModeCpp());
+        m_pDataForFullMode->m_cDataAttenderPublic.setup(idx);
         //m_pDataForFullMode->m_cDataPrivateDirect.setup(idx);
 
         reset(false);
     };
 
-    virtual void initMirrorMode(TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx, UMyMJAttenderDataPublicForMirrorModeCpp *pDataPublic, UMyMJAttenderDataPrivateForMirrorModeCpp *pDataPrivate)
+    virtual void initMirrorMode(TWeakPtr<FMyMJGameCoreCpp> pCore, int32 idx, UMyMJRoleDataAttenderPublicForMirrorModeCpp *pDataPublic, UMyMJRoleDataAttenderPrivateForMirrorModeCpp *pDataPrivate)
     {
         m_pCore = pCore;
 
@@ -68,7 +68,7 @@ public:
         m_pDataPublicForMirrorMode = pDataPublic;
         m_pDataPrivateForMirrorMode = pDataPrivate;
 
-        m_pDataPublicForMirrorMode->m_cDataPublicDirect.setup(idx);
+        m_pDataPublicForMirrorMode->m_cDataAttenderPublic.setup(idx);
         //m_pDataPrivateForMirrorMode->m_cDataPrivateDirect.setup(idx);
 
         reset(false);
@@ -78,8 +78,8 @@ public:
     {
         if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
             if (m_pDataForFullMode.IsValid()) {
-                m_pDataForFullMode->m_cDataPublicDirect.reset();
-                m_pDataForFullMode->m_cDataPrivateDirect.reset();
+                m_pDataForFullMode->m_cDataAttenderPublic.reset();
+                m_pDataForFullMode->m_cDataAttenderPrivate.reset();
             }
             else {
                 //if code reach here, it should be calling constructor, in which case members is not created yet
@@ -88,11 +88,11 @@ public:
         }
         else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
             if (m_pDataPublicForMirrorMode.IsValid()) {
-                m_pDataPublicForMirrorMode->m_cDataPublicDirect.reset();
+                m_pDataPublicForMirrorMode->m_cDataAttenderPublic.reset();
             }
 
             if (m_pDataPrivateForMirrorMode.IsValid()) {
-                m_pDataPrivateForMirrorMode->m_cDataPrivateDirect.reset();
+                m_pDataPrivateForMirrorMode->m_cDataAttenderPrivate.reset();
             }
         }
         else {
@@ -123,12 +123,18 @@ public:
         }
     };
 
-    FMyMJAttenderDataPublicDirectForBPCpp* getDataPublicDirect()
+    inline FMyMJRoleDataAttenderPublicCpp* getDataPublicDirect()
+    {
+        const FMyMJRoleDataAttenderPublicCpp *p = getDataPublicDirectConst();
+        return const_cast<FMyMJRoleDataAttenderPublicCpp *>(p);
+    };
+
+    const FMyMJRoleDataAttenderPublicCpp* getDataPublicDirectConst() const
     {
         if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
             MY_VERIFY(IsInGameThread());
             if (m_pDataPublicForMirrorMode.IsValid()) {
-                return &m_pDataPublicForMirrorMode->m_cDataPublicDirect;
+                return &m_pDataPublicForMirrorMode->m_cDataAttenderPublic;
             }
             else {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataPublicForMirrorMode Invalid!"));
@@ -137,7 +143,7 @@ public:
         }
         else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
             MY_VERIFY(m_pDataForFullMode.IsValid());
-            return &m_pDataForFullMode->m_cDataPublicDirect;
+            return &m_pDataForFullMode->m_cDataAttenderPublic;
         }
         else {
             MY_VERIFY(false);
@@ -145,12 +151,12 @@ public:
         }
     };
 
-    FMyMJAttenderDataPrivateDirectForBPCpp* getDataPrivateDirect()
+    FMyMJRoleDataAttenderPrivateCpp* getDataPrivateDirect()
     {
         if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
             MY_VERIFY(IsInGameThread());
             if (m_pDataPrivateForMirrorMode.IsValid()) {
-                return &m_pDataPrivateForMirrorMode->m_cDataPrivateDirect;
+                return &m_pDataPrivateForMirrorMode->m_cDataAttenderPrivate;
             }
             else {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataPrivateForMirrorMode Invalid!"));
@@ -159,7 +165,7 @@ public:
         }
         else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
             MY_VERIFY(m_pDataForFullMode.IsValid());
-            return &m_pDataForFullMode->m_cDataPrivateDirect;
+            return &m_pDataForFullMode->m_cDataAttenderPrivate;
         }
         else {
             MY_VERIFY(false);
@@ -167,18 +173,34 @@ public:
         }
     };
 
-    bool& getIsRealAttenderRef()
+    bool getIsRealAttender() const
     {
-        FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+        const FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirectConst();
         MY_VERIFY(pDPubD);
-        return pDPubD->m_bIsRealAttender;
+        return UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender);
+        //return pDPubD->m_bIsRealAttender;
     };
 
-    bool& getIsStillInGameRef()
+    void setIsRealAttender(bool bV)
     {
-        FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+        const FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
         MY_VERIFY(pDPubD);
-        return pDPubD->m_bIsStillInGame;
+        UMyMJUtilsLibrary::setBoolValueToBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender, bV);
+    };
+
+    bool getIsStillInGame() const
+    {
+        const FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirectConst();
+        MY_VERIFY(pDPubD);
+        return UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame);
+        //return pDPubD->m_bIsStillInGame;
+    };
+
+    void setIsStillInGame(bool bV)
+    {
+        const FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
+        MY_VERIFY(pDPubD);
+        UMyMJUtilsLibrary::setBoolValueToBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame, bV);
     };
 
     FMyMJGameActionContainorCpp *getActionContainor()
@@ -196,13 +218,13 @@ protected:
     void recalcMinorPosiOfCardsInShowedOutWeaves();
 
 
-    TSharedPtr<FMyMJAttenderDataForFullModeCpp> m_pDataForFullMode;
+    TSharedPtr<FMyMJRoleDataForFullModeCpp> m_pDataForFullMode;
 
 
-    TWeakObjectPtr<UMyMJAttenderDataPublicForMirrorModeCpp>  m_pDataPublicForMirrorMode;
+    TWeakObjectPtr<UMyMJRoleDataAttenderPublicForMirrorModeCpp>  m_pDataPublicForMirrorMode;
 
 
-    TWeakObjectPtr<UMyMJAttenderDataPrivateForMirrorModeCpp> m_pDataPrivateForMirrorMode;
+    TWeakObjectPtr<UMyMJRoleDataAttenderPrivateForMirrorModeCpp> m_pDataPrivateForMirrorMode;
 
     FMyMJAttenderDataLogicOnlyCpp m_cDataLogic;
 

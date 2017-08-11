@@ -6,7 +6,7 @@ void AMyMJAttenderPawnBPCpp::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
-    //m_pDataPublic = NewObject<UMyMJAttenderDataPublicForMirrorModeCpp>(this);
+    //m_pDataPublic = NewObject<UMyMJRoleDataAttenderPublicForMirrorModeCpp>(this);
 
-    //m_pDataPrivate = NewObject<UMyMJAttenderDataPrivateForMirrorModeCpp>(this);
+    //m_pDataPrivate = NewObject<UMyMJRoleDataAttenderPrivateForMirrorModeCpp>(this);
 }

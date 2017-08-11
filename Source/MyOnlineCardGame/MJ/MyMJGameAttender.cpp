@@ -16,9 +16,9 @@ void FMyMJGameAttenderCpp::removeCard(int32 id)
     FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
     MyMJCardSlotTypeCpp eType = pCardInfo->m_cPosi.m_eSlot;
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     if (eType == MyMJCardSlotTypeCpp::JustTaken) {
@@ -68,9 +68,9 @@ void FMyMJGameAttenderCpp::insertCard(int32 id, MyMJCardSlotTypeCpp eTargetSlot)
     pCardInfo->m_cPosi.m_iIdxAttender = getIdx();
     pCardInfo->m_cPosi.m_eSlot = eType;
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     if (eType == MyMJCardSlotTypeCpp::JustTaken) {
@@ -109,9 +109,9 @@ void FMyMJGameAttenderCpp::recalcMinorPosiOfCardsInShowedOutWeaves()
     FMyMJGameCoreCpp *pCore = m_pCore.Pin().Get();
     FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPack();
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
     MY_VERIFY(pDPubD);
-    FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
     MY_VERIFY(pDPriD);
 
     //fix helper posi in all weaves

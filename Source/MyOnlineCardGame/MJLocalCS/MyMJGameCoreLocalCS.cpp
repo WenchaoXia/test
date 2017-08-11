@@ -126,7 +126,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(FMyMJGamePusherBaseCpp *pPusher)
 
 void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, FMyMJGameCmdBaseCpp *pCmd)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     if (pCmd->m_eType == MyMJGameCmdType::RestartGame) {
@@ -138,7 +138,9 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
             if (pCmdRestartGame->m_cGameCfg.m_eRuleType == getRuleType()) {
                 FMyMJGamePusherResetGameCpp p, *pPusherReset = &p;
                 FRandomStream &RS = m_pResManager->getRandomStreamRef();
-                int32 iGameId = m_cDataLogic.m_iGameId + 1;
+                int32 iGameIdOld;
+                getGameIdAndPusherIdLast(&iGameIdOld, NULL);
+                int32 iGameId = iGameIdOld + 1;
                 if (iGameId < 0) {
                     iGameId = 0;
                 }
@@ -198,7 +200,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusherMadeChoiceNotify(FMyMJGamePusherMadeCho
 
 void FMyMJGameCoreLocalCSCpp::applyPusherCountUpdate(FMyMJGamePusherCountUpdateCpp *pPusher)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     if (pPusher->m_bActionGroupIncrease) {
@@ -215,7 +217,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusherCountUpdate(FMyMJGamePusherCountUpdateC
 void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *pPusher)
 {
     //Stateless, never judge condition of previous state, just reset the whole core
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack  = &getCardInfoPack();
@@ -237,8 +239,8 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
         for (int32 i = 0; i < 2; i++) {
 
             TSharedPtr<FMyMJGameAttenderCpp> pAttender = m_aAttendersAll[i * 2];
-            pAttender->getIsRealAttenderRef() = true;
-            pAttender->getIsStillInGameRef() = true;
+            pAttender->setIsRealAttender(true);
+            pAttender->setIsStillInGame(true);
             aContainors.Emplace(pAttender->getActionContainor());
         }
     }
@@ -246,8 +248,8 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
         for (int32 i = 0; i < iRealAttenderNum; i++) {
 
             TSharedPtr<FMyMJGameAttenderCpp> pAttender = m_aAttendersAll[i];
-            pAttender->getIsRealAttenderRef() = true;
-            pAttender->getIsStillInGameRef() = true;
+            pAttender->setIsRealAttender(true);
+            pAttender->setIsStillInGame(true);
             aContainors.Emplace(pAttender->getActionContainor());
         }
     }
@@ -265,8 +267,11 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
     resetForNewLoop(NULL, NULL, uMask, false, pPusher->m_cGameRunData.m_iIdxAttenderMenFeng);
 
     pD->reset();
-    m_cDataLogic.m_iGameId = pPusher->m_iGameId;
-    m_cDataLogic.m_iPusherIdLast = 0;
+    
+    //Todo:
+    //m_cDataLogic.m_iGameId = pPusher->m_iGameId;
+    //m_cDataLogic.m_iPusherIdLast = 0;
+
     pD->m_iActionGroupId = 0;
 
     //m_iTurnId = 0;
@@ -296,12 +301,13 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
 
         int32 iCardNum = pPusher->m_aShuffledValues.Num();
 
+        //Todo: fix
         for (int32 i = 0; i < l; i++) {
             if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper) {
-                m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.resetAndRevealAll(pPusher->m_aShuffledValues);
+                //m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.resetAndRevealAll(pPusher->m_aShuffledValues);
             }
             else {
-                m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.reset(iCardNum);
+                //m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.reset(iCardNum);
             }
         }
     }
@@ -358,7 +364,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(FMyMJGamePusherResetGameCpp *
             stackL = stackArrayLAssumed;
         }
 
-        FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = m_aAttendersAll[i]->getDataPublicDirect();
+        FMyMJRoleDataAttenderPublicCpp *pDPubD = m_aAttendersAll[i]->getDataPublicDirect();
         MY_VERIFY(pDPubD);
 
         pDPubD->m_cUntakenSlotSubSegmentInfo.m_iIdxStart = idxStart;
@@ -421,7 +427,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusherUpdateCards(FMyMJGamePusherUpdateCardsC
 
 void FMyMJGameCoreLocalCSCpp::applyActionStateUpdate(FMyMJGameActionStateUpdateCpp *pAction)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     if (pAction->m_eStateNext != MyMJGameStateCpp::Invalid) {
@@ -440,7 +446,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionStateUpdate(FMyMJGameActionStateUpdateC
 
 void FMyMJGameCoreLocalCSCpp::applyActionThrowDices(FMyMJGameActionThrowDicesCpp *pAction)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     //idx is always 1 - 4
@@ -453,9 +459,9 @@ void FMyMJGameCoreLocalCSCpp::applyActionThrowDices(FMyMJGameActionThrowDicesCpp
 
     if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GameStart) {
 
-        FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = m_aAttendersAll[idxAttender]->getDataPublicDirect();
+        FMyMJRoleDataAttenderPublicCpp *pDPubD = m_aAttendersAll[idxAttender]->getDataPublicDirect();
         MY_VERIFY(pDPubD);
-        //FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+        //FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
         //MY_VERIFY(pDPriD);
 
 
@@ -494,7 +500,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionThrowDices(FMyMJGameActionThrowDicesCpp
 
 void FMyMJGameCoreLocalCSCpp::applyActionDistCardsAtStart(FMyMJGameActionDistCardAtStartCpp *pAction)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPack();
@@ -535,10 +541,10 @@ void FMyMJGameCoreLocalCSCpp::applyActionDistCardsAtStart(FMyMJGameActionDistCar
 
                 TSharedPtr<FMyMJGameAttenderLocalCSCpp> pAttender = getAttenderByIdx(i);
                 MY_VERIFY(pAttender.IsValid());
-                if (i == idxZhuang || pAttender->getIsStillInGameRef() == false) {
+                if (i == idxZhuang || pAttender->getIsStillInGame() == false) {
                     continue;
                 }
-                MY_VERIFY(pAttender->getIsRealAttenderRef());
+                MY_VERIFY(pAttender->getIsRealAttender());
                 pAttender->tryGenAndEnqueueUpdateTingPusher();
             }
         }
@@ -553,7 +559,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionDistCardsAtStart(FMyMJGameActionDistCar
 
 void FMyMJGameCoreLocalCSCpp::applyActionTakeCards(FMyMJGameActionTakeCardsCpp *pAction)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPack();
@@ -608,7 +614,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionTakeCards(FMyMJGameActionTakeCardsCpp *
 
 void FMyMJGameCoreLocalCSCpp::applyActionGiveOutCards(FMyMJGameActionGiveOutCardsCpp *pAction)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPack();
@@ -638,9 +644,9 @@ void FMyMJGameCoreLocalCSCpp::applyActionGiveOutCards(FMyMJGameActionGiveOutCard
 
 
         {
-            FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = pAttender->getDataPublicDirect();
+            FMyMJRoleDataAttenderPublicCpp *pDPubD = pAttender->getDataPublicDirect();
             MY_VERIFY(pDPubD);
-            //FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+            //FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
             //MY_VERIFY(pDPriD);
 
             TArray<int32> &aIdCardsTaken = pDPubD->m_aIdJustTakenCards;// pAttender->getIdJustTakenCardsRef();
@@ -670,7 +676,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionGiveOutCards(FMyMJGameActionGiveOutCard
         pCardInfo->m_eFlipState = MyMJCardFlipStateCpp::Up;
     }
 
-    FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = pAttender->getDataPublicDirect();
+    FMyMJRoleDataAttenderPublicCpp *pDPubD = pAttender->getDataPublicDirect();
     MY_VERIFY(pDPubD);
 
     TArray<int32> aIdsJustTaken = pDPubD->m_aIdJustTakenCards;// pAttender->getIdJustTakenCardsRef(); //do a copy
@@ -720,7 +726,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionGiveOutCards(FMyMJGameActionGiveOutCard
 
 void FMyMJGameCoreLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAction)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     int32 idxAttender = pAction->getIdxAttender();
@@ -811,7 +817,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAction)
 
 void FMyMJGameCoreLocalCSCpp::applyActionHu(FMyMJGameActionHuCpp *pAction)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     int32 idxAttender = pAction->getIdxAttender();
@@ -824,7 +830,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionHu(FMyMJGameActionHuCpp *pAction)
 
     for (int32 i = 0; i < 4; i++) {
         TSharedPtr<FMyMJGameAttenderLocalCSCpp> pAttender2 = getAttenderByIdx(i);
-        if (!pAttender2->getIsStillInGameRef()) {
+        if (!pAttender2->getIsStillInGame()) {
             continue;
         }
         pAttender2->showOutCardsAfterHu();
@@ -836,9 +842,9 @@ void FMyMJGameCoreLocalCSCpp::applyActionHu(FMyMJGameActionHuCpp *pAction)
 
     if (pAction->m_bEndGame) {
 
-        FMyMJAttenderDataPublicDirectForBPCpp *pDPubD = m_aAttendersAll[idxAttender]->getDataPublicDirect();
+        FMyMJRoleDataAttenderPublicCpp *pDPubD = m_aAttendersAll[idxAttender]->getDataPublicDirect();
         MY_VERIFY(pDPubD);
-        //FMyMJAttenderDataPrivateDirectForBPCpp *pDPriD = getDataPrivateDirect();
+        //FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
         //MY_VERIFY(pDPriD);
 
         //pAttender->getHuScoreResultFinalGroupRef() = pAction->m_cHuScoreResultFinalGroup;
@@ -862,7 +868,7 @@ void FMyMJGameCoreLocalCSCpp::applyActionHu(FMyMJGameActionHuCpp *pAction)
 
 void FMyMJGameCoreLocalCSCpp::applyActionZhaNiaoLocalCS(FMyMJGameActionZhaNiaoLocalCSCpp *pAction)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPack();

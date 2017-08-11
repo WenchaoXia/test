@@ -18,7 +18,7 @@ FMyMJGameCoreBaseCpp::findIdxAttenderStillInGame(int32 idxAttenderBase, uint32 d
     for (int i = 0; i < 4; i++) {
         pAttender = m_aAttendersAll[idxChecking];
 
-        if (pAttender->getIsStillInGameRef()) {
+        if (pAttender->getIsStillInGame()) {
             //valid one found
             bFound = true;
             if (delta == 0) {
@@ -53,7 +53,7 @@ int32 FMyMJGameCoreBaseCpp::genIdxAttenderStillInGameMaskOne(int32 idxAttender)
         pAttender = m_aAttendersAll[i];
 
         if (idxAttender == i) {
-            MY_VERIFY(pAttender->getIsStillInGameRef());
+            MY_VERIFY(pAttender->getIsStillInGame());
             ret |= (1 << i);
             break;
         }
@@ -73,7 +73,7 @@ int32 FMyMJGameCoreBaseCpp::genIdxAttenderStillInGameMaskExceptOne(int32 idxAtte
         pAttender = m_aAttendersAll[i];
 
         if (idxAttender != i) {
-            if (pAttender->getIsStillInGameRef()) {
+            if (pAttender->getIsStillInGame()) {
                 ret |= (1 << i);
             }
         }
@@ -92,7 +92,7 @@ int32 FMyMJGameCoreBaseCpp::genIdxAttenderStillInGameMaskAll()
     for (int i = 0; i < 4; i++) {
         pAttender = m_aAttendersAll[i];
 
-        if (pAttender->getIsStillInGameRef()) {
+        if (pAttender->getIsStillInGame()) {
             ret |= (1 << i);
         }
 
@@ -106,7 +106,7 @@ int32 FMyMJGameCoreBaseCpp::genIdxAttenderStillInGameMaskAll()
 
 int32 FMyMJGameCoreCpp::calcUntakenSlotCardsLeftNumKeptFromTail()
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJGameUntakenSlotInfoCpp *pInfo = &pD->m_cUntakenSlotInfo;
@@ -138,7 +138,7 @@ int32 FMyMJGameCoreCpp::calcUntakenSlotCardsLeftNumKeptFromTail()
 
 bool FMyMJGameCoreCpp::isIdxUntakenSlotInKeptFromTailSegment(int32 idx)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJGameUntakenSlotInfoCpp *pInfo = &pD->m_cUntakenSlotInfo;
@@ -179,7 +179,7 @@ bool FMyMJGameCoreCpp::isIdxUntakenSlotInKeptFromTailSegment(int32 idx)
 //don't reenter this func, this may result stack overflow
 bool FMyMJGameCoreCpp::actionLoop()
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     bool bRet = false;
@@ -321,7 +321,7 @@ void FMyMJGameCoreCpp::genActionChoices()
     for (int i = 0; i < 4; i++) {
         FMyMJGameAttenderCpp *pAttender = m_aAttendersAll[i].Get();
         MY_VERIFY(pAttender);
-        if (!pAttender->getIsStillInGameRef()) {
+        if (!pAttender->getIsStillInGame()) {
             continue;
         }
 
@@ -339,7 +339,7 @@ void FMyMJGameCoreCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyM
     for (int i = 0; i < 4; i++) {
         FMyMJGameAttenderCpp *pAttender = m_aAttendersAll[i].Get();
         MY_VERIFY(pAttender);
-        if (!pAttender->getIsStillInGameRef()) {
+        if (!pAttender->getIsStillInGame()) {
             continue;
         }
         iRealAttenderCount++;
@@ -392,7 +392,7 @@ void FMyMJGameCoreCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyM
 
 void FMyMJGameCoreCpp::tryProgressInFullMode()
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     //the sequence ensure pusher is drained out clean before cmd applies
@@ -418,7 +418,7 @@ void FMyMJGameCoreCpp::tryProgressInFullMode()
 
 int32 FMyMJGameCoreCpp::getIdxOfUntakenSlotHavingCard(int32 idxBase, uint32 delta, bool bReverse)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     int32 l = pD->m_aUntakenCardStacks.Num();
@@ -459,7 +459,7 @@ int32 FMyMJGameCoreCpp::getIdxOfUntakenSlotHavingCard(int32 idxBase, uint32 delt
 
 void FMyMJGameCoreCpp::collectCardsFromUntakenSlot(int32 idxBase, uint32 len, bool bReverse, TArray<int32> &outIds)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     int32 l = pD->m_aUntakenCardStacks.Num();
@@ -496,7 +496,7 @@ void FMyMJGameCoreCpp::collectCardsFromUntakenSlot(int32 idxBase, uint32 len, bo
 
 void FMyMJGameCoreCpp::tryCollectCardsFromUntakenSlot(int32 idxBase, uint32 len, bool bReverse, TArray<int32> &outIds)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     int32 cardsleftAll = pD->m_cUntakenSlotInfo.getCardNumCanBeTakenAll();
@@ -506,7 +506,7 @@ void FMyMJGameCoreCpp::tryCollectCardsFromUntakenSlot(int32 idxBase, uint32 len,
 
 void FMyMJGameCoreCpp::moveCardFromOldPosi(int32 id)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     FMyMJCardInfoPackCpp  *pCardInfoPack =  &getCardInfoPack();
@@ -563,7 +563,7 @@ void FMyMJGameCoreCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSl
 
 void FMyMJGameCoreCpp::updateUntakenInfoHeadOrTail(bool bUpdateHead, bool bUpdateTail)
 {
-    FMyMJCoreDataPublicDirectCpp *pD = getDataPublicDirect();
+    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
     if (pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal <= 0) {

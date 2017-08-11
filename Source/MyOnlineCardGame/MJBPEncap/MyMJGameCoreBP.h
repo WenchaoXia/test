@@ -342,7 +342,7 @@ public:
             return false;
         }
 
-        int32 l = pMJData->m_aAttenderDatas.Num();
+        int32 l = pMJData->m_aRoleDatas.Num();
 
         if (l != (uint8)MyMJGameRoleTypeCpp::Max) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender datas only %d present."), l);
