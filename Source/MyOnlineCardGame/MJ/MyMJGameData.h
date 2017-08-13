@@ -14,6 +14,8 @@
 
 #include "MyMJGameData.generated.h"
 
+//Todo: use UE4's generated delta instead of my own
+
 USTRUCT(BlueprintType)
 struct FMyMJGameUntakenSlotInfoCpp
 {
@@ -40,7 +42,47 @@ public:
         m_iUntakenSlotCardsLeftNumTotal = 0;
         m_iUntakenSlotCardsLeftNumKeptFromTail = 0;
         m_iUntakenSlotCardsLeftNumNormalFromHead = 0;
+
+        m_iCfgStackNumKeptFromTail = 0;
     };
+
+
+    bool isIdxUntakenSlotInKeptFromTailSegment(int32 idx) const
+    {
+        const FMyMJGameUntakenSlotInfoCpp *pInfo = this;
+
+        int32 keptCount = pInfo->m_iCfgStackNumKeptFromTail;
+        int32 idxTail = pInfo->m_iUntakenSlotLengthAtStart;
+        int32 totalL = pInfo->m_iUntakenSlotLengthAtStart;
+
+        if (keptCount <= 0) {
+            return false;
+        }
+
+        MY_VERIFY(totalL > 0);
+        MY_VERIFY(idxTail >= 0);
+
+        int32 idxEnd = (idxTail + 1) % totalL; // use < 
+        int32 idxStart = (idxEnd - keptCount + totalL) % totalL;
+
+        int32 idxStartFix0, idxStartFix1, idxEndFix0, idxEndFix1;
+        if (idxStart < idxEnd) {
+            idxStartFix0 = idxStart;
+            idxEndFix0 = idxEnd;
+            idxStartFix1 = 0;
+            idxEndFix1 = 0;
+        }
+        else {
+            MY_VERIFY(idxStart != idxEnd);
+            idxStartFix0 = idxStart;
+            idxEndFix0 = totalL;
+            idxStartFix1 = 0;
+            idxEndFix1 = idxEnd;
+        }
+
+        return (idxStartFix0 <= idx && idx < idxEndFix0) || (idxStartFix1 <= idx && idx < idxEndFix1);
+    }
+
 
     inline
         int32 getCardNumCanBeTakenNormally() const
@@ -79,6 +121,8 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "untaken slot cards left num normal from head"))
     int32 m_iUntakenSlotCardsLeftNumNormalFromHead;
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "cfg stack num kept from tail"))
+    int32 m_iCfgStackNumKeptFromTail; //Todo: set it when reset game
 };
 
 //Only Used for logic, not for visulzied
@@ -118,8 +162,8 @@ public:
 
 #define FMyMJCoreDataPublicDirectMask0_UpdateActionGroupId (1 << 1)
 #define FMyMJCoreDataPublicDirectMask0_UpdateGameState (1 << 3)
-#define FMyMJCoreDataPublicDirectMask0_UpdateHelperLastCardsGivenOutOrWeave (1 << 5)
-#define FMyMJCoreDataPublicDirectMask0_UpdateHelperLastCardTakenInGame (1 << 7)
+//#define FMyMJCoreDataPublicDirectMask0_UpdateHelperLastCardsGivenOutOrWeave (1 << 5)
+//#define FMyMJCoreDataPublicDirectMask0_UpdateHelperLastCardTakenInGame (1 << 7) //not needed. automatically set when removing card from untaken slot
 
 //Atomic
 //Both used for logic and visualize
@@ -209,8 +253,9 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Untaken Slot Info"))
     FMyMJGameUntakenSlotInfoCpp m_cUntakenSlotInfo;
 
+    //When weave, it takes trigger card(if have) or 1st card per weave, value is possible invalid if card is not flip up(or valid if you have revealled it's value before)
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
-    TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
+    TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hai Di Card Id"))
     FMyIdValuePair m_cHelperLastCardTakenInGame; //hai di card if id >= 0
@@ -245,11 +290,8 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game State"))
     MyMJGameStateCpp m_eGameState;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
-    TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hai Di Card Id"))
-    FMyIdValuePair m_cHelperLastCardTakenInGame;
+    //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
+    //TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
 
     //used for bit bool and bit tip updating as delta
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
@@ -363,7 +405,12 @@ public:
 #define FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame        (1 << 2)
 #define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsStillInGame  (1 << 3)
 
-#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateHuScoreResultFinalGroup  (1 << 5)
+
+#define FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS        (1 << 16)
+#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateGangYaoedLocalCS  (1 << 17)
+#define FMyMJRoleDataAttenderPublicCpp_Mask0_BanPaoHuLocalCS         (1 << 18)
+#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateBanPaoHuLocalCS   (1 << 19)
+
 
 USTRUCT(BlueprintType)
 struct FMyMJRoleDataAttenderPublicCpp
@@ -422,6 +469,8 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards win symbol"))
     FMyMJGameUntakenSlotSubSegmentInfoCpp m_cUntakenSlotSubSegmentInfo;
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final Local"))
+    FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroupLocal;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final"))
     FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroup;
@@ -443,18 +492,22 @@ public:
         m_iMask0 = 0;
     };
 
-    //Type valid means to add
+    //if Num() > 0, it must equal to 1
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "weave to add"))
-    FMyMJWeaveCpp m_cWeave2Add;
+    TArray<FMyMJWeaveCpp> m_aWeave2Add;
 
+    //if Num() > 0, it must equal to 1
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final Local"))
+    TArray<FMyMJHuScoreResultFinalGroupCpp> m_aHuScoreResultFinalGroupLocal;
+
+    //if Num() > 0, it must equal to 1
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final"))
-    FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroup;
+    TArray<FMyMJHuScoreResultFinalGroupCpp> m_aHuScoreResultFinalGroup;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
     int32 m_iMask0;
 };
 
-#define FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateHuScoreResultTingGroup  (1 << 1)
 
 USTRUCT(BlueprintType)
 struct FMyMJRoleDataAttenderPrivateCpp
@@ -496,17 +549,13 @@ public:
 
     FMyMJRoleDataAttenderPrivateDeltaCpp()
     {
-        m_iMask0 = 0;
+
     };
 
-
-    //m_iIdxAttenderWin >= 0 means update to
+    //if Num() > 0, it must equal to 1
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Ting"))
-    FMyMJHuScoreResultTingGroupCpp  m_cHuScoreResultTingGroup;
+    TArray<FMyMJHuScoreResultTingGroupCpp>  m_aHuScoreResultTingGroup;
 
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
-    int32 m_iMask0;
 };
 
 USTRUCT(BlueprintType)
@@ -539,43 +588,46 @@ public:
 
     FMyMJRoleDataPrivateDeltaCpp()
     {
-
+        m_eRoleType = MyMJGameRoleTypeCpp::Observer;
     };
 
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card id values to reveal"))
     TArray<FMyIdValuePair> m_aIdValuePairs2Reveal;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "role type it belong to"))
+    MyMJGameRoleTypeCpp m_eRoleType;
+
+    //Controls which role should have @m_aDataPrivate when clone/mute for different roles
+    //when a role test return false, @m_aDataPrivate will be removed afer clone for that role
+    int32 m_iRoleMaskForDataPrivateClone;
+
+
+
 };
 
 USTRUCT(BlueprintType)
-struct FMyMJRoleDataDeltaCpp
+struct FMyMJRoleDataAttenderDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyMJRoleDataDeltaCpp()
+    FMyMJRoleDataAttenderDeltaCpp()
     {
         m_iIdxAttender = -1;
     };
 
     //Num > 0 means valid, and num must equal 1 in that case
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "data public"))
-    TArray<FMyMJRoleDataAttenderPublicDeltaCpp> m_aDataAttenderPublic;
+    TArray<FMyMJRoleDataAttenderPublicDeltaCpp> m_aDataPublic;
 
     //Num > 0 means valid, and num must equal 1 in that case
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "data private"))
-    TArray<FMyMJRoleDataAttenderPrivateDeltaCpp> m_aDataAttenderPrivate;
+    TArray<FMyMJRoleDataAttenderPrivateDeltaCpp> m_aDataPrivate;
 
-    //Num > 0 means valid, and num must equal 1 in that case
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "role data private"))
-    TArray<FMyMJRoleDataPrivateDeltaCpp> m_aDataPrivate;
-
-    //Controls which role should have @m_aDataPrivate when clone/mute for different roles
-    //when a role test return false, @m_aDataPrivate will be removed afer clone for that role
-    int32 m_iRoleMaskForDataPrivateClone;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx Attender"))
+    //equal to idx role, MyMJRoleTypeCpp
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx attender"))
     int32 m_iIdxAttender;
 };
 
@@ -748,16 +800,22 @@ public:
     TArray<FMyMJCoreDataDeltaCpp> m_aCoreData;
 
     //Num > 0 means valid, and num must equal 1 in that case
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "role data"))
-    TArray<FMyMJRoleDataDeltaCpp> m_aRoleData;
+    //represent whe attender's update, what he does to make game progress, private data is hidden to other
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "role data attender"))
+    TArray<FMyMJRoleDataAttenderDeltaCpp> m_aRoleDataAttender;
+
+    //Num > 0 means valid, and num must equal 1 in that case
+    //represent the role's update, how he knows the game,  it is different for different role
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "role data private"))
+    TArray<FMyMJRoleDataPrivateDeltaCpp> m_aRoleDataPrivate;
 
     //in a idea env, game id and pusher id is not neccessary, we put it here just to detect if data goes wrong in network case
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "game id"))
-        int32 m_iGameId;
+    int32 m_iGameId;
 
     //how many 10ms passed, it = timescond * 100
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "time"))
-        int32 m_iServerWorldTimeStamp_10Ms;
+    int32 m_iServerWorldTimeStamp_10Ms;
 };
 
 USTRUCT()
@@ -956,20 +1014,29 @@ struct FMyMJDataAccessorCpp
     {
         m_pDataFullMode = NULL;
         m_pDataMirrorMode = NULL;
+        m_eAccessRoleType = MyMJGameRoleTypeCpp::Observer;
         m_eWorkMode = MyMJGameCoreWorkModeCpp::Invalid;
+    };
+
+    MyMJGameRoleTypeCpp getAccessRoleType() const
+    {
+        //todo: make it conditional
+        return m_eAccessRoleType;
     };
 
     void setupFullMode()
     {
         MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Invalid);
+        m_eAccessRoleType = MyMJGameRoleTypeCpp::SysKeeper;
         m_eWorkMode = MyMJGameCoreWorkModeCpp::Full;
         m_pDataFullMode = MakeShareable<FMyMJDataForFullModeCpp>(new FMyMJDataForFullModeCpp());
     };
 
     //Can be called multiple times
-    void resetupMirrorMode(UMyMJDataForMirrorModeCpp *pDataMirrorMode)
+    void resetupMirrorMode(MyMJGameRoleTypeCpp eAccessRoleType, UMyMJDataForMirrorModeCpp *pDataMirrorMode)
     {
         MY_VERIFY(m_eWorkMode != MyMJGameCoreWorkModeCpp::Full);
+        m_eAccessRoleType = eAccessRoleType;
         m_eWorkMode = MyMJGameCoreWorkModeCpp::Mirror;
         m_pDataMirrorMode = pDataMirrorMode;
         MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
@@ -1025,7 +1092,7 @@ struct FMyMJDataAccessorCpp
     
     inline FMyMJRoleDataAttenderPrivateCpp *getRoleDataAttenderPrivate(int32 idxAttender)
     {
-        return const_cast<FMyMJRoleDataAttenderPrivateCpp *>(getRoleDataAttenderPrivate(idxAttender));
+        return const_cast<FMyMJRoleDataAttenderPrivateCpp *>(getRoleDataAttenderPrivateConst(idxAttender));
     };
 
     //@idxAttender equal to idxRole
@@ -1152,14 +1219,35 @@ struct FMyMJDataAccessorCpp
         }
     };
 
+    //the delta myst be applied by two step, and after step 0 it can be visualized, can be used by both full and mirror mode
+    //after step 0 we have a chance for visualize, before calling next
+    void applyDeltaStep0(const FMyMJDataDeltaCpp &delta);
+    void applyDeltaStep1(const FMyMJDataDeltaCpp &delta);
+
+    //direct to apply, don't leave a chance for visualize
     void applyDelta(const FMyMJDataDeltaCpp &delta);
 
+protected:
 
-public:
+    FMyMJCardValuePackCpp& getCardValuePackRef()
+    {
+        int32 iAccessRoleType = (uint8)getAccessRoleType();
+
+        FMyMJRoleDataPrivateCpp* pDRolePriv = getRoleDataPrivate(iAccessRoleType);
+
+        MY_VERIFY(pDRolePriv);
+
+        return pDRolePriv->m_cCardValuePack;
+    };
+
+    void moveCardFromOldPosi(int32 id);
+    void moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSlotTypeCpp eSlotDst);
+    void updateUntakenInfoHeadOrTail(bool bUpdateHead, bool bUpdateTail);
 
     //the really storage we point to
     TSharedPtr<FMyMJDataForFullModeCpp> m_pDataFullMode;
     TWeakObjectPtr<UMyMJDataForMirrorModeCpp> m_pDataMirrorMode;
 
+    MyMJGameRoleTypeCpp m_eAccessRoleType;
     MyMJGameCoreWorkModeCpp m_eWorkMode;
 };

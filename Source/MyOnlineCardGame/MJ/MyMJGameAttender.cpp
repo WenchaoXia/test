@@ -115,13 +115,14 @@ void FMyMJGameAttenderCpp::recalcMinorPosiOfCardsInShowedOutWeaves()
     MY_VERIFY(pDPriD);
 
     //fix helper posi in all weaves
+
     int32 l0 = pDPubD->m_aShowedOutWeaves.Num();
     for (int32 i = 0; i < l0; i++) {
         FMyMJWeaveCpp *pWeave = &pDPubD->m_aShowedOutWeaves[i];
-        const TArray<FMyIdValuePair>& aT = pWeave->getIdValuesRef();
+        const TArray<int32> &aT = pWeave->getIdsRefConst();
         int32 l1 = aT.Num();
         for (int32 j = 0; j < l1; j++) {
-            FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(aT[j].m_iId);
+            FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(aT[j]);
             pCardInfo->m_cPosi.m_iIdxInSlot0 = i;
             pCardInfo->m_cPosi.m_iIdxInSlot1 = j;
         }

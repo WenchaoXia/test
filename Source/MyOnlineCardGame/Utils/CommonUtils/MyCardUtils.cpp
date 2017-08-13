@@ -56,11 +56,14 @@ FMyValueIdMapCpp::remove(int32 id, int32 value)
 
 }
 
-bool FMyValueIdMapCpp::insertIdValuePairs(const TArray<FMyIdValuePair>& aPairs)
+bool FMyValueIdMapCpp::insertIdValuePairs(const TArray<FMyIdValuePair>& aPairs, bool bAssertValueValid)
 {
     bool bNoDup = true;
     int32 l = aPairs.Num();
     for (int32 i = 0; i < l; i++) {
+        if (bAssertValueValid) {
+            MY_VERIFY(aPairs[i].m_iValue > 0);
+        }
         if (!insert(aPairs[i].m_iId, aPairs[i].m_iValue)) {
             bNoDup = false;
         }

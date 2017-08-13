@@ -67,7 +67,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
         }
 
         TArray<FMyIdValuePair> aIdValuePairs;
-        pCardValuePack->getIdValuePairsByIds(aIds, aIdValuePairs);
+        pCardValuePack->helperIds2IdValuePairs(aIds, aIdValuePairs);
 
         //OK, all data collecteed, let's gen
 
@@ -81,7 +81,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
         assembleHuActionAttr(-1, NULL, MyMJHuTriggerCardSrcTypeCpp::CommonInGame, huActionAttr);
 
         FMyMJHuScoreResultFinalGroupCpp resultGroup;
-        if (UMyMJUtilsLocalCSLibrary::checkHuWithOutTriggerCard(pGameCfg->m_cHuCfg, pGameCfg->m_cSubLocalCSCfg, pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, huActionAttr, resultGroup)) {
+        if (UMyMJUtilsLocalCSLibrary::checkHuWithOutTriggerCard(*pCardValuePack, pGameCfg->m_cHuCfg, pGameCfg->m_cSubLocalCSCfg, pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, huActionAttr, resultGroup)) {
             FMyMJGameActionHuCpp *pAction = new FMyMJGameActionHuCpp();
             pAction->m_cHuScoreResultFinalGroup = resultGroup;
             pAction->initWithFinalGroupAlreadyInited(getIdx(), true);
@@ -173,7 +173,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
         assembleHuActionAttr(-1, &aTriggerCards, MyMJHuTriggerCardSrcTypeCpp::CommonInGame, huActionAttr);
 
         FMyMJHuScoreResultFinalGroupCpp resultGroup;
-        if (UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(pGameCfg->m_cHuCfg, pGameCfg->m_cSubLocalCSCfg, pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, huActionAttr, pDPriD->m_cHuScoreResultTingGroup, resultGroup)) {
+        if (UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(*pCardValuePack, pGameCfg->m_cHuCfg, pGameCfg->m_cSubLocalCSCfg, pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, huActionAttr, pDPriD->m_cHuScoreResultTingGroup, resultGroup)) {
             FMyMJGameActionHuCpp *pAction = new FMyMJGameActionHuCpp();
             pAction->m_cHuScoreResultFinalGroup = resultGroup;
             pAction->initWithFinalGroupAlreadyInited(getIdx(), true);
@@ -221,7 +221,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
         assembleHuActionAttr(idxAttenderTrigger, &lastCards, MyMJHuTriggerCardSrcTypeCpp::GangWeaveShowedOut, huActionAttr);
 
         FMyMJHuScoreResultFinalGroupCpp resultGroup;
-        if (UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(pGameCfg->m_cHuCfg, pGameCfg->m_cSubLocalCSCfg, pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, huActionAttr, pDPriD->m_cHuScoreResultTingGroup, resultGroup)) {
+        if (UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(*pCardValuePack, pGameCfg->m_cHuCfg, pGameCfg->m_cSubLocalCSCfg, pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, huActionAttr, pDPriD->m_cHuScoreResultTingGroup, resultGroup)) {
             FMyMJGameActionHuCpp *pAction = new FMyMJGameActionHuCpp();
             pAction->m_cHuScoreResultFinalGroup = resultGroup;
             pAction->initWithFinalGroupAlreadyInited(getIdx(), true);
@@ -248,7 +248,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
             assembleHuActionAttr(-1, &aTriggerCards, MyMJHuTriggerCardSrcTypeCpp::GangCardTaken, huActionAttr);
 
             FMyMJHuScoreResultFinalGroupCpp resultGroup;
-            if (UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(pGameCfg->m_cHuCfg, pGameCfg->m_cSubLocalCSCfg, pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, huActionAttr, pDPriD->m_cHuScoreResultTingGroup, resultGroup)) {
+            if (UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(*pCardValuePack, pGameCfg->m_cHuCfg, pGameCfg->m_cSubLocalCSCfg, pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, huActionAttr, pDPriD->m_cHuScoreResultTingGroup, resultGroup)) {
                 FMyMJGameActionHuCpp *pAction = new FMyMJGameActionHuCpp();
                 pAction->m_cHuScoreResultFinalGroup = resultGroup;
                 pAction->initWithFinalGroupAlreadyInited(getIdx(), true);
@@ -275,7 +275,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
                                                                 m_cDataLogic.m_cHandCards, huScoreResultItems, aIdsShowOutCards);
         if (bHu) {
             TArray<FMyIdValuePair> aShowOutIdValuePairs;
-            pCardValuePack->getIdValuePairsByIds(aIdsShowOutCards, aShowOutIdValuePairs);
+            pCardValuePack->helperIds2IdValuePairs(aIdsShowOutCards, aShowOutIdValuePairs, true);
             FMyMJGameActionHuBornLocalCSCpp *pAction = new FMyMJGameActionHuBornLocalCSCpp();
             pAction->init(getIdx(), huScoreResultItems, aShowOutIdValuePairs);
             pFillInPusher->m_cActionChoices.give(pAction);
@@ -349,7 +349,7 @@ bool FMyMJGameAttenderLocalCSCpp::tryGenAndEnqueueUpdateTingPusher()
     }
 
     FMyMJGamePusherUpdateTingCpp pusherUpdateTing;
-    bool bTing = UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(pD->m_cGameCfg, pCore->getCardValuePackOfSys(), pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, pusherUpdateTing.m_cTingGroup);
+    bool bTing = UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(pCore->getCardValuePackOfSys(), pD->m_cGameCfg, pCore->getCardValuePackOfSys(), pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, pusherUpdateTing.m_cTingGroup);
 
     if (pDPriD->m_cHuScoreResultTingGroup.getCount() == pusherUpdateTing.m_cTingGroup.getCount() && pDPriD->m_cHuScoreResultTingGroup.getCount() == 0) {
         //not ting yet, we don't need to gen pusher
@@ -440,7 +440,9 @@ void FMyMJGameAttenderLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAct
     MY_VERIFY(pDPriD);
 
     //1st, move and update cards
-    const TArray<FMyIdValuePair>& aIdValuePairs = pAction->m_cWeave.getIdValuesRef();
+    TArray<FMyIdValuePair> aIdValuePairs;
+    pCardValuePack->helperIds2IdValuePairs(pAction->m_cWeave.getIdsRefConst(), aIdValuePairs, true);
+
     int32 l = aIdValuePairs.Num();
     for (int32 i = 0; i < l; i++) {
         const FMyIdValuePair *pPair = &aIdValuePairs[i];
@@ -520,7 +522,7 @@ void FMyMJGameAttenderLocalCSCpp::showOutCardsAfterHu()
     int32 l;
     l = pDPubD->m_aShowedOutWeaves.Num();
     for (int32 i = 0; i < l; i++) {
-        pDPubD->m_aShowedOutWeaves[i].getIds(aIdsTemp);
+        const TArray<int32> &aIdsTemp = pDPubD->m_aShowedOutWeaves[i].getIdsRefConst();
         aIdsWeaves.Append(aIdsTemp);
     }
 
@@ -627,7 +629,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionAfterGivenOutCards(FMyMJGamePusherFil
     //check hu
     bool bCanHu = false;
     FMyMJHuScoreResultFinalGroupCpp resultGroup;
-    if (UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(pGameCfg->m_cHuCfg, pGameCfg->m_cSubLocalCSCfg, pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, huActionAttr, pDPriD->m_cHuScoreResultTingGroup, resultGroup)) {
+    if (UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(*pCardValuePack, pGameCfg->m_cHuCfg, pGameCfg->m_cSubLocalCSCfg, pDPubD->m_aShowedOutWeaves, m_cDataLogic.m_cHandCards, huActionAttr, pDPriD->m_cHuScoreResultTingGroup, resultGroup)) {
         FMyMJGameActionHuCpp *pAction = new FMyMJGameActionHuCpp();
         pAction->m_cHuScoreResultFinalGroup = resultGroup;
         pAction->initWithFinalGroupAlreadyInited(getIdx(), true);
@@ -793,6 +795,8 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
     FMyMJGameCoreCpp* pCore = getpCore();
     MY_VERIFY(pCore);
 
+    FMyMJCardValuePackCpp* pCardValuePack = &pCore->getCardValuePackOfSys();
+
     FMyMJCoreDataPublicCpp *pD = pCore->getDataPublicDirect();
     MY_VERIFY(pD);
 
@@ -838,7 +842,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
         const FMyMJWeaveCpp *pWeave = &inWeavesShowedOut[i];
         MY_VERIFY(pWeave->getType() != MyMJWeaveTypeCpp::KeZiAn);
         if (inWeavesShowedOut[i].getType() == MyMJWeaveTypeCpp::KeZiMing) {
-            int32 cardValue = pWeave->getMidValue();
+            int32 cardValue = pWeave->getMidValue(*pCardValuePack);
             int32 cardIdFound = -1;
             int32 iIdTriggerCard = -1;
             int32 iIdxAttenderTriggerCardSrc = -1;
@@ -862,11 +866,13 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
                 int32 idx = actionWeavesBuZhangLocalCS.Emplace();
                 FMyMJGameActionWeaveCpp *pAction = &actionWeavesBuZhangLocalCS[idx];
                 FMyMJWeaveCpp *pWeaveInAction = &pAction->m_cWeave;
-                pWeaveInAction->appendIdVakuePairs(pWeave->getIdValuesRef());
-                pWeaveInAction->addCard(cardIdFound, cardValue);
+                //pWeaveInAction->appendIdVakuePairs(pWeave->getIdValuesRef());
+                //pWeaveInAction->addCard(cardIdFound, cardValue);
+                pWeaveInAction->appendIds(pWeave->getIdsRefConst());
+                pWeaveInAction->addCard(cardIdFound);
 
                 pWeaveInAction->initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp::GangMing, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::KeZiMing, 0 | (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang);
-                pAction->initWithWeaveAlreadyInited(idxAttenderSelf, MyMJCardFlipStateCpp::Up);
+                pAction->initWithWeaveAlreadyInited(*pCardValuePack, idxAttenderSelf, MyMJCardFlipStateCpp::Up);
             }
         }
     }
@@ -910,11 +916,12 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
             pWeaveInAction->appendIdVakuePairs(aPairsTemp);
             if (aPairsTemp.Num() < 4) {
                 MY_VERIFY(pTriggerCard);
-                pWeaveInAction->addCard(*pTriggerCard);
+                //pWeaveInAction->addCard(*pTriggerCard);
+                pWeaveInAction->addCard(pTriggerCard->m_iId);
             }
 
             pWeaveInAction->initWitIdValuesAlreadyInited(eType, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::Invalid, 0 | (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang);
-            pAction->initWithWeaveAlreadyInited(idxAttenderSelf, eTargetFlipState);
+            pAction->initWithWeaveAlreadyInited(*pCardValuePack, idxAttenderSelf, eTargetFlipState);
         }
     }
 
@@ -934,13 +941,13 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
         for (int32 i = 0; i < l; i++) {
             const FMyMJGameActionWeaveCpp *pAction = &actionWeavesBuZhangLocalCS[i];
             const FMyMJWeaveCpp *pWeave = &pAction->m_cWeave;
-            int32 cardValue = pWeave->getMidValue();
+            int32 cardValue = pWeave->getMidValue(*pCardValuePack);
 
             //Forcast the state after gang
             handCardValueTemp.removeAllByValue(cardValue, aPairsTemp);
             weavesShowedOutTemp.Push(*pWeave);
 
-            bool bTing = UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(pD->m_cGameCfg, pCore->getCardValuePackOfSys(), weavesShowedOutTemp, handCardValueTemp, tingGroup);
+            bool bTing = UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(*pCardValuePack, pD->m_cGameCfg, pCore->getCardValuePackOfSys(), weavesShowedOutTemp, handCardValueTemp, tingGroup);
             if (bTing) {
                 bool bIsRealTingWhenZiMo;
                 tingGroup.isRealTing(&bIsRealTingWhenZiMo, NULL);
@@ -1011,10 +1018,11 @@ bool FMyMJGameAttenderLocalCSCpp::checkPeng(const FMyMJCardCpp &triggerCard, TAr
             FMyMJWeaveCpp *pWeaveInAction = &pAction->m_cWeave;
             pWeaveInAction->appendIdVakuePairsWithLimit(aPairsTemp, 2);
     
-            pWeaveInAction->addCard(triggerCard);
+            //pWeaveInAction->addCard(triggerCard);
+            pWeaveInAction->addCard(triggerCard.m_iId);
 
             pWeaveInAction->initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp::KeZiMing, triggerCard.m_iId, triggerCard.m_cPosi.m_iIdxAttender, MyMJWeaveTypeCpp::Invalid, 0);
-            pAction->initWithWeaveAlreadyInited(getIdx(), MyMJCardFlipStateCpp::Up);
+            pAction->initWithWeaveAlreadyInited(pCore->getCardValuePackOfSys(), getIdx(), MyMJCardFlipStateCpp::Up);
         }
     }
 
@@ -1064,10 +1072,11 @@ bool FMyMJGameAttenderLocalCSCpp::checkChi(const FMyMJCardCpp &triggerCard, TArr
             FMyMJWeaveCpp *pWeaveInAction = &pAction->m_cWeave;
             pWeaveInAction->appendIdVakuePairsWithLimit(aIdValuePairsInMap, 2);
 
-            pWeaveInAction->addCard(triggerCardIdValuePair);
+            //pWeaveInAction->addCard(triggerCardIdValuePair);
+            pWeaveInAction->addCard(triggerCardIdValuePair.m_iId);
 
             pWeaveInAction->initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp::ShunZiMing, triggerCard.m_iId, triggerCard.m_cPosi.m_iIdxAttender, MyMJWeaveTypeCpp::Invalid, 0);
-            pAction->initWithWeaveAlreadyInited(getIdx(), MyMJCardFlipStateCpp::Up);
+            pAction->initWithWeaveAlreadyInited(pCore->getCardValuePackOfSys(), getIdx(), MyMJCardFlipStateCpp::Up);
         }
         //bool checkShunZi(MyMJChiTypeCpp type, int32 checkingValueInMap, int32 extraValue, TArray<int32> &outIds, TArray<int32> &outValues) const;
     }

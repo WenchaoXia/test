@@ -136,7 +136,7 @@ struct FMyMJCardPosiCpp
         resetMinorData();
     };
 
-    void resetMinorData() {
+    inline void resetMinorData() {
         m_iIdxInSlot0 = -1;
         m_iIdxInSlot1 = -1;
     };
@@ -237,16 +237,105 @@ struct FMyMJCardCpp : public FMyMJCardInfoCpp
     int32 m_iValue;
 };
 
+
+USTRUCT(BlueprintType)
+struct FMyMJCardValuePackCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJCardValuePackCpp()
+    {
+        reset(0);
+    };
+
+    virtual ~FMyMJCardValuePackCpp()
+    {
+
+    };
+
+    void reset(int32 iCardNum)
+    {
+        MY_VERIFY(iCardNum >= 0);
+        m_aCardValues.Reset(iCardNum);
+        m_aCardValues.AddZeroed(iCardNum);
+    };
+
+    //this will reveal all card values
+    void resetAndRevealAll(const TArray<int32> &aShuffledValues)
+    {
+        m_aCardValues = aShuffledValues;
+    };
+
+    inline
+        int32 getLength() const
+    {
+        return m_aCardValues.Num();
+    };
+
+    inline
+        int32 getByIdx(int32 idx, bool bVerifyValueValid = false) const
+    {
+        MY_VERIFY(idx >= 0 && idx < m_aCardValues.Num());
+        int32 v = m_aCardValues[idx];
+        if (bVerifyValueValid) {
+            MY_VERIFY(v > 0);
+        }
+        return v;
+    };
+
+    inline
+        int32 &getByIdxRef(int32 idx)
+    {
+        MY_VERIFY(idx >= 0 && idx < m_aCardValues.Num());
+        return m_aCardValues[idx];
+    };
+
+    //this function will check values, and assert if error happens
+    void helperVerifyValues() const;
+
+    void tryRevealCardValue(int32 id, int32 value);
+
+    inline void tryRevealCardValue(const FMyIdValuePair &idValuePair)
+    {
+        tryRevealCardValue(idValuePair.m_iId, idValuePair.m_iValue);
+    };
+
+    inline void tryRevealCardValueByIdValuePairs(const TArray<FMyIdValuePair> &aIdValuePairs)
+    {
+        int32 l = aIdValuePairs.Num();
+        for (int32 i = 0; i < l; i++) {
+            tryRevealCardValue(aIdValuePairs[i]);
+        }
+    };
+
+
+    void getValuesByIds(const TArray<int32> &aIds, TArray<int32> &outaValues, bool bVerifyValueValid = false) const;
+
+    //will fiill in with card value
+    void helperIds2IdValuePairs(const TArray<int32> &aIds, TArray<FMyIdValuePair> &aIdValuePairs, bool bVerifyValueValid = false) const;
+
+    void helperResolveValue(FMyIdValuePair &pair, bool bVerifyValueValid = false) const;
+
+    void helperResolveValues(TArray<FMyIdValuePair> &aPairs, bool bVerifyValueValid = false) const;
+
+
+
+protected:
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card values"))
+        TArray<int32> m_aCardValues;
+};
+
 UENUM(Blueprintable, Meta = (Bitflags))
 enum class EMyMJWeaveReserved0Mask : uint8
 {
     LocalCSGangBuZhang = 0x01, //1 means BuZhang, 0 means GangYao
 };
 
-//#define FMyMJWeaveCppReserved0WhenGangValueGangYao 0
-//#define FMyMJWeaveCppReserved0WhenGangValueBuZhang 1
-
 //Id should be unique always
+
+/*
 USTRUCT(BlueprintType)
 struct FMyMJWeaveCpp
 {
@@ -436,13 +525,23 @@ struct FMyMJWeaveCpp
         inMap.collectAllWithValue(m_aIdValues);
     };
 
+    inline
+    void eraseValues()
+    {
+        int32 l = m_aIdValues.Num();
+        for (int32 i = 0; i < l; i++) {
+            m_aIdValues[i].m_iValue = 0;
+        }
+    };
+
     FString genDebugString() const;
 
 protected:
-    /* type */
+
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "type"))
     MyMJWeaveTypeCpp m_eType;
 
+    //values can be 0(invalid) when it is not public action
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Id Value Array"))
     TArray<FMyIdValuePair> m_aIdValues;
 
@@ -461,6 +560,204 @@ protected:
     //in the case of CSMJ, when type is GangAn or GangMing, 0 means it is a gangyao, 1 means a buzhang 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "reserved0", Bitmask, BitmaskEnum = "EMyMJWeaveReserved0Mask"))
     int32 m_iReserved0;
+};
+*/
+
+
+//Id should be unique always
+USTRUCT(BlueprintType)
+struct FMyMJWeaveCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+        FMyMJWeaveCpp()
+    {
+        reset();
+    };
+
+    void reset() {
+        m_eType = MyMJWeaveTypeCpp::Invalid;
+        m_aIds.Reset();
+
+        m_iIdTriggerCard = -1;
+        m_iIdxAttenderTriggerCardSrc = -1;
+        m_eTypeConsumed = MyMJWeaveTypeCpp::Invalid;
+        m_iReserved0 = 0;
+    };
+
+    inline
+    void addCard(int32 id)
+    {
+        int32 idx = m_aIds.AddUnique(id);
+        MY_VERIFY(id >= 0);
+    };
+
+    inline
+    void appendIds(TArray<int32> aIds)
+    {
+        int32 l = aIds.Num();
+        for (int32 i = 0; i < l; i++) {
+            addCard(aIds[i]);
+        }
+    };
+
+    inline
+        void appendIdVakuePairs(const TArray<FMyIdValuePair> &aIdValuePairs)
+    {
+        int32 l = aIdValuePairs.Num();
+        for (int32 i = 0; i < l; i++) {
+            addCard(aIdValuePairs[i].m_iId);
+        }
+    };
+
+    inline
+        void appendIdVakuePairsWithLimit(const TArray<FMyIdValuePair> &aIdValuePairs, int32 maxLimit)
+    {
+        MY_VERIFY(maxLimit > 0);
+        int32 count = aIdValuePairs.Num();
+        if (count > maxLimit) {
+            count = maxLimit;
+        }
+
+        for (int32 i = 0; i < count; i++) {
+            addCard(aIdValuePairs[i].m_iId);
+        }
+
+    };
+
+    bool removeById(int32 id)
+    {
+        int removedNum = m_aIds.Remove(id);
+        return (removedNum > 0);
+    };
+
+    inline MyMJWeaveTypeCpp& getTypeRef()
+    {
+        return m_eType;
+    };
+
+    inline MyMJWeaveTypeCpp getType() const
+    {
+        return m_eType;
+    };
+
+    inline const TArray<int32>& getIdsRefConst() const
+    {
+        return m_aIds;
+    };
+
+
+    inline int32& getIdTriggerCardRef()
+    {
+        return m_iIdTriggerCard;
+    };
+
+    inline int32& getIdxAttenderTriggerCardSrcRef()
+    {
+        return m_iIdxAttenderTriggerCardSrc;
+    };
+
+    inline MyMJWeaveTypeCpp getTypeConsumed() const
+    {
+        return m_eTypeConsumed;
+    };
+
+    inline int32 getReserved0() const
+    {
+        return m_iReserved0;
+    };
+
+    inline int32& getReserved0Ref()
+    {
+        return m_iReserved0;
+    };
+
+    inline int32 getCount() const
+    {
+        return m_aIds.Num();
+    };
+
+    int32 getMidValue(const FMyMJCardValuePackCpp &inValuePack) const
+    {
+        int32 l = m_aIds.Num();
+        MY_VERIFY(l > 0);
+
+        int32 v;
+        if (getType() == MyMJWeaveTypeCpp::ShunZiAn || getType() == MyMJWeaveTypeCpp::ShunZiMing) {
+            int vall = 0;
+            for (int32 i = 0; i < l; i++) {
+                v = inValuePack.getByIdx(m_aIds[i], true);
+                vall += v;
+            }
+
+            return vall / l;
+        }
+        else {
+            v = inValuePack.getByIdx(m_aIds[0], true);
+            return v;
+        }
+    };
+
+    inline
+    void getIdValues(const FMyMJCardValuePackCpp &inValuePack, TArray<FMyIdValuePair>& outaIdValues, bool bVerifyValueValid = false) const
+    {
+        inValuePack.helperIds2IdValuePairs(m_aIds, outaIdValues, bVerifyValueValid);
+    };
+
+
+    //return trigger card , or 1st card if not exist
+    int32 getRepresentCardId() const
+    {
+        if (m_iIdTriggerCard >= 0) {
+            return m_iIdTriggerCard;
+        }
+
+        MY_VERIFY(m_aIds.Num() > 0);
+        return m_aIds[0];
+
+    };
+
+    void initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp eType, int32 iIdTriggerCard, int32 iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp eTypeConsumed, int32 iReserved0)
+    {
+        m_eType = eType;
+        m_iIdTriggerCard = iIdTriggerCard;
+        m_iIdxAttenderTriggerCardSrc = iIdxAttenderTriggerCardSrc;
+        m_eTypeConsumed = eTypeConsumed;
+        m_iReserved0 = iReserved0;
+    };
+
+    void buildUnweavedInstanceFromValueIdMapCpp(const FMyValueIdMapCpp &inMap)
+    {
+        reset();
+        m_eType = MyMJWeaveTypeCpp::SpecialUnWeavedCards;
+        inMap.collectAll(m_aIds);
+    };
+
+    FString genDebugString() const;
+
+protected:
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "type"))
+        MyMJWeaveTypeCpp m_eType;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Id Array"))
+        TArray<int32> m_aIds;
+
+    //< 0 means no trigger, and trigger can be in @m_aIds or not, most take care of it
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Id Trigger Card"))
+        int32 m_iIdTriggerCard;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Idx Attender Trigger Card Src"))
+        int32 m_iIdxAttenderTriggerCardSrc;
+
+    //in MJ game, you can find the consumed one by check type equal and mid value equal
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Type Of Previous Weave Consumed"))
+        MyMJWeaveTypeCpp m_eTypeConsumed;
+
+    //in some local MJ rule, use it to distinguish weave sub type.
+    //in the case of CSMJ, when type is GangAn or GangMing, 0 means it is a gangyao, 1 means a buzhang 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "reserved0", Bitmask, BitmaskEnum = "EMyMJWeaveReserved0Mask"))
+        int32 m_iReserved0;
 };
 
 
@@ -1824,6 +2121,40 @@ public:
         }
     };
 
+    static inline
+    void testAndsetBoolValueToBitMask(int32 &iMaskStorage, int32 iMaskDelta, int32 iCondtionBitValue, int32 iResultBitValue)
+    {
+        if (getBoolValueFromBitMask(iMaskDelta, iCondtionBitValue)) {
+            bool bV = UMyMJUtilsLibrary::getBoolValueFromBitMask(iMaskDelta, iResultBitValue);
+            setBoolValueToBitMask(iMaskStorage, iResultBitValue, bV);
+        }
+    };
+
+    /*
+    static
+    int32 getMidValueWithWeaveType(const TArray<FMyIdValuePair> &aIdValues, MyMJWeaveTypeCpp eWeaveType)
+    {
+        int32 l = aIdValues.Num();
+        MY_VERIFY(l > 0);
+
+        if (eWeaveType == MyMJWeaveTypeCpp::ShunZiAn || eWeaveType == MyMJWeaveTypeCpp::ShunZiMing) {
+            int vall = 0;
+            for (int32 i = 0; i < l; i++) {
+                int32 v = aIdValues[i].m_iValue;
+                MY_VERIFY(v > 0); //any time calc value, assert it is a valid one
+                vall += v;
+            }
+
+            return vall / l;
+        }
+        else {
+            int32 v = aIdValues[0].m_iValue;
+            MY_VERIFY(v > 0); //any time calc value, assert it is a valid one
+            return v;
+        }
+    };
+    */
+
     static FString getStringFromEnum(const TCHAR *enumName, uint8 value);
 
     static int64 nowAsMsFromTick();
@@ -1862,15 +2193,15 @@ public:
     /*
     * @param pOutIdxTriggerWeave the idx found in @inWeaves, if @pInTriggerCardIdx specified, not touched if not found, caller must set its initial value < 0
     */
-    static void parseWeaves(const TArray<FMyMJWeaveCpp> &inWeaves, const int32 *pInTriggerCardIdx, FMyMJCardParseResultCpp &outResult, int32 *pOutIdxTriggerWeave);
+    static void parseWeaves(const FMyMJCardValuePackCpp &inValuePack, const TArray<FMyMJWeaveCpp> &inWeaves, const int32 *pInTriggerCardIdx, FMyMJCardParseResultCpp &outResult, int32 *pOutIdxTriggerWeave);
 
-    static int32 getCountOfValueHave4CardsExceptGang(const TArray<FMyMJWeaveCpp> &inWeaves);
+    static int32 getCountOfValueHave4CardsExceptGang(const FMyMJCardValuePackCpp &inValuePack, const TArray<FMyMJWeaveCpp> &inWeaves);
 
     static bool isWeavesHaveShunZi(const TArray<FMyMJWeaveCpp> &inWeaves);
 
-    static MyMJCardValueTypeCpp getWeavesUnifiedNumCardType(const TArray<FMyMJWeaveCpp> &inWeaves);
+    static MyMJCardValueTypeCpp getWeavesUnifiedNumCardType(const FMyMJCardValuePackCpp &inValuePack, const TArray<FMyMJWeaveCpp> &inWeaves);
 
-    static void getWeavesShowedOutStatis(const TArray<FMyMJWeaveCpp> &inWeaves, FMyWeavesShowedOutStatisCpp &outResult);
+    static void getWeavesShowedOutStatis(const FMyMJCardValuePackCpp &inValuePack, const TArray<FMyMJWeaveCpp> &inWeaves, FMyWeavesShowedOutStatisCpp &outResult);
 
 
     /**
@@ -1878,7 +2209,8 @@ public:
     * @param inHuCardTypeCfgs assume higher prioroty hu is at tail, conform to this rule may speed up a bit
     * 
     */
-    static bool checkHu(const FMyMJHuCommonCfg &inHuCommonCfg,
+    static bool checkHu(const FMyMJCardValuePackCpp &inValuePack,
+                        const FMyMJHuCommonCfg &inHuCommonCfg,
                         const TArray<MyMJHuCardTypeCpp> inHuCardTypeCfgs,
                         const TArray<FMyMJWeaveCpp> &inWeavesShowOut,
                         const FMyMJValueIdMapCpp &inHandCardMap,
@@ -1926,6 +2258,8 @@ public:
                                     const TArray<FMyMJWeaveCpp> &inWeavesShowedOut,
                                     const FMyMJValueIdMapCpp &inHandCardMap,
                                     FMyMJScoreCalcResultCpp &outScoreResultMax);
+
+    static int32 getIdxOfUntakenSlotHavingCard(const TArray<FMyIdCollectionCpp> &aUntakenCardStacks, int32 idxBase, uint32 delta, bool bReverse);
 
 
 protected:

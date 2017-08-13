@@ -729,6 +729,9 @@ void FMyMJGameCoreLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAction)
     FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
     MY_VERIFY(pD);
 
+    FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPack();
+    FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSys();
+
     int32 idxAttender = pAction->getIdxAttender();
 
     //1st, attender apply
@@ -739,8 +742,9 @@ void FMyMJGameCoreLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAction)
     //2nd, update helper
     pD->m_aHelperLastCardsGivenOutOrWeave.Reset();
     if (pAction->m_eTargetFlipState == MyMJCardFlipStateCpp::Up) {
-        const TArray<FMyIdValuePair>& aIdValues = pAction->m_cWeave.getIdValuesRef();
-        m_cDataLogic.m_cHelperShowedOut2AllCards.insertIdValuePairs(aIdValues);
+        TArray<FMyIdValuePair> aIdValues;
+        pAction->m_cWeave.getIdValues(*pCardValuePack, aIdValues, false);
+        m_cDataLogic.m_cHelperShowedOut2AllCards.insertIdValuePairs(aIdValues, true);
     }
 
     //3rd, update the state
@@ -800,8 +804,6 @@ void FMyMJGameCoreLocalCSCpp::applyActionWeave(FMyMJGameActionWeaveCpp *pAction)
     }
 
     //extra step to setup helper data
-    FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPack();
-    FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSys();
 
     FMyIdValuePair cIdValue;
     cIdValue.m_iId = pAction->m_cWeave.getRepresentCardId();

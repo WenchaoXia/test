@@ -200,7 +200,7 @@ struct FMyValueIdMapCpp
     /**
     * @return false if duplicated one found
     */
-    bool insertIdValuePairs(const TArray<FMyIdValuePair>& aPairs);
+    bool insertIdValuePairs(const TArray<FMyIdValuePair>& aPairs, bool bAssertValueValid = false);
     void insertIdValuePairsAssertNoDup(const TArray<FMyIdValuePair>& aPairs);
 
 

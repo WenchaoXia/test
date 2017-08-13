@@ -636,7 +636,8 @@ UMyMJUtilsLocalCSLibrary::calcScoreFinalLocalCSInGame(const FMyMJHuCfgCpp &huCfg
 
 
 bool
-UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJGameCfgCpp &gameCfg,
+UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJCardValuePackCpp &inValuePack,
+                                            const FMyMJGameCfgCpp &gameCfg,
                                             const FMyMJCardValuePackCpp &cardValuePack,
                                              const TArray<FMyMJWeaveCpp> &weavesShowedOut,
                                              const FMyMJValueIdMapCpp &handCardsMapExcludeTriggerCard,
@@ -645,7 +646,7 @@ UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJGameCfgCpp &gameCfg
 
 
     FMyWeavesShowedOutStatisCpp weaveStatis;
-    UMyMJUtilsLibrary::getWeavesShowedOutStatis(weavesShowedOut, weaveStatis);
+    UMyMJUtilsLibrary::getWeavesShowedOutStatis(inValuePack, weavesShowedOut, weaveStatis);
 
     FMyMJValueIdMapCpp tempHandCards;
     tempHandCards.copyDeep(&handCardsMapExcludeTriggerCard);
@@ -688,7 +689,8 @@ UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJGameCfgCpp &gameCfg
 
 
 bool
-UMyMJUtilsLocalCSLibrary::checkHuWithOutTriggerCard(const FMyMJHuCfgCpp &huCfg,
+UMyMJUtilsLocalCSLibrary::checkHuWithOutTriggerCard(const FMyMJCardValuePackCpp &inValuePack,
+                                                const FMyMJHuCfgCpp &huCfg,
                                                 const FMyMJGameSubLocalCSCfgCpp &localCSCfg,
                                                 const TArray<FMyMJWeaveCpp> &weavesShowedOut,
                                                 const FMyMJValueIdMapCpp &handCardsMap,
@@ -703,7 +705,7 @@ UMyMJUtilsLocalCSLibrary::checkHuWithOutTriggerCard(const FMyMJHuCfgCpp &huCfg,
     }
 
     FMyWeavesShowedOutStatisCpp weaveStatis;
-    UMyMJUtilsLibrary::getWeavesShowedOutStatis(weavesShowedOut, weaveStatis);
+    UMyMJUtilsLibrary::getWeavesShowedOutStatis(inValuePack, weavesShowedOut, weaveStatis);
 
     FMyMJHuScoreResultTingCpp resultTing;
  
@@ -729,7 +731,8 @@ UMyMJUtilsLocalCSLibrary::checkHuWithOutTriggerCard(const FMyMJHuCfgCpp &huCfg,
 }
 
 bool
-UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(const FMyMJHuCfgCpp &huCfg,
+UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(const FMyMJCardValuePackCpp &inValuePack,
+                                            const FMyMJHuCfgCpp &huCfg,
                                             const FMyMJGameSubLocalCSCfgCpp &localCSCfg,
                                             const TArray<FMyMJWeaveCpp> &weavesShowedOut,
                                             const FMyMJValueIdMapCpp &handCardsMap,
@@ -743,7 +746,7 @@ UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(const FMyMJHuCfgCpp &huCfg,
     }
 
     FMyWeavesShowedOutStatisCpp weaveStatis;
-    UMyMJUtilsLibrary::getWeavesShowedOutStatis(weavesShowedOut, weaveStatis);
+    UMyMJUtilsLibrary::getWeavesShowedOutStatis(inValuePack, weavesShowedOut, weaveStatis);
 
     const TArray<FMyTriggerDataCpp>  &aTriggerDatas = huActionAttr.m_aTriggerDatas;
 

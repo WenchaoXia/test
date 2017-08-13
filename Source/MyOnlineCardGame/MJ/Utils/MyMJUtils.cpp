@@ -3,10 +3,133 @@
 #include "MyMJUtils.h"
 #include "Kismet/KismetMathLibrary.h"
 
+
+
+void FMyMJCardValuePackCpp::helperVerifyValues() const
+{
+    int32 l = m_aCardValues.Num();
+    MY_VERIFY(l > 0);
+
+    TMap<int32, int32> mValueCount;
+    for (int i = 0; i < l; i++) {
+        int32 value = getByIdx(i);
+
+        if (value <= 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid card value, id %d, value %d."), i, value);
+            MY_VERIFY(false);
+        }
+
+        int32 &c = mValueCount.FindOrAdd(value);
+        c++;
+    }
+
+    for (auto It = mValueCount.CreateConstIterator(); It; ++It)
+    {
+        int32 cardValue = It.Key();
+        int32 count = It.Value();
+
+        MyMJCardValueTypeCpp eType = UMyMJUtilsLibrary::getCardValueType(cardValue);
+        if (eType == MyMJCardValueTypeCpp::WangZi || eType == MyMJCardValueTypeCpp::BingZi || eType == MyMJCardValueTypeCpp::TiaoZi || eType == MyMJCardValueTypeCpp::Feng || eType == MyMJCardValueTypeCpp::Jian) {
+            if (count != 4) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected cardValue %d, count %d."), cardValue, count);
+                MY_VERIFY(false);
+            }
+        }
+        else if (eType == MyMJCardValueTypeCpp::Hua) {
+            if (count != 1) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected cardValue %d, count %d."), cardValue, count);
+                MY_VERIFY(false);
+            }
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid cardValue %d, count %d."), cardValue, count);
+            MY_VERIFY(false);
+        }
+
+    }
+}
+
+void FMyMJCardValuePackCpp::tryRevealCardValue(int32 id, int32 value)
+{
+    if (value > 0) {
+        int32 &destV = getByIdxRef(id);
+        bool bOk = FMyIdValuePair::helperTryRevealValue(destV, value);
+        if (!bOk) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("revealCardValue failed: id %d, destV %d, value %d."), id, destV, value);
+            MY_VERIFY(false);
+        }
+
+    }
+}
+
+void
+FMyMJCardValuePackCpp::getValuesByIds(const TArray<int32> &aIds, TArray<int32> &outaValues, bool bVerifyValueValid) const
+{
+
+    int32  l = aIds.Num();
+    outaValues.Reset(l);
+
+    for (int32 i = 0; i < l; i++) {
+        int32 v = getByIdx(aIds[i]);
+        outaValues.Emplace(v);
+
+        if (bVerifyValueValid) {
+            if (v <= 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid id and value pair: %d:%d"), aIds[i], v);
+                MY_VERIFY(false);
+            }
+        }
+    }
+}
+
+void FMyMJCardValuePackCpp::helperIds2IdValuePairs(const TArray<int32> &aIds, TArray<FMyIdValuePair> &aIdValuePairs, bool bVerifyValueValid) const
+{
+    int32 l = aIds.Num();
+
+    aIdValuePairs.Reset(l);
+
+    for (int32 i = 0; i < l; i++) {
+        int32 idx = aIdValuePairs.Emplace();
+        FMyIdValuePair &pair = aIdValuePairs[idx];
+        pair.m_iId = aIds[i];
+        pair.m_iValue = getByIdx(pair.m_iId);
+
+        if (bVerifyValueValid) {
+            if (!(pair.m_iId >= 0 && pair.m_iValue > 0)) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid id and value pair: %d:%d"), pair.m_iId, pair.m_iValue);
+                MY_VERIFY(false);
+            }
+        }
+    }
+
+}
+
+void FMyMJCardValuePackCpp::helperResolveValue(FMyIdValuePair &pair, bool bVerifyValueValid) const
+{
+    int32 value = getByIdx(pair.m_iId);
+    pair.revealValue(value);
+
+    if (bVerifyValueValid) {
+        if (value <= 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid id and value pair: %d:%d"), pair.m_iId, value);
+            MY_VERIFY(false);
+        }
+    }
+}
+
+void FMyMJCardValuePackCpp::helperResolveValues(TArray<FMyIdValuePair> &aPairs, bool bVerifyValueValid) const
+{
+    int32 l = aPairs.Num();
+    for (int32 i = 0; i < l; i++) {
+        helperResolveValue(aPairs[i], bVerifyValueValid);
+    }
+}
+
 FString FMyMJWeaveCpp::genDebugString() const
 {
     FString ret = FString::Printf(TEXT(" m_eType: %s, m_iIdTriggerCard %d, m_iIdxAttenderTriggerCardSrc %d, m_eTypeConsumed: %s, m_iReserved0: 0x%x."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eType), m_iIdTriggerCard, m_iIdxAttenderTriggerCardSrc, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eTypeConsumed), m_iReserved0);
-    ret += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aIdValues);
+
+    //ret += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aIdValues);
 
     return ret;
 };
@@ -721,7 +844,8 @@ FMyMJValueIdMapCpp::checkAllCanBeWeavedForHuIn(bool allowJiang, bool reqJiang258
         pWeave->getTypeRef() = MyMJWeaveTypeCpp::KeZiAn;
 
         for (int i = 0; i < pengDupReq; i++) {
-            pWeave->addCard(Ids[i], checkingCardValue);
+            //pWeave->addCard(Ids[i], checkingCardValue);
+            pWeave->addCard(Ids[i]);
         }
 
         if (totalCount <= 3) {
@@ -767,8 +891,8 @@ FMyMJValueIdMapCpp::checkAllCanBeWeavedForHuIn(bool allowJiang, bool reqJiang258
         pWeave->getTypeRef() = MyMJWeaveTypeCpp::DuiZi;
 
         for (int i = 0; i < (pengDupReq - 1); i++) {
-            pWeave->addCard(Ids[i], checkingCardValue);
-
+            //pWeave->addCard(Ids[i], checkingCardValue);
+            pWeave->addCard(Ids[i]);
         }
 
         if (totalCount <= 2) {
@@ -810,7 +934,8 @@ FMyMJValueIdMapCpp::checkAllCanBeWeavedForHuIn(bool allowJiang, bool reqJiang258
 
             OK2Add = checkShunZi(chiTypes[i], checkingCardValue, NULL, Ids, Values);
             if (OK2Add) {
-                pWeave->appendIdsValues(Ids, Values);
+                //pWeave->appendIdsValues(Ids, Values);
+                pWeave->appendIds(Ids);
 
                 if (totalCount <= 3) {
                     //this is the last one
@@ -953,8 +1078,11 @@ FMyMJValueIdMapCpp::fillInWeavesAssert7Dui(TArray<FMyMJWeaveCpp> &outWeaves) con
             int32 idx = outWeaves.Emplace();
             FMyMJWeaveCpp *pWeave = &outWeaves[idx];
             pWeave->getTypeRef() = MyMJWeaveTypeCpp::DuiZi;
-            pWeave->addCard(pMapElem->m_aIds[i * 2], cardValue);
-            pWeave->addCard(pMapElem->m_aIds[i * 2 + 1], cardValue);
+            //pWeave->addCard(pMapElem->m_aIds[i * 2], cardValue);
+            //pWeave->addCard(pMapElem->m_aIds[i * 2 + 1], cardValue);
+
+            pWeave->addCard(pMapElem->m_aIds[i * 2]);
+            pWeave->addCard(pMapElem->m_aIds[i * 2 + 1]);
         }
 
     }
@@ -987,7 +1115,8 @@ FMyMJValueIdMapCpp::fillInWeavesSpecialUnWeavedCards(TArray<FMyMJWeaveCpp> &outW
 
         for (int32 i = 0; i < l; i++) {
 
-            pWeave->addCard(pMapElem->m_aIds[i], cardValue);
+            //pWeave->addCard(pMapElem->m_aIds[i], cardValue);
+            pWeave->addCard(pMapElem->m_aIds[i]);
         }
 
     }
@@ -1061,7 +1190,8 @@ FMyMJValueIdMapCpp::checkSpecialZuHeLong(TArray<FMyMJWeaveArrayCpp> &outWeaveCom
                         }
                         id = Ids[0];
                         newMap.remove(id, v);
-                        pWeave->addCard(id, v);
+                        //pWeave->addCard(id, v);
+                        pWeave->addCard(id);
 
                         v = j * 10 + 3 * o + 1;
                         collectByValue(v, 1, Ids);
@@ -1071,7 +1201,8 @@ FMyMJValueIdMapCpp::checkSpecialZuHeLong(TArray<FMyMJWeaveArrayCpp> &outWeaveCom
                         }
                         id = Ids[0];
                         newMap.remove(id, v);
-                        pWeave->addCard(id, v);
+                        //pWeave->addCard(id, v);
+                        pWeave->addCard(id);
 
                         v = k * 10 + 3 * o + 2;
                         collectByValue(v, 1, Ids);
@@ -1081,7 +1212,8 @@ FMyMJValueIdMapCpp::checkSpecialZuHeLong(TArray<FMyMJWeaveArrayCpp> &outWeaveCom
                         }
                         id = Ids[0];
                         newMap.remove(id, v);
-                        pWeave->addCard(id, v);
+                        //pWeave->addCard(id, v);
+                        pWeave->addCard(id);
 
                         bool bcanWeave = newMap.checkAllCanBeWeavedForHu(false, true, true, &rootNode);
                         if (bcanWeave) {
@@ -1393,7 +1525,7 @@ void UMyMJUtilsLibrary::testSleep(float seconds)
 }
 
 void
-UMyMJUtilsLibrary:: parseWeaves(const TArray<FMyMJWeaveCpp> &inWeaves, const int32 *pInTriggerCardIdx, FMyMJCardParseResultCpp &outResult, int32 *pOutIdxTriggerWeave)
+UMyMJUtilsLibrary:: parseWeaves(const FMyMJCardValuePackCpp &inValuePack, const TArray<FMyMJWeaveCpp> &inWeaves, const int32 *pInTriggerCardIdx, FMyMJCardParseResultCpp &outResult, int32 *pOutIdxTriggerWeave)
 {
     outResult.reset();
 
@@ -1407,7 +1539,8 @@ UMyMJUtilsLibrary:: parseWeaves(const TArray<FMyMJWeaveCpp> &inWeaves, const int
     for (int32 i = 0; i < inWeaves.Num(); i++) {
         const FMyMJWeaveCpp *pWeave = &inWeaves[i];
 
-        const TArray<FMyIdValuePair> &aIdValues = pWeave->getIdValuesRef();
+        TArray<FMyIdValuePair> aIdValues; // = pWeave->getIdValuesRef();
+        pWeave->getIdValues(inValuePack, aIdValues, true);
 
         l = aIdValues.Num();
 
@@ -1416,9 +1549,8 @@ UMyMJUtilsLibrary:: parseWeaves(const TArray<FMyMJWeaveCpp> &inWeaves, const int
             MY_VERIFY(false);
         }
 
-        int32 weaveValue = pWeave->getMidValue();
-
         weaveType = pWeave->getType();
+        int32 weaveValue = pWeave->getMidValue(inValuePack);
 
         pStatisCounts0 = &pSimple->m_mWeaveCounts.FindOrAdd(weaveType);
         pStatisCounts0->addCountByValue(weaveValue, 1);
@@ -1516,13 +1648,14 @@ UMyMJUtilsLibrary:: parseWeaves(const TArray<FMyMJWeaveCpp> &inWeaves, const int
 }
 
 int32
-UMyMJUtilsLibrary::getCountOfValueHave4CardsExceptGang(const TArray<FMyMJWeaveCpp> &inWeaves)
+UMyMJUtilsLibrary::getCountOfValueHave4CardsExceptGang(const FMyMJCardValuePackCpp &inValuePack, const TArray<FMyMJWeaveCpp> &inWeaves)
 {
     TMap<int32, int32> valueCountMapTemp;
     MyMJWeaveTypeCpp weaveType;
     const FMyMJWeaveCpp *pWeave;
     int32 l0, l1, value, ret = 0;
 
+    TArray<FMyIdValuePair> aIdValues;
     l0 = inWeaves.Num();
     for (int32 i = 0; i < l0; i++) {
         pWeave = &inWeaves[i];
@@ -1532,7 +1665,7 @@ UMyMJUtilsLibrary::getCountOfValueHave4CardsExceptGang(const TArray<FMyMJWeaveCp
             weaveType == MyMJWeaveTypeCpp::ShunZiAn || weaveType == MyMJWeaveTypeCpp::ShunZiMing ||
             weaveType == MyMJWeaveTypeCpp::KeZiAn || weaveType == MyMJWeaveTypeCpp::KeZiMing) {
 
-            const TArray<FMyIdValuePair>& aIdValues = pWeave->getIdValuesRef();
+            pWeave->getIdValues(inValuePack, aIdValues, true);
             l1 = aIdValues.Num();
 
             for (int32 j = 0; j < l1; j++) {
@@ -1576,7 +1709,7 @@ UMyMJUtilsLibrary::isWeavesHaveShunZi(const TArray<FMyMJWeaveCpp> &inWeaves)
 }
 
 MyMJCardValueTypeCpp
-UMyMJUtilsLibrary::getWeavesUnifiedNumCardType(const TArray<FMyMJWeaveCpp> &inWeaves)
+UMyMJUtilsLibrary::getWeavesUnifiedNumCardType(const FMyMJCardValuePackCpp &inValuePack, const TArray<FMyMJWeaveCpp> &inWeaves)
 {
     int32 l = inWeaves.Num();
 
@@ -1587,7 +1720,7 @@ UMyMJUtilsLibrary::getWeavesUnifiedNumCardType(const TArray<FMyMJWeaveCpp> &inWe
 
         //MY_VERIFY(pWeave->m_aValues.Num() > 0);
         //int32 v = pWeave->m_aValues[0];
-        int32 v = pWeave->getMidValue();
+        int32 v = pWeave->getMidValue(inValuePack);
         MyMJCardValueTypeCpp t = getCardValueType(v);
         if (t == MyMJCardValueTypeCpp::WangZi || t == MyMJCardValueTypeCpp::BingZi || t == MyMJCardValueTypeCpp::TiaoZi) {
             if (bFound) {
@@ -1610,17 +1743,18 @@ UMyMJUtilsLibrary::getWeavesUnifiedNumCardType(const TArray<FMyMJWeaveCpp> &inWe
     return unifiedType;
 }
 
-void UMyMJUtilsLibrary::getWeavesShowedOutStatis(const TArray<FMyMJWeaveCpp> &inWeaves, FMyWeavesShowedOutStatisCpp &outResult)
+void UMyMJUtilsLibrary::getWeavesShowedOutStatis(const FMyMJCardValuePackCpp &inValuePack, const TArray<FMyMJWeaveCpp> &inWeaves, FMyWeavesShowedOutStatisCpp &outResult)
 {
     outResult.reset();
     outResult.m_bMenQing = isMenQing(inWeaves);
     outResult.m_bHaveShunZi = isWeavesHaveShunZi(inWeaves);
-    outResult.m_eUnifiedNumCardType = getWeavesUnifiedNumCardType(inWeaves);
+    outResult.m_eUnifiedNumCardType = getWeavesUnifiedNumCardType(inValuePack, inWeaves);
 }
 
 
 bool
-UMyMJUtilsLibrary::checkHu(const FMyMJHuCommonCfg &inHuCommonCfg,
+UMyMJUtilsLibrary::checkHu(const FMyMJCardValuePackCpp &inValuePack,
+                            const FMyMJHuCommonCfg &inHuCommonCfg,
                             const TArray<MyMJHuCardTypeCpp> inHuCardTypeCfgs,
                             const TArray<FMyMJWeaveCpp> &inWeavesShowedOut,
                             const FMyMJValueIdMapCpp &inHandCardMap,
@@ -1664,7 +1798,7 @@ UMyMJUtilsLibrary::checkHu(const FMyMJHuCommonCfg &inHuCommonCfg,
     bool bMenQing = UMyMJUtilsLibrary::isMenQing(inWeavesShowedOut);
 
     bool bWeavesShowedOutMayPengPengHu = !isWeavesHaveShunZi(inWeavesShowedOut);
-    MyMJCardValueTypeCpp  weavesShowedOutUnifiedType = getWeavesUnifiedNumCardType(inWeavesShowedOut);
+    MyMJCardValueTypeCpp  weavesShowedOutUnifiedType = getWeavesUnifiedNumCardType(inValuePack, inWeavesShowedOut);
     int32 weavesShowedOutCount = inWeavesShowedOut.Num();
 
     //Now all cards are pushed in, and we assume the priority is higher at the tail, let's loop from tail
@@ -3564,3 +3698,41 @@ UMyMJUtilsLibrary::calcHuScorePostProcess(const FMyMJHuActionAttrBaseCpp &inHuAc
 
 }
 
+int32 UMyMJUtilsLibrary::getIdxOfUntakenSlotHavingCard(const TArray<FMyIdCollectionCpp> &aUntakenCardStacks, int32 idxBase, uint32 delta, bool bReverse)
+{
+
+    int32 l = aUntakenCardStacks.Num();
+
+    MY_VERIFY(idxBase >= 0 && idxBase < l);
+
+    int32 idxChecking = idxBase;
+    for (int32 i = 0; i < l; i++) {
+        const FMyIdCollectionCpp *pC = &aUntakenCardStacks[idxChecking];
+        int32 l2 = pC->m_aIds.Num();
+
+        if (l2 > 0) {
+            //this is a valid stack
+            if (delta == 0) {
+                break;
+            }
+            else {
+                delta--;
+            }
+        }
+
+        //goto next
+        if (bReverse) {
+            idxChecking = (idxChecking - 1 + l) % l;
+        }
+        else {
+            idxChecking = (idxChecking + 1) % l;
+        }
+    }
+
+    if (delta == 0) {
+        return idxChecking;
+    }
+    else {
+        return -1;
+    }
+}

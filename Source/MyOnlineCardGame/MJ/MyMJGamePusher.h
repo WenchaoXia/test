@@ -1430,6 +1430,7 @@ public:
         FString str = Super::genDebugString();
         str += FString::Printf(TEXT(" m_eTargetFlipState: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eTargetFlipState));
         str += m_cWeave.genDebugString();
+        str += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aCardValuesRelated);
 
         return str;
     };
@@ -1439,15 +1440,17 @@ public:
         return true;
     };
 
+
     virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
     {
         outiRoleMask = 0;
 
         if (m_eTargetFlipState == MyMJCardFlipStateCpp::Up) {
             outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
-            outaRevealedCardValues = m_cWeave.getIdValuesRef();
+            outaRevealedCardValues = m_aCardValuesRelated;
         }
     };
+
 
     virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
     {
@@ -1459,7 +1462,7 @@ public:
         return true;
     };
 
-    void initWithWeaveAlreadyInited(int32 idxAttender, MyMJCardFlipStateCpp eTargetFlipState)
+    void initWithWeaveAlreadyInited(const FMyMJCardValuePackCpp &inValuePack, int32 idxAttender, MyMJCardFlipStateCpp eTargetFlipState)
     {
         m_iIdxAttender = idxAttender;
         m_eTargetFlipState = eTargetFlipState;
@@ -1479,6 +1482,9 @@ public:
         else {
             MY_VERIFY(false);
         }
+
+        m_cWeave.getIdValues(inValuePack, m_aCardValuesRelated, true);
+        //inValuePack.getIdValuePairsByIds(m_cWeave.getIdsRefConst(), m_aCardValuesRelated, true);
     };
 
     //it is possible ingame hu not ending the game, such as, one attender exit as observer and other continue
@@ -1489,6 +1495,12 @@ public:
     UPROPERTY()
     MyMJCardFlipStateCpp m_eTargetFlipState;
 
+    //All card related to this weave will be included, and it is possile get erased or empty if it is a secret weave
+    UPROPERTY()
+    TArray<FMyIdValuePair> m_aCardValuesRelated;
+
+    //Never let this across thread
+    //FMyMJCardValuePackCpp *m_pHelperValuePack;
 };
 
 

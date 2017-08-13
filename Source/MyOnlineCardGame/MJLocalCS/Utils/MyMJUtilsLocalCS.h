@@ -55,14 +55,16 @@ public:
 
     //return whether ting, it simply consider card type, the caller may check extra conditions such as either card left in game, and set it in @outResultTingGroup later
     //@handCardsMapExcludeTriggerCard must not include trigger card
-    static bool checkTingsLocalCSInGame(const FMyMJGameCfgCpp &gameCfg,
+    static bool checkTingsLocalCSInGame(const FMyMJCardValuePackCpp &inValuePack,
+                                        const FMyMJGameCfgCpp &gameCfg,
                                         const FMyMJCardValuePackCpp &cardValuePack,
                                         const TArray<FMyMJWeaveCpp> &weavesShowedOut,
                                         const FMyMJValueIdMapCpp &handCardsMapExcludeTriggerCard,
                                         FMyMJHuScoreResultTingGroupCpp &outResultTingGroup);
 
     //assume all cards in, used to check like the case TianHu
-    static bool checkHuWithOutTriggerCard(const FMyMJHuCfgCpp &huCfg,
+    static bool checkHuWithOutTriggerCard(const FMyMJCardValuePackCpp &inValuePack,
+                                          const FMyMJHuCfgCpp &huCfg,
                                           const FMyMJGameSubLocalCSCfgCpp &localCSCfg,
                                           const TArray<FMyMJWeaveCpp> &weavesShowedOut,
                                           const FMyMJValueIdMapCpp &handCardsMap,
@@ -70,7 +72,8 @@ public:
                                           FMyMJHuScoreResultFinalGroupCpp &outScoreResultFinalGroup);
 
 
-    static bool checkHuWithTriggerCard(const FMyMJHuCfgCpp &huCfg,
+    static bool checkHuWithTriggerCard(const FMyMJCardValuePackCpp &inValuePack,
+                                        const FMyMJHuCfgCpp &huCfg,
                                         const FMyMJGameSubLocalCSCfgCpp &localCSCfg,
                                         const TArray<FMyMJWeaveCpp> &weavesShowedOut,
                                         const FMyMJValueIdMapCpp &handCardsMap,
