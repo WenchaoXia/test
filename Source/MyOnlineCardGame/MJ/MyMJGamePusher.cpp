@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MyMJGamePusher.h"
+#include "MyMJGameData.h"
 #include "MyMJGameCore.h"
 
 void
@@ -430,14 +431,14 @@ bool FMyMJGamePusherPointersCpp::trySerializeWithTag(FArchive &Ar)
 
             }
         }
-        else if (eType == MyMJGamePusherTypeCpp::PusherUpdateCards) {
+        else if (eType == MyMJGamePusherTypeCpp::PusherUpdateAttenderCardsAndState) {
             if (bIsLoading) {
-                FMyMJGamePusherUpdateCardsCpp *pPusher0 = new FMyMJGamePusherUpdateCardsCpp();
+                FMyMJGamePusherUpdateAttenderCardsAndStateCpp *pPusher0 = new FMyMJGamePusherUpdateAttenderCardsAndStateCpp();
                 pS = pPusher0->StaticStruct();
                 pPusherBase = StaticCast<FMyMJGamePusherBaseCpp *>(pPusher0);
             }
             else {
-                FMyMJGamePusherUpdateCardsCpp *pPusher0 = StaticCast<FMyMJGamePusherUpdateCardsCpp *>(pPusherBase);
+                FMyMJGamePusherUpdateAttenderCardsAndStateCpp *pPusher0 = StaticCast<FMyMJGamePusherUpdateAttenderCardsAndStateCpp *>(pPusherBase);
                 pS = pPusher0->StaticStruct();
             }
 
@@ -845,7 +846,7 @@ FMyMJGameActionDistCardAtStartCpp::cloneDeep() const
     return pRet;
 }
 
-int32 FMyMJGameActionGiveOutCardsCpp::makeSubSelection(TArray<int32> &subSelections)
+int32 FMyMJGameActionGiveOutCardsCpp::makeSubSelection(const TArray<int32> &subSelections)
 {
 
 
@@ -914,15 +915,8 @@ void FMyMJGameActionGiveOutCardsCpp::resolveActionResult(FMyMJGameAttenderCpp &a
 {
     MY_VERIFY(m_aIdValuePairsSelected.Num() > 0);
 
-    attender.getpCore()->getCardValuePackOfSys().helperResolveValues(m_aIdValuePairsSelected);
+    attender.getCoreRefConst().getCardValuePackOfSysKeeperRefConst().helperResolveValues(m_aIdValuePairsSelected, true);
 
-    TArray<FMyIdValuePair>& aTargets = m_aIdValuePairsSelected;
-    int32 l = aTargets.Num();
-    MY_VERIFY(l > 0);
-    for (int32 i = 0; i < l; i++) {
-        MY_VERIFY(aTargets[i].m_iId >= 0);
-        MY_VERIFY(aTargets[i].m_iValue > 0);
-    }
     return;
 
 }
@@ -931,11 +925,11 @@ void FMyMJGameActionHuCpp::resolveActionResult(FMyMJGameAttenderCpp &attender)
 {
     m_aRevealingCards.Reset();
 
-    FMyMJCardInfoPackCpp  *pCardInfoPack  = &attender.getpCore()->getCardInfoPack();
-    FMyMJCardValuePackCpp *pCardValuePack = &attender.getpCore()->getCardValuePackOfSys();
+    const FMyMJCardInfoPackCpp  *pCardInfoPack  = &attender.getCoreRefConst().getCardInfoPackRefConst();
+    const FMyMJCardValuePackCpp *pCardValuePack = &attender.getCoreRefConst().getCardValuePackOfSysKeeperRefConst();
     int32 l = pCardValuePack->getLength();
     for (int32 i = 0; i < l; i++) {
-        FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(i);
+        const FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdxConst(i);
         if (pCardInfo->m_eFlipState == MyMJCardFlipStateCpp::Up) {
             //already revealed
             continue;

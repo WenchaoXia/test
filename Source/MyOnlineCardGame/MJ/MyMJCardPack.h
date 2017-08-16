@@ -50,6 +50,8 @@ public:
         return const_cast<FMyMJCardInfoCpp *>(getByIdxConst(idx));
     };
 
+    const FMyMJCardInfoCpp *getByIdxConst(int32 idx) const;
+
     inline
     FMyMJCardInfoCpp& getRefByIdx(int32 idx)
     {
@@ -58,7 +60,13 @@ public:
         return *pRet;
     };
 
-    const FMyMJCardInfoCpp *getByIdxConst(int32 idx) const;
+    inline
+    const FMyMJCardInfoCpp& getRefByIdxConst(int32 idx) const
+    {
+        return *getByIdxConst(idx);
+    };
+
+
 
     void helperVerifyInfos() const;
 

@@ -13,7 +13,7 @@ TSharedPtr<FMyMJGamePusherBaseCpp> FMyMJGamePusherIOComponentFullCpp::tryPullPus
     if (m_cQueueLocal.Dequeue(pTaken)) {
 
         //Take onwership, for full mode IO Component, we directly done it here
-        pTaken->onReachedConsumeThread();
+        //pTaken->m_pPusher->onReachedConsumeThread();
         return MakeShareable<FMyMJGamePusherBaseCpp>(pTaken);
     }
     else {
@@ -29,7 +29,7 @@ FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriori
     outPriorityMax = m_iPriorityMax;
     outAlwaysCheckDistWhenCalcPri = m_bAlwaysCheckDistWhenCalcPri;
 
-    int32 choiceCount = getActionChoiceCount();
+    int32 choiceCount = getActionChoiceRealCount();
 
     //have no choices
     if (choiceCount <= 0) {
@@ -136,7 +136,8 @@ FMyMJGameActionCollectorCpp::reinit(TArray<FMyMJGameActionContainorCpp *> &aActi
 void
 FMyMJGameActionCollectorCpp::resetForNewLoopForFullMode(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax, int32 iExpectedContainorDebug)
 {
-    m_aActionCollected.Reset();
+    clear();
+
     m_iCalcActionCollectedPriMax = 0;
     m_bAllowSamePriAction = bAllowSamePriAction;
 
@@ -151,19 +152,16 @@ FMyMJGameActionCollectorCpp::resetForNewLoopForFullMode(FMyMJGameActionBaseCpp *
     //m_iActionGroupId = iActionGroupId;
     m_bEnQueueDone = false;
 
+
+
     if (pPrevAction) {
         m_pPrevAction = MakeShareable<FMyMJGameActionBaseCpp>(pPrevAction);
-    }
-    else {
-        m_pPrevAction = NULL;
     }
 
     if (pPostAction) {
         m_pPostAction = MakeShareable<FMyMJGameActionBaseCpp>(pPostAction);
     }
-    else {
-        m_pPostAction = NULL;
-    }
+
 
     FMyMJGameActionContainorCpp* pContainor;
     int l = m_aActionContainors.Num();
@@ -209,7 +207,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHavePro
         idxWorkingContainor = (m_iIdxContainorSearchStart + i0) % l;
         pContainor = m_aActionContainors[idxWorkingContainor];
 
-        bool &bNeed2Collect = pContainor->getNeed2Collect();
+        bool &bNeed2Collect = pContainor->getNeed2CollectRef();
         if (!bNeed2Collect) {
             continue;
         }
@@ -250,11 +248,11 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHavePro
 
             bNeed2Collect = false;
 
-            FMyMJGamePusherMadeChoiceNotifyCpp madeChoiceNotify, *pMadeChoiceNotify = &madeChoiceNotify;
+            FMyMJGamePusherMadeChoiceNotifyCpp *pMadeChoiceNotify = new FMyMJGamePusherMadeChoiceNotifyCpp();
 
             idxAttender = pContainor->getIdxAttender();
             pMadeChoiceNotify->init(idxAttender, m_iActionGroupId, selection, aSubSelections);
-            m_pPusherIO->EnqueuePusher(*pMadeChoiceNotify);
+            m_pPusherIO->GivePusher(pMadeChoiceNotify, (void **)&pMadeChoiceNotify);
 
             outHaveProgress = true;
         }
@@ -291,7 +289,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHavePro
 
             pContainor = m_aActionContainors[i];
 
-            bool &bNeed2Collect = pContainor->getNeed2Collect();
+            bool &bNeed2Collect = pContainor->getNeed2CollectRef();
             if (!bNeed2Collect) {
                 continue;
             }
@@ -333,7 +331,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHavePro
     m_bEnQueueDone = true; //one way to switch, never jump back unless reset
     for (int i = 0; i < l; i++) {
         pContainor = m_aActionContainors[i];
-        pContainor->getNeed2Collect() = false;
+        pContainor->getNeed2CollectRef() = false;
     }
 
     //let's filter, only pick up actions == max
@@ -388,26 +386,47 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHavePro
         }
     }
 
+    TSharedPtr<FMyMJGameCoreCpp> pCore = m_pCore.Pin();
+
     if (m_pPrevAction.IsValid()) {
-        m_pPusherIO->EnqueuePusher(*m_pPrevAction);
+        int32 idxA = m_pPrevAction->getIdxAttender(false);
+        if (idxA >= 0 && idxA < 4) {
+            TSharedPtr<FMyMJGameAttenderCpp> pA = pCore->getRealAttenderByIdx(idxA, false);
+            if (pA.IsValid()) {
+                m_pPrevAction->resolveActionResult(*pA.Get());
+            }
+        }
+
+        FMyMJGamePusherBaseCpp *p = m_pPrevAction->cloneDeep();
+        m_pPusherIO->GivePusher(p, (void **)&p);
     }
 
-
-    TSharedPtr<FMyMJGameCoreCpp> pCore = m_pCore.Pin();
     for (int32 i = 0; i < aPusher2Enqueue.Num(); i++) {
         TSharedPtr<FMyMJGameActionBaseCpp> &pAction = aPusher2Enqueue[i];
         pAction->resolveActionResult(*(pCore->getRealAttenderByIdx(pAction->getIdxAttender()).Get()));
-        m_pPusherIO->EnqueuePusher(*aPusher2Enqueue[i]);
+
+        FMyMJGamePusherBaseCpp *p = pAction->cloneDeep();
+        m_pPusherIO->GivePusher(p, (void **)&p);
+
     }
     aPusher2Enqueue.Empty();
 
     if (m_pPostAction.IsValid()) {
-        m_pPusherIO->EnqueuePusher(*m_pPostAction);
+        int32 idxA = m_pPostAction->getIdxAttender(false);
+        if (idxA >= 0 && idxA < 4) {
+            TSharedPtr<FMyMJGameAttenderCpp> pA = pCore->getRealAttenderByIdx(idxA, false);
+            if (pA.IsValid()) {
+                m_pPostAction->resolveActionResult(*pA.Get());
+            }
+        }
+
+        FMyMJGamePusherBaseCpp *p = m_pPostAction->cloneDeep();
+        m_pPusherIO->GivePusher(p, (void **)&p);
     }
 
-    FMyMJGamePusherCountUpdateCpp pusherCountUpdate;
-    pusherCountUpdate.m_bActionGroupIncrease = true;
-    m_pPusherIO->EnqueuePusher(pusherCountUpdate);
+    FMyMJGamePusherCountUpdateCpp *pPusherCountUpdate = new FMyMJGamePusherCountUpdateCpp();
+    pPusherCountUpdate->m_bActionGroupIncrease = true;
+    m_pPusherIO->GivePusher(pPusherCountUpdate, (void **)(&pPusherCountUpdate));
 
     return bAllCollected;
 }

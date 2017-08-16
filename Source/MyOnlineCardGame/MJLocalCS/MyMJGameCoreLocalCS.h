@@ -6,12 +6,12 @@
 #include "MJ/MyMJGameCore.h"
 //#include "MyMJGameCoreLocalCS.generated.h"
 
-
+//always full mode
 class FMyMJGameCoreLocalCSCpp : public FMyMJGameCoreCpp
 {
 public:
 
-    FMyMJGameCoreLocalCSCpp(MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed) : FMyMJGameCoreCpp(eWorkMode, iSeed)
+    FMyMJGameCoreLocalCSCpp(int32 iSeed) : FMyMJGameCoreCpp(iSeed)
     {
         m_cDataLogic.m_eRuleType = MyMJGameRuleTypeCpp::LocalCS;
     };
@@ -35,34 +35,35 @@ public:
 
 protected:
 
-    virtual FMyMJGameAttenderCpp* createAttender(MyMJGameCoreWorkModeCpp eWorkMode) override
+    virtual FMyMJGameAttenderCpp* createAttender() override
     {
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameCoreLocalCSCpp createAndInitAttender."));
-        FMyMJGameAttenderLocalCSCpp *pRet = new FMyMJGameAttenderLocalCSCpp(eWorkMode);
+        FMyMJGameAttenderLocalCSCpp *pRet = new FMyMJGameAttenderLocalCSCpp();
         return StaticCast<FMyMJGameAttenderCpp *>(pRet);
     };
 
-    virtual void applyPusher(FMyMJGamePusherBaseCpp *pPusher) override;
-    virtual void handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, FMyMJGameCmdBaseCpp *pCmd) override;
+    virtual FMyMJGamePusherResultCpp* genPusherResultAsSysKeeper(const FMyMJGamePusherBaseCpp &pusher) override;
+    virtual void applyPusher(const FMyMJGamePusherBaseCpp &pusher) override;
+    virtual void handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, FMyMJGameCmdBaseCpp &cmd) override;
+
+
+    static void genBaseFromPusherResetGame(const FMyMJGamePusherResetGameCpp &pusherReset, FMyMJDataStructCpp &outBase);
 
     //don't store the pPusher or pAction, it is intended to use in local thread, and managed by other component, so it is only for sure valid in the call stack path
-    void applyPusherFillInActionChoices(FMyMJGamePusherFillInActionChoicesCpp *pPusher);
-    void applyPusherMadeChoiceNotify(FMyMJGamePusherMadeChoiceNotifyCpp *pPusher);
-    void applyPusherCountUpdate(FMyMJGamePusherCountUpdateCpp *pPusher);
-    void applyPusherResetGame(FMyMJGamePusherResetGameCpp *pPusher);
-    void applyPusherUpdateCards(FMyMJGamePusherUpdateCardsCpp *pPusher);
 
-    void applyActionStateUpdate(FMyMJGameActionStateUpdateCpp *pAction);
-    void applyActionThrowDices(FMyMJGameActionThrowDicesCpp *pAction);
-    void applyActionDistCardsAtStart(FMyMJGameActionDistCardAtStartCpp *pAction);
-    void applyActionTakeCards(FMyMJGameActionTakeCardsCpp *pAction);
-    void applyActionGiveOutCards(FMyMJGameActionGiveOutCardsCpp *pAction);
+    void applyPusherResetGame(const FMyMJGamePusherResetGameCpp &pusher);
 
-    void applyActionWeave(FMyMJGameActionWeaveCpp *pAction);
 
-    void applyActionHu(FMyMJGameActionHuCpp *pAction);
+    void applyActionThrowDices(const FMyMJGameActionThrowDicesCpp &action);
+    void applyActionDistCardsAtStart(const FMyMJGameActionDistCardAtStartCpp &action);
+    void applyActionTakeCards(const FMyMJGameActionTakeCardsCpp &action);
+    void applyActionGiveOutCards(const FMyMJGameActionGiveOutCardsCpp &action);
 
-    void applyActionZhaNiaoLocalCS(FMyMJGameActionZhaNiaoLocalCSCpp *pAction);
+    void applyActionWeave(const FMyMJGameActionWeaveCpp &action);
+
+    void applyActionHu(const FMyMJGameActionHuCpp &action);
+
+    void applyActionZhaNiaoLocalCS(const FMyMJGameActionZhaNiaoLocalCSCpp &action);
 
 
 };

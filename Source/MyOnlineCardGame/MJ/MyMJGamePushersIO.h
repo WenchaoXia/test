@@ -19,6 +19,28 @@
 
 #include "MyMJGamePushersIO.generated.h"
 
+/*
+struct FMyMJGamePusherAndResultCpp
+{
+
+public:
+    FMyMJGamePusherAndResultCpp()
+    {
+        m_pPusher = NULL;
+    };
+
+    virtual ~FMyMJGamePusherAndResultCpp()
+    {
+        if (m_pPusher) {
+            delete(m_pPusher);
+        }
+    };
+
+    //this struct owns them
+    FMyMJGamePusherBaseCpp *m_pPusher;
+    FMyMJGamePusherResultCpp m_cResult;
+};
+*/
 
 //both producer and consumer, consume itself, and produce to external unit
 class FMyMJGamePusherIOComponentFullCpp
@@ -48,7 +70,7 @@ public:
 
     };
 
-    void init(TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *pQueueRemote)
+    void init(TQueue<FMyMJGamePusherResultCpp *, EQueueMode::Spsc> *pQueueRemote)
     {
         m_pQueueRemote = pQueueRemote;
         reset();
@@ -56,38 +78,66 @@ public:
 
     TSharedPtr<FMyMJGamePusherBaseCpp> tryPullPusherFromLocal();
 
-    void EnqueuePusher(FMyMJGamePusherBaseCpp &pusher)
+    //@pPusher must be allocated on heap, and ownership will be taken
+    void GivePusher(FMyMJGamePusherBaseCpp* pPusher, void** ppPusher)
     {
-        if (pusher.getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
+        MY_VERIFY(pPusher);
+        MY_VERIFY(ppPusher);
+        MY_VERIFY(pPusher == *ppPusher);
+
+        if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
             m_iEnqueuePusherCount = 0;
         }
 
-        pusher.m_iId = m_iEnqueuePusherCount;
+        pPusher->m_iId = m_iEnqueuePusherCount;
 
-        FMyMJGamePusherBaseCpp *pNew;
-        {
-            pNew = pusher.cloneDeep();
-            if (pNew) {
-                m_cQueueLocal.Enqueue(pNew);
-            }
-            else {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone, pusher type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()));
-                MY_VERIFY(false);
-            }
-        }
+        //FMyMJGamePusherAndResultCpp *pNew = new FMyMJGamePusherAndResultCpp();
 
-        if (m_pQueueRemote) {
-            pNew = pusher.cloneDeep();
-            if (pNew) {
-                m_pQueueRemote->Enqueue(pNew);
-            }
-            else {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone, pusher type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()));
-                MY_VERIFY(false);
-            }
-        }
+        //pNew->m_pPusher = pusher.cloneDeep();
+        //if (pNew->m_pPusher == NULL) {
+            //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone pusher, pusher type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()));
+            //MY_VERIFY(false);
+        //}
+
+        //pNew->m_pPusher->tryGenResultAsSysKeeper(pNew->m_cResult);
+        //pNew->m_cResult.checkHaveValidResult();
+
+        //if (m_pQueueRemote) {
+         //   FMyMJGamePusherResultCpp *pResultNew = pNew->m_cResult.cloneDeep();
+         //   if (pResultNew) {
+         //       m_pQueueRemote->Enqueue(pResultNew);
+         //   }
+         //   else {
+         //       UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone pusher result, pusher type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()));
+         //       MY_VERIFY(false);
+         //   }
+        //}
+
+        m_cQueueLocal.Enqueue(pPusher);
+        //pPusher = NULL;
+
+        *ppPusher = NULL;
 
         m_iEnqueuePusherCount++;
+    };
+
+    //@pPusherResult must be allocated on heap, and ownership will be taken
+    bool GivePusherResult(FMyMJGamePusherResultCpp*& pPusherResult)
+    {
+        MY_VERIFY(pPusherResult);
+
+        if (m_pQueueRemote)
+        {
+            m_pQueueRemote->Enqueue(pPusherResult);
+            pPusherResult = NULL;
+            return true;
+        }
+        else {
+            if (m_iEnqueuePusherCount == 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("remote queue is NULL, this is only legal in local test case!"));
+            }
+            return false;
+        }
     };
 
 protected:
@@ -97,7 +147,7 @@ protected:
 
     //owned by other, never managed by this class, don't drain it in this class!
     //Note, only consume thread can clear it, and this is always created by main thread, destroy by main thread. destroy only happen after sub thread stopped/killed, after then, parent thread can clear() also
-    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> *m_pQueueRemote;
+    TQueue<FMyMJGamePusherResultCpp *, EQueueMode::Spsc> *m_pQueueRemote;
 
     int32 m_iEnqueuePusherCount;
 
@@ -113,6 +163,9 @@ struct FMyMJGameActionContainorCpp
     GENERATED_USTRUCT_BODY()
 
 public:
+
+    friend struct FMyMJGameActionContainorForBPCpp;
+
     FMyMJGameActionContainorCpp()
     {
         FMyMJGameActionContainorCpp(-1);
@@ -165,12 +218,18 @@ public:
     };
 
     inline
-    bool &getNeed2Collect()
+    bool &getNeed2CollectRef()
     {
         return m_bNeed2Collect;
     };
 
-    int32 getActionChoiceCount()
+    inline
+    bool getNeed2CollectConst() const
+    {
+        return m_bNeed2Collect;
+    };
+
+    int32 getActionChoiceRealCount() const
     {
         int32 totalCount = 0;
         int32 l = m_aActionChoices.Num();
@@ -179,6 +238,12 @@ public:
         }
 
         return totalCount;
+    };
+
+    inline
+    int32 getActionChoiceUnitCount() const
+    {
+        return m_aActionChoices.Num();
     };
 
     void fillInNewChoices(int32 iActionGroupId, TArray<TSharedPtr<FMyMJGameActionBaseCpp>> &actionChoices)
@@ -246,7 +311,7 @@ public:
     void makeRandomSelection(FRandomStream &RS);
 
     //this code path core dump if met any invalid request
-    void showSelectionOnNotify(int32 iActionGroupId, int32 iSelection, TArray<int32> &subSelections)
+    void showSelectionOnNotify(int32 iActionGroupId, int32 iSelection, const TArray<int32> &subSelections)
     {
         if (m_iActionGroupId != iActionGroupId) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action group id not equal: m_iActionGroupId %d, iActionGroupId %d."), m_iActionGroupId, iActionGroupId);
@@ -286,16 +351,19 @@ public:
         return m_bAlwaysCheckDistWhenCalcPri;
     };
 
+    inline
+    int32 getActionGroupId() const
+    {
+        return m_iActionGroupId;
+    };
+
 protected:
     //following is used to tell BP what we have
     //< 0 means not selected yet
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx of selection"))
     int32 m_iSelectionPushed;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "sub selections"))
     TArray<int32> m_aSubSelectionsPushed;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "need to collect"))
     bool m_bNeed2CollectPushed; //can be used to tip whether waiting to choose in UI
 
     TArray<TSharedPtr<FMyMJGameActionBaseCpp>> m_aActionChoices; //Todo: War
@@ -328,17 +396,28 @@ public:
     {
         m_pCore = pCore;
         m_pPusherIO = NULL;
+        m_pPrevAction = NULL;
+        m_pPostAction = NULL;
 
         resetForNewLoopForFullMode(NULL, NULL, false, 0, -1);
         setActionGroupId(0);
     };
 
     virtual ~FMyMJGameActionCollectorCpp()
-    {};
+    {
+        clear();
+    };
 
     void init(TSharedPtr<FMyMJGamePusherIOComponentFullCpp> &pPusherIO)
     {
         m_pPusherIO = pPusherIO;
+    };
+
+    void clear()
+    {
+        m_pPrevAction = NULL;
+        m_pPostAction = NULL;
+        m_aActionCollected.Reset();
     };
 
     //reinit means can be called multiple times, unlike init() which is disigned to be called only one time in its life time
@@ -355,6 +434,12 @@ public:
     };
 
     inline
+    int32 getActionGroupId() const
+    {
+        return m_iActionGroupId;
+    };
+
+    inline
     TSharedPtr<FMyMJGamePusherIOComponentFullCpp> getpPusherIO()
     {
         return m_pPusherIO;
@@ -365,6 +450,7 @@ public:
 
 protected:
 
+    //we can't use raw pointers since the action may exist both collector and attender's containor, which require you write ref count by you own
     TArray<TSharedPtr<FMyMJGameActionBaseCpp>> m_aActionCollected;
 
     TSharedPtr<FMyMJGameActionBaseCpp> m_pPrevAction;
@@ -388,4 +474,62 @@ protected:
     TSharedPtr<FMyMJGamePusherIOComponentFullCpp> m_pPusherIO;
 
     TWeakPtr<FMyMJGameCoreCpp> m_pCore;
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJGameActionContainorForBPCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameActionContainorForBPCpp()
+    {
+        resetForNewLoop();
+    };
+
+    void resetForNewLoop()
+    {
+        m_iChoiceSelected = -1;
+        m_aSubDataChoiceSelected.Reset();
+        m_aActionChoices.Reset();
+    };
+
+    bool equal(const FMyMJGameActionContainorCpp &other) const
+    {
+
+        if (m_iChoiceSelected != other.m_iSelectionPushed) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action choice selection not equal, logic %d, data %d."), other.m_iSelectionPushed, m_iChoiceSelected);
+            return false;
+        }
+
+        if (m_aSubDataChoiceSelected != other.m_aSubSelectionsPushed) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action choice sub data not equal, logic num %d, data num %d."), other.m_aSubSelectionsPushed.Num(), m_aSubDataChoiceSelected.Num());
+            return false;
+        }
+
+        int32 l0, l1;
+        l0 = other.m_aActionChoices.Num();
+        l1 = m_aActionChoices.Num();
+
+        if (l0 != l1) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action choice num not equal, logic %d, data %d."), l0, l1);
+            return false;
+        }
+
+        return true;
+    };
+
+    //following is used to tell BP what we have
+    //< 0 means not selected yet
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx of choice selected"))
+    int32 m_iChoiceSelected;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "sub data of choices selected"))
+    TArray<int32> m_aSubDataChoiceSelected;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "action choices"))
+    TArray<FMyMJGameActionUnfiedForBPCpp> m_aActionChoices; //Todo: War
+
+
 };

@@ -102,11 +102,11 @@ class UMyMJBPUtilsLibrary :
 public:
 
     //create one instance on heap
-    static FMyMJGameCoreCpp* helperCreateCoreByRuleType(MyMJGameRuleTypeCpp eRuleType, MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed, int32 iTrivalConfigMask)
+    static FMyMJGameCoreCpp* helperCreateCoreByRuleType(MyMJGameRuleTypeCpp eRuleType, int32 iSeed, int32 iTrivalConfigMask)
     {
         FMyMJGameCoreCpp *pRet = NULL;
         if (eRuleType == MyMJGameRuleTypeCpp::LocalCS) {
-            pRet = StaticCast<FMyMJGameCoreCpp *>(new FMyMJGameCoreLocalCSCpp(eWorkMode, iSeed));
+            pRet = StaticCast<FMyMJGameCoreCpp *>(new FMyMJGameCoreLocalCSCpp(iSeed));
         }
         else if (eRuleType == MyMJGameRuleTypeCpp::GuoBiao) {
             MY_VERIFY(false);

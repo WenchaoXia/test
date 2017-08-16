@@ -104,83 +104,10 @@ int32 FMyMJGameCoreBaseCpp::genIdxAttenderStillInGameMaskAll()
 
 
 
-int32 FMyMJGameCoreCpp::calcUntakenSlotCardsLeftNumKeptFromTail()
-{
-    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
-    MY_VERIFY(pD);
-
-    FMyMJGameUntakenSlotInfoCpp *pInfo = &pD->m_cUntakenSlotInfo;
-
-    int32 keptCount = pD->m_cGameCfg.m_cTrivialCfg.m_iStackNumKeptFromTail;
-    int32 idxTail = pInfo->m_iIdxUntakenSlotTailAtStart;
-    int32 totalL = pInfo->m_iUntakenSlotCardsLeftNumTotal;
-
-    int32 idxWorking = idxTail;
-    int32 stack2check = keptCount;
-
-    int32 ret = 0;
-
-    MY_VERIFY(totalL > 0);
-    MY_VERIFY(keptCount >= 0);
-    MY_VERIFY(idxTail >= 0);
-
-    while (stack2check > 0) {
-
-        ret += pD->m_aUntakenCardStacks[idxWorking].m_aIds.Num();
-
-
-        idxWorking = (idxWorking - 1 + totalL) % totalL;
-        stack2check--;
-    }
-
-    return ret;
-}
-
-bool FMyMJGameCoreCpp::isIdxUntakenSlotInKeptFromTailSegment(int32 idx)
-{
-    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
-    MY_VERIFY(pD);
-
-    FMyMJGameUntakenSlotInfoCpp *pInfo = &pD->m_cUntakenSlotInfo;
-
-    int32 keptCount = pD->m_cGameCfg.m_cTrivialCfg.m_iStackNumKeptFromTail;
-    int32 idxTail = pInfo->m_iUntakenSlotLengthAtStart;
-    int32 totalL = pInfo->m_iUntakenSlotLengthAtStart;
-
-    if (keptCount <= 0) {
-        return false;
-    }
-
-    MY_VERIFY(totalL > 0);
-    MY_VERIFY(idxTail >= 0);
-
-    int32 idxEnd = (idxTail + 1) % totalL; // use < 
-    int32 idxStart = (idxEnd - keptCount + totalL) % totalL;
-
-    int32 idxStartFix0, idxStartFix1, idxEndFix0, idxEndFix1;
-    if (idxStart < idxEnd) {
-        idxStartFix0 = idxStart;
-        idxEndFix0 = idxEnd;
-        idxStartFix1 = 0;
-        idxEndFix1 = 0;
-    }
-    else {
-        MY_VERIFY(idxStart != idxEnd);
-        idxStartFix0 = idxStart;
-        idxEndFix0 = totalL;
-        idxStartFix1 = 0;
-        idxEndFix1 = idxEnd;
-    }
-
-    return (idxStartFix0 <= idx && idx < idxEndFix0) || (idxStartFix1 <= idx && idx < idxEndFix1);
-}
-
-
 //don't reenter this func, this may result stack overflow
 bool FMyMJGameCoreCpp::actionLoop()
 {
-    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
-    MY_VERIFY(pD);
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
 
     bool bRet = false;
     int64 iMsLast = UMyMJUtilsLibrary::nowAsMsFromTick();
@@ -232,48 +159,90 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
 {
     bool bRet = false;
    
+    FMyMJDataAccessorCpp& ac = getDataAccessorRef();
+    FMyMJGamePusherIOComponentFullCpp &pusherIO = getPusherIOFullRef();
 
-    //this is the end of pusher's life cycle
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
+
+
     int32 iGameId, iPusherIdLast;
-    getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
+    TSharedPtr<FMyMJGamePusherBaseCpp> pPusher;
 
-    TSharedPtr<FMyMJGamePusherBaseCpp> pPusherShared = m_pPusherIOFull->tryPullPusherFromLocal();
+    iGameId = pD->m_iGameId;
+    iPusherIdLast = pD->m_iPusherIdLast;
+    pPusher = m_pPusherIOFull->tryPullPusherFromLocal();     //this is the end of pusher's life cycle
 
-
-    while (pPusherShared.IsValid()) {
+    while (pPusher.IsValid()) {
 
         bRet = true;
 
-        /*
-        MY_VERIFY(m_pCoreMirror->getWorkMode() == MyMJGameCoreWorkModeCpp::Mirror);
-
-        int32 iAttenderMask;
-        TArray<FMyIdValuePair> aRevealedCardValues;
-
-        pPusher->getRevealedCardValues(iAttenderMask, aRevealedCardValues);
-        if (iAttenderMask != 0) {
-
-
-            int32 l;
-            //l = MY_GET_ARRAY_LEN(m_aAttendersAll);
-            l = m_aAttenderPawns.Num();
-
-            MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
-
-            for (int32 i = 0; i < l; i++) {
-                if ((iAttenderMask & (1 << i)) == 0) {
-                    continue;
-                }
-                //need update
-                m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.tryRevealCardValueByIdValuePairs(aRevealedCardValues);
-            }
+        FMyMJGamePusherResultCpp* pusherResult = genPusherResultAsSysKeeper(*pPusher.Get());
+        if (pusherResult == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("core full [%s]: pusher %s generated NULL result."),
+                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()),
+                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pPusher->getType()));
+            MY_VERIFY(false);
         }
-        */
 
-        makeProgressByPusher(pPusherShared.Get());
+        if (!pusherResult->checkHaveValidResult()) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("core full [%s]: pusher %s generated an invalid result."),
+                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()),
+                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pPusher->getType()));
+            MY_VERIFY(false);
+        }
 
-        getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
-        pPusherShared = m_pPusherIOFull->tryPullPusherFromLocal();
+        if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0 && pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("got pusher of reset game."));
+        }
+
+        bool bNeedVerify = prevApplyPusherResult(*pusherResult);
+
+        if (pusherResult->m_aResultBase.Num() > 0) {
+            ac.applyBase(pusherResult->m_aResultBase[0]);
+        }
+        if (pusherResult->m_aResultDelta.Num() > 0) {
+            ac.applyDelta(pusherResult->m_aResultDelta[0]);
+        }
+
+        if (pusherIO.GivePusherResult(pusherResult)) {
+            MY_VERIFY(pusherResult == NULL);
+        }
+        else {
+            delete(pusherResult);
+            pusherResult = NULL;
+        }
+
+
+
+        /// this should be done by apply pusher
+        if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
+            iGameId = pD->m_iGameId;
+            iPusherIdLast = -1;
+        }
+
+        if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("core full [%s:%d:%d]: Applying: %s"),
+                  *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()), pD->m_iActionGroupId, iPusherIdLast,
+                  *pPusher->genDebugString());
+        }
+
+        applyPusher(*pPusher.Get());
+
+
+        if (!(pD->m_iPusherIdLast == pPusher->getId())) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("core full [%s:%d:%d], pusher [%s] id not equal: %d, %d."),
+                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()), pD->m_iActionGroupId, iPusherIdLast,
+                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pPusher->getType()), pD->m_iPusherIdLast, pPusher->getId());
+            MY_VERIFY(false);
+        }
+
+        if (bNeedVerify) {
+            MY_VERIFY(VerifyDataUniformationAfterPusherAndResultApplied());
+        }
+
+        iGameId = pD->m_iGameId;
+        iPusherIdLast = pD->m_iPusherIdLast;
+        pPusher = m_pPusherIOFull->tryPullPusherFromLocal();
     }
 
     return bRet;
@@ -281,9 +250,6 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
 
 bool FMyMJGameCoreCpp::findAndHandleCmd()
 {
-    if (getWorkMode() != MyMJGameCoreWorkModeCpp::Full) {
-        return false;
-    }
 
     MY_VERIFY(m_pCmdIO.IsValid());
     MY_VERIFY(m_pPusherIOFull.IsValid());
@@ -302,7 +268,7 @@ bool FMyMJGameCoreCpp::findAndHandleCmd()
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("recieved cmd, role %d, cmd %d"), (uint8)eRoleType, (uint8)pCmd->m_eType);
             bNewCmdGot = true;
 
-            handleCmd(eRoleType, pCmd);
+            handleCmd(eRoleType, *pCmd);
 
             //found one cmd, and the cmd life cycle is also manager by external, return it
             pCmdIO->m_pOutputQueueRemote->Enqueue(pCmd);
@@ -314,7 +280,6 @@ bool FMyMJGameCoreCpp::findAndHandleCmd()
 
 void FMyMJGameCoreCpp::genActionChoices()
 {
-    MY_VERIFY(getWorkMode() == MyMJGameCoreWorkModeCpp::Full);
     MY_VERIFY(m_pPusherIOFull.IsValid());
 
 
@@ -325,8 +290,8 @@ void FMyMJGameCoreCpp::genActionChoices()
             continue;
         }
 
-        FMyMJGameActionContainorCpp *pContainor = pAttender->getActionContainor();
-        if (pContainor->getNeed2Collect() == true) {
+        const FMyMJGameActionContainorCpp *pContainor = &pAttender->getDataLogicRefConst().m_cActionContainor;
+        if (pContainor->getNeed2CollectConst() == true) {
             pAttender->genActionChoices(m_pPusherIOFull.Get());
         }
     }
@@ -338,33 +303,115 @@ void FMyMJGameCoreCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyM
     int32 iRealAttenderCount = 0;
     for (int i = 0; i < 4; i++) {
         FMyMJGameAttenderCpp *pAttender = m_aAttendersAll[i].Get();
-        MY_VERIFY(pAttender);
-        if (!pAttender->getIsStillInGame()) {
-            continue;
-        }
-        iRealAttenderCount++;
-        FMyMJGameActionContainorCpp *pContainor = pAttender->getActionContainor();
-        pContainor->resetForNewLoop();
         int32 idxAttender = pAttender->getIdx();
         MY_VERIFY(i == idxAttender);
-        if ((iIdxAttenderMask & (1 << idxAttender)) > 0) {
-            pContainor->getNeed2Collect() = true;
-        }
-        else {
-            pContainor->getNeed2Collect() = false;
+
+        bool bIsStillInGame = pAttender->getIsStillInGame();
+        bool  bNeed2Collect = ((iIdxAttenderMask & (1 << idxAttender)) > 0) && bIsStillInGame;
+        pAttender->resetForNewLoop(bNeed2Collect);
+
+        if (pAttender->getIsRealAttender()) {
+            iRealAttenderCount++;
         }
     }
 
-    if (getWorkMode() != MyMJGameCoreWorkModeCpp::Full) {
-        MY_VERIFY(!m_pActionCollector.IsValid());
-        return;
-    }
 
     MY_VERIFY(m_pActionCollector.IsValid());
 
     //step2: reset collector
     m_pActionCollector->resetForNewLoopForFullMode(pPrevAction, pPostAction, bAllowSamePriAction, iIdxAttenderHavePriMax, iRealAttenderCount);
 }
+
+bool FMyMJGameCoreCpp::prevApplyPusherResult(const FMyMJGamePusherResultCpp &pusherResult)
+{
+    bool bRet = false;
+
+    if (pusherResult.m_aResultBase.Num() > 0) {
+
+        bRet = true;
+    }
+
+    if (pusherResult.m_aResultDelta.Num() > 0) {
+        const FMyMJDataDeltaCpp& delta = pusherResult.m_aResultDelta[0];
+        if (delta.m_aCoreData.Num() > 0) {
+            const TArray<FMyMJCardInfoCpp>& aCardInfos2Update = delta.m_aCoreData[0].m_aCardInfos2Update;
+            int l = aCardInfos2Update.Num();
+            if (l > 0) {
+                const FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPackRefConst();
+                for (int i = 0; i < aCardInfos2Update.Num(); i++) {
+                    const FMyMJCardInfoCpp& cardInfoTarget = aCardInfos2Update[i];
+                    const FMyMJCardInfoCpp& cardInfoSelf = *pCardInfoPack->getByIdxConst(cardInfoTarget.m_iId);
+
+                    if (cardInfoSelf.m_cPosi != cardInfoTarget.m_cPosi) {
+                        bRet = true;
+                        //for safety, any different exist, we make movement happen
+                        moveCardFromOldPosi(cardInfoTarget.m_iId);
+                        moveCardToNewPosi(cardInfoTarget.m_iId, cardInfoTarget.m_cPosi.m_iIdxAttender, cardInfoTarget.m_cPosi.m_eSlot);
+                    }
+                }
+            }
+        }
+
+        MyMJGamePusherTypeCpp ePusherType = delta.getType();
+        if (ePusherType == MyMJGamePusherTypeCpp::PusherFillInActionChoices || ePusherType == MyMJGamePusherTypeCpp::PusherMadeChoiceNotify || ePusherType == MyMJGamePusherTypeCpp::PusherCountUpdate) {
+            bRet = true;
+        }
+
+    }
+
+   return bRet;
+};
+
+bool FMyMJGameCoreCpp::VerifyDataUniformationAfterPusherAndResultApplied()
+{
+    bool bRet = true;
+
+    MY_VERIFY(m_pActionCollector.IsValid());
+    int32 actionGroupIdCollectorLogic = m_pActionCollector->getActionGroupId();
+
+    int32 actionGroupIdData = getCoreDataRefConst().m_iActionGroupId;
+    if (actionGroupIdCollectorLogic != actionGroupIdData) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action group id not uniform, logic %d, data %d."), actionGroupIdCollectorLogic, actionGroupIdData);
+        return false;
+    }
+
+
+
+    for (int i = 0; i < 4; i++) {
+        const FMyMJAttenderDataLogicOnlyCpp& attenderDataLogic = getAttenderByIdx(i)->getDataLogicRefConst();
+        const FMyMJRoleDataAttenderPublicCpp& attenderDataPublic = getAttenderByIdx(i)->getRoleDataAttenderPublicRefConst();
+        const FMyMJRoleDataAttenderPrivateCpp& attenderDataPrivate = getAttenderByIdx(i)->getRoleDataAttenderPrivateRefConst();
+
+        int32 l0, l1;
+        l0 = attenderDataLogic.m_cHandCards.getCount();
+        l1 = attenderDataPublic.m_aIdHandCards.Num();
+
+        if (l0 != l1) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender %d's hand card not uniform, logic %d, data %d."), i, l0, l1);
+            bRet = false;
+            break;
+        }
+
+        bool bEqual = attenderDataPrivate.m_cActionContainor.equal(attenderDataLogic.m_cActionContainor);
+
+        if (!bEqual) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender %d's action containor not uniform."), i);
+            bRet = false;
+            break;
+        }
+
+        int32 actionGroupIdAttenderLogic = attenderDataLogic.m_cActionContainor.getActionGroupId();
+        if (actionGroupIdCollectorLogic != actionGroupIdAttenderLogic) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender %d's logic action group id not equal to core collector,, collector's %d, attender's %d."), actionGroupIdCollectorLogic, actionGroupIdAttenderLogic);
+            return false;
+        }
+    }
+
+
+
+
+    return bRet;
+};
 
 /*
 #if PLATFORM_WINDOWS
@@ -392,8 +439,7 @@ void FMyMJGameCoreCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyM
 
 void FMyMJGameCoreCpp::tryProgressInFullMode()
 {
-    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
-    MY_VERIFY(pD);
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
 
     //the sequence ensure pusher is drained out clean before cmd applies
     findAndApplyPushers();
@@ -401,32 +447,26 @@ void FMyMJGameCoreCpp::tryProgressInFullMode()
         findAndApplyPushers();
     }
 
-    if (getWorkMode() == MyMJGameCoreWorkModeCpp::Full) {
+    bool bIsInGameState = pD->isInGameState();
+    bool bHaveProgress = true;
 
-        bool bIsInGameState = pD->isInGameState();
-        bool bHaveProgress = true;
+    while (bIsInGameState && bHaveProgress) {
+        bHaveProgress = actionLoop();
+        bIsInGameState = pD->isInGameState();
+    }
 
-        while (bIsInGameState && bHaveProgress) {
-            bHaveProgress = actionLoop();
-            bIsInGameState = pD->isInGameState();
-        }
-    }
-    else {
-        MY_VERIFY(false);
-    }
 }
 
 int32 FMyMJGameCoreCpp::getIdxOfUntakenSlotHavingCard(int32 idxBase, uint32 delta, bool bReverse)
 {
-    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
-    MY_VERIFY(pD);
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
 
     int32 l = pD->m_aUntakenCardStacks.Num();
     MY_VERIFY(idxBase >= 0 && idxBase < l);
 
     int32 idxChecking = idxBase;
     for (int32 i = 0; i < l; i++) {
-        FMyIdCollectionCpp *pC = &pD->m_aUntakenCardStacks[idxChecking];
+        const FMyIdCollectionCpp *pC = &pD->m_aUntakenCardStacks[idxChecking];
         int32 l2 = pC->m_aIds.Num();
 
         if (l2 > 0) {
@@ -459,8 +499,7 @@ int32 FMyMJGameCoreCpp::getIdxOfUntakenSlotHavingCard(int32 idxBase, uint32 delt
 
 void FMyMJGameCoreCpp::collectCardsFromUntakenSlot(int32 idxBase, uint32 len, bool bReverse, TArray<int32> &outIds)
 {
-    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
-    MY_VERIFY(pD);
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
 
     int32 l = pD->m_aUntakenCardStacks.Num();
     MY_VERIFY(idxBase >= 0 && idxBase < l);
@@ -471,7 +510,7 @@ void FMyMJGameCoreCpp::collectCardsFromUntakenSlot(int32 idxBase, uint32 len, bo
 
     //loop limited cycle
     for (int32 i = 0; i < l && idxChecking >= 0; i++) {
-        FMyIdCollectionCpp *pC = &pD->m_aUntakenCardStacks[idxChecking];
+        const FMyIdCollectionCpp *pC = &pD->m_aUntakenCardStacks[idxChecking];
 
         int32 l2 = pC->m_aIds.Num();
         int32 Num2Collect = l2 < (int32)len ? l2 : (int32)len;
@@ -496,8 +535,7 @@ void FMyMJGameCoreCpp::collectCardsFromUntakenSlot(int32 idxBase, uint32 len, bo
 
 void FMyMJGameCoreCpp::tryCollectCardsFromUntakenSlot(int32 idxBase, uint32 len, bool bReverse, TArray<int32> &outIds)
 {
-    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
-    MY_VERIFY(pD);
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
 
     int32 cardsleftAll = pD->m_cUntakenSlotInfo.getCardNumCanBeTakenAll();
     int32 l = (int32)len < cardsleftAll ? (int32)len : cardsleftAll;
@@ -506,36 +544,21 @@ void FMyMJGameCoreCpp::tryCollectCardsFromUntakenSlot(int32 idxBase, uint32 len,
 
 void FMyMJGameCoreCpp::moveCardFromOldPosi(int32 id)
 {
-    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
-    MY_VERIFY(pD);
+    //const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
 
-    FMyMJCardInfoPackCpp  *pCardInfoPack =  &getCardInfoPack();
-    FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSys();
+    const FMyMJCardInfoPackCpp  *pCardInfoPack =  &getCardInfoPackRefConst();
+    //const FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSysKeeperRefConst();
 
-    FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
+    const FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdxConst(id);
     MyMJCardSlotTypeCpp eSlotSrc = pCardInfo->m_cPosi.m_eSlot;
     int32 idxAttender = pCardInfo->m_cPosi.m_iIdxAttender;
     if (eSlotSrc == MyMJCardSlotTypeCpp::Untaken) {
-        MY_VERIFY(pCardInfo->m_cPosi.m_iIdxInSlot0 >= 0 && pCardInfo->m_cPosi.m_iIdxInSlot0 < pD->m_aUntakenCardStacks.Num());
-        int32 idx = pCardInfo->m_cPosi.m_iIdxInSlot0;
-        FMyIdCollectionCpp *pCollection = &pD->m_aUntakenCardStacks[idx];
+        //MY_VERIFY(pCardInfo->m_cPosi.m_iIdxInSlot0 >= 0 && pCardInfo->m_cPosi.m_iIdxInSlot0 < pD->m_aUntakenCardStacks.Num());
+        //int32 idx = pCardInfo->m_cPosi.m_iIdxInSlot0;
+        //FMyIdCollectionCpp *pCollection = &pD->m_aUntakenCardStacks[idx];
         //MY_VERIFY(pCard->m_cPosi.m_iIdxInSlot1 >= 0 && pCard->m_cPosi.m_iIdxInSlot1 < pCollection->m_aIds.Num());
         
-        MY_VERIFY(pCollection->m_aIds.Pop() == id);
-
-        pCardInfo->m_cPosi.reset();
-
-        if (isIdxUntakenSlotInKeptFromTailSegment(idx)) {
-            pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail--;
-        }
-        else {
-            pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead--;
-            if (pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead == 0) {
-                pD->m_cHelperLastCardTakenInGame.m_iId = id;
-                pD->m_cHelperLastCardTakenInGame.m_iValue = pCardValuePack->getByIdx(id);
-            }
-        }
-        pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal--;
+        //MY_VERIFY(pCollection->m_aIds.Pop() == id);
 
     }
     else if (idxAttender >= 0 && idxAttender < 4) {
@@ -563,21 +586,5 @@ void FMyMJGameCoreCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSl
 
 void FMyMJGameCoreCpp::updateUntakenInfoHeadOrTail(bool bUpdateHead, bool bUpdateTail)
 {
-    FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
-    MY_VERIFY(pD);
 
-    if (pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal <= 0) {
-        return;
-    }
-
-    if (bUpdateHead) {
-        int32 idx = getIdxOfUntakenSlotHavingCard(pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow, 0, false);
-        MY_VERIFY(idx >= 0);
-        pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow = idx;
-    }
-    if (bUpdateTail) {
-        int32 idx = getIdxOfUntakenSlotHavingCard(pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow, 0, true);
-        MY_VERIFY(idx >= 0);
-        pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow = idx;
-    }
 }

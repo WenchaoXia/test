@@ -138,7 +138,7 @@ public:
 };
 
 bool
-UMyMJUtilsLocalCSLibrary::checkHuLocalCSBorn(FMyMJGameSubLocalCSCfgCpp &localCSCfg,
+UMyMJUtilsLocalCSLibrary::checkHuLocalCSBorn(const FMyMJGameSubLocalCSCfgCpp &localCSCfg,
                                         const FMyMJValueIdMapCpp &handCardMap,
                                         TArray<FMyMJHuScoreResultItemCpp> &outHuScoreResultItems,
                                         TArray<int32> &outShowOutCards)
@@ -638,7 +638,6 @@ UMyMJUtilsLocalCSLibrary::calcScoreFinalLocalCSInGame(const FMyMJHuCfgCpp &huCfg
 bool
 UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJCardValuePackCpp &inValuePack,
                                             const FMyMJGameCfgCpp &gameCfg,
-                                            const FMyMJCardValuePackCpp &cardValuePack,
                                              const TArray<FMyMJWeaveCpp> &weavesShowedOut,
                                              const FMyMJValueIdMapCpp &handCardsMapExcludeTriggerCard,
                                              FMyMJHuScoreResultTingGroupCpp &outResultTingGroup)
@@ -678,7 +677,7 @@ UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJCardValuePackCpp &i
         TArray<int32> aIds;
         checkingHandCards.collectAll(aIds);
 
-        cardValuePack.getValuesByIds(aIds, outResultTingGroup.m_aValuesHandCardWhenChecking);
+        inValuePack.getValuesByIds(aIds, outResultTingGroup.m_aValuesHandCardWhenChecking);
 
         return true;
     }

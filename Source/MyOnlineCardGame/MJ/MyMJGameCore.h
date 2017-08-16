@@ -86,15 +86,15 @@ public:
 
     virtual ~FMyMJGameIOGroupAllCpp()
     {
-        FMyMJGamePusherBaseCpp *pPusher = NULL;
-        while (m_cPusherQueue.Dequeue(pPusher)) {
-            delete(pPusher);
+        FMyMJGamePusherResultCpp *pPusherResult = NULL;
+        while (m_cPusherResultQueue.Dequeue(pPusherResult)) {
+            delete(pPusherResult);
         }
     };
 
     FMyMJGameIOGroupCpp m_aGroups[(uint8)MyMJGameRoleTypeCpp::Max];
 
-    TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> m_cPusherQueue;
+    TQueue<FMyMJGamePusherResultCpp *, EQueueMode::Spsc> m_cPusherResultQueue;
 };
 
 //Base class ii used to ensure basic facility create/destory sequence
@@ -109,12 +109,29 @@ public:
     {
         m_pPusherIOFull = NULL;
         m_pCmdIO = NULL;
-        //m_pExtIOGroupAll = NULL;
+
     };
 
     virtual ~FMyMJGameCoreBaseCpp()
     {
 
+    };
+
+    void initBase()
+    {
+        for (int i = 0; i < 4; i++) {
+            MY_VERIFY(m_aAttendersAll[i].IsValid() == false);
+            m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(createAttender());
+        }
+
+        m_cDataAccessor.setupFullMode();
+
+        resetDatasOwned();
+    };
+
+    virtual void resetDatasOwned()
+    {
+        m_cDataLogic.reset();
     };
 
     TSharedPtr<FMyMJGameAttenderCpp> getAttenderByIdx(int32 idxAttender)
@@ -125,15 +142,51 @@ public:
         return ret;
     };
 
-    TSharedPtr<FMyMJGameAttenderCpp> getRealAttenderByIdx(int32 idxAttender)
+    TSharedPtr<FMyMJGameAttenderCpp> getRealAttenderByIdx(int32 idxAttender, bool bVerifyIsReal = true)
     {
         TSharedPtr<FMyMJGameAttenderCpp> ret = getAttenderByIdx(idxAttender);
-        if (!ret->getIsRealAttender()) {
-            MY_VERIFY(false);
-        }
 
-        return ret;
+        bool bIsReal = ret->getIsRealAttender();
+        if (bIsReal) {
+            return ret;
+        }
+        else {
+            if (bVerifyIsReal) {
+                MY_VERIFY(false);
+            }
+            return NULL;
+        }
     };
+
+    inline const FMyMJDataAccessorCpp& getDataAccessorRefConst() const
+    {
+        return m_cDataAccessor;
+    };
+
+    inline
+    const FMyMJCoreDataLogicOnlyCpp& getDataLogicRefConst() const
+    {
+        return m_cDataLogic;
+    };
+
+    inline
+    const FMyMJCoreDataPublicCpp& getCoreDataRefConst() const
+    {
+        return getDataAccessorRefConst().getCoreDataRefConst();
+    };
+
+    inline const FMyMJCardInfoPackCpp& getCardInfoPackRefConst() const
+    {
+        return m_cDataAccessor.getCoreDataRefConst().m_cCardInfoPack;
+    };
+
+    inline const FMyMJCardValuePackCpp& getCardValuePackOfSysKeeperRefConst() const
+    {
+        const FMyMJRoleDataPrivateCpp* pD = m_cDataAccessor.getRoleDataPrivateConst((uint8)MyMJGameRoleTypeCpp::SysKeeper);
+        MY_VERIFY(pD);
+        return pD->m_cCardValuePack;
+    };
+
 
     //assert idxAttenderOfContainor is in place
     //assert idxAttenderBase is real attender, but it may now is not in game anymore
@@ -144,177 +197,109 @@ public:
     int32 genIdxAttenderStillInGameMaskAll();
 
 
+
 protected:
 
+    inline FMyMJDataAccessorCpp& getDataAccessorRef()
+    {
+        return const_cast<FMyMJDataAccessorCpp &>(getDataAccessorRefConst());
+    };
+
+    //must allocate one attender on heap and return it, must be overwrite
+    virtual FMyMJGameAttenderCpp* createAttender() = NULL;
+    /*
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("createAttender() must be override!"));
+        MY_VERIFY(false);
+        return NULL;
+    };
+    */
+
     //Basic facilities
-    TSharedPtr<FMyMJGameAttenderCpp> m_aAttendersAll[(uint8)MyMJGameRoleTypeCpp::Max]; //always 4, note this should be a fixed structure, means don't change it after init()
+    TSharedPtr<FMyMJGameAttenderCpp> m_aAttendersAll[4]; //always 4, note this should be a fixed structure, means don't change it after init()
     TSharedPtr<FMyMJGamePusherIOComponentFullCpp>  m_pPusherIOFull; //only used in full mode
     TSharedPtr<FMyMJGameCmdIOComponentCpp> m_pCmdIO;
 
-    //FMyMJGameIOGroupAllCpp *m_pExtIOGroupAll; //This is the fundermental IO resource, for simple, directly use it to process cmd
+    //data
+    FMyMJCoreDataLogicOnlyCpp m_cDataLogic;
+    FMyMJDataAccessorCpp m_cDataAccessor;
+
 };
 
 #define MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero 0x01
 #define MyMJGameCoreTrivalConfigMaskShowPusherLog 0x02
 
+//class FMyMJGameCoreCpp : public FMyMJGameCoreBaseCpp, public TSharedFromThis<FMyMJGameCoreCpp> //to save trouble, not use multiple inheritance
+
 /*
- * It works in two mode: full or mirror mode
+ * The core have two mdes: full and mirror. Full mode have all data members, while mirror mode only have the data representing the state without logic only members.
+ * this class is used for the full mode only. 
  * The dsign is: code is stateless, only pusher can change state
- * It works as one source plus mutiple mirrors, not in thread safe mode(but works as produce->consume mode)
+ * It works as one source generating data changes which can used to rebuild many mirrors. and it is not in thread safe(but works as produce->consume mode)
  * Should always be created on heap with SharedPtr created
  * Warn, since TArray use memcpy(), so don't use it with TSharedPtr to avoid operator =, the best way is to subclass TArray and write one support pointer,
- *but we don't have time and it may have issues with serilizetion, so let's leave this problem by not using UStruct, but plain C++ class
+ * but we don't have time and it may have issues with serilizetion, so let's leave this problem by not using UStruct which have = operator, but plain C++ class
  */
-//class FMyMJGameCoreCpp : public FMyMJGameCoreBaseCpp, public TSharedFromThis<FMyMJGameCoreCpp> //to save trouble, not use multiple inheritance
 class FMyMJGameCoreCpp : public FMyMJGameCoreBaseCpp
 {
 public:
 
-    FMyMJGameCoreCpp(MyMJGameCoreWorkModeCpp eWorkMode, int32 iSeed) : FMyMJGameCoreBaseCpp()
+    FMyMJGameCoreCpp(int32 iSeed) : FMyMJGameCoreBaseCpp()
     {
         m_iTrivalConfigMask = 0;
-
-        m_pDataForFullMode = NULL;
-        m_pDataForMirrorMode = NULL;
 
         m_pActionCollector = NULL;
         m_pExtIOGroupAll = NULL;
 
         m_pResManager = MakeShareable<FMyMJGameResManager>(new FMyMJGameResManager(iSeed));
 
-        m_cDataLogic.m_eWorkMode = eWorkMode;
-
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("[%s] inited with seed: %d"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)eWorkMode), iSeed);
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("[%s] inited with seed: %d"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)eWorkMode), iSeed);
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("full core inited with seed: %d"), iSeed);
     };
 
     virtual ~FMyMJGameCoreCpp()
     {};
 
-    inline MyMJGameCoreWorkModeCpp getWorkMode() const
-    {
-        return m_cDataLogic.m_eWorkMode;
-    };
-
     inline MyMJGameRuleTypeCpp getRuleType() const
     {
         MyMJGameRuleTypeCpp eRuleType = m_cDataLogic.m_eRuleType;
-        MyMJGameCoreWorkModeCpp eWorkMode = getWorkMode();
 
-        if (eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
-            MY_VERIFY(IsInGameThread());
-            if (m_pDataForMirrorMode.IsValid()) {
-                MyMJGameRuleTypeCpp eRuleType2 = m_pDataForMirrorMode->m_cDataPubicDirect.m_cGameCfg.m_eRuleType;
-                if (eRuleType2 != MyMJGameRuleTypeCpp::Invalid) {
-                    MY_VERIFY(eRuleType2 == eRuleType); //If set, they must equal
-                }
-            }
-        }
-        else if (eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
-            if (m_pDataForFullMode.IsValid()) {
-                MyMJGameRuleTypeCpp eRuleType2 = m_pDataForFullMode->m_cDataPubicDirect.m_cGameCfg.m_eRuleType;
-                if (eRuleType2 != MyMJGameRuleTypeCpp::Invalid) {
-                    MY_VERIFY(eRuleType2 == eRuleType); //If set, they must equal
-                }
-                //MY_VERIFY(m_pDataForFullMode->m_cDataPubicDirect.m_eRuleType == m_eRuleType);
-            }
+        MyMJGameRuleTypeCpp eRuleType2 = m_cDataAccessor.getCoreDataRefConst().m_cGameCfg.m_eRuleType;
+        if (eRuleType2 != MyMJGameRuleTypeCpp::Invalid) {
+            MY_VERIFY(eRuleType2 == eRuleType); //If set, they must equal
         }
 
         return eRuleType;
     };
 
-    const FMyMJCoreDataLogicOnlyCpp& getDataLogicRef() const
-    {
-        return m_cDataLogic;
-    };
-
-    FMyMJCoreDataPublicCpp* getDataPublicDirect()
-    {
-        const FMyMJCoreDataPublicCpp* ret = getDataPublicDirectConst();
-        return const_cast<FMyMJCoreDataPublicCpp *>(ret);
-    };
-
-    const FMyMJCoreDataPublicCpp* getDataPublicDirectConst() const
-    {
-        MyMJGameCoreWorkModeCpp eWorkMode = getWorkMode();
-        if (eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
-            MY_VERIFY(IsInGameThread());
-            if (m_pDataForMirrorMode.IsValid()) {
-                return &m_pDataForMirrorMode->m_cDataPubicDirect;
-            }
-            else {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataForMirrorMode Invalid!"));  
-                return NULL;
-            }
-        }
-        else if (eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
-            MY_VERIFY(m_pDataForFullMode.IsValid());
-            return &m_pDataForFullMode->m_cDataPubicDirect;
-        }
-        else {
-            MY_VERIFY(false);
-            return NULL;
-        }
-    };
 
     inline
-    FMyMJCardInfoPackCpp& getCardInfoPack()
+    FMyMJGameResManager& getResManagerRef() 
     {
-        FMyMJCoreDataPublicCpp *pD = getDataPublicDirect();
-        MY_VERIFY(pD);
-        return pD->m_cCardInfoPack;
+        MY_VERIFY(m_pResManager.IsValid());
+        return *m_pResManager.Get();
     };
 
-    inline
-    FMyMJCardValuePackCpp& getCardValuePackOfSys()
-    {
-        TSharedPtr<FMyMJGameAttenderCpp> &pAttender = m_aAttendersAll[(uint8)MyMJGameRoleTypeCpp::SysKeeper];
-        MY_VERIFY(pAttender.IsValid());
-        FMyMJRoleDataAttenderPrivateCpp *pDPriD = pAttender->getDataPrivateDirect();
-        MY_VERIFY(pDPriD);
-
-        //todo:
-        return *(FMyMJCardValuePackCpp *)NULL;
-        //return pDPriD->m_cCardValuePack;
-    }
-
-
-    inline
-    TSharedPtr<FMyMJGameResManager> getpResManager()
-    {
-        return m_pResManager;
-    };
-
-
-    inline TSharedPtr<FMyMJGamePusherIOComponentFullCpp> getpPusherIOFull()
+    inline FMyMJGamePusherIOComponentFullCpp& getPusherIOFullRef()
     {
         MY_VERIFY(m_pActionCollector.IsValid());
-        return m_pActionCollector->getpPusherIO();
+        TSharedPtr<FMyMJGamePusherIOComponentFullCpp> p = m_pActionCollector->getpPusherIO();
+        MY_VERIFY(p.IsValid());
+        return *p.Get();
     };
-
 
     //@pIOGroupAll owned by external, don't manage their lifecycle inside
     virtual void initFullMode(TWeakPtr<FMyMJGameCoreCpp> pSelf, FMyMJGameIOGroupAllCpp *pIOGroupAll)
     {
-        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("initFullMode."));
-
-        MY_VERIFY(getWorkMode() == MyMJGameCoreWorkModeCpp::Full);
-        initBase(pSelf);
-
-        //setup data members
-        MY_VERIFY(!m_pDataForFullMode.IsValid());
-        //MY_VERIFY(m_pDataForMirrorMode == NULL); //don't do this, we may across thread
-
-        m_pDataForFullMode = MakeShareable<FMyMJCoreDataForFullModeCpp>(new FMyMJCoreDataForFullModeCpp());
-        m_pDataForFullMode->m_cDataPubicDirect.reinit(getRuleType());
- 
+        initBase();
+        
         int32 l;
         l = MY_GET_ARRAY_LEN(m_aAttendersAll);
-        MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+        MY_VERIFY(l == 4);
 
         for (int32 i = 0; i < l; i++) {
             m_aAttendersAll[i]->initFullMode(pSelf, i);
         }
-
 
         TQueue<FMyMJGameCmdBaseCpp *, EQueueMode::Spsc> *ppCmdInputQueues[(uint8)MyMJGameRoleTypeCpp::Max], *ppCmdOutputQueues[(uint8)MyMJGameRoleTypeCpp::Max];
 
@@ -326,9 +311,8 @@ public:
         TSharedPtr<FMyMJGamePusherIOComponentFullCpp>  pPusherIOFull = MakeShareable<FMyMJGamePusherIOComponentFullCpp>(new FMyMJGamePusherIOComponentFullCpp());
 
         //setup pusher output path, which will link to @ppPusherOutputQueues as remote outputs
-        pPusherIOFull->init(&pIOGroupAll->m_cPusherQueue);
+        pPusherIOFull->init(&pIOGroupAll->m_cPusherResultQueue);
         m_pPusherIOFull = pPusherIOFull;
-
 
         m_pActionCollector = MakeShareable(new FMyMJGameActionCollectorCpp(pSelf));
         m_pActionCollector->init(pPusherIOFull);
@@ -338,96 +322,8 @@ public:
         m_pCmdIO->init(ppCmdInputQueues, ppCmdOutputQueues, (uint8)MyMJGameRoleTypeCpp::Max);
     };
 
-
-    virtual void initMirrorMode(TWeakPtr<FMyMJGameCoreCpp> pSelf, UMyMJDataForMirrorModeCpp *pMJData)
-    {
-
-        MY_VERIFY(getWorkMode() == MyMJGameCoreWorkModeCpp::Mirror);
-        
-        initBase(pSelf);
-
-        //MY_VERIFY(!m_pDataForFullMode.IsValid());
-        MY_VERIFY(m_pDataForMirrorMode == NULL);
-
-        m_pDataForMirrorMode = pMJData->m_pCoreData;
-        MY_VERIFY(m_pDataForMirrorMode.IsValid());
-        //m_pDataForMirrorMode->m_cDataPubicDirect.m_cGameCfg.m_eRuleType
-        m_pDataForMirrorMode->m_cDataPubicDirect.reinit(getRuleType());
-
-        int32 l;
-        l = MY_GET_ARRAY_LEN(m_aAttendersAll);
-        MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
-
-        MY_VERIFY(l == pMJData->m_aRoleDatas.Num());
-
-        for (int32 i = 0; i < l; i++) {
-            m_aAttendersAll[i]->initMirrorMode(pSelf, i, pMJData->m_aRoleDatas[i]->m_pDataAttenderPublic, pMJData->m_aRoleDatas[i]->m_pDataAttenderPrivate);
-        }
-    };
-
-    //call this only in full mode
     void tryProgressInFullMode();
-
-    //call this both in mirror mode, and let caller handle the cycle
-    inline
-    void makeProgressByPusher(FMyMJGamePusherBaseCpp *pPusher)
-    {
-        FMyMJCoreDataPublicCpp* pCoreData = getDataPublicDirect();
-        if (pCoreData == NULL) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCoreData is invalid!"));
-            return;
-        }
-
-        /* this should be done by apply pusher
-        if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
-            pCoreData->m_iGameId = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher)->m_iGameId;
-            pCoreData->m_iPusherIdLast = -1;
-        }
-        */
-        int32 iGameId, iPusherIdLast;
-        getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
-
-        if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0) {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("[%s:%d:%d]: Applying: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)getWorkMode()), pCoreData->m_iActionGroupId, iPusherIdLast, *pPusher->genDebugString());
-        }
-        applyPusher(pPusher);
-
-        if (pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
-            //all data reseted when applyPusher(), we don't bother about it here
-        }
-        else {
-            //m_cDataLogic.m_iPusherIdLast++;
-        }
-
-        /*
-        if (!(m_cDataLogic.m_iPusherIdLast == pPusher->getId())) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s, pusher [%d] id not equal: %d, %d."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)getWorkMode()), (uint8)pPusher->getType(), m_cDataLogic.m_iPusherIdLast, pPusher->getId());
-            MY_VERIFY(false);
-        }
-        */
-    };
-
-    inline
-    void getGameIdAndPusherIdLast(int32 *pOutGameId, int32 *pOutPusherIdLast) const
-    {
-        int32 iGameId = -1, iPusherIdLast = -1;
-        const FMyMJCoreDataPublicCpp* pCoreData = getDataPublicDirectConst();
-        if (pCoreData == NULL) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCoreData is invalid!"));
-            MY_VERIFY(false);
-        }
-        else {
-            iGameId = pCoreData->m_iGameId;
-            iPusherIdLast = pCoreData->m_iPusherIdLast;
-        }
-
-        if (pOutGameId) {
-            *pOutGameId = iGameId;
-        }
-        if (*pOutPusherIdLast) {
-            *pOutPusherIdLast = iPusherIdLast;
-        }
-    };
+  
 
     //@idxBase can be a empty slot, will return the first one found valid, return < 0 means no one found
     int32 getIdxOfUntakenSlotHavingCard(int32 idxBase, uint32 delta, bool bReverse);
@@ -458,34 +354,23 @@ protected:
     //following should be implemented by child class
     //start
 
-    //must allocate one attender on heap and return it
-    virtual FMyMJGameAttenderCpp* createAttender(MyMJGameCoreWorkModeCpp eWorkMode) = NULL;
-    virtual void applyPusher(FMyMJGamePusherBaseCpp *pPusher) = NULL;
-    virtual void handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, FMyMJGameCmdBaseCpp *pCmd) = NULL;
+    //optional implement
+    
+    //return whether we need to verify unformation, it checks the input, and here we may apply some thing to logic
+    virtual bool prevApplyPusherResult(const FMyMJGamePusherResultCpp &pusherResult);
+
+    //called when both result and pusher itself applied
+    virtual bool VerifyDataUniformationAfterPusherAndResultApplied();
+
+
+    //must implement
+
+    //returned one should be allocated on heap
+    virtual FMyMJGamePusherResultCpp* genPusherResultAsSysKeeper(const FMyMJGamePusherBaseCpp &pusher) = NULL;
+    virtual void applyPusher(const FMyMJGamePusherBaseCpp &pusher) = NULL;
+    virtual void handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, FMyMJGameCmdBaseCpp &cmd) = NULL;
 
     //end
-
-
-    int32 calcUntakenSlotCardsLeftNumKeptFromTail();
-
-    bool isIdxUntakenSlotInKeptFromTailSegment(int32 idx);
-
-
-    inline
-    void initBase(TWeakPtr<FMyMJGameCoreCpp> pSelf)
-    {
-        for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
-            MY_VERIFY(m_aAttendersAll[i].IsValid() == false);
-            m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(createAttender(getWorkMode()));
-        }
-    };
-
-    //data
-    TSharedPtr<FMyMJCoreDataForFullModeCpp> m_pDataForFullMode;
-
-    TWeakObjectPtr<UMyMJCoreDataForMirrorModeCpp> m_pDataForMirrorMode;
-
-    FMyMJCoreDataLogicOnlyCpp m_cDataLogic;
 
     //Anything may change in subclass, should be defined as pointer, otherwise direct a member. we don't use pointer for only reason about destruction sequence
     //Basic facilities

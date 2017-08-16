@@ -26,6 +26,7 @@
 
 void UMyMJPusherBufferCpp::trySyncDataFromCoreFull()
 {
+    /*
     MY_VERIFY(m_pConnectedCoreFull);
     if (!IsValid(m_pConnectedCoreFull)) {
         return;
@@ -46,7 +47,7 @@ void UMyMJPusherBufferCpp::trySyncDataFromCoreFull()
         m_cPusherUpdatedMultcastDelegate.Broadcast();
 
     }
-
+    */
 };
 
 void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog)
@@ -219,6 +220,7 @@ void UMyMJCoreFullCpp::PostInitProperties()
 
 FMyMJGamePusherBaseCpp* AMyMJCoreMirrorCpp::tryCheckAndGetNextPusher()
 {
+    /*
     int32 iGameId = -1, iPusherIdLast = -1;
 
     if (IsValid(m_pPusherBuffer)) {
@@ -235,7 +237,7 @@ FMyMJGamePusherBaseCpp* AMyMJCoreMirrorCpp::tryCheckAndGetNextPusher()
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pIONodeAsSys invalid!"));
     }
-
+    */
     return NULL;
 }
 
@@ -274,12 +276,12 @@ void AMyMJCoreMirrorCpp::loop()
 
 
 
-                FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(eDestType, MyMJGameCoreWorkModeCpp::Mirror, iSeed, MyMJGameCoreTrivalConfigMaskShowPusherLog);
+                FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(eDestType, iSeed, MyMJGameCoreTrivalConfigMaskShowPusherLog);
                 m_pCoreMirror = MakeShareable<FMyMJGameCoreCpp>(pCore);
 
                 UMyMJDataForMirrorModeCpp *pMJData = getpMJData();
 
-                m_pCoreMirror->initMirrorMode(m_pCoreMirror, pMJData);
+                //m_pCoreMirror->initMirrorMode(m_pCoreMirror, pMJData);
             }
 
             m_iPusherApplyState = 0;
@@ -297,7 +299,7 @@ void AMyMJCoreMirrorCpp::loop()
                 m_iPusherApplyState = 1;
 
                 //When full mode, all values revealed in system role, but when mirror mode, we need to reveal them in each role's private data
-                MY_VERIFY(m_pCoreMirror->getWorkMode() == MyMJGameCoreWorkModeCpp::Mirror);
+                //MY_VERIFY(m_pCoreMirror->getWorkMode() == MyMJGameCoreWorkModeCpp::Mirror);
 
                 int32 iAttenderMask;
                 TArray<FMyIdValuePair> aRevealedCardValues;
@@ -336,7 +338,7 @@ void AMyMJCoreMirrorCpp::loop()
 
             if (m_iPusherApplyState == 1) {
                 m_iPusherApplyState = 2;
-                m_pCoreMirror->makeProgressByPusher(pPusher);
+                //m_pCoreMirror->makeProgressByPusher(pPusher);
             }
             
             if (m_iPusherApplyState == 2) {

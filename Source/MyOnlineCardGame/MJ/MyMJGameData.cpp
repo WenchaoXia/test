@@ -65,7 +65,7 @@ void UMyMJDataForMirrorModeCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProp
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(UMyMJDataForMirrorModeCpp, m_pCoreData);
-    DOREPLIFETIME(UMyMJDataForMirrorModeCpp, m_aRoleDatas);
+    DOREPLIFETIME(UMyMJDataForMirrorModeCpp, m_aRoleDataAttenders);
 };
 
 //Component replicate subobjects, just take care of child subobject, it's own property will be taken care by caller
@@ -82,27 +82,27 @@ bool UMyMJDataForMirrorModeCpp::ReplicateSubobjects(class UActorChannel *Channel
         WroteSomething |= Channel->ReplicateSubobject(m_pCoreData, *Bunch, *RepFlags);
     }
 
-    int l = m_aRoleDatas.Num();
+    int l = m_aRoleDataAttenders.Num();
     for (int i = 0; i < l; i++) {
         //m_aAttenderDatas[i]->ReplicateSubobjects(Channel, Bunch, RepFlags);
-        WroteSomething |= Channel->ReplicateSubobject(m_aRoleDatas[i], *Bunch, *RepFlags);
+        WroteSomething |= Channel->ReplicateSubobject(m_aRoleDataAttenders[i], *Bunch, *RepFlags);
 
-        if (m_aRoleDatas[i]->m_pDataAttenderPublic) {
-            WroteSomething |= Channel->ReplicateSubobject(m_aRoleDatas[i]->m_pDataAttenderPublic, *Bunch, *RepFlags);
+        if (m_aRoleDataAttenders[i]->m_pDataAttenderPublic) {
+            WroteSomething |= Channel->ReplicateSubobject(m_aRoleDataAttenders[i]->m_pDataAttenderPublic, *Bunch, *RepFlags);
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("role attender public is NULL."));
         }
 
-        if (m_aRoleDatas[i]->m_pDataAttenderPrivate) {
-            WroteSomething |= Channel->ReplicateSubobject(m_aRoleDatas[i]->m_pDataAttenderPrivate, *Bunch, *RepFlags);
+        if (m_aRoleDataAttenders[i]->m_pDataAttenderPrivate) {
+            WroteSomething |= Channel->ReplicateSubobject(m_aRoleDataAttenders[i]->m_pDataAttenderPrivate, *Bunch, *RepFlags);
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("role attender private is NULL."));
         }
 
-        if (m_aRoleDatas[i]->m_pDataPrivate) {
-            WroteSomething |= Channel->ReplicateSubobject(m_aRoleDatas[i]->m_pDataPrivate, *Bunch, *RepFlags);
+        if (m_aRoleDataAttenders[i]->m_pDataPrivate) {
+            WroteSomething |= Channel->ReplicateSubobject(m_aRoleDataAttenders[i]->m_pDataPrivate, *Bunch, *RepFlags);
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("role private is NULL."));
@@ -125,7 +125,7 @@ void UMyMJDataForMirrorModeCpp::createSubObjects(bool bBuildingDefault, bool bHa
         m_pCoreData = NewObject<UMyMJCoreDataForMirrorModeCpp>(this);
     }
 
-    m_aRoleDatas.Reset();
+    m_aRoleDataAttenders.Reset();
     for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
         UMyMJRoleDataForMirrorModeCpp *pRoleData;
         if (bBuildingDefault) {
@@ -138,7 +138,7 @@ void UMyMJDataForMirrorModeCpp::createSubObjects(bool bBuildingDefault, bool bHa
         pRoleData->createSubObjects(false, i < 4, bHavePrivate);
         pRoleData->resetup(i);
 
-        int32 idx = m_aRoleDatas.Emplace(pRoleData);
+        int32 idx = m_aRoleDataAttenders.Emplace(pRoleData);
 
         MY_VERIFY(idx == i);
     }
@@ -146,6 +146,12 @@ void UMyMJDataForMirrorModeCpp::createSubObjects(bool bBuildingDefault, bool bHa
 
 void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta)
 {
+    FMyMJCoreDataPublicCpp &coreDataSelf = getCoreDataRef();
+    if (!(coreDataSelf.m_iGameId == delta.m_iGameId && (coreDataSelf.m_iPusherIdLast + 1) == delta.getId())) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to apply delta since id mismatch: game id [%d, %d], push id [%d, %d]."), coreDataSelf.m_iGameId, delta.m_iGameId, coreDataSelf.m_iPusherIdLast, delta.getId());
+        return;
+    }
+
     while (delta.m_aRoleDataPrivate.Num() > 0) {
         MY_VERIFY(delta.m_aRoleDataPrivate.Num() == 1);
         const FMyMJRoleDataPrivateDeltaCpp& roleDataPriDelta = delta.m_aRoleDataPrivate[0];
@@ -182,7 +188,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
     FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackRef();
     FMyMJCardInfoPackCpp  *pCardInfoPack = &coreDataSelf.m_cCardInfoPack;
 
-    if (!(coreDataSelf.m_iGameId == delta.m_iGameId && coreDataSelf.m_iPusherIdLast == delta.getId())) {
+    if (!(coreDataSelf.m_iGameId == delta.m_iGameId && (coreDataSelf.m_iPusherIdLast + 1) == delta.getId())) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to apply delta since id mismatch: game id [%d, %d], push id [%d, %d]."), coreDataSelf.m_iGameId, delta.m_iGameId, coreDataSelf.m_iPusherIdLast, delta.getId());
         return;
     }
@@ -225,13 +231,18 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
             }
         }
 
-        if (UMyMJUtilsLibrary::getBoolValueFromBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateActionGroupId)) {
-            coreDataSelf.m_iActionGroupId = coreDataDelta.m_iActionGroupId;
+        if (UMyMJUtilsLibrary::getBoolValueFromBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_IncreaseActionGroupId)) {
+            coreDataSelf.m_iActionGroupId++;
         }
 
         if (UMyMJUtilsLibrary::getBoolValueFromBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState)) {
             coreDataSelf.m_eGameState = coreDataDelta.m_eGameState;
         }
+
+        if (UMyMJUtilsLibrary::getBoolValueFromBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave)) {
+            coreDataSelf.m_aHelperLastCardsGivenOutOrWeave.Reset();
+        }
+
     }
 
     //todo: update it
@@ -297,10 +308,9 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
                 pRDAttenderPubSelf->m_cHuScoreResultFinalGroup = resultFinalGroup;
             }
 
-            UMyMJUtilsLibrary::testAndsetBoolValueToBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsRealAttender, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender);
-            UMyMJUtilsLibrary::testAndsetBoolValueToBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsStillInGame, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame);
-            UMyMJUtilsLibrary::testAndsetBoolValueToBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateGangYaoedLocalCS, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
-            UMyMJUtilsLibrary::testAndsetBoolValueToBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateBanPaoHuLocalCS, FMyMJRoleDataAttenderPublicCpp_Mask0_BanPaoHuLocalCS);
+            UMyMJUtilsLibrary::testUpdateFlagAndsetBoolValueToStorageBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsRealAttender, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender);
+            UMyMJUtilsLibrary::testUpdateFlagAndsetBoolValueToStorageBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsStillInGame, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame);
+            UMyMJUtilsLibrary::testUpdateFlagAndsetBoolValueToStorageBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateGangYaoedLocalCS, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
         }
 
 
@@ -319,17 +329,27 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
                     pRDAttenderPriSelf->m_cHuScoreResultTingGroup = resultTingGroup;
                 }
 
+                if (roleDataAttenderPriDelta.m_aActionContainor.Num() > 0) {
+                    MY_VERIFY(roleDataAttenderPriDelta.m_aActionContainor.Num() == 1);
+
+                    const FMyMJGameActionContainorForBPCpp &aActionContainor = roleDataAttenderPriDelta.m_aActionContainor[0];
+
+                    pRDAttenderPriSelf->m_cActionContainor = aActionContainor;
+                }
+
             }
             else {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("tring to apply role attender %d's private delta but target is NULL."), idxAttender);
             }
 
+            UMyMJUtilsLibrary::testUpdateFlagAndsetBoolValueToStorageBitMask(pRDAttenderPriSelf->m_iMask0, roleDataAttenderPriDelta.m_iMask0, FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS, FMyMJRoleDataAttenderPrivateCpp_Mask0_BanPaoHuLocalCS);
         }
 
     }
 
 
     //We may need to apply role private data, but now we didn't have any except thos applied in step 1
+
 
     //all updated, let's increase pusher count
     coreDataSelf.m_iPusherIdLast++;
@@ -375,6 +395,8 @@ void FMyMJDataAccessorCpp::moveCardFromOldPosi(int32 id)
             }
         }
         pDCoreData->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal--;
+
+        pCardInfo->m_cPosi.reset();
 
     }
     else if (idxAttender >= 0 && idxAttender < 4) {

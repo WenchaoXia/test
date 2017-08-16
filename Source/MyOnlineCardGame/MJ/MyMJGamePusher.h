@@ -18,9 +18,7 @@
 
 #include "MyMJGamePusher.generated.h"
 
-//typedef struct FMyMJGamePusherPointersCpp FMyMJGamePusherPointersCpp;
-
-//Every thing here need to be serialized
+//Every thing below need to be serialized
 //we don't use netserilize, since we want custom serialize code for local file usage, and net-serialize is another code path, which means a double custom code work  
 
 UENUM(BlueprintType)
@@ -41,7 +39,7 @@ enum class MyMJGamePusherTypeCpp : uint8
     PusherMadeChoiceNotify = 12         UMETA(DisplayName = "PusherMadeChoiceNotify"),
     PusherCountUpdate = 13              UMETA(DisplayName = "PusherCountUpdate"),
     PusherResetGame = 20                UMETA(DisplayName = "PusherResetGame"),
-    PusherUpdateCards = 25              UMETA(DisplayName = "PusherUpdateCards"), //mostly used in game end, reveal all card values
+    PusherUpdateAttenderCardsAndState = 25              UMETA(DisplayName = "PusherUpdateAttenderCardsAndState"), //mostly used in game end, reveal all card values
     PusherUpdateTing = 30               UMETA(DisplayName = "PusherUpdateTing"),
 
     ActionBase = 50                     UMETA(DisplayName = "ActionBase"),
@@ -80,13 +78,16 @@ enum class MyMJGamePusherTypeCpp : uint8
 #define ActionGenTimeLeft2AutoChooseMsForImportant 4000
 
 //Most class is create->destroy, so they don't need reset()
-
+//pusher have all info to make game progress, and it may generate full or delta data describing how to change data related to both visualization and logic
 USTRUCT(BlueprintType)
 struct FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
+
+    friend class FMyMJGamePusherIOComponentFullCpp;
+
     FMyMJGamePusherBaseCpp()
     {
         m_eType = MyMJGamePusherTypeCpp::PusherBase;
@@ -136,16 +137,14 @@ public:
         return m_eType;
     };
 
-    //return the pusher id, means the base state id it should be, it must equal to core->m_iIdPusherLast, except a full state update case like game reset
+    //return the pusher id after it is applied, so it must equal to base's id + 1, otherwise invalid
     inline int32 getId() const
     {
         return m_iId;
     };
 
-
 protected:
 
-    friend class FMyMJGamePusherIOComponentFullCpp;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "type"))
     MyMJGamePusherTypeCpp m_eType;
@@ -289,6 +288,7 @@ public:
     {
         prepareForConsume();
 
+        //MY_VERIFY(m_aPushers.Num() <= 0);
         MY_VERIFY(idx >= 0 && idx < m_aPushersSharedPtr.Num());
 
         return m_aPushersSharedPtr[idx];
@@ -457,7 +457,7 @@ public:
     };
 
     inline
-    int32 getIdxAttender()
+    int32 getIdxAttender() const
     {
         MY_VERIFY(m_iIdxAttender >= 0 && m_iIdxAttender < 4);
         return m_iIdxAttender;
@@ -521,6 +521,12 @@ public:
 
     inline
     int32& getIdxAttenderRef()
+    {
+        return m_iIdxAttender;
+    };
+
+    inline
+    int32 getIdxAttenderConst() const
     {
         return m_iIdxAttender;
     };
@@ -645,33 +651,34 @@ public:
 
 };
 
-#define MaskAttenderDataResetIdHandCardShowedOutLocalCS 0x01
+#define MyMJGamePusherUpdateAttenderCardsAndState_Mask0_ResetIdHandCardShowedOutLocalCS 0x01
 
+//restrict to update one attender's card and statte
 USTRUCT(BlueprintType)
-struct FMyMJGamePusherUpdateCardsCpp : public FMyMJGamePusherBaseCpp
+struct FMyMJGamePusherUpdateAttenderCardsAndStateCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGamePusherUpdateCardsCpp() : Super()
+    FMyMJGamePusherUpdateAttenderCardsAndStateCpp() : Super()
     {
-        m_eType = MyMJGamePusherTypeCpp::PusherUpdateCards;
+        m_eType = MyMJGamePusherTypeCpp::PusherUpdateAttenderCardsAndState;
 
         m_iIdxAttender = -1;
-        m_eCurrentState = MyMJCardFlipStateCpp::Invalid;
+
         m_eTargetState = MyMJCardFlipStateCpp::Invalid;
-        m_iMaskAttenderDataReset = 0;
+        m_iMask0 = 0;
     };
 
-    virtual ~FMyMJGamePusherUpdateCardsCpp()
+    virtual ~FMyMJGamePusherUpdateAttenderCardsAndStateCpp()
     {
 
     };
 
     virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
-        FMyMJGamePusherUpdateCardsCpp *pRet = NULL;
-        pRet = new FMyMJGamePusherUpdateCardsCpp();
+        FMyMJGamePusherUpdateAttenderCardsAndStateCpp *pRet = NULL;
+        pRet = new FMyMJGamePusherUpdateAttenderCardsAndStateCpp();
 
         *pRet = *this;
 
@@ -681,7 +688,7 @@ public:
     virtual FString genDebugString() const override
     {
         FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_iIdxAttender: %d, %s->%s, mask 0x%x"), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eCurrentState), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eTargetState), m_iMaskAttenderDataReset);
+        str += FString::Printf(TEXT(" m_iIdxAttender: %d, any->%s, mask 0x%x"), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eTargetState), m_iMask0);
         int32 l = m_aIdValues.Num();
         for (int32 i = 0; i < l; i++) {
             str += m_aIdValues[i].genDebugStr();
@@ -692,12 +699,13 @@ public:
     void initWithCardsTargetStateAlreadyInited(int32 idxAttender, MyMJCardFlipStateCpp eCurrentState, MyMJCardFlipStateCpp eTargetState, int32 iMaskAttenderDataReset)
     {
         m_iIdxAttender = idxAttender;
-        m_eCurrentState = eCurrentState;
+
         m_eTargetState = eTargetState;
-        m_iMaskAttenderDataReset = iMaskAttenderDataReset;
+        m_iMask0 = iMaskAttenderDataReset;
     };
 
     //@outiRoleMask return 0 means not update any one's
+    /*
     virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
     {
         outiRoleMask = 0;
@@ -724,21 +732,18 @@ public:
         
         outaRevealedCardValues = m_aIdValues;
     };
+    */
 
-    //Possible -1, means update cards only
     UPROPERTY()
     int32 m_iIdxAttender;
-
-    UPROPERTY()
-    MyMJCardFlipStateCpp m_eCurrentState;
 
     UPROPERTY()
     MyMJCardFlipStateCpp m_eTargetState;
 
     UPROPERTY()
-    int32 m_iMaskAttenderDataReset;
+    int32 m_iMask0;
 
-    //possible empty when apply
+    //possible value is 0, means not reveal values
     UPROPERTY()
     TArray<FMyIdValuePair> m_aIdValues;
 
@@ -808,7 +813,7 @@ public:
         m_eType = MyMJGamePusherTypeCpp::ActionBase;
 
         m_iPriority = 0;
-        m_iIdxAttender = 0;
+        m_iIdxAttender = -1;
         m_iTimeLeft2AutoChooseMs = 0;
     };
 
@@ -829,7 +834,7 @@ public:
     };
 
     //return 0 if OK, transform this to target form, make sure this is stateless, means regargless how many times it is called, result is same
-    virtual int32 makeSubSelection(TArray<int32> &subSelections)
+    virtual int32 makeSubSelection(const TArray<int32> &subSelections)
     {
         MY_VERIFY(getRealCountOfSelection() >= 1);
         return 0;
@@ -853,14 +858,16 @@ public:
     };
 
     inline
-    int32 getIdxAttender()
+    int32 getIdxAttender(bool bVerifyValid = true) const
     {
-        MY_VERIFY(m_iIdxAttender >= 0 && m_iIdxAttender < 4);
+        if (bVerifyValid) {
+            MY_VERIFY(m_iIdxAttender >= 0 && m_iIdxAttender < 4);
+        }
         return m_iIdxAttender;
     };
 
     inline
-    int32 getPriority()
+    int32 getPriority() const
     {
         return m_iPriority;
     };
@@ -872,7 +879,7 @@ public:
     };
 
     inline
-    int32 getTimeLeft2AutoChoose()
+    int32 getTimeLeft2AutoChoose() const
     {
         return m_iTimeLeft2AutoChooseMs;
     };
@@ -902,9 +909,9 @@ protected:
     int32 m_iTimeLeft2AutoChooseMs; //only used in full mode, not need to serialize, < 0 means not enabled
 };
 
-
+//value must equal to (1 << n) style, but the compile not allow direct set it in enum, so check it manually when change it!
 UENUM(Blueprintable, Meta = (Bitflags))
-enum class EMyMJGameActionReserved0Mask : uint8
+enum class EMyMJGameActionUnfiedMask0 : uint8
 {
     PassPaoHu = 0x01,
 };
@@ -919,7 +926,7 @@ struct FMyMJGameActionUnfiedForBPCpp : public FMyMJGameActionBaseCpp
 public:
     FMyMJGameActionUnfiedForBPCpp() : Super()
     {
-        m_iReserved0 = 0;
+        m_iMask0 = 0;
     };
 
     virtual ~FMyMJGameActionUnfiedForBPCpp()
@@ -933,11 +940,12 @@ public:
     UPROPERTY(BlueprintReadOnly)
     FMyMJWeaveCpp m_cWeave;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "reserved0", Bitmask, BitmaskEnum = "EMyMJGameActionReserved0Mask"))
-    int32 m_iReserved0;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0", Bitmask, BitmaskEnum = "EMyMJGameActionUnfiedMask0"))
+    int32 m_iMask0;
 };
 
 //For visualization, we didn't need all info, but remember we don't use it for base state, only delta
+/*
 USTRUCT(BlueprintType)
 struct FMyMJGamePusherResultUnfiedForBPCpp : public FMyMJGamePusherBaseCpp
 {
@@ -946,6 +954,7 @@ struct FMyMJGamePusherResultUnfiedForBPCpp : public FMyMJGamePusherBaseCpp
 public:
 
 };
+*/
 
 #define MyMJGameActionStateUpdateMaskNotResetHelperLastCardsGivenOutOrWeave 0x01
 
@@ -1023,7 +1032,7 @@ public:
         m_eType = MyMJGamePusherTypeCpp::ActionNoAct;
         m_iPriority = PriMyMJGameActionNoAct;
 
-        m_iReserved0 = 0;
+        m_iMask0 = 0;
 
     };
 
@@ -1046,7 +1055,7 @@ public:
     {
 
         FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_iReserved0: %d."), m_iReserved0);
+        str += FString::Printf(TEXT(" m_iMask0: %d."), m_iMask0);
         return str;
     };
 
@@ -1055,25 +1064,25 @@ public:
         if (poutActionUnified) {
             FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
             *pBase = *this;
-            poutActionUnified->m_iReserved0 = m_iReserved0;
+            poutActionUnified->m_iMask0 = m_iMask0;
         }
 
         return true;
     };
 
     inline
-    void init(int32 idxAttender, int32 iReserved0, int32 iTimeLeft2AutoChooseMs, bool bForceActionGenTimeLeft2AutoChooseMsZero)
+    void init(int32 idxAttender, int32 iMask0, int32 iTimeLeft2AutoChooseMs, bool bForceActionGenTimeLeft2AutoChooseMsZero)
     {
         m_iIdxAttender = idxAttender;
-        m_iReserved0 = iReserved0;
+        m_iMask0 = iMask0;
 
         if (!bForceActionGenTimeLeft2AutoChooseMsZero) {
             m_iTimeLeft2AutoChooseMs = iTimeLeft2AutoChooseMs;
         }
     };
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "reserved0", Bitmask, BitmaskEnum = "EMyMJGameActionReserved0Mask"))
-    int32 m_iReserved0;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0", Bitmask, BitmaskEnum = "EMyMJGameActionUnfiedMask0"))
+    int32 m_iMask0;
 };
 
 UENUM(BlueprintType)
@@ -1359,14 +1368,14 @@ public:
     };
 
     //subSelection here contains card Id
-    virtual int32 makeSubSelection(TArray<int32> &subSelections) override;
+    virtual int32 makeSubSelection(const TArray<int32> &subSelections) override;
 
     //subSelection here contains card Id
     virtual int32 genRandomSubSelections(FRandomStream &RS, TArray<int32> &outSubSelections) override;
 
     virtual void resolveActionResult(FMyMJGameAttenderCpp &attender) override;
 
-    void init(int32 idxAttender, TArray<int32> &aOptionIdsHandCard, TArray<int32> &aOptionIdsJustTaken, bool bRestrict2SelectCardsJustTaken, bool bIsGang)
+    void init(int32 idxAttender, const TArray<int32> &aOptionIdsHandCard, const TArray<int32> &aOptionIdsJustTaken, bool bRestrict2SelectCardsJustTaken, bool bIsGang)
     {
         m_iIdxAttender = idxAttender;
         m_aOptionIdsHandCard = aOptionIdsHandCard;

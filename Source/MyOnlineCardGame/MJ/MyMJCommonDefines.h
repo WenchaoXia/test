@@ -15,6 +15,10 @@ typedef class FMyMJGameAttenderCpp FMyMJGameAttenderCpp;
 typedef struct FMyMJGameIOGroupCpp FMyMJGameIOGroupCpp;
 typedef class FMyMJGamePusherIOComponentFullCpp FMyMJGamePusherIOComponentFullCpp;
 
+typedef struct FMyMJDataStructCpp FMyMJDataStructCpp;
+typedef struct FMyMJDataDeltaCpp FMyMJDataDeltaCpp;
+typedef struct FMyMJGamePusherResultCpp FMyMJGamePusherResultCpp;
+
 //Warn: code use its uint8 value, don't modify it unless checked carefully
 UENUM(BlueprintType)
 enum class MyMJGameErrorCodeCpp : uint8

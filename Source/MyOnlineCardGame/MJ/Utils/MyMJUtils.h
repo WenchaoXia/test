@@ -2122,12 +2122,19 @@ public:
     };
 
     static inline
-    void testAndsetBoolValueToBitMask(int32 &iMaskStorage, int32 iMaskDelta, int32 iCondtionBitValue, int32 iResultBitValue)
+    void testUpdateFlagAndsetBoolValueToStorageBitMask(int32 &iStorageBitMask, int32 iDeltaBitMask, int32 iUpdateFlagBitValue, int32 iResultBitValue)
     {
-        if (getBoolValueFromBitMask(iMaskDelta, iCondtionBitValue)) {
-            bool bV = UMyMJUtilsLibrary::getBoolValueFromBitMask(iMaskDelta, iResultBitValue);
-            setBoolValueToBitMask(iMaskStorage, iResultBitValue, bV);
+        if (getBoolValueFromBitMask(iDeltaBitMask, iUpdateFlagBitValue)) {
+            bool bV = UMyMJUtilsLibrary::getBoolValueFromBitMask(iDeltaBitMask, iResultBitValue);
+            setBoolValueToBitMask(iStorageBitMask, iResultBitValue, bV);
         }
+    };
+
+    static inline
+    void setUpdateFlagAndBoolValueToDeltaBitMask(int32 &iDeltaBitMask, int32 iUpdateFlagBitValue, int32 iResultBitValue, bool bV)
+    {
+        setBoolValueToBitMask(iDeltaBitMask, iUpdateFlagBitValue, true);
+        setBoolValueToBitMask(iDeltaBitMask, iResultBitValue, bV);
     };
 
     /*

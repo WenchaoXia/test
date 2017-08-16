@@ -29,7 +29,7 @@ public:
     static void genDefaultCfg(FMyMJGameCfgCpp &outCfg);
 
     //return whether can Hu
-    static bool checkHuLocalCSBorn(FMyMJGameSubLocalCSCfgCpp &localCSCfg,
+    static bool checkHuLocalCSBorn(const FMyMJGameSubLocalCSCfgCpp &localCSCfg,
                                    const FMyMJValueIdMapCpp &handCardMap,
                                    TArray<FMyMJHuScoreResultItemCpp> &outHuScoreCalcResultItems,
                                    TArray<int32> &outShowOutCards);
@@ -57,7 +57,6 @@ public:
     //@handCardsMapExcludeTriggerCard must not include trigger card
     static bool checkTingsLocalCSInGame(const FMyMJCardValuePackCpp &inValuePack,
                                         const FMyMJGameCfgCpp &gameCfg,
-                                        const FMyMJCardValuePackCpp &cardValuePack,
                                         const TArray<FMyMJWeaveCpp> &weavesShowedOut,
                                         const FMyMJValueIdMapCpp &handCardsMapExcludeTriggerCard,
                                         FMyMJHuScoreResultTingGroupCpp &outResultTingGroup);

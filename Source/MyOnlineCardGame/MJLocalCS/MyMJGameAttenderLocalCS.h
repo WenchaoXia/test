@@ -12,9 +12,9 @@ class FMyMJGameAttenderLocalCSCpp : public FMyMJGameAttenderCpp
     //GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGameAttenderLocalCSCpp(MyMJGameCoreWorkModeCpp eWorkMode) : FMyMJGameAttenderCpp(eWorkMode)
+    FMyMJGameAttenderLocalCSCpp() : FMyMJGameAttenderCpp()
     {
-        reset(false);
+        //resetDatasOwned(); // not good to call virtual function in constructor 
     };
 
     virtual ~FMyMJGameAttenderLocalCSCpp()
@@ -22,21 +22,11 @@ public:
 
     };
 
-    inline
-        FMyMJHuScoreResultFinalGroupCpp& getHuScoreResultFinalGroupLocalCSBornRef()
+    virtual void resetDatasOwned() override
     {
-        return m_cHuScoreResultFinalGroupLocalCSBorn;
-    };
-
-
-    virtual void reset(bool bIsRealAttender) override
-    {
-        FMyMJGameAttenderCpp::reset(bIsRealAttender);
+        FMyMJGameAttenderCpp::resetDatasOwned();
 
         m_aIdHandCardShowedOutLocalCS.Reset();
-        m_cHuScoreResultFinalGroupLocalCSBorn.reset();
-        m_bGangYaoedLocalCS = false;
-        m_bBanPaoHuLocalCS = false;
 
     };
 
@@ -47,14 +37,10 @@ public:
     //return whether now ting 
     bool tryGenAndEnqueueUpdateTingPusher();
 
-    //Following Can only be called by MJCore, and they try to do all the work related to attender, such as update ting
-    void applyPusherUpdateTing(FMyMJGamePusherUpdateTingCpp *pPusher);
 
-    void applyActionNoAct(FMyMJGameActionNoActCpp *pAction);
+    void applyActionHuBornLocalCS(const FMyMJGameActionHuBornLocalCSCpp &action);
 
-    void applyActionHuBornLocalCS(FMyMJGameActionHuBornLocalCSCpp *pAction);
-
-    void applyActionWeave(FMyMJGameActionWeaveCpp *pAction);
+    void applyActionWeave(const FMyMJGameActionWeaveCpp &action);
 
 
     void showOutCardsAfterHu();
@@ -85,9 +71,8 @@ protected:
     bool checkChi(const FMyMJCardCpp &triggerCard, TArray<FMyMJGameActionWeaveCpp> &outActionWeaves);
 
 
-    //local CS
+    //local CS, we can set it here since not related to visualize and only afferct local CS game
     TArray<int32> m_aIdHandCardShowedOutLocalCS;
-    FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroupLocalCSBorn;
-    bool m_bGangYaoedLocalCS;
-    bool m_bBanPaoHuLocalCS;
+
+
 };

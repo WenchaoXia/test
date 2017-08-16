@@ -24,7 +24,7 @@ FMyValueIdMapCpp::insert(int32 id, int32 value)
 }
 
 bool
-FMyValueIdMapCpp::insert(FMyIdValuePair &pair)
+FMyValueIdMapCpp::insert(const FMyIdValuePair &pair)
 {
     return insert(pair.m_iId, pair.m_iValue);
 }

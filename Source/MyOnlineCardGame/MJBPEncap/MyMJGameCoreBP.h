@@ -70,7 +70,7 @@ protected:
     {
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("thread started, beginInRun()"));
 
-        FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(m_eRuleType, MyMJGameCoreWorkModeCpp::Full, m_iSeed.GetValue(), m_iTrivalConfigMask);
+        FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(m_eRuleType, m_iSeed.GetValue(), m_iTrivalConfigMask);
 
         if (m_ppCoreInRun) {
             delete(m_ppCoreInRun);
@@ -207,10 +207,10 @@ public:
 
     void clearUp();
 
-    inline TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc>* getPusherQueue()
+    inline TQueue<FMyMJGamePusherResultCpp *, EQueueMode::Spsc>* getPusherResultQueue()
     {
         if (m_pCoreFullWithThread.IsValid()) {
-            return &m_pCoreFullWithThread->getIOGourpAll().m_cPusherQueue;
+            return &m_pCoreFullWithThread->getIOGourpAll().m_cPusherResultQueue;
         }
 
         return NULL;
@@ -342,12 +342,12 @@ public:
             return false;
         }
 
-        int32 l = pMJData->m_aRoleDatas.Num();
+        //int32 l = pMJData->m_aRoleDataAttenders.Num();
 
-        if (l != (uint8)MyMJGameRoleTypeCpp::Max) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender datas only %d present."), l);
-            return false;
-        }
+        //if (l != (uint8)MyMJGameRoleTypeCpp::Max) {
+            //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender datas only %d present."), l);
+            //return false;
+        //}
 
         //Todo: check more about pawns
 

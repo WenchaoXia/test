@@ -41,7 +41,7 @@ enum class MyMJGamePusherTypeCpp : uint8
     PusherMadeChoiceNotify = 12         UMETA(DisplayName = "PusherMadeChoiceNotify"),
     PusherCountUpdate = 13              UMETA(DisplayName = "PusherCountUpdate"),
     PusherResetGame = 20                UMETA(DisplayName = "PusherResetGame"),
-    PusherUpdateCards = 25              UMETA(DisplayName = "PusherUpdateCards"), //mostly used in game end, reveal all card values
+    PusherUpdateAttenderCardsAndState = 25              UMETA(DisplayName = "PusherUpdateAttenderCardsAndState"), //mostly used in game end, reveal all card values
     PusherUpdateTing = 30               UMETA(DisplayName = "PusherUpdateTing"),
 
     ActionBase = 50                     UMETA(DisplayName = "ActionBase"),
@@ -466,29 +466,29 @@ public:
 
 };
 
-#define MaskAttenderDataResetIdHandCardShowedOutLocalCS 0x01
+#define MyMJGamePusherUpdateAttenderCardsAndState_Mask0_ResetIdHandCardShowedOutLocalCS 0x01
 
 USTRUCT(BlueprintType)
-struct FMyMJGamePusherUpdateCardsCpp : public FMyMJGamePusherBaseCpp
+struct FMyMJGamePusherUpdateAttenderCardsAndStateCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGamePusherUpdateCardsCpp() : Super()
+    FMyMJGamePusherUpdateAttenderCardsAndStateCpp() : Super()
     {
-        m_eType = MyMJGamePusherTypeCpp::PusherUpdateCards;
+        m_eType = MyMJGamePusherTypeCpp::PusherUpdateAttenderCardsAndState;
         m_iIdxAttender = -1;
     };
 
-    virtual ~FMyMJGamePusherUpdateCardsCpp()
+    virtual ~FMyMJGamePusherUpdateAttenderCardsAndStateCpp()
     {
 
     };
 
     virtual FMyMJGamePusherBaseCpp* cloneDeep() const override
     {
-        FMyMJGamePusherUpdateCardsCpp *pRet = NULL;
-        pRet = new FMyMJGamePusherUpdateCardsCpp();
+        FMyMJGamePusherUpdateAttenderCardsAndStateCpp *pRet = NULL;
+        pRet = new FMyMJGamePusherUpdateAttenderCardsAndStateCpp();
 
         *pRet = *this;
 
@@ -498,7 +498,7 @@ public:
     virtual FString genDebugString() const override
     {
         FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_iIdxAttender: %d, mask 0x%x"), m_iIdxAttender, m_iMaskAttenderDataReset);
+        str += FString::Printf(TEXT(" m_iIdxAttender: %d, mask 0x%x"), m_iIdxAttender, m_iMask0);
         int32 l = m_aCardsTargetState.Num();
         for (int32 i = 0; i < l; i++) {
             str += m_aCardsTargetState[i].genDebugStr();
@@ -509,7 +509,7 @@ public:
     void initWithCardsTargetStateAlreadyInited(int32 idxAttender, int32 iMaskAttenderDataReset)
     {
         m_iIdxAttender = idxAttender;
-        m_iMaskAttenderDataReset = iMaskAttenderDataReset;
+        m_iMask0 = iMaskAttenderDataReset;
     };
 
     //Possible -1, means update cards only
@@ -517,7 +517,7 @@ public:
     int32 m_iIdxAttender;
 
     UPROPERTY()
-    int32 m_iMaskAttenderDataReset;
+    int32 m_iMask0;
 
     //possible empty when apply
     UPROPERTY()

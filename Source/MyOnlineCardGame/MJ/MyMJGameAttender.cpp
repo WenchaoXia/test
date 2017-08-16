@@ -6,125 +6,68 @@
 
 #include "MyMJGameCore.h"
 
+const FMyMJRoleDataAttenderPublicCpp&  FMyMJGameAttenderCpp::getRoleDataAttenderPublicRefConst()  const
+{
+    int32 idx = getIdx();
+    return getCoreRefConst().getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(idx);
+}
+
+const FMyMJRoleDataAttenderPrivateCpp& FMyMJGameAttenderCpp::getRoleDataAttenderPrivateRefConst() const
+{
+    int32 idx = getIdx();
+    const FMyMJRoleDataAttenderPrivateCpp* p = getCoreRefConst().getDataAccessorRefConst().getRoleDataAttenderPrivateConst(idx);
+    MY_VERIFY(p);
+    return *p;
+}
+
+bool FMyMJGameAttenderCpp::getIsRealAttender() const
+{
+    int32 idx = getIdx();
+    int32 iMask = getCoreRefConst().getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(idx).m_iMask0;
+
+    return UMyMJUtilsLibrary::getBoolValueFromBitMask(iMask, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender);
+}
+
+bool FMyMJGameAttenderCpp::getIsStillInGame() const
+{
+    int32 idx = getIdx();
+    int32 iMask = getCoreRefConst().getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(idx).m_iMask0;
+
+    return UMyMJUtilsLibrary::getBoolValueFromBitMask(iMask, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame);
+}
 
 void FMyMJGameAttenderCpp::removeCard(int32 id)
 {
-    FMyMJGameCoreCpp *pCore = m_pCore.Pin().Get();
-    FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPack();
-    FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSys();
+    const FMyMJGameCoreCpp *pCore = &getCoreRefConst();
+    const FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPackRefConst();
 
-    FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
+    const FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdxConst(id);
     MyMJCardSlotTypeCpp eType = pCardInfo->m_cPosi.m_eSlot;
 
-    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
-    MY_VERIFY(pDPubD);
-    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
-    MY_VERIFY(pDPriD);
+    if (eType == MyMJCardSlotTypeCpp::InHand) {
 
-    if (eType == MyMJCardSlotTypeCpp::JustTaken) {
-        pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(pDPubD->m_aIdJustTakenCards, id);
-    }
-    else if (eType == MyMJCardSlotTypeCpp::InHand) {
-        int32 value = pCardValuePack->getByIdx(id);
-        MY_VERIFY(value> 0);
+        const FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSysKeeperRefConst();
+
+        int32 value = pCardValuePack->getByIdx(id, true);
         bool bRemoved = m_cDataLogic.m_cHandCards.remove(id, value);
         MY_VERIFY(bRemoved);
     }
-    else if (eType == MyMJCardSlotTypeCpp::GivenOut) {
-        pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(pDPubD->m_aIdGivenOutCards, id);
-    }
-    else if (eType == MyMJCardSlotTypeCpp::Weaved) {
-        bool bWeavesDeleted;
-
-        MY_VERIFY(UMyMJUtilsLibrary::removeCardByIdInWeaves(pDPubD->m_aShowedOutWeaves, id, &bWeavesDeleted));
-
-        if (bWeavesDeleted) {
-            recalcMinorPosiOfCardsInShowedOutWeaves();
-        }
-    }
-    else if (eType == MyMJCardSlotTypeCpp::WinSymbol) {
-        pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(pDPubD->m_aIdWinSymbolCards, id);
-        //m_cHandCards.remove(id, pCard->m_iValue);
-    }
-    else
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("removeCard: not a valid slot type: %d"), (uint8)eType);
-        MY_VERIFY(false);
-    }
-
-    pCardInfo->m_cPosi.reset();
 
 }
 
 void FMyMJGameAttenderCpp::insertCard(int32 id, MyMJCardSlotTypeCpp eTargetSlot)
 {
-    FMyMJGameCoreCpp *pCore = m_pCore.Pin().Get();
-    FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPack();
-    FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSys();
+    if (eTargetSlot == MyMJCardSlotTypeCpp::InHand) {
 
-    FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
-    MyMJCardSlotTypeCpp eType = eTargetSlot;
+        const FMyMJGameCoreCpp *pCore = &getCoreRefConst();
+        const FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPackRefConst();
+        const FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSysKeeperRefConst();
 
-    pCardInfo->m_cPosi.m_iIdxAttender = getIdx();
-    pCardInfo->m_cPosi.m_eSlot = eType;
+        const FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdxConst(id);
 
-    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
-    MY_VERIFY(pDPubD);
-    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
-    MY_VERIFY(pDPriD);
-
-    if (eType == MyMJCardSlotTypeCpp::JustTaken) {
-        pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(pDPubD->m_aIdJustTakenCards, id);
-    }
-    else if (eType == MyMJCardSlotTypeCpp::InHand) {
-        int32 value = pCardValuePack->getByIdx(id);
-        MY_VERIFY(value> 0);
+        int32 value = pCardValuePack->getByIdx(id, true);
         bool bInserted = m_cDataLogic.m_cHandCards.insert(id, value);
         MY_VERIFY(bInserted);
-
-        pCardInfo->m_cPosi.resetMinorData();
-
-    }
-    else if (eType == MyMJCardSlotTypeCpp::GivenOut) {
-        pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(pDPubD->m_aIdGivenOutCards, id);
-    }
-    else if (eType == MyMJCardSlotTypeCpp::Weaved) {
-        //We don't directly insert here, instead, operate weaves later in applyActionWeave
-
-    }
-    else if (eType == MyMJCardSlotTypeCpp::WinSymbol) {
-        pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(pDPubD->m_aIdWinSymbolCards, id);
-    }
-    else
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("insertCard: not a valid slot type: %d"), (uint8)eType);
-        MY_VERIFY(false);
     }
 
-
-}
-
-void FMyMJGameAttenderCpp::recalcMinorPosiOfCardsInShowedOutWeaves()
-{
-    FMyMJGameCoreCpp *pCore = m_pCore.Pin().Get();
-    FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPack();
-
-    FMyMJRoleDataAttenderPublicCpp *pDPubD = getDataPublicDirect();
-    MY_VERIFY(pDPubD);
-    FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
-    MY_VERIFY(pDPriD);
-
-    //fix helper posi in all weaves
-
-    int32 l0 = pDPubD->m_aShowedOutWeaves.Num();
-    for (int32 i = 0; i < l0; i++) {
-        FMyMJWeaveCpp *pWeave = &pDPubD->m_aShowedOutWeaves[i];
-        const TArray<int32> &aT = pWeave->getIdsRefConst();
-        int32 l1 = aT.Num();
-        for (int32 j = 0; j < l1; j++) {
-            FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(aT[j]);
-            pCardInfo->m_cPosi.m_iIdxInSlot0 = i;
-            pCardInfo->m_cPosi.m_iIdxInSlot1 = j;
-        }
-    }
 }

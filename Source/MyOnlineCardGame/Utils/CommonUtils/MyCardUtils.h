@@ -190,7 +190,7 @@ struct FMyValueIdMapCpp
     * @return false if duplicated one found
     */
     bool insert(int32 id, int32 value);
-    bool insert(FMyIdValuePair &pair);
+    bool insert(const FMyIdValuePair &pair);
 
     /*
     * @return false if not found
