@@ -218,6 +218,40 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionThrowDices)
     {
+        const FMyMJGameActionThrowDicesCpp &actionThrowDice = StaticCast<const FMyMJGameActionThrowDicesCpp &>(pusher);
+
+        int32 idx = delta.m_aCoreData.Emplace();
+        FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[idx];
+
+        //idx is always 1 - 4
+        int32 idxAttender = actionThrowDice.getIdxAttender();
+
+        idx = delta.m_aRoleDataAttender.Emplace();
+        FMyMJRoleDataAttenderDeltaCpp &deltaAttender = delta.m_aRoleDataAttender[idx];
+        deltaAttender.m_iIdxAttender = idxAttender;
+
+        int32 iDiceNumberNow0, iDiceNumberNow1;
+        actionThrowDice.getDiceNumbers(&iDiceNumberNow0, &iDiceNumberNow1);
+
+        UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen, iDiceNumberNow0);
+        UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen, iDiceNumberNow1);
+
+        MyMJGameActionThrowDicesSubTypeCpp eSubType = actionThrowDice.getSubType();
+        if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GameStart) {
+            coreDataDelta.m_eGameState = MyMJGameStateCpp::CardsWaitingForDistribution;
+            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+
+            UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart);
+        }
+        else if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS) {
+            coreDataDelta.m_eGameState = MyMJGameStateCpp::WeavedGangDicesThrownLocalCS;
+            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+
+            UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GangYaoLocalCS);
+        }
+        else {
+            MY_VERIFY(false);
+        }
 
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart)
@@ -260,9 +294,6 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
 {
     const FMyMJGamePusherBaseCpp *pPusher = &pusher;
 
-
-    const FMyMJGameActionNoActCpp *pActionNoAct;
-    const FMyMJGameActionThrowDicesCpp *pActionThrowDices;
     const FMyMJGameActionDistCardAtStartCpp *pActionDistCardAtStart;
     const FMyMJGameActionTakeCardsCpp *pActionTakeCards;
     const FMyMJGameActionGiveOutCardsCpp *pActionGiveOutCards;
@@ -347,12 +378,25 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
         }
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionNoAct) {
-        pActionNoAct = StaticCast<const FMyMJGameActionNoActCpp *>(pPusher);
-        //getRealAttenderByIdx(pActionNoAct->getIdxAttender())->applyActionNoAct(pActionNoAct);
+
+
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionThrowDices) {
-        pActionThrowDices = StaticCast<const FMyMJGameActionThrowDicesCpp *>(pPusher);
-        applyActionThrowDices(*pActionThrowDices);
+        const FMyMJGameActionThrowDicesCpp& actionThrowDices = StaticCast<const FMyMJGameActionThrowDicesCpp &>(pusher);
+
+        int32 idxAttender = actionThrowDices.getIdxAttender();
+        MyMJGameActionThrowDicesSubTypeCpp eSubType = actionThrowDices.getSubType();
+
+        if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GameStart) {
+        }
+        else if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS) {
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
+        int32 uMask = genIdxAttenderStillInGameMaskOne(idxAttender);
+        resetForNewLoop(NULL, NULL, uMask, false, idxAttender);
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart) {
         pActionDistCardAtStart = StaticCast<const FMyMJGameActionDistCardAtStartCpp *>(pPusher);
@@ -532,8 +576,9 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
         workingIdx++;
     }
 
-    //let's recalc and arrange them
-    stackCount = pD->m_aUntakenCardStacks.Num();
+    //let's recalc and arrange them to attender's
+    MY_VERIFY(stackCount == pD->m_aUntakenCardStacks.Num());
+    //stackCount = pD->m_aUntakenCardStacks.Num();
     int32 stackArrayLAssumed = stackCount / 4;
 
     for (int32 i = 0; i < 4; i++) {
@@ -573,7 +618,9 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
         }
     }
 
-    pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal = cardCount;
+
+    //update untaken slot info
+    pD->m_cUntakenSlotInfo.initWhenCardsFilledInUntakenSlot(stackCount, cardCount, pD->m_cGameCfg.m_cTrivialCfg.m_iStackNumKeptFromTail);
 
     pCardInfoPack->helperVerifyInfos();
 }
@@ -631,59 +678,6 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(const FMyMJGamePusherResetGam
 
 }
 
-
-void FMyMJGameCoreLocalCSCpp::applyActionThrowDices(const FMyMJGameActionThrowDicesCpp &action)
-{
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
-
-    //idx is always 1 - 4
-    int32 idxAttender = action.getIdxAttender();
-
-    int32 iDiceNumberNow0, iDiceNumberNow1, trash;
-    action.getDiceNumbers(iDiceNumberNow0, iDiceNumberNow1, trash);
-
-    MyMJGameActionThrowDicesSubTypeCpp eSubType = action.getSubType();
-
-    if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GameStart) {
-
-        const FMyMJRoleDataAttenderPublicCpp *pDPubD = &m_aAttendersAll[idxAttender]->getRoleDataAttenderPublicRefConst();
-
-        //FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
-        //MY_VERIFY(pDPriD);
-
-
-        int32 iBase = pDPubD->m_cUntakenSlotSubSegmentInfo.m_iIdxStart;
-        //int32 len = m_aUntakenCardStacks.Num();
-        int32 len = pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal;
-        MY_VERIFY(len > 0);
-        //pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow = (iBase + iDiceNumberNow0 + iDiceNumberNow1 - 1 + len) % len;
-        //pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow = pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotTailAtStart = (pD->m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow - 1 + len) % len;
-
-        int32 cardNumKept = pD->m_cGameCfg.m_cTrivialCfg.m_iStackNumKeptFromTail * pD->m_cGameCfg.m_cTrivialCfg.m_iCardNumPerStackInUntakenSlot;
-        MY_VERIFY(pD->m_cUntakenSlotInfo.calcUntakenSlotCardsLeftNumKeptFromTailConst(pD->m_aUntakenCardStacks) == cardNumKept);
-        //pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail = cardNumKept;
-        //pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead = pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal - pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail;
-
-        //pD->m_eGameState = MyMJGameStateCpp::CardsWaitingForDistribution;
-
-        //if (getWorkMode() == MyMJGameCoreWorkModeCpp::Full) {
-            //int32 idxAttenderNext = findIdxAttenderStillInGame(idxAttender, 1, false);
-            int32 uMask = genIdxAttenderStillInGameMaskOne(idxAttender);
-            resetForNewLoop(NULL, NULL, uMask, false, idxAttender);
-        //}
-    }
-    else if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS) {
-        //pD->m_eGameState = MyMJGameStateCpp::WeavedGangDicesThrownLocalCS;
-
-        //if (getWorkMode() == MyMJGameCoreWorkModeCpp::Full) {
-            int32 uMask = genIdxAttenderStillInGameMaskOne(idxAttender);
-            resetForNewLoop(NULL, NULL, uMask, false, idxAttender);
-        //}
-    }
-    else {
-        MY_VERIFY(false);
-    }
-}
 
 void FMyMJGameCoreLocalCSCpp::applyActionDistCardsAtStart(const FMyMJGameActionDistCardAtStartCpp &action)
 {

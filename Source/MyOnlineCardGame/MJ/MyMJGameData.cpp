@@ -231,6 +231,44 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
             }
         }
 
+        int32 diceNumerNowMaskUpdateReason = UMyMJUtilsLibrary::getIntValueFromBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen);
+        if (diceNumerNowMaskUpdateReason != FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_Invalid) {
+
+            int32 diceNumerValue0 = UMyMJUtilsLibrary::getIntValueFromBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen);
+            int32 diceNumerValue1 = UMyMJUtilsLibrary::getIntValueFromBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen);
+            int32 idxAttender = delta.getActionIdxAttender();
+
+            if (diceNumerNowMaskUpdateReason == FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart) {
+
+                //just updat the untaken info
+                FMyMJRoleDataAttenderPublicCpp& roleDataAttenderPublicSelf = getRoleDataAttenderPublicRef(idxAttender);
+
+                int32 iBase = roleDataAttenderPublicSelf.m_cUntakenSlotSubSegmentInfo.m_iIdxStart;
+                int32 len = coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal;
+                MY_VERIFY(len > 0);
+
+                coreDataSelf.m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow = (iBase + diceNumerValue0 + diceNumerValue1 - 1 + len) % len;
+                coreDataSelf.m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow = coreDataSelf.m_cUntakenSlotInfo.m_iIdxUntakenSlotTailAtStart = (coreDataSelf.m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow - 1 + len) % len;
+
+                //the cfg is only say how many stack kept, now dice throwed, we can resolve how many cards kept
+                int32 cardNumKept = coreDataSelf.m_cUntakenSlotInfo.calcUntakenSlotCardsLeftNumKeptFromTailConst(coreDataSelf.m_aUntakenCardStacks);
+
+                coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail = cardNumKept;
+                coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead = coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal - coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail;
+
+            }
+            else if (diceNumerNowMaskUpdateReason == FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GangYaoLocalCS) {
+
+            }
+            else {
+                MY_VERIFY(false);
+            }
+
+            UMyMJUtilsLibrary::setIntValueToBitMask(coreDataSelf.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen, diceNumerValue0);
+            UMyMJUtilsLibrary::setIntValueToBitMask(coreDataSelf.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen, diceNumerValue1);
+        }
+
+
         if (UMyMJUtilsLibrary::getBoolValueFromBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_IncreaseActionGroupId)) {
             coreDataSelf.m_iActionGroupId++;
         }

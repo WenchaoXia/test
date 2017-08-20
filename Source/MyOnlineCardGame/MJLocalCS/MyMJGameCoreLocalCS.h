@@ -54,7 +54,6 @@ protected:
     void applyPusherResetGame(const FMyMJGamePusherResetGameCpp &pusher);
 
 
-    void applyActionThrowDices(const FMyMJGameActionThrowDicesCpp &action);
     void applyActionDistCardsAtStart(const FMyMJGameActionDistCardAtStartCpp &action);
     void applyActionTakeCards(const FMyMJGameActionTakeCardsCpp &action);
     void applyActionGiveOutCards(const FMyMJGameActionGiveOutCardsCpp &action);

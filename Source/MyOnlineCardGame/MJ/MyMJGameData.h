@@ -73,9 +73,18 @@ public:
         m_iUntakenSlotCardsLeftNumKeptFromTail = 0;
         m_iUntakenSlotCardsLeftNumNormalFromHead = 0;
 
-        m_iCfgStackNumKeptFromTail = 0;
+        m_iCfgStackNumKeptFromTail = -1;
     };
 
+    //Fill in basic info when game reseted, but not thrown dices yet
+    void initWhenCardsFilledInUntakenSlot(int32 stackCount, int32 cardCount, int32 CfgStackNumKeptFromTail)
+    {
+        m_iUntakenSlotLengthAtStart = stackCount;
+
+        m_iUntakenSlotCardsLeftNumTotal = cardCount;
+
+        m_iCfgStackNumKeptFromTail = CfgStackNumKeptFromTail;
+    }
 
     bool isIdxUntakenSlotInKeptFromTailSegment(int32 idx) const
     {
@@ -116,6 +125,8 @@ public:
     //Before calling, verify cfg data have been set.
     int32 calcUntakenSlotCardsLeftNumKeptFromTailConst(const TArray<FMyIdCollectionCpp> &aUntakenCardStacks) const
     {
+        MY_VERIFY(m_iCfgStackNumKeptFromTail >= 0);
+
         const FMyMJGameUntakenSlotInfoCpp *pInfo = this;
 
         int32 keptCount = m_iCfgStackNumKeptFromTail;
@@ -143,13 +154,6 @@ public:
 
         return ret;
     }
-
-    //Before calling, verify cfg data have been set, and it will update @m_iUntakenSlotCardsLeftNumKeptFromTail and return the value
-    inline
-    int32 calcUntakenSlotCardsLeftNumKeptFromTail(const TArray<FMyIdCollectionCpp> &aUntakenCardStacks)
-    {
-        m_iUntakenSlotCardsLeftNumKeptFromTail = calcUntakenSlotCardsLeftNumKeptFromTailConst(aUntakenCardStacks);
-    };
 
     inline
         int32 getCardNumCanBeTakenNormally() const
@@ -235,6 +239,17 @@ public:
 
 #define FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave (1 << 4)
 
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart (0)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen (3)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart (3)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen (3)
+
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart    (6)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen          (3)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_Invalid         (0)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart       (1)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GangYaoLocalCS  (2)
+
 //#define FMyMJCoreDataPublicDirectMask0_UpdateHelperLastCardsGivenOutOrWeave (1 << 5)
 //#define FMyMJCoreDataPublicDirectMask0_UpdateHelperLastCardTakenInGame (1 << 7) //not needed. automatically set when removing card from untaken slot
 
@@ -312,8 +327,8 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game State"))
      MyMJGameStateCpp m_eGameState;
 
-    //0xf means dice 0, 0xf0 means dice 1
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number 0"))
+    //see mask define
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number Now Mask"))
     int32 m_iDiceNumberNowMask;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Untaken Slot Info"))
@@ -338,6 +353,7 @@ public:
     FMyMJCoreDataDeltaCpp()
     {
         m_eGameState = MyMJGameStateCpp::Invalid;
+        m_iDiceNumberNowMask = 0;
         m_iMask0 = 0;
     };
 
@@ -350,6 +366,9 @@ public:
 
     //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
     //TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Numbers Now Mask"))
+    int32 m_iDiceNumberNowMask;
 
     //used for bit bool and bit tip updating as delta
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
@@ -847,6 +866,12 @@ public:
     {
         m_iGameId = 0;
         m_iServerWorldTimeStamp_10Ms = 0;
+    };
+
+    int32 getActionIdxAttender() const
+    {
+        MY_VERIFY(m_aRoleDataAttender.Num() == 1);
+        return m_aRoleDataAttender[0].m_iIdxAttender;
     };
 
     //Num > 0 means valid, and num must equal 1 in that case

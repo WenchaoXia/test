@@ -1142,7 +1142,7 @@ public:
 
     void init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream &RS, bool bForceActionGenTimeLeft2AutoChooseMsZero);
 
-    void getDiceNumbers(int32 &outDiceNumber0, int32 &outDiceNumber1, int32 &outDiceNumberMask) const;
+    void getDiceNumbers(int32 *poutDiceNumber0, int32 *poutDiceNumber1) const;
 
     MyMJGameActionThrowDicesSubTypeCpp getSubType() const;
 

@@ -2111,7 +2111,7 @@ public:
     };
 
     static inline
-    void setBoolValueToBitMask(int32 iMask, int32 iTestingBitValue, bool bV)
+    void setBoolValueToBitMask(int32 &iMask, int32 iTestingBitValue, bool bV)
     {
         if (bV) {
             iMask |= iTestingBitValue;
@@ -2135,6 +2135,39 @@ public:
     {
         setBoolValueToBitMask(iDeltaBitMask, iUpdateFlagBitValue, true);
         setBoolValueToBitMask(iDeltaBitMask, iResultBitValue, bV);
+    };
+
+    //@iBitPosStart must like (n), Not £¨1 << n£©
+    static
+    int32 getIntValueFromBitMask(int32 iMask, uint32 iBitPosiStart, uint32 iBitLen)
+    {
+        MY_VERIFY((iBitPosiStart + iBitLen) <= 32);
+        MY_VERIFY(iBitLen > 0);
+
+        int32 valueMask = ((1 << iBitLen) - 1);
+        int32 valueMaskExpanded = valueMask << iBitPosiStart;
+
+        int32 valueExpanded = iMask & valueMaskExpanded;
+        int32 value = valueExpanded >> iBitPosiStart;
+
+        return value;
+    };
+
+    static
+    void setIntValueToBitMask(int32 &iMask, uint32 iBitPosiStart, uint32 iBitLen, int32 v)
+    {
+        MY_VERIFY((iBitPosiStart + iBitLen) <= 32);
+        MY_VERIFY(iBitLen > 0);
+
+        int32 valueMask = ((1 << iBitLen) - 1);
+        int32 valueMaskExpanded = valueMask << iBitPosiStart;
+
+        int32 value = v & valueMask;
+        int32 valueExpanded = value << iBitPosiStart;
+
+        iMask &= (~valueMaskExpanded);
+        iMask |= valueExpanded;
+
     };
 
     /*
