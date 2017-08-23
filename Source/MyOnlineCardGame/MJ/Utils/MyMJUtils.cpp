@@ -125,6 +125,19 @@ void FMyMJCardValuePackCpp::helperResolveValues(TArray<FMyIdValuePair> &aPairs, 
     }
 }
 
+
+void FMyMJWeaveCpp::addCard(int32 id)
+{
+    int32 idx = m_aIds.AddUnique(id);
+
+    if (idx < 0) {
+
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("id not unique, id %d, now array: %s ."), id, *UMyMJUtilsLibrary::formatStrIds(m_aIds));
+        MY_VERIFY(false);
+    }
+
+};
+
 FString FMyMJWeaveCpp::genDebugString() const
 {
     FString ret = FString::Printf(TEXT(" m_eType: %s, m_iIdTriggerCard %d, m_iIdxAttenderTriggerCardSrc %d, m_eTypeConsumed: %s, m_iReserved0: 0x%x."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eType), m_iIdTriggerCard, m_iIdxAttenderTriggerCardSrc, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eTypeConsumed), m_iReserved0);
@@ -132,6 +145,13 @@ FString FMyMJWeaveCpp::genDebugString() const
     //ret += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aIdValues);
 
     return ret;
+};
+
+
+
+FString FMyMJHuScoreAttrCpp::genDebugString() const
+{
+    return FString::Printf(TEXT("(%s, %d)"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)m_eType), m_iScorePerAttender);
 };
 
 
@@ -150,6 +170,21 @@ FString FMyMJHuScoreResultBaseCpp::genDebugString() const
 
     return ret;
 };
+
+
+
+void FMyMJHuCfgCpp::prepareForUse()
+{
+    UMyMJUtilsLibrary::array2MapForHuScoreAttr(m_aHuScoreAttrs, m_mHuScoreAttrs);
+};
+
+
+const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& FMyMJHuCfgCpp::getHuScoreAttrsRefConst() const
+{
+    MY_VERIFY(UMyMJUtilsLibrary::checkUniformOfArrayAndMapForHuScoreAttr(m_aHuScoreAttrs, m_mHuScoreAttrs, false));
+    return m_mHuScoreAttrs;
+};
+
 
 void
 FMyMJWeaveTreeNodeCpp::appendChild(TSharedPtr<FMyMJWeaveTreeNodeCpp> &pChild)
@@ -1337,6 +1372,48 @@ FMyMJValueIdMapCpp::getCountOfGroupSameCardValue(int32 minCount, bool bAlwaysCou
 }
 
 
+void UMyMJUtilsLibrary::array2MapForHuScoreAttr(const TArray<FMyMJHuScoreAttrCpp>& aHuBornScoreAttrs, TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& mHuBornScoreAttrs)
+{
+    mHuBornScoreAttrs.Reset();
+    int32 l = aHuBornScoreAttrs.Num();
+    for (int32 i = 0; i < l; i++) {
+        FMyMJHuScoreAttrCpp& attr = mHuBornScoreAttrs.FindOrAdd(aHuBornScoreAttrs[i].m_eType);
+        attr = aHuBornScoreAttrs[i];
+    }
+
+    MY_VERIFY(checkUniformOfArrayAndMapForHuScoreAttr(aHuBornScoreAttrs, mHuBornScoreAttrs, true));
+}
+
+bool UMyMJUtilsLibrary::checkUniformOfArrayAndMapForHuScoreAttr(const TArray<FMyMJHuScoreAttrCpp>& aHuBornScoreAttrs, const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& mHuBornScoreAttrs, bool bComplexCheck)
+{
+    int32 l = aHuBornScoreAttrs.Num();
+
+    if (l != mHuBornScoreAttrs.Num()) {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("array and map's num not equal: %d, %d"), l, mHuBornScoreAttrs.Num());
+        return false;
+    }
+
+    if (bComplexCheck == false) {
+        return true;
+    }
+
+    for (int32 i = 0; i < l; i++) {
+        const FMyMJHuScoreAttrCpp* pAttrOfArray = &aHuBornScoreAttrs[i];
+        const FMyMJHuScoreAttrCpp* pAttrOfMap = mHuBornScoreAttrs.Find(pAttrOfArray->m_eType);
+        if (pAttrOfMap == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("array elem %s not found in map."), *pAttrOfArray->genDebugString());
+            return false;
+        }
+
+        if (!pAttrOfArray->equal(*pAttrOfMap)) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("array and map elem not equal: %s, %s."), *pAttrOfArray->genDebugString(), *pAttrOfMap->genDebugString());
+            return false;
+        }
+    }
+
+    return true;
+}
+
 FString
 UMyMJUtilsLibrary::getStringFromEnum(const TCHAR *enumName, uint8 value)
 {
@@ -1359,6 +1436,17 @@ UMyMJUtilsLibrary::nowAsMsFromTick()
     return UKismetMathLibrary::Now().GetTicks() / (ETimespan::TicksPerSecond / 1000);
 }
 
+FString UMyMJUtilsLibrary::formatStrIds(const TArray<int32> &aIds)
+{
+    FString str;
+    int32 l = aIds.Num();
+
+    for (int32 i = 0; i < l; i++) {
+        str += FString::Printf(TEXT("(%d), "), aIds[i]);
+    }
+
+    return str;
+}
 
 FString
 UMyMJUtilsLibrary::formatStrIdsValues(const TArray<int32> &aIds, const TArray<int32> &aValues)

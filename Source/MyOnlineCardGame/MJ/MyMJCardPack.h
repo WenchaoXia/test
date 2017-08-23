@@ -80,6 +80,9 @@ public:
 
     void helperRecalcMinorPosiOfCardsInShowedOutWeaves(const TArray<FMyMJWeaveCpp> &aShowedOutWeaves);
 
+    //slow, return the idx, < 0  means not found
+    static int32 helperFindCardByIdInCardInfos(const TArray<FMyMJCardInfoCpp>& aCardInfos, int32 idCard);
+
 protected:
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card infos"))

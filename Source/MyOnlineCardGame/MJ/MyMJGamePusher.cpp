@@ -808,34 +808,42 @@ FMyMJGameActionThrowDicesCpp::cloneDeep() const
     return pRet;
 }
 
-void FMyMJGameActionThrowDicesCpp::init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream &RS, bool bForceActionGenTimeLeft2AutoChooseMsZero)
+void FMyMJGameActionThrowDicesCpp::init(int32 iReason, int32 idxAttender, FRandomStream &RS, bool bForceActionGenTimeLeft2AutoChooseMsZero)
 {
-    m_eSubType = eSubType;
     m_iIdxAttender = idxAttender;
-    m_iDiceNumber0 = RS.RandRange(1, 6);
-    m_iDiceNumber1 = RS.RandRange(1, 6);
 
-    if (m_eSubType == MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS && !bForceActionGenTimeLeft2AutoChooseMsZero) {
+    int32 iDiceNumber0 = RS.RandRange(1, 6);
+    int32 iDiceNumber1 = RS.RandRange(1, 6);
+
+    if (iReason == FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GangYaoLocalCS && !bForceActionGenTimeLeft2AutoChooseMsZero) {
         m_iTimeLeft2AutoChooseMs = ActionGenTimeLeft2AutoChooseMsForImportant;
     }
+
+    UMyMJUtilsLibrary::setIntValueToBitMask(m_iDiceNumberMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen, iDiceNumber0);
+    UMyMJUtilsLibrary::setIntValueToBitMask(m_iDiceNumberMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen, iDiceNumber1);
+    UMyMJUtilsLibrary::setIntValueToBitMask(m_iDiceNumberMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen, iReason);
 }
+
 
 void FMyMJGameActionThrowDicesCpp::getDiceNumbers(int32 *poutDiceNumber0, int32 *poutDiceNumber1) const
 {
-    MY_VERIFY(m_iDiceNumber0 >= 1 && m_iDiceNumber0 < 7);
-    MY_VERIFY(m_iDiceNumber1 >= 1 && m_iDiceNumber1 < 7);
+    int32 iDiceNumber0 = UMyMJUtilsLibrary::getIntValueFromBitMask(m_iDiceNumberMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen);
+    int32 iDiceNumber1 = UMyMJUtilsLibrary::getIntValueFromBitMask(m_iDiceNumberMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen);
+
+    MY_VERIFY(iDiceNumber0 >= 1 && iDiceNumber0 < 7);
+    MY_VERIFY(iDiceNumber1 >= 1 && iDiceNumber1 < 7);
 
     if (poutDiceNumber0) {
-        *poutDiceNumber0 = m_iDiceNumber0;
+        *poutDiceNumber0 = iDiceNumber0;
     }
     if (poutDiceNumber1) {
-        *poutDiceNumber1 = m_iDiceNumber1;
+        *poutDiceNumber1 = iDiceNumber1;
     }
 }
 
-MyMJGameActionThrowDicesSubTypeCpp FMyMJGameActionThrowDicesCpp::getSubType() const
+int32 FMyMJGameActionThrowDicesCpp::getDiceReason() const
 {
-    return m_eSubType;
+    return UMyMJUtilsLibrary::getIntValueFromBitMask(m_iDiceNumberMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen);
 }
 
 FMyMJGamePusherBaseCpp*
@@ -924,24 +932,3 @@ void FMyMJGameActionGiveOutCardsCpp::resolveActionResult(FMyMJGameAttenderCpp &a
 
 }
 
-void FMyMJGameActionHuCpp::resolveActionResult(FMyMJGameAttenderCpp &attender)
-{
-    m_aRevealingCards.Reset();
-
-    const FMyMJCardInfoPackCpp  *pCardInfoPack  = &attender.getCoreRefConst().getCardInfoPackRefConst();
-    const FMyMJCardValuePackCpp *pCardValuePack = &attender.getCoreRefConst().getCardValuePackOfSysKeeperRefConst();
-    int32 l = pCardValuePack->getLength();
-    for (int32 i = 0; i < l; i++) {
-        const FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdxConst(i);
-        if (pCardInfo->m_eFlipState == MyMJCardFlipStateCpp::Up) {
-            //already revealed
-            continue;
-        }
-
-        int32 idx = m_aRevealingCards.Emplace();
-        m_aRevealingCards[idx].m_iId = pCardInfo->m_iId;
-        pCardValuePack->helperResolveValue(m_aRevealingCards[idx]);
-
-    }
-
-}

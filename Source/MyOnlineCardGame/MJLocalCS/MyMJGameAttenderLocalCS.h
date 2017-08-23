@@ -27,7 +27,6 @@ public:
         FMyMJGameAttenderCpp::resetDatasOwned();
 
         m_aIdHandCardShowedOutLocalCS.Reset();
-
     };
 
     //There are methods to move virtual func binding from runtime to compile time, but to save time I just used virtual func here 
@@ -36,11 +35,6 @@ public:
 
     //return whether now ting 
     bool tryGenAndEnqueueUpdateTingPusher();
-
-
-    void applyActionHuBornLocalCS(const FMyMJGameActionHuBornLocalCSCpp &action);
-
-    void applyActionWeave(const FMyMJGameActionWeaveCpp &action);
 
 
     void showOutCardsAfterHu();

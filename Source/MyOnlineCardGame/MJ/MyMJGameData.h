@@ -67,11 +67,11 @@ public:
         m_iIdxUntakenSlotHeadNow = -1;
         m_iIdxUntakenSlotTailNow = -1;
         m_iIdxUntakenSlotTailAtStart = -1;
-        m_iUntakenSlotLengthAtStart = 0;
+        m_iUntakenSlotLengthAtStart = -1;
 
-        m_iUntakenSlotCardsLeftNumTotal = 0;
-        m_iUntakenSlotCardsLeftNumKeptFromTail = 0;
-        m_iUntakenSlotCardsLeftNumNormalFromHead = 0;
+        m_iUntakenSlotCardsLeftNumTotal = -1;
+        m_iUntakenSlotCardsLeftNumKeptFromTail = -1;
+        m_iUntakenSlotCardsLeftNumNormalFromHead = -1;
 
         m_iCfgStackNumKeptFromTail = -1;
     };
@@ -84,7 +84,23 @@ public:
         m_iUntakenSlotCardsLeftNumTotal = cardCount;
 
         m_iCfgStackNumKeptFromTail = CfgStackNumKeptFromTail;
-    }
+    };
+
+    void setupWhenDicesThrownForCardDistAtStart(const TArray<FMyIdCollectionCpp>& aUntakenCardStacks, int32 iIdxUntakenSlotHeadNow)
+    {
+        MY_VERIFY(m_iUntakenSlotLengthAtStart > 0);
+
+        m_iIdxUntakenSlotHeadNow = iIdxUntakenSlotHeadNow;
+        m_iIdxUntakenSlotTailNow = (m_iIdxUntakenSlotHeadNow - 1 + m_iUntakenSlotLengthAtStart) % m_iUntakenSlotLengthAtStart;
+        m_iIdxUntakenSlotTailAtStart = m_iIdxUntakenSlotTailNow;
+
+
+        //the cfg is only say how many stack kept, now dice throwed, we can resolve how many cards kept
+        int32 cardNumKept = calcUntakenSlotCardsLeftNumKeptFromTailConst(aUntakenCardStacks);
+
+        m_iUntakenSlotCardsLeftNumKeptFromTail = cardNumKept;
+        m_iUntakenSlotCardsLeftNumNormalFromHead = m_iUntakenSlotCardsLeftNumTotal - m_iUntakenSlotCardsLeftNumKeptFromTail;
+    };
 
     bool isIdxUntakenSlotInKeptFromTailSegment(int32 idx) const
     {
@@ -126,12 +142,12 @@ public:
     int32 calcUntakenSlotCardsLeftNumKeptFromTailConst(const TArray<FMyIdCollectionCpp> &aUntakenCardStacks) const
     {
         MY_VERIFY(m_iCfgStackNumKeptFromTail >= 0);
-
-        const FMyMJGameUntakenSlotInfoCpp *pInfo = this;
+        MY_VERIFY(m_iIdxUntakenSlotTailAtStart >= 0);
+        MY_VERIFY(m_iUntakenSlotCardsLeftNumTotal >= 0);
 
         int32 keptCount = m_iCfgStackNumKeptFromTail;
-        int32 idxTail = pInfo->m_iIdxUntakenSlotTailAtStart;
-        int32 totalL = pInfo->m_iUntakenSlotCardsLeftNumTotal;
+        int32 idxTail = m_iIdxUntakenSlotTailAtStart;
+        int32 totalL = m_iUntakenSlotCardsLeftNumTotal;
 
         int32 idxWorking = idxTail;
         int32 stack2check = keptCount;
@@ -154,6 +170,28 @@ public:
 
         return ret;
     }
+
+    void updateUntakenInfoHeadOrTail(const TArray<FMyIdCollectionCpp>& aUntakenCardStacks, bool bUpdateHead, bool bUpdateTail)
+    {
+
+        if (m_iUntakenSlotCardsLeftNumTotal <= 0) {
+            return;
+        }
+
+        MY_VERIFY(m_iIdxUntakenSlotHeadNow >= 0);
+        MY_VERIFY(m_iIdxUntakenSlotTailNow >= 0);
+
+        if (bUpdateHead) {
+            int32 idx = UMyMJUtilsLibrary::getIdxOfUntakenSlotHavingCard(aUntakenCardStacks, m_iIdxUntakenSlotHeadNow, 0, false);
+            MY_VERIFY(idx >= 0);
+            m_iIdxUntakenSlotHeadNow = idx;
+        }
+        if (bUpdateTail) {
+            int32 idx = UMyMJUtilsLibrary::getIdxOfUntakenSlotHavingCard(aUntakenCardStacks, m_iIdxUntakenSlotTailNow, 0, true);
+            MY_VERIFY(idx >= 0);
+            m_iIdxUntakenSlotTailNow = idx;
+        }
+    };
 
     inline
         int32 getCardNumCanBeTakenNormally() const
@@ -204,13 +242,13 @@ struct FMyMJCoreDataLogicOnlyCpp
 
     FMyMJCoreDataLogicOnlyCpp()
     {
-        reset();
+        resetForNewGame();
         m_iMsLast = 0;
         m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
-        //m_eWorkMode = MyMJGameCoreWorkModeCpp::Invalid;
+        //m_eWorkMode = MyMJGameElemWorkModeCpp::Invalid;
     };
 
-    void reset()
+    void resetForNewGame()
     {
         m_eActionLoopState = MyMJActionLoopStateCpp::Invalid;
         m_cHelperShowedOut2AllCards.clear();
@@ -222,7 +260,7 @@ public:
 
     //actually representing the core class type, even before game config arrive
     MyMJGameRuleTypeCpp m_eRuleType;
-    //MyMJGameCoreWorkModeCpp m_eWorkMode;
+    //MyMJGameElemWorkModeCpp m_eWorkMode;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Loop State"))
     MyMJActionLoopStateCpp m_eActionLoopState;
@@ -232,6 +270,45 @@ public:
         FMyMJValueIdMapCpp m_cHelperShowedOut2AllCards;
 };
 
+USTRUCT(BlueprintType)
+struct FMyMJCoreDataHelperCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJCoreDataHelperCpp()
+    {
+        reset();
+    };
+
+    void reset()
+    {
+        m_aIdHelperLastCardsGivenOut.Reset();
+        m_aHelperLastWeaves.Reset();
+        m_aIdHelperLastCardsTakenInWholeGame.Reset();
+        m_eHelperGameStateJustBeforeLastCardsTakenInWholeGame = MyMJGameStateCpp::Invalid;
+    };
+
+    //It takes all cards and number may > 1 in case of giving out cards just after taken card for gang
+    //union with @m_aIdHelperLastWeave
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut"))
+        TArray<int32> m_aIdHelperLastCardsGivenOut;
+
+    //When weave, it takes all cards, and we can assert only one weave's card in. When give out cards, it takes all cards and number may > 1 in case of give out cards just ganged
+    //union with @m_aIdHelperLastCardsGivenOut
+    //Num() may > 1, but in most case it is 0 or 1
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Weaves"))
+        TArray<FMyMJWeaveCpp> m_aHelperLastWeaves;
+
+    //Note it only record the last cards taken in reltated pusher, and it is not equal to Haidi, some rule have extra condition such as Not BuZhang in local CS
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards Taken In Whole Game"))
+    TArray<int32> m_aIdHelperLastCardsTakenInWholeGame;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game State Just Before Last Cards Taken In Whole Game"))
+    MyMJGameStateCpp m_eHelperGameStateJustBeforeLastCardsTakenInWholeGame;
+
+};
 
 #define FMyMJCoreDataPublicDirectMask0_IncreaseActionGroupId (1 << 0)
 
@@ -240,12 +317,12 @@ public:
 #define FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave (1 << 4)
 
 #define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart (0)
-#define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen (3)
-#define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart (3)
-#define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen (3)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen (4)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart (4)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen (4)
 
-#define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart    (6)
-#define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen          (3)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart    (8)
+#define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen          (4)
 #define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_Invalid         (0)
 #define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart       (1)
 #define FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GangYaoLocalCS  (2)
@@ -276,6 +353,7 @@ public:
     {
         //some data does not need to reset since reset pusher will overwrite them all
         m_aUntakenCardStacks.Reset();
+        m_aIdShownOnDesktopCards.Reset();
         m_cCardInfoPack.reset(0);
 
         m_cGameCfg.reset();
@@ -289,9 +367,7 @@ public:
         m_iDiceNumberNowMask = 0;
 
         m_cUntakenSlotInfo.reset();
-
-        m_aHelperLastCardsGivenOutOrWeave.Reset();
-        m_cHelperLastCardTakenInGame.reset(true);
+        m_cHelper.reset();
     };
 
     inline bool isInGameState() const
@@ -301,6 +377,9 @@ public:
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UnTaken Card Stacks"))
         TArray<FMyIdCollectionCpp> m_aUntakenCardStacks; //Always start from attender 0 to 3
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards shown on desktop"))
+    TArray<int32> m_aIdShownOnDesktopCards;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card info pack"))
         FMyMJCardInfoPackCpp  m_cCardInfoPack;
@@ -334,12 +413,8 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Untaken Slot Info"))
     FMyMJGameUntakenSlotInfoCpp m_cUntakenSlotInfo;
 
-    //When weave, it takes trigger card(if have) or 1st card per weave, value is possible invalid if card is not flip up(or valid if you have revealled it's value before)
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
-    TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hai Di Card Id"))
-    FMyIdValuePair m_cHelperLastCardTakenInGame; //hai di card if id >= 0
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Helper Data"))
+    FMyMJCoreDataHelperCpp m_cHelper;
 
 };
 
@@ -482,7 +557,7 @@ public:
         m_aShowedOutWeaves.Reset();
         m_aIdWinSymbolCards.Reset();
         m_cUntakenSlotSubSegmentInfo.reset();
-        m_cHuScoreResultFinalGroup.reset();
+        m_aHuScoreResultFinalGroups.Reset();
 
         m_iMask0 = 0;
     };
@@ -508,11 +583,8 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards win symbol"))
     FMyMJGameUntakenSlotSubSegmentInfoCpp m_cUntakenSlotSubSegmentInfo;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final Local"))
-    FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroupLocal;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final"))
-    FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroup;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final Groups"))
+    TArray<FMyMJHuScoreResultFinalGroupCpp> m_aHuScoreResultFinalGroups;
 
     //used for bit bool and bit tip updating as delta
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
@@ -536,12 +608,8 @@ public:
     TArray<FMyMJWeaveCpp> m_aWeave2Add;
 
     //if Num() > 0, it must equal to 1
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final Local"))
-    TArray<FMyMJHuScoreResultFinalGroupCpp> m_aHuScoreResultFinalGroupLocal;
-
-    //if Num() > 0, it must equal to 1
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final"))
-    TArray<FMyMJHuScoreResultFinalGroupCpp> m_aHuScoreResultFinalGroup;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final Group to Add"))
+    TArray<FMyMJHuScoreResultFinalGroupCpp> m_aHuScoreResultFinalGroup2Add;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
     int32 m_iMask0;
@@ -569,7 +637,7 @@ public:
 
     void reset()
     {
-        m_cActionContainor.resetForNewLoop();
+        m_cActionContainor.resetForNewActionLoop();
         m_cHuScoreResultTingGroup.reset();
         m_iMask0 = 0;
     };
@@ -634,6 +702,7 @@ public:
 #define MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_All               (0x0f | (1 << (uint8)MyMJGameRoleTypeCpp::Observer))
 #define MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_One(idxAttender)  (1 << idxAttender)
 
+//this is mutable for different role of seeing the game, some role may be even empty
 USTRUCT(BlueprintType)
 struct FMyMJRoleDataPrivateDeltaCpp
 {
@@ -643,14 +712,14 @@ public:
 
     FMyMJRoleDataPrivateDeltaCpp()
     {
-        m_eRoleType = MyMJGameRoleTypeCpp::Observer;
+        m_eRoleType = MyMJGameRoleTypeCpp::Max;
     };
 
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card id values to reveal"))
     TArray<FMyIdValuePair> m_aIdValuePairs2Reveal;
 
-    //mute for different role of viewer
+    //mute for different role of viewer, not actually used but for debug purpose
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "role type it belong to"))
     MyMJGameRoleTypeCpp m_eRoleType;
 
@@ -864,14 +933,18 @@ public:
 
     FMyMJDataDeltaCpp() : Super()
     {
+        m_iIdxAttenderActionInitiator = -1;
         m_iGameId = 0;
         m_iServerWorldTimeStamp_10Ms = 0;
     };
 
-    int32 getActionIdxAttender() const
+    inline
+    int32 getIdxAttenderActionInitiator(bool bVerifyValid = true) const
     {
-        MY_VERIFY(m_aRoleDataAttender.Num() == 1);
-        return m_aRoleDataAttender[0].m_iIdxAttender;
+        if (bVerifyValid) {
+            MY_VERIFY(m_iIdxAttenderActionInitiator >= 0 && m_iIdxAttenderActionInitiator < 4);
+        }
+        return m_iIdxAttenderActionInitiator;
     };
 
     //Num > 0 means valid, and num must equal 1 in that case
@@ -887,6 +960,10 @@ public:
     //represent the role's update, how he knows the game,  it is different for different role
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "role data private"))
     TArray<FMyMJRoleDataPrivateDeltaCpp> m_aRoleDataPrivate;
+
+    //most action, have a Initiator
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx Attender Action Initiator"))
+    int32 m_iIdxAttenderActionInitiator;
 
     //in a idea env, game id and pusher id is not neccessary, we put it here just to detect if data goes wrong in network case
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "game id"))
@@ -1157,8 +1234,9 @@ struct FMyMJDataAccessorCpp
     {
         m_pDataFullMode = NULL;
         m_pDataMirrorMode = NULL;
+        m_pDataExtTempMode = NULL;
         m_eAccessRoleType = MyMJGameRoleTypeCpp::Observer;
-        m_eWorkMode = MyMJGameCoreWorkModeCpp::Invalid;
+        m_eWorkMode = MyMJGameElemWorkModeCpp::Invalid;
     };
 
     MyMJGameRoleTypeCpp getAccessRoleType() const
@@ -1169,32 +1247,46 @@ struct FMyMJDataAccessorCpp
 
     void setupFullMode()
     {
-        MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Invalid);
+        MY_VERIFY(m_eWorkMode == MyMJGameElemWorkModeCpp::Invalid);
         m_eAccessRoleType = MyMJGameRoleTypeCpp::SysKeeper;
-        m_eWorkMode = MyMJGameCoreWorkModeCpp::Full;
+        m_eWorkMode = MyMJGameElemWorkModeCpp::Full;
         m_pDataFullMode = MakeShareable<FMyMJDataStructCpp>(new FMyMJDataStructCpp());
     };
 
     //Can be called multiple times
     void resetupMirrorMode(MyMJGameRoleTypeCpp eAccessRoleType, UMyMJDataForMirrorModeCpp *pDataMirrorMode)
     {
-        MY_VERIFY(m_eWorkMode != MyMJGameCoreWorkModeCpp::Full);
+        MY_VERIFY(m_eWorkMode != MyMJGameElemWorkModeCpp::Full);
         m_eAccessRoleType = eAccessRoleType;
-        m_eWorkMode = MyMJGameCoreWorkModeCpp::Mirror;
+        m_eWorkMode = MyMJGameElemWorkModeCpp::Mirror;
         m_pDataMirrorMode = pDataMirrorMode;
         MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
+    };
+
+    void setupTempMode(FMyMJDataStructCpp* pDataExtTempMode)
+    {
+        MY_VERIFY(m_eWorkMode == MyMJGameElemWorkModeCpp::Invalid);
+        m_eAccessRoleType = MyMJGameRoleTypeCpp::SysKeeper;
+        m_eWorkMode = MyMJGameElemWorkModeCpp::Temp;
+        m_pDataExtTempMode = pDataExtTempMode;
     };
 
     //don't store the return, it can be invalid anytime
     const FMyMJCoreDataPublicCpp& getCoreDataRefConst() const
     {
-        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Full) {
             return m_pDataFullMode->getCoreDataRefConst();
         }
-        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror) {
 
             MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
             return m_pDataMirrorMode->getCoreDataRefConst();
+        }
+        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Temp) {
+
+            MY_VERIFY(m_pDataExtTempMode);
+            return m_pDataExtTempMode->getCoreDataRefConst();
+
         }
         else {
             MY_VERIFY(false);
@@ -1207,13 +1299,19 @@ struct FMyMJDataAccessorCpp
     //don't store the return, it can be invalid anytime
     const FMyMJRoleDataAttenderPublicCpp& getRoleDataAttenderPublicRefConst(int32 idxAttender) const
     {
-        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Full) {
             return m_pDataFullMode->getRoleDataAttenderPublicRefConst(idxAttender);
         }
-        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror) {
 
             MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
             return m_pDataMirrorMode->getRoleDataAttenderPublicRefConst(idxAttender);
+        }
+        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Temp) {
+
+            MY_VERIFY(m_pDataExtTempMode);
+            return m_pDataExtTempMode->getRoleDataAttenderPublicRefConst(idxAttender);
+
         }
         else {
             MY_VERIFY(false);
@@ -1226,13 +1324,19 @@ struct FMyMJDataAccessorCpp
     //don't store the return, it can be invalid anytime, can return NULL
     const FMyMJRoleDataAttenderPrivateCpp *getRoleDataAttenderPrivateConst(int32 idxAttender) const
     {
-        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Full) {
             return &m_pDataFullMode->getRoleDataAttenderPrivateRefConst(idxAttender);
         }
-        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror) {
 
             MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
             return m_pDataMirrorMode->getRoleDataAttenderPrivateConst(idxAttender);
+        }
+        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Temp) {
+
+            MY_VERIFY(m_pDataExtTempMode);
+            return &m_pDataExtTempMode->getRoleDataAttenderPrivateRefConst(idxAttender);
+
         }
         else {
             MY_VERIFY(false);
@@ -1244,13 +1348,19 @@ struct FMyMJDataAccessorCpp
     //@idxAttender equal to idxRole
     inline const FMyMJRoleDataPrivateCpp* getRoleDataPrivateConst(int32 idxRole) const
     {
-        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Full) {
+        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Full) {
             return &m_pDataFullMode->getRoleDataPrivateRefConst(idxRole);
         }
-        else if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror) {
 
             MY_VERIFY(IsValid(m_pDataMirrorMode.Get()));
             return m_pDataMirrorMode->getRoleDataPrivateConst(idxRole);
+        }
+        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Temp) {
+
+            MY_VERIFY(m_pDataExtTempMode);
+            return &m_pDataExtTempMode->getRoleDataPrivateRefConst(idxRole);
+
         }
         else {
             MY_VERIFY(false);
@@ -1262,7 +1372,7 @@ struct FMyMJDataAccessorCpp
     //Note all data will be overwritten, include default values, usually used in full mode, but also possible for mirror as one way to implement replay  
     void applyBase(const FMyMJDataStructCpp &base)
     {
-        if (m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror) {
+        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror) {
             //now this is not supposed to happen unless low level replay method is used
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("apply base but mode is mirror, check it!"), );
         }
@@ -1302,12 +1412,13 @@ struct FMyMJDataAccessorCpp
             }
         }
 
+        getCoreDataRef().m_cGameCfg.prepareForUse();
     }
 
 
     void applyBase(const UMyMJDataForMirrorModeCpp &base)
     {
-        MY_VERIFY(m_eWorkMode == MyMJGameCoreWorkModeCpp::Mirror);
+        MY_VERIFY(m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror);
 
         getCoreDataRef() = base.getCoreDataRefConst();
 
@@ -1342,6 +1453,8 @@ struct FMyMJDataAccessorCpp
                 }
             }
         }
+
+        getCoreDataRef().m_cGameCfg.prepareForUse();
     };
 
 
@@ -1352,6 +1465,8 @@ struct FMyMJDataAccessorCpp
 
     //direct to apply, don't leave a chance for visualize
     void applyDelta(const FMyMJDataDeltaCpp &delta);
+
+    void resetForNewActionLoop();
 
 protected:
 
@@ -1388,13 +1503,14 @@ protected:
 
 
     void moveCardFromOldPosi(int32 id);
+    //@idxAttender can < 0
     void moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSlotTypeCpp eSlotDst);
-    void updateUntakenInfoHeadOrTail(bool bUpdateHead, bool bUpdateTail);
 
     //the really storage we point to
     TSharedPtr<FMyMJDataStructCpp> m_pDataFullMode;
     TWeakObjectPtr<UMyMJDataForMirrorModeCpp> m_pDataMirrorMode;
+    FMyMJDataStructCpp* m_pDataExtTempMode; //not owning it
 
     MyMJGameRoleTypeCpp m_eAccessRoleType;
-    MyMJGameCoreWorkModeCpp m_eWorkMode;
+    MyMJGameElemWorkModeCpp m_eWorkMode;
 };

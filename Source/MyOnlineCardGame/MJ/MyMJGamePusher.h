@@ -18,7 +18,6 @@
 
 #include "MyMJGamePusher.generated.h"
 
-//Every thing below need to be serialized
 //we don't use netserilize, since we want custom serialize code for local file usage, and net-serialize is another code path, which means a double custom code work  
 
 UENUM(BlueprintType)
@@ -79,7 +78,8 @@ enum class MyMJGamePusherTypeCpp : uint8
 
 //Most class is create->destroy, so they don't need reset()
 //pusher have all info to make game progress, and it may generate full or delta data describing how to change data related to both visualization and logic
-USTRUCT(BlueprintType)
+//Most pusher or action doesn't need value to make logic go, just for debug purpose to keep the values in
+USTRUCT()
 struct FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -125,12 +125,6 @@ public:
 
     };
 
-    //@outiRoleMask = 0 in return means no value will be updated
-    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues)
-    {
-        outiRoleMask = 0;
-    };
-
     inline
     MyMJGamePusherTypeCpp getType() const
     {
@@ -158,7 +152,7 @@ protected:
 //FIFO,like a queue, can transfer over thread, but never used it by multiple thread at one time
 //two mode at runtime: canProduceAcrossThread() distinguish them
 //two content mode: full sequence or segment
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGamePusherPointersCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -415,7 +409,7 @@ struct TStructOpsTypeTraits<FMyMJGamePusherPointersCpp> : public TStructOpsTypeT
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGamePusherFillInActionChoicesCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -480,7 +474,7 @@ protected:
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGamePusherMadeChoiceNotifyCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -550,7 +544,7 @@ protected:
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGamePusherCountUpdateCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -591,7 +585,7 @@ public:
 
 //Also put on cards, this pusher is just like a base state setting the game to
 //When in UI, let's first apply data then animate in UI
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGamePusherResetGameCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -616,18 +610,9 @@ public:
     virtual FString genDebugString() const override
     {
         FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_iGameId: %d, ruleType %s."), m_iGameId, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)m_cGameCfg.m_eRuleType));
+        str += FString::Printf(TEXT(" m_iGameId: %d, ruleType: %s."), m_iGameId, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)m_cGameCfg.m_eRuleType));
         return str;
     };
-
-    //we do reset game special in code, which always set values in sysrole's value pack
-    /*
-    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
-    {
-        outiRoleMask = (1 << (uint8)MyMJGameRoleTypeCpp::SysKeeper);
-        outaRevealedCardValues = m_aShuffledIdValues;
-    };
-    */
 
     //call this only when m_cGameCfg is set
     void init(int32 iGameId, FRandomStream &RS, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData, int32 iAttenderBehaviorRandomSelectMask);
@@ -654,7 +639,7 @@ public:
 #define MyMJGamePusherUpdateAttenderCardsAndState_Mask0_ResetIdHandCardShowedOutLocalCS 0x01
 
 //restrict to update one attender's card and statte
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGamePusherUpdateAttenderCardsAndStateCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -704,36 +689,6 @@ public:
         m_iMask0 = iMaskAttenderDataReset;
     };
 
-    //@outiRoleMask return 0 means not update any one's
-    /*
-    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
-    {
-        outiRoleMask = 0;
-        outaRevealedCardValues.Reset();
-
-        if (m_eTargetState == MyMJCardFlipStateCpp::Up) {
-            if (m_eCurrentState == MyMJCardFlipStateCpp::Up) {
-                return;
-            }
-            else {
-                //we need to show everyone
-                outiRoleMask = 0x0f | (1 << (uint8)MyMJGameRoleTypeCpp::Observer);
-            }
-        }
-        else if (m_eTargetState == MyMJCardFlipStateCpp::Stand) {
-            if (m_eCurrentState == MyMJCardFlipStateCpp::Down) {
-                //we need to show owner and keeper
-                outiRoleMask = (1 << m_iIdxAttender) | (1 << (uint8)MyMJGameRoleTypeCpp::Observer);
-            }
-            else {
-                return;
-            }
-        }
-        
-        outaRevealedCardValues = m_aIdValues;
-    };
-    */
-
     UPROPERTY()
     int32 m_iIdxAttender;
 
@@ -749,7 +704,7 @@ public:
 
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGamePusherUpdateTingCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -802,7 +757,7 @@ public:
 
 typedef struct FMyMJGameActionUnfiedForBPCpp FMyMJGameActionUnfiedForBPCpp;
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionBaseCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -854,7 +809,12 @@ public:
     //return true means this action have a valid represent, @poutActionUnified can be NULL fpr caller to test if this action have a valid unified form
     virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified)
     {
-        return false;
+        if (poutActionUnified) {
+            FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
+            *pBase = *this;
+        }
+
+        return true;
     };
 
     inline
@@ -958,7 +918,7 @@ public:
 
 #define MyMJGameActionStateUpdateMaskNotResetHelperLastCardsGivenOutOrWeave 0x01
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionStateUpdateCpp : public FMyMJGameActionBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1002,6 +962,11 @@ public:
         return str;
     };
 
+    virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
+    {
+        return false;
+    };
+
     UPROPERTY()
     MyMJGameStateCpp m_eStateNext;
 
@@ -1021,7 +986,7 @@ public:
     int32 m_iMask;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionNoActCpp : public FMyMJGameActionBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1061,9 +1026,8 @@ public:
 
     virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
     {
+        Super::genActionUnified(poutActionUnified);
         if (poutActionUnified) {
-            FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
-            *pBase = *this;
             poutActionUnified->m_iMask0 = m_iMask0;
         }
 
@@ -1085,15 +1049,7 @@ public:
     int32 m_iMask0;
 };
 
-UENUM(BlueprintType)
-enum class MyMJGameActionThrowDicesSubTypeCpp : uint8
-{
-    Invalid = 0                             UMETA(DisplayName = "Invalid"),
-    GameStart = 10                          UMETA(DisplayName = "GameStart"),
-    GangYaoLocalCS = 50                     UMETA(DisplayName = "GangYaoLocalCS"),
-};
-
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionThrowDicesCpp : public FMyMJGameActionBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1104,9 +1060,7 @@ public:
         m_eType = MyMJGamePusherTypeCpp::ActionThrowDices;
         m_iPriority = PriMyMJGameActionThrowDice;
 
-        m_iDiceNumber0 = -1;
-        m_iDiceNumber1 = -1;
-        m_eSubType = MyMJGameActionThrowDicesSubTypeCpp::Invalid;
+        m_iDiceNumberMask = 0;
 
     };
 
@@ -1118,34 +1072,35 @@ public:
     virtual FString genDebugString() const override
     {
         FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_iDiceNumber0: %d, m_iDiceNumber1: %d, subType %s."), m_iDiceNumber0, m_iDiceNumber1, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameActionThrowDicesSubTypeCpp"), (uint8)m_eSubType));
+        int32 iDiceNumber0, iDiceNumber1, iReason;
+        getDiceNumbers(&iDiceNumber0, &iDiceNumber1);
+        iReason = getDiceReason();
+        str += FString::Printf(TEXT(" m_iDiceNumbeMask 0x%x, iDiceNumber0: %d, iDiceNumber1: %d, reason %d."), m_iDiceNumberMask, iDiceNumber0, iDiceNumber1, iReason);
         return str;
     };
 
 
     virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
     {
-        if (m_eSubType == MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS) {
-            if (poutActionUnified) {
-                FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
-                *pBase = *this;
-            }
-
-            return true;
-        }
-        else {
-            return false;
+  
+        if (poutActionUnified) {
+            FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
+            *pBase = *this;
         }
 
-
+        return true;
     };
 
-    void init(MyMJGameActionThrowDicesSubTypeCpp eSubType, int32 idxAttender, FRandomStream &RS, bool bForceActionGenTimeLeft2AutoChooseMsZero);
+    void init(int32 iReason, int32 idxAttender, FRandomStream &RS, bool bForceActionGenTimeLeft2AutoChooseMsZero);
 
     void getDiceNumbers(int32 *poutDiceNumber0, int32 *poutDiceNumber1) const;
 
-    MyMJGameActionThrowDicesSubTypeCpp getSubType() const;
+    int32 getDiceReason() const;
 
+    int32 getDiceNumbeMask() const
+    {
+        return m_iDiceNumberMask;
+    };
 
 protected:
 
@@ -1156,12 +1111,12 @@ protected:
     int32 m_iDiceNumber1;
 
     UPROPERTY()
-    MyMJGameActionThrowDicesSubTypeCpp m_eSubType;
+    int32 m_iDiceNumberMask;
 
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionDistCardAtStartCpp : public FMyMJGameActionBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1185,32 +1140,27 @@ public:
         FString str = Super::genDebugString();
         str += FString::Printf(TEXT(" m_bLastCard: %d. cards: "), m_bLastCard);
 
-        str += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aIdValues);
+        str += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aIdValuePairs);
 
         return str;
     };
 
-    void init(int32 idxAttender, const TArray<FMyIdValuePair> &aIdValues, bool bLastCard)
+    void init(int32 idxAttender, const TArray<FMyIdValuePair> &aIdValuePairs, bool bLastCard)
     {
         m_iIdxAttender = idxAttender;
-        m_aIdValues = aIdValues;
+        m_aIdValuePairs = aIdValuePairs;
         m_bLastCard = bLastCard;
     };
 
-    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
-    {
-        outiRoleMask = (1 << m_iIdxAttender);
-        outaRevealedCardValues = m_aIdValues;
-    };
-
     UPROPERTY()
-    TArray<FMyIdValuePair> m_aIdValues;
+    TArray<FMyIdValuePair> m_aIdValuePairs;
 
     UPROPERTY()
     bool m_bLastCard;
 };
 
-UENUM(BlueprintType)
+
+UENUM()
 enum class MyMJGameCardTakenOrderCpp : uint8
 {
     Invalid = 0                      UMETA(DisplayName = "Invalid"),
@@ -1220,7 +1170,7 @@ enum class MyMJGameCardTakenOrderCpp : uint8
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionTakeCardsCpp : public FMyMJGameActionBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1232,7 +1182,7 @@ public:
         m_iPriority = PriMyMJGameActionTakeCards;
 
         m_bIsGang = false;
-        m_eTakenOrder = MyMJGameCardTakenOrderCpp::Invalid;
+        //m_eTakenOrder = MyMJGameCardTakenOrderCpp::Invalid;
 
     };
 
@@ -1274,12 +1224,6 @@ public:
         m_eTakenOrder = eTakenOrder;
     };
 
-    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
-    {
-        outiRoleMask = (1 << m_iIdxAttender);
-        outaRevealedCardValues = m_aIdValuePairs;
-    };
-
 
     UPROPERTY()
     TArray<FMyIdValuePair> m_aIdValuePairs;
@@ -1287,12 +1231,13 @@ public:
     UPROPERTY()
     bool m_bIsGang;
 
+    //just for debug
     UPROPERTY()
     MyMJGameCardTakenOrderCpp m_eTakenOrder;
 
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionGiveOutCardsCpp : public FMyMJGameActionBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1343,28 +1288,24 @@ public:
         }
     };
 
-    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
-    {
-        outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
-        outaRevealedCardValues = m_aIdValuePairsSelected;
-    };
-
     virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
     {
+
+        Super::genActionUnified(poutActionUnified);
+
+
         if (m_bRestrict2SelectCardsJustTaken) {
-            return false;
+
         }
         else {
             if (poutActionUnified) {
 
-                FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
-                *pBase = *this;
                 poutActionUnified->m_aCardIds = m_aOptionIdsHandCard;
                 poutActionUnified->m_aCardIds.Append(m_aOptionIdsJustTaken);
             }
-            return true;
         }
 
+        return true;
     };
 
     //subSelection here contains card Id
@@ -1409,7 +1350,7 @@ public:
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionWeaveCpp : public FMyMJGameActionBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1449,23 +1390,10 @@ public:
         return true;
     };
 
-
-    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
-    {
-        outiRoleMask = 0;
-
-        if (m_eTargetFlipState == MyMJCardFlipStateCpp::Up) {
-            outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
-            outaRevealedCardValues = m_aCardValuesRelated;
-        }
-    };
-
-
     virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
     {
+        Super::genActionUnified(poutActionUnified);
         if (poutActionUnified) {
-            FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
-            *pBase = *this;
             poutActionUnified->m_cWeave = m_cWeave;
         }
         return true;
@@ -1504,7 +1432,7 @@ public:
     UPROPERTY()
     MyMJCardFlipStateCpp m_eTargetFlipState;
 
-    //All card related to this weave will be included, and it is possile get erased or empty if it is a secret weave
+    //All card related to this weave will be included, mainly for debug, but also in logic to keep data uniform
     UPROPERTY()
     TArray<FMyIdValuePair> m_aCardValuesRelated;
 
@@ -1514,7 +1442,7 @@ public:
 
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionHuCpp : public FMyMJGameActionBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1545,14 +1473,6 @@ public:
         str += m_cHuScoreResultFinalGroup.genDebugString();
 
         return str;
-    };
-
-    virtual void resolveActionResult(FMyMJGameAttenderCpp &attender) override;
-
-    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
-    {
-        outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
-        outaRevealedCardValues = m_aRevealingCards;
     };
 
     virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
@@ -1588,12 +1508,10 @@ public:
     UPROPERTY()
     FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroup;
 
-    UPROPERTY()
-    TArray<FMyIdValuePair> m_aRevealingCards;
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionHuBornLocalCSCpp : public FMyMJGameActionBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1624,49 +1542,37 @@ public:
         str += TEXT(" cards: ");
         str += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aShowOutIdValues);
 
-        int32 l = m_aHuScoreResultItems.Num();
-        str += FString::Printf(TEXT(" huScoreItem.Num %d: "), l);
-        for (int32 i = 0; i < l; i++) {
-            const FMyMJHuScoreResultItemCpp *pItem = &(m_aHuScoreResultItems[i]);
-            str += FString::Printf(TEXT("type %s, scorePerAttender %d, count %d"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)pItem->m_eType), pItem->m_iScorePerAttender, pItem->m_iCount);
-        }
+        str += TEXT(" hu : ");
+        str += m_cHuScoreResultFinalGroup.genDebugString();
+
 
         return str;
     };
 
-    virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
-    {
-        if (poutActionUnified) {
-            FMyMJGameActionBaseCpp* pBase = StaticCast<FMyMJGameActionBaseCpp *>(poutActionUnified);
-            *pBase = *this;
-        }
-        return true;
-    };
-
-    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
-    {
-        outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
-        outaRevealedCardValues = m_aShowOutIdValues;
-    };
-
     inline
-    void init(int32 idxAttender, const TArray<FMyMJHuScoreResultItemCpp> &aHuScoreResultItems, const TArray<FMyIdValuePair> &aShowOutIdValues)
+    void init(int32 idxAttender, const TArray<FMyMJHuScoreResultItemCpp>& huScoreResultItems, const TArray<FMyIdValuePair> &aShowOutIdValues)
     {
         m_iIdxAttender = idxAttender;
-        m_aHuScoreResultItems = aHuScoreResultItems;
+
+        m_cHuScoreResultFinalGroup.m_iIdxAttenderWin = idxAttender;
+        int32 idx = m_cHuScoreResultFinalGroup.m_aScoreResults.Emplace();
+        m_cHuScoreResultFinalGroup.m_aScoreResults[idx].append(huScoreResultItems);
+        m_cHuScoreResultFinalGroup.m_eHuMainType = MyMJHuMainTypeCpp::LocalCSBorn;
+
         m_aShowOutIdValues = aShowOutIdValues;
 
     };
 
+    //one action one result
     UPROPERTY()
-    TArray<FMyMJHuScoreResultItemCpp> m_aHuScoreResultItems;
+    FMyMJHuScoreResultFinalGroupCpp m_cHuScoreResultFinalGroup;
 
     UPROPERTY()
     TArray<FMyIdValuePair> m_aShowOutIdValues;
 
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionZhaNiaoLocalCSCpp : public FMyMJGameActionBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1700,16 +1606,14 @@ public:
         return str;
     };
 
-    virtual void getRevealedCardValues(int32 &outiRoleMask, TArray<FMyIdValuePair> &outaRevealedCardValues) override
+    virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
     {
-        outiRoleMask = 0x0f | (uint8)MyMJGameRoleTypeCpp::Observer;
-        outaRevealedCardValues = m_aPickedIdValues;
+        return false;
     };
 
     inline
-    void initWithPickedIdValuesInited(int32 idxAttender)
+    void initWithPickedIdValuesInited()
     {
-        m_iIdxAttender = idxAttender;
     };
 
 

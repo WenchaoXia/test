@@ -109,15 +109,17 @@ enum class MyMJCardFlipStateCpp : uint8
 UENUM(BlueprintType)
 enum class MyMJCardSlotTypeCpp : uint8
 {
-    Invalid = 0                    UMETA(DisplayName = "Invalid"),
+    Invalid = 0                        UMETA(DisplayName = "Invalid"),
 
     //Keeper = 1                       UMETA(DisplayName = "Keeper"),
-    Untaken = 2                      UMETA(DisplayName = "Untaken"),
+    Untaken = 2                        UMETA(DisplayName = "Untaken"),
     JustTaken = 3                      UMETA(DisplayName = "JustTaken"),
-    InHand = 4                        UMETA(DisplayName = "InHand"),
-    GivenOut = 5                        UMETA(DisplayName = "GivenOut"),
-    Weaved = 6                        UMETA(DisplayName = "Weaved"),
-    WinSymbol = 7                        UMETA(DisplayName = "WinSymbol")
+    InHand = 4                         UMETA(DisplayName = "InHand"),
+    GivenOut = 5                       UMETA(DisplayName = "GivenOut"),
+    Weaved = 6                         UMETA(DisplayName = "Weaved"),
+    WinSymbol = 7                      UMETA(DisplayName = "WinSymbol"),
+    ShownOnDesktop = 8                 UMETA(DisplayName = "ShownOnDesktop")
+
 };
 
 //Todo, to support memset as init, use 0 as default for all to make it run faster
@@ -284,12 +286,7 @@ public:
         return v;
     };
 
-    inline
-        int32 &getByIdxRef(int32 idx)
-    {
-        MY_VERIFY(idx >= 0 && idx < m_aCardValues.Num());
-        return m_aCardValues[idx];
-    };
+
 
     //this function will check values, and assert if error happens
     void helperVerifyValues() const;
@@ -309,6 +306,12 @@ public:
         }
     };
 
+    /*
+    void getAll(TArray<FMyIdValuePair>& out)
+    {
+
+    };
+    */
 
     void getValuesByIds(const TArray<int32> &aIds, TArray<int32> &outaValues, bool bVerifyValueValid = false) const;
 
@@ -321,7 +324,30 @@ public:
 
 
 
+    static bool helperVerifyValuesInIdValuePairs(const TArray<FMyIdValuePair> &aIdValuePairs)
+    {
+        int32 l = aIdValuePairs.Num();
+        for (int32 i = 0; i < l; i++) {
+            int32 id = aIdValuePairs[i].m_iId;
+            int32 v = aIdValuePairs[i].m_iValue;
+
+            if (id < 0 || v <= 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid id %d and value %d found!"), id, v);
+                return false;
+            }
+        }
+
+        return true;
+    };
+
 protected:
+
+    inline
+        int32 &getByIdxRef(int32 idx)
+    {
+        MY_VERIFY(idx >= 0 && idx < m_aCardValues.Num());
+        return m_aCardValues[idx];
+    };
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card values"))
         TArray<int32> m_aCardValues;
@@ -585,12 +611,8 @@ struct FMyMJWeaveCpp
         m_iReserved0 = 0;
     };
 
-    inline
-    void addCard(int32 id)
-    {
-        int32 idx = m_aIds.AddUnique(id);
-        MY_VERIFY(id >= 0);
-    };
+
+    void addCard(int32 id);
 
     inline
     void appendIds(TArray<int32> aIds)
@@ -760,6 +782,15 @@ protected:
         int32 m_iReserved0;
 };
 
+UENUM(BlueprintType)
+enum class MyMJHuMainTypeCpp : uint8
+{
+    Invalid = 0                    UMETA(DisplayName = "Invalid"),
+
+    //88 fan
+    Common = 1                     UMETA(DisplayName = "Common"),
+    LocalCSBorn = 2                UMETA(DisplayName = "LocalCSBorn"),
+};
 
 /* multiple hu score type can exist at same type.*/
 UENUM(BlueprintType)
@@ -919,6 +950,14 @@ struct FMyMJHuScoreAttrCpp
         m_iScorePerAttender = 0;
 
     };
+    
+    inline
+    bool equal(const FMyMJHuScoreAttrCpp& other) const
+    {
+        return m_eType == other.m_eType && m_iScorePerAttender == other.m_iScorePerAttender;
+    };
+
+    FString genDebugString() const;
 
     /* type */
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Type"))
@@ -1249,6 +1288,7 @@ public:
     FMyIdValuePair m_cIdValueTriggerCard;
 };
 
+//represent one action of hus
 USTRUCT()
 struct FMyMJHuScoreResultFinalGroupCpp
 {
@@ -1268,6 +1308,8 @@ public:
         m_aWeavesShowedOut.Reset();
         m_aWeavesInHand.Reset();
         m_aScoreResults.Reset();
+
+        m_eHuMainType = MyMJHuMainTypeCpp::Invalid;
     };
 
     FString genDebugString() const
@@ -1297,8 +1339,12 @@ public:
     UPROPERTY()
     TArray<FMyMJWeaveCpp> m_aWeavesInHand;
 
+    //one action can contains multiple Hus, every one is a affective(should be already selected as highest score before in code logic) one with different trigger and socre 
     UPROPERTY()
     TArray<FMyMJHuScoreResultFinalCpp> m_aScoreResults;
+
+    UPROPERTY()
+    MyMJHuMainTypeCpp m_eHuMainType;
 };
 
 USTRUCT()
@@ -1458,19 +1504,19 @@ public:
     void reset()
     {
         m_cHuCommonCfg.reset();
-        m_mHuScoreAttrsCfg.Reset();
+        m_aHuScoreAttrs.Reset();
+        m_mHuScoreAttrs.Reset();
     };
 
-    inline
-    const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& getHuScoreAttrsCfgRef() const
-    {
-        return m_mHuScoreAttrsCfg;
-    };
+
+    void prepareForUse();
+
+    const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& getHuScoreAttrsRefConst() const;
 
     inline
-    TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& getHuScoreAttrsCfgRef()
+    TArray<FMyMJHuScoreAttrCpp>& getHuScoreAttrsRef()
     {
-        return m_mHuScoreAttrsCfg;
+        return m_aHuScoreAttrs;
     };
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Hu Common Cfg"))
@@ -1486,8 +1532,10 @@ protected:
     //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Hu Score Attrs Cfg"))
     //TArray<FMyMJHuScoreAttrCpp> m_aHuScoreAttrsCfg;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Hu Score Attrs Cfg"))
-    TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> m_mHuScoreAttrsCfg; //always pointer to
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Hu Score Attrs"))
+    TArray<FMyMJHuScoreAttrCpp> m_aHuScoreAttrs; //always pointer to
+
+    TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> m_mHuScoreAttrs;
 };
 
 
@@ -2195,11 +2243,17 @@ public:
     };
     */
 
+    static void array2MapForHuScoreAttr(const TArray<FMyMJHuScoreAttrCpp>& aHuBornScoreAttrs, TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& mHuBornScoreAttrs);
+
+    static bool checkUniformOfArrayAndMapForHuScoreAttr(const TArray<FMyMJHuScoreAttrCpp>& aHuBornScoreAttrs, const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& mHuBornScoreAttrs, bool bComplexCheck);
+
     static FString getStringFromEnum(const TCHAR *enumName, uint8 value);
 
     static int64 nowAsMsFromTick();
 
-    static FString formatStrIdsValues(const TArray<int32> &aIDs, const TArray<int32> &aValues);
+    static FString formatStrIds(const TArray<int32> &aIds);
+
+    static FString formatStrIdsValues(const TArray<int32> &aIds, const TArray<int32> &aValues);
 
     static FString formatStrIdValuePairs(const TArray<FMyIdValuePair> &aIdValues);
 

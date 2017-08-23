@@ -137,7 +137,7 @@ bool FMyMJGameCoreCpp::actionLoop()
         //collect action
         bool bHaveProgres;
         MY_VERIFY(m_pResManager.IsValid());
-        bool bAllCollected = pCollector->collectAction(iTimePassedMs32, bHaveProgres, m_pResManager->getRandomStreamRef());
+        bool bAllCollected = pCollector->collectAction(pD->m_iActionGroupId, iTimePassedMs32, bHaveProgres, m_pResManager->getRandomStreamRef());
 
         if (bAllCollected) {
             eActionLoopState = MyMJActionLoopStateCpp::ActionCollected;
@@ -176,6 +176,16 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
 
         bRet = true;
 
+        if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0 && pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("got pusher of reset game."));
+        }
+
+        if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("core full [%s:%d:%d]: Applying: %s"),
+                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()), pD->m_iActionGroupId, iPusherIdLast,
+                *pPusher->genDebugString());
+        }
+
         FMyMJGamePusherResultCpp* pusherResult = genPusherResultAsSysKeeper(*pPusher.Get());
         if (pusherResult == NULL) {
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("core full [%s]: pusher %s generated NULL result."),
@@ -191,9 +201,7 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
             MY_VERIFY(false);
         }
 
-        if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0 && pPusher->getType() == MyMJGamePusherTypeCpp::PusherResetGame) {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("got pusher of reset game."));
-        }
+
 
         bool bNeedVerify = prevApplyPusherResult(*pusherResult);
 
@@ -220,12 +228,6 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
             iPusherIdLast = -1;
         }
 
-        if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0) {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("core full [%s:%d:%d]: Applying: %s"),
-                  *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()), pD->m_iActionGroupId, iPusherIdLast,
-                  *pPusher->genDebugString());
-        }
-
         applyPusher(*pPusher.Get());
 
 
@@ -237,7 +239,7 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
         }
 
         if (bNeedVerify) {
-            MY_VERIFY(VerifyDataUniformationAfterPusherAndResultApplied());
+            MY_VERIFY(verifyDataUniformationAfterPusherAndResultApplied());
         }
 
         iGameId = pD->m_iGameId;
@@ -282,7 +284,6 @@ void FMyMJGameCoreCpp::genActionChoices()
 {
     MY_VERIFY(m_pPusherIOFull.IsValid());
 
-
     for (int i = 0; i < 4; i++) {
         FMyMJGameAttenderCpp *pAttender = m_aAttendersAll[i].Get();
         MY_VERIFY(pAttender);
@@ -297,8 +298,23 @@ void FMyMJGameCoreCpp::genActionChoices()
     }
 };
 
-void FMyMJGameCoreCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, int32 iIdxAttenderMask, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax)
+
+void FMyMJGameCoreCpp::resetForNewActionLoop()
 {
+    if (!m_cActionLoopHelperData.getHaveSetupDataConst()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("full core have not setup loop helper data, m_eState: %s."),
+                            *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)getCoreDataRefConst().m_eGameState));
+        MY_VERIFY(false);
+    }
+
+    FMyMJGameActionBaseCpp* pPrev = m_cActionLoopHelperData.takePrevAction();
+    FMyMJGameActionBaseCpp* pPost = m_cActionLoopHelperData.takePostAction();
+    int32 iIdxAttenderMask = m_cActionLoopHelperData.m_iIdxAttenderMask;
+    bool bAllowSamePriAction = m_cActionLoopHelperData.m_bAllowSamePriAction;
+    int32 iIdxAttenderHavePriMax = m_cActionLoopHelperData.m_iIdxAttenderHavePriMax;
+
+    m_cActionLoopHelperData.clear();
+
     //step1: reset containors:
     int32 iRealAttenderCount = 0;
     for (int i = 0; i < 4; i++) {
@@ -308,7 +324,7 @@ void FMyMJGameCoreCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyM
 
         bool bIsStillInGame = pAttender->getIsStillInGame();
         bool  bNeed2Collect = ((iIdxAttenderMask & (1 << idxAttender)) > 0) && bIsStillInGame;
-        pAttender->resetForNewLoop(bNeed2Collect);
+        pAttender->resetForNewActionLoop(bNeed2Collect);
 
         if (pAttender->getIsRealAttender()) {
             iRealAttenderCount++;
@@ -319,7 +335,7 @@ void FMyMJGameCoreCpp::resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyM
     MY_VERIFY(m_pActionCollector.IsValid());
 
     //step2: reset collector
-    m_pActionCollector->resetForNewLoopForFullMode(pPrevAction, pPostAction, bAllowSamePriAction, iIdxAttenderHavePriMax, iRealAttenderCount);
+    m_pActionCollector->resetForNewLoopForFullMode(pPrev, pPost, bAllowSamePriAction, iIdxAttenderHavePriMax, iRealAttenderCount);
 }
 
 bool FMyMJGameCoreCpp::prevApplyPusherResult(const FMyMJGamePusherResultCpp &pusherResult)
@@ -338,6 +354,8 @@ bool FMyMJGameCoreCpp::prevApplyPusherResult(const FMyMJGamePusherResultCpp &pus
             int l = aCardInfos2Update.Num();
             if (l > 0) {
                 const FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPackRefConst();
+                const FMyMJCardValuePackCpp& cardValuePack = getCardValuePackOfSysKeeperRefConst();
+
                 for (int i = 0; i < aCardInfos2Update.Num(); i++) {
                     const FMyMJCardInfoCpp& cardInfoTarget = aCardInfos2Update[i];
                     const FMyMJCardInfoCpp& cardInfoSelf = *pCardInfoPack->getByIdxConst(cardInfoTarget.m_iId);
@@ -347,6 +365,13 @@ bool FMyMJGameCoreCpp::prevApplyPusherResult(const FMyMJGamePusherResultCpp &pus
                         //for safety, any different exist, we make movement happen
                         moveCardFromOldPosi(cardInfoTarget.m_iId);
                         moveCardToNewPosi(cardInfoTarget.m_iId, cardInfoTarget.m_cPosi.m_iIdxAttender, cardInfoTarget.m_cPosi.m_eSlot);
+                    }
+
+                    if (cardInfoSelf.m_eFlipState != cardInfoTarget.m_eFlipState && cardInfoTarget.m_eFlipState == MyMJCardFlipStateCpp::Up) {
+                        int32 idCard = cardInfoTarget.m_iId;
+                        int32 valueCard = cardValuePack.getByIdx(idCard);
+                        MY_VERIFY(valueCard > 0);
+                        m_cDataLogic.m_cHelperShowedOut2AllCards.insert(idCard, valueCard);
                     }
                 }
             }
@@ -359,21 +384,23 @@ bool FMyMJGameCoreCpp::prevApplyPusherResult(const FMyMJGamePusherResultCpp &pus
 
     }
 
-   return bRet;
+    //testing: overwrite it
+    bRet = true;
+    return bRet;
 };
 
-bool FMyMJGameCoreCpp::VerifyDataUniformationAfterPusherAndResultApplied()
+bool FMyMJGameCoreCpp::verifyDataUniformationAfterPusherAndResultApplied()
 {
     bool bRet = true;
 
     MY_VERIFY(m_pActionCollector.IsValid());
-    int32 actionGroupIdCollectorLogic = m_pActionCollector->getActionGroupId();
+    //int32 actionGroupIdCollectorLogic = m_pActionCollector->getActionGroupId();
 
     int32 actionGroupIdData = getCoreDataRefConst().m_iActionGroupId;
-    if (actionGroupIdCollectorLogic != actionGroupIdData) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action group id not uniform, logic %d, data %d."), actionGroupIdCollectorLogic, actionGroupIdData);
-        return false;
-    }
+    //if (actionGroupIdCollectorLogic != actionGroupIdData) {
+        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action group id not uniform, logic %d, data %d."), actionGroupIdCollectorLogic, actionGroupIdData);
+        //return false;
+    //}
 
 
 
@@ -400,11 +427,11 @@ bool FMyMJGameCoreCpp::VerifyDataUniformationAfterPusherAndResultApplied()
             break;
         }
 
-        int32 actionGroupIdAttenderLogic = attenderDataLogic.m_cActionContainor.getActionGroupId();
-        if (actionGroupIdCollectorLogic != actionGroupIdAttenderLogic) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender %d's logic action group id not equal to core collector,, collector's %d, attender's %d."), actionGroupIdCollectorLogic, actionGroupIdAttenderLogic);
-            return false;
-        }
+        //int32 actionGroupIdAttenderLogic = attenderDataLogic.m_cActionContainor.getActionGroupId();
+        //if (actionGroupIdCollectorLogic != actionGroupIdAttenderLogic) {
+        //    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender %d's logic action group id not equal to core collector,, collector's %d, attender's %d."), actionGroupIdCollectorLogic, actionGroupIdAttenderLogic);
+        //    return false;
+        //}
     }
 
 
@@ -582,9 +609,4 @@ void FMyMJGameCoreCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSl
     else {
         MY_VERIFY(false);
     }
-}
-
-void FMyMJGameCoreCpp::updateUntakenInfoHeadOrTail(bool bUpdateHead, bool bUpdateTail)
-{
-
 }

@@ -83,12 +83,12 @@ void UMyMJGameCoreObjFullCpp::testLocalInit()
 
     int32 iSeed = UMyMJUtilsLibrary::nowAsMsFromTick();
     //int32 iSeed = 11180997;
-    m_pCore = MakeShareable<FMyMJGameCoreCpp>(StaticCast<FMyMJGameCoreCpp *>(new FMyMJGameCoreLocalCSCpp(MyMJGameCoreWorkModeCpp::Full, iSeed)));
+    m_pCore = MakeShareable<FMyMJGameCoreCpp>(StaticCast<FMyMJGameCoreCpp *>(new FMyMJGameCoreLocalCSCpp(MyMJGameElemWorkModeCpp::Full, iSeed)));
     m_pCore->initFullMode(m_pCore, m_pIOGroupAll.Get());
 
     
     FMyMJGameCmdRestartGameCpp *pCmdReset = new FMyMJGameCmdRestartGameCpp();
-    pCmdReset->m_iAttenderRandomSelectMask = 0x0f;
+    pCmdReset->m_iAttendersAllRandomSelectMask = 0x0f;
     UMyMJUtilsLocalCSLibrary::genDefaultCfg(pCmdReset->m_cGameCfg);
     m_pIOGroupAll->m_aGroups[(uint8)MyMJGameRoleTypeCpp::SysKeeper].getCmdInputQueue().Enqueue(pCmdReset);
 

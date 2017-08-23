@@ -168,7 +168,8 @@ void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta)
             break;
         }
 
-        if (roleDataPriDelta.m_aIdValuePairs2Reveal.Num() > 0) {
+        if (roleDataPriDelta.m_aIdValuePairs2Reveal.Num() > 0 && m_eAccessRoleType != MyMJGameRoleTypeCpp::SysKeeper && m_eAccessRoleType < MyMJGameRoleTypeCpp::Max) {
+            //syskeeper doesn't need to update any in progress, since when reset he knows all
             getCardValuePackRef().tryRevealCardValueByIdValuePairs(roleDataPriDelta.m_aIdValuePairs2Reveal);
 
         }
@@ -197,7 +198,10 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
         MY_VERIFY(delta.m_aCoreData.Num() == 1);
         const FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[0];
 
-        //update card info
+        TArray<int32> aIdHelperMovedFromUntakenSlot;
+        TArray<int32> aIdHelperMovedToGivenOutSlot;
+
+        //update card info, move and flip
         int32 l = coreDataDelta.m_aCardInfos2Update.Num();
         for (int32 i = 0; i < l; i++) {
             const FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[i];
@@ -205,38 +209,54 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
 
             MY_VERIFY(cardInfoSelf.m_iId == cardInfoTarget.m_iId);
 
+            //move
             if (cardInfoSelf.m_cPosi != cardInfoTarget.m_cPosi) {
+
+                if (cardInfoSelf.m_cPosi.m_eSlot == MyMJCardSlotTypeCpp::Untaken && cardInfoTarget.m_cPosi.m_eSlot != cardInfoSelf.m_cPosi.m_eSlot) {
+                    aIdHelperMovedFromUntakenSlot.Emplace(cardInfoSelf.m_iId);
+                }
+
+                if (cardInfoTarget.m_cPosi.m_eSlot == MyMJCardSlotTypeCpp::GivenOut && cardInfoTarget.m_cPosi.m_eSlot != cardInfoSelf.m_cPosi.m_eSlot) {
+                    aIdHelperMovedToGivenOutSlot.Emplace(cardInfoSelf.m_iId);
+                }
+
                 //for safety, any different exist, we make movement happen
                 moveCardFromOldPosi(cardInfoTarget.m_iId);
                 moveCardToNewPosi(cardInfoTarget.m_iId, cardInfoTarget.m_cPosi.m_iIdxAttender, cardInfoTarget.m_cPosi.m_eSlot);
+
             }
 
+            //flip
             if (cardInfoTarget.m_eFlipState != MyMJCardFlipStateCpp::Invalid) {
                 cardInfoSelf.m_eFlipState = cardInfoTarget.m_eFlipState;
             }
 
         }
 
-        if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
-            MY_VERIFY(l > 0);
-            coreDataSelf.m_aHelperLastCardsGivenOutOrWeave.Reset();
+        //update helper
+        if (coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead <= 0 && aIdHelperMovedFromUntakenSlot.Num() > 0) {
+            coreDataSelf.m_cHelper.m_aIdHelperLastCardsTakenInWholeGame = aIdHelperMovedFromUntakenSlot;
+            coreDataSelf.m_cHelper.m_eHelperGameStateJustBeforeLastCardsTakenInWholeGame = coreDataSelf.m_eGameState;
 
-            FMyIdValuePair cIdValue;
-            for (int32 i = 0; i < l; i++) {
-
-                cIdValue.m_iId = coreDataDelta.m_aCardInfos2Update[i].m_iId;
-                cIdValue.m_iValue = pCardValuePack->getByIdx(cIdValue.m_iId);
-
-                coreDataSelf.m_aHelperLastCardsGivenOutOrWeave.Emplace(cIdValue);
-            }
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Debug: setting last cards with game state %s."),
+                      *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)coreDataSelf.m_eGameState));
         }
+
+        if (aIdHelperMovedToGivenOutSlot.Num() > 0) {
+            coreDataSelf.m_cHelper.m_aIdHelperLastCardsGivenOut.Reset();
+            coreDataSelf.m_cHelper.m_aHelperLastWeaves.Reset();
+
+            coreDataSelf.m_cHelper.m_aIdHelperLastCardsGivenOut = aIdHelperMovedToGivenOutSlot;
+        }
+
+
 
         int32 diceNumerNowMaskUpdateReason = UMyMJUtilsLibrary::getIntValueFromBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen);
         if (diceNumerNowMaskUpdateReason != FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_Invalid) {
 
             int32 diceNumerValue0 = UMyMJUtilsLibrary::getIntValueFromBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen);
             int32 diceNumerValue1 = UMyMJUtilsLibrary::getIntValueFromBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen);
-            int32 idxAttender = delta.getActionIdxAttender();
+            int32 idxAttender = delta.getIdxAttenderActionInitiator();
 
             if (diceNumerNowMaskUpdateReason == FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart) {
 
@@ -247,14 +267,8 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
                 int32 len = coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal;
                 MY_VERIFY(len > 0);
 
-                coreDataSelf.m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow = (iBase + diceNumerValue0 + diceNumerValue1 - 1 + len) % len;
-                coreDataSelf.m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow = coreDataSelf.m_cUntakenSlotInfo.m_iIdxUntakenSlotTailAtStart = (coreDataSelf.m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow - 1 + len) % len;
-
-                //the cfg is only say how many stack kept, now dice throwed, we can resolve how many cards kept
-                int32 cardNumKept = coreDataSelf.m_cUntakenSlotInfo.calcUntakenSlotCardsLeftNumKeptFromTailConst(coreDataSelf.m_aUntakenCardStacks);
-
-                coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail = cardNumKept;
-                coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead = coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal - coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail;
+                int32 iIdxUntakenSlotHeadNow = (iBase + diceNumerValue0 + diceNumerValue1 - 1 + len) % len;
+                coreDataSelf.m_cUntakenSlotInfo.setupWhenDicesThrownForCardDistAtStart(coreDataSelf.m_aUntakenCardStacks, iIdxUntakenSlotHeadNow);
 
             }
             else if (diceNumerNowMaskUpdateReason == FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GangYaoLocalCS) {
@@ -270,7 +284,15 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
 
 
         if (UMyMJUtilsLibrary::getBoolValueFromBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_IncreaseActionGroupId)) {
+
+            if (ePusherType != MyMJGamePusherTypeCpp::PusherCountUpdate) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Increase action group id but type is %s."),
+                    *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
+                MY_VERIFY(false);
+            }
+            resetForNewActionLoop();
             coreDataSelf.m_iActionGroupId++;
+
         }
 
         if (UMyMJUtilsLibrary::getBoolValueFromBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState)) {
@@ -278,7 +300,8 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
         }
 
         if (UMyMJUtilsLibrary::getBoolValueFromBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave)) {
-            coreDataSelf.m_aHelperLastCardsGivenOutOrWeave.Reset();
+            coreDataSelf.m_cHelper.m_aIdHelperLastCardsGivenOut.Reset();
+            coreDataSelf.m_cHelper.m_aHelperLastWeaves.Reset();
         }
 
     }
@@ -312,6 +335,8 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
                 int32 idx = pRDAttenderPubSelf->m_aShowedOutWeaves.Emplace();
                 pRDAttenderPubSelf->m_aShowedOutWeaves[idx] = cWeave;
 
+                pCardInfoPack->helperRecalcMinorPosiOfCardsInShowedOutWeaves(pRDAttenderPubSelf->m_aShowedOutWeaves);
+                /*
                 const TArray<int32>& aIds = cWeave.getIdsRefConst();
                 int32 l = aIds.Num();
                 for (int32 i = 0; i < l; i++) {
@@ -319,32 +344,23 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
                     pCardInfo->m_cPosi.m_iIdxInSlot0 = idx;
                     pCardInfo->m_cPosi.m_iIdxInSlot1 = i;
                 }
+                */
 
-                //3rd, consider the type and update
+                //3rd, update helper
+                coreDataSelf.m_cHelper.m_aIdHelperLastCardsGivenOut.Reset();
+                coreDataSelf.m_cHelper.m_aHelperLastWeaves.Reset();
 
-                coreDataSelf.m_aHelperLastCardsGivenOutOrWeave.Reset();
+                coreDataSelf.m_cHelper.m_aHelperLastWeaves.Emplace(cWeave);
 
-                FMyIdValuePair cIdValue;
-                cIdValue.m_iId = cWeave.getRepresentCardId();
-                cIdValue.m_iValue = pCardValuePack->getByIdx(cIdValue.m_iId);
-
-                coreDataSelf.m_aHelperLastCardsGivenOutOrWeave.Reset();
-                coreDataSelf.m_aHelperLastCardsGivenOutOrWeave.Emplace(cIdValue);
             }
 
-            if (roleDataAttenderPubDelta.m_aHuScoreResultFinalGroupLocal.Num() > 0) {
-                MY_VERIFY(roleDataAttenderPubDelta.m_aHuScoreResultFinalGroupLocal.Num() == 1);
-                const FMyMJHuScoreResultFinalGroupCpp& resultFinalGroup = roleDataAttenderPubDelta.m_aHuScoreResultFinalGroupLocal[0];
+            if (roleDataAttenderPubDelta.m_aHuScoreResultFinalGroup2Add.Num() > 0) {
+                MY_VERIFY(roleDataAttenderPubDelta.m_aHuScoreResultFinalGroup2Add.Num() == 1);
+                const FMyMJHuScoreResultFinalGroupCpp& resultFinalGroup2Add = roleDataAttenderPubDelta.m_aHuScoreResultFinalGroup2Add[0];
 
-                pRDAttenderPubSelf->m_cHuScoreResultFinalGroupLocal = resultFinalGroup;
+                pRDAttenderPubSelf->m_aHuScoreResultFinalGroups.Emplace(resultFinalGroup2Add);
             }
 
-            if (roleDataAttenderPubDelta.m_aHuScoreResultFinalGroup.Num() > 0) {
-                MY_VERIFY(roleDataAttenderPubDelta.m_aHuScoreResultFinalGroup.Num() == 1);
-                const FMyMJHuScoreResultFinalGroupCpp& resultFinalGroup = roleDataAttenderPubDelta.m_aHuScoreResultFinalGroup[0];
-
-                pRDAttenderPubSelf->m_cHuScoreResultFinalGroup = resultFinalGroup;
-            }
 
             UMyMJUtilsLibrary::testUpdateFlagAndsetBoolValueToStorageBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsRealAttender, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender);
             UMyMJUtilsLibrary::testUpdateFlagAndsetBoolValueToStorageBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsStillInGame, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame);
@@ -401,6 +417,22 @@ void FMyMJDataAccessorCpp::applyDelta(const FMyMJDataDeltaCpp &delta)
 
 };
 
+void FMyMJDataAccessorCpp::resetForNewActionLoop()
+{
+    for (int32 i = 0; i < 4; i++) {
+        FMyMJRoleDataAttenderPrivateCpp* pRoleDataAttenderPriv = getRoleDataAttenderPrivate(i);
+
+        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Full) {
+            MY_VERIFY(pRoleDataAttenderPriv);
+        }
+
+        if (pRoleDataAttenderPriv == NULL) {
+            continue;
+        }
+
+        pRoleDataAttenderPriv->m_cActionContainor.resetForNewActionLoop();
+    }
+};
 
 void FMyMJDataAccessorCpp::moveCardFromOldPosi(int32 id)
 {
@@ -422,19 +454,28 @@ void FMyMJDataAccessorCpp::moveCardFromOldPosi(int32 id)
 
         pCardInfo->m_cPosi.reset();
 
+        pDCoreData->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal--;
         if (pDCoreData->m_cUntakenSlotInfo.isIdxUntakenSlotInKeptFromTailSegment(idx)) {
             pDCoreData->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumKeptFromTail--;
+
+            pDCoreData->m_cUntakenSlotInfo.updateUntakenInfoHeadOrTail(pDCoreData->m_aUntakenCardStacks, false, true);
         }
         else {
             pDCoreData->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead--;
-            if (pDCoreData->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead == 0) {
-                pDCoreData->m_cHelperLastCardTakenInGame.m_iId = id;
-                pDCoreData->m_cHelperLastCardTakenInGame.m_iValue = pCardValuePack->getByIdx(id);
-            }
+
+            pDCoreData->m_cUntakenSlotInfo.updateUntakenInfoHeadOrTail(pDCoreData->m_aUntakenCardStacks, true, false);
         }
-        pDCoreData->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal--;
 
         pCardInfo->m_cPosi.reset();
+
+    }
+    else if (eSlotSrc == MyMJCardSlotTypeCpp::ShownOnDesktop)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("removing card from shownOnDesktop slot, this logic is not supposed to run in current game rules."));
+
+        bool bRemovedOne = false;
+        pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(pDCoreData->m_aIdShownOnDesktopCards, id, &bRemovedOne);
+        MY_VERIFY(bRemovedOne);
 
     }
     else if (idxAttender >= 0 && idxAttender < 4) {
@@ -500,6 +541,10 @@ void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCa
     if (eSlotDst == MyMJCardSlotTypeCpp::Untaken) {
         MY_VERIFY(false);
     }
+    else if (eSlotDst == MyMJCardSlotTypeCpp::ShownOnDesktop)
+    {
+        pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(pCoreData->m_aIdShownOnDesktopCards, id);
+    }
     else if (idxAttender >= 0 && idxAttender < 4) {
 
         FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
@@ -540,23 +585,3 @@ void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCa
         MY_VERIFY(false);
     }
 };
-
-void FMyMJDataAccessorCpp::updateUntakenInfoHeadOrTail(bool bUpdateHead, bool bUpdateTail)
-{
-    FMyMJCoreDataPublicCpp *pCoreData = &getCoreDataRef();
-
-    if (pCoreData->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumTotal <= 0) {
-        return;
-    }
-
-    if (bUpdateHead) {
-        int32 idx = UMyMJUtilsLibrary::getIdxOfUntakenSlotHavingCard(pCoreData->m_aUntakenCardStacks, pCoreData->m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow, 0, false);
-        MY_VERIFY(idx >= 0);
-        pCoreData->m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow = idx;
-    }
-    if (bUpdateTail) {
-        int32 idx = UMyMJUtilsLibrary::getIdxOfUntakenSlotHavingCard(pCoreData->m_aUntakenCardStacks, pCoreData->m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow, 0, true);
-        MY_VERIFY(idx >= 0);
-        pCoreData->m_cUntakenSlotInfo.m_iIdxUntakenSlotTailNow = idx;
-    }
-}

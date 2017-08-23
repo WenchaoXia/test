@@ -47,7 +47,18 @@ public:
     virtual void resetDatasOwned()
     {
         m_cDataLogic.resetForNewGame();
+        resetForNewActionLoop(false);
     };
+
+
+    virtual void resetForNewActionLoop(bool bNeed2Collect)
+    {
+        FMyMJGameActionContainorCpp *pContainor = &m_cDataLogic.m_cActionContainor;
+        pContainor->resetForNewLoop();
+
+        pContainor->getNeed2CollectRef() = bNeed2Collect;
+    };
+
 
     virtual void genActionChoices(FMyMJGamePusherIOComponentFullCpp *pPusherIO) = NULL;
     //end
@@ -82,15 +93,6 @@ public:
     const FMyMJAttenderDataLogicOnlyCpp& getDataLogicRefConst() const
     {
         return m_cDataLogic;
-    };
-
-    inline
-    void resetForNewLoop(bool bNeed2Collect)
-    {
-        FMyMJGameActionContainorCpp *pContainor = &m_cDataLogic.m_cActionContainor;
-        pContainor->resetForNewLoop();
-
-        pContainor->getNeed2CollectRef() = bNeed2Collect;
     };
 
 

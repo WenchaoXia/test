@@ -12,7 +12,7 @@
 #include "MJ/Utils/MyMJUtils.h"
 #include "MJ/MyMJCardPack.h"
 
-#include "MJ/MyMJCommonDefines.h"
+#include "MJ/MyMJGameData.h"
 
 #include "MyMJUtilsLocalCS.generated.h"
 
@@ -27,6 +27,16 @@ class UMyMJUtilsLocalCSLibrary :
 public:
     
     static void genDefaultCfg(FMyMJGameCfgCpp &outCfg);
+
+    //HaiDi card in Changsha, have its own rules
+    static int32 getHaiDiCard(const FMyMJCoreDataHelperCpp& helper)
+    {
+        if (helper.m_aIdHelperLastCardsTakenInWholeGame.Num() > 0 && helper.m_eHelperGameStateJustBeforeLastCardsTakenInWholeGame != MyMJGameStateCpp::WeavedGangSpBuZhangLocalCS) {
+            return helper.m_aIdHelperLastCardsTakenInWholeGame.Top();
+        }
+
+        return -1;
+    };
 
     //return whether can Hu
     static bool checkHuLocalCSBorn(const FMyMJGameSubLocalCSCfgCpp &localCSCfg,

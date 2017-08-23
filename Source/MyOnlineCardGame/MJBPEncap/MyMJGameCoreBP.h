@@ -198,10 +198,10 @@ public:
 
     //test with a full mode core created and run in sub thread
     UFUNCTION(BlueprintCallable, Category = "UMyMJCoreFullCpp")
-    void testGameCoreInSubThread(bool showCoreLog);
+    void testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst);
 
     bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTrivalConfigMask);
-    bool startGame();
+    bool startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst);
 
     void loop();
 

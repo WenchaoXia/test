@@ -13,7 +13,7 @@ TSharedPtr<FMyMJGamePusherBaseCpp> FMyMJGamePusherIOComponentFullCpp::tryPullPus
     if (m_cQueueLocal.Dequeue(pTaken)) {
 
         //Take onwership, for full mode IO Component, we directly done it here
-        //pTaken->m_pPusher->onReachedConsumeThread();
+        pTaken->onReachedConsumeThread();
         return MakeShareable<FMyMJGamePusherBaseCpp>(pTaken);
     }
     else {
@@ -54,7 +54,7 @@ FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriori
 
             //2nd, try make choice
             if (timeLeft == 0) {
-                MyMJGameErrorCodeCpp errorCode = makeSelection(m_iActionGroupId, 0);
+                MyMJGameErrorCodeCpp errorCode = makeSelection(0);
                 if (errorCode != MyMJGameErrorCodeCpp::None) {
                     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("errorCode: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameErrorCodeCpp"), (uint8)errorCode));
                     MY_VERIFY(false);
@@ -65,7 +65,7 @@ FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriori
     }
 
     //have choices, not choose yet, try random choose
-    if (m_pSelected.Get() == NULL && m_bRandomSelect) {
+    if (m_pSelected.Get() == NULL && (MyMJGameActionContainorCpp_RandomMask_DoRandomSelect & m_iRandomMask) > 0) {
 
         makeRandomSelection(RS);
     }
@@ -86,12 +86,35 @@ FMyMJGameActionContainorCpp::makeRandomSelection(FRandomStream &RS)
 {
     int32 l = m_aActionChoices.Num();
     MY_VERIFY(l > 0);
+
     int32 selection0 = RS.RandRange(0, l - 1);
+    if ((MyMJGameActionContainorCpp_RandomMask_HighPriActionFirst & m_iRandomMask) > 0) {
+        TArray<int32> aSelectionsPriMax;
+        int32 priMax = -1;
+        for (int32 i = 0; i < l; i++) {
+            int32 iPri = m_aActionChoices[i]->getPriority();
+            if (iPri > priMax) {
+                aSelectionsPriMax.Reset();
+                aSelectionsPriMax.Emplace(i);
+                priMax = iPri;
+            }
+            else if (iPri == priMax) {
+                aSelectionsPriMax.Emplace(i);
+            }
+            else {
+
+            }
+        }
+
+        MY_VERIFY(aSelectionsPriMax.Num() > 0);
+        int32 idx = RS.RandRange(0, aSelectionsPriMax.Num() - 1);
+        selection0 = aSelectionsPriMax[idx];
+    }
 
     TSharedPtr<FMyMJGameActionBaseCpp> pAction = m_aActionChoices[selection0];
 
     if (pAction->getRealCountOfSelection() < 2) {
-        MyMJGameErrorCodeCpp errorCode = makeSelection(m_iActionGroupId, selection0);
+        MyMJGameErrorCodeCpp errorCode = makeSelection(selection0);
         if (errorCode != MyMJGameErrorCodeCpp::None) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("errorCode: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameErrorCodeCpp"), (uint8)errorCode));
             MY_VERIFY(false);
@@ -102,7 +125,7 @@ FMyMJGameActionContainorCpp::makeRandomSelection(FRandomStream &RS)
     TArray<int32> subSelections;
     MY_VERIFY(pAction->genRandomSubSelections(RS, subSelections) == 0);
 
-    MyMJGameErrorCodeCpp errorCode = makeSelection(m_iActionGroupId, selection0, subSelections);
+    MyMJGameErrorCodeCpp errorCode = makeSelection(selection0, subSelections);
     if (errorCode != MyMJGameErrorCodeCpp::None) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("errorCode: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameErrorCodeCpp"), (uint8)errorCode));
         MY_VERIFY(false);
@@ -120,17 +143,13 @@ FMyMJGameActionCollectorCpp::reinit(TArray<FMyMJGameActionContainorCpp *> &aActi
     for (int32 i = 0; i < l; i++) {
         FMyMJGameActionContainorCpp *pContainor = m_aActionContainors[i];
         int32 idxAttender = pContainor->getIdxAttender();
-        if ((iRandomSelectMask & (1 << idxAttender)) > 0) {
-            pContainor->reinit(true);
-        }
-        else {
-            pContainor->reinit(false);
-        }
+        int8 iMask = (iRandomSelectMask >> (8 * idxAttender)) & 0xff;
 
+        pContainor->reinit(iMask);
     }
 
     //reinit always happend before game start
-    setActionGroupId(0);
+    //setActionGroupId(0);
 };
 
 void
@@ -183,7 +202,7 @@ FMyMJGameActionCollectorCpp::resetForNewLoopForFullMode(FMyMJGameActionBaseCpp *
 
 
 bool
-FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHaveProgress, FRandomStream &RS)
+FMyMJGameActionCollectorCpp::collectAction(int32 iActionGroupId, int32 iTimePassedMs, bool &outHaveProgress, FRandomStream &RS)
 {
     MY_VERIFY(m_pPusherIO.IsValid());
     outHaveProgress = false;
@@ -251,7 +270,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iTimePassedMs, bool &outHavePro
             FMyMJGamePusherMadeChoiceNotifyCpp *pMadeChoiceNotify = new FMyMJGamePusherMadeChoiceNotifyCpp();
 
             idxAttender = pContainor->getIdxAttender();
-            pMadeChoiceNotify->init(idxAttender, m_iActionGroupId, selection, aSubSelections);
+            pMadeChoiceNotify->init(idxAttender, iActionGroupId, selection, aSubSelections);
             m_pPusherIO->GivePusher(pMadeChoiceNotify, (void **)&pMadeChoiceNotify);
 
             outHaveProgress = true;

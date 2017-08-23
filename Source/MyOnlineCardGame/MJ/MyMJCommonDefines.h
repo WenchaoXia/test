@@ -10,6 +10,8 @@
 #define My_MJ_GAME_IO_DRAIN_LOOP_TIME_MS 100
 #define MY_MJ_GAME_CORE_MIRROR_LOOP_TIME_MS 100
 
+#define MyMJGameDup8BitMaskForSingleAttenderTo32BitMaskForAll(iMaskSingle) ( ((iMaskSingle & 0xff) << 24) | ((iMaskSingle & 0xff) << 16) | ((iMaskSingle & 0xff) << 8) | ((iMaskSingle & 0xff) << 0) )
+
 typedef class FMyMJGameCoreCpp FMyMJGameCoreCpp;
 typedef class FMyMJGameAttenderCpp FMyMJGameAttenderCpp;
 typedef struct FMyMJGameIOGroupCpp FMyMJGameIOGroupCpp;
@@ -35,12 +37,12 @@ enum class MyMJGameErrorCodeCpp : uint8
 };
 
 UENUM(BlueprintType)
-enum class MyMJGameCoreWorkModeCpp : uint8
+enum class MyMJGameElemWorkModeCpp : uint8
 {
     Invalid = 0  UMETA(DisplayName = "Invalid"),
     Full = 1     UMETA(DisplayName = "Full"), //Full Function mode
     Mirror = 2   UMETA(DisplayName = "Mirror"), //Mirror mode, doesn't produce any thing, just consume the pushers
-                                                //MirrorAlone = 2      UMETA(DisplayName = "MirrorAlone")
+    Temp = 3     UMETA(DisplayName = "Temp"),
 };
 
 UENUM(BlueprintType)
@@ -72,8 +74,9 @@ enum class MyMJGameStateCpp : uint8
 
     CardsShuffled = 10 UMETA(DisplayName = "CardsShuffled"),
     CardsWaitingForDistribution = 11 UMETA(DisplayName = "CardsWaitingForDistribution"),
-    CardsDistributedWaitingForBuHua = 12 UMETA(DisplayName = "CardsDistributedWaitingForBuHua"),
-    JustStarted = 14 UMETA(DisplayName = "JustStarted"), //Just started game, zhuang attender need to take action
+    CardsDistributed = 12 UMETA(DisplayName = "CardsDistributed"),
+
+    JustStarted = 15 UMETA(DisplayName = "JustStarted"), //Just started game, zhuang attender need to take action, Note: for simple subclass core must use action update state to enter just started state
     JustHu = 20      UMETA(DisplayName = "JustHu"),
 
     WaitingForTakeCard = 100 UMETA(DisplayName = "WaitingForTakeCard"), //normal take card, not in gang path
@@ -86,7 +89,6 @@ enum class MyMJGameStateCpp : uint8
     WeavedGangTakenCards = 145 UMETA(DisplayName = "WeavedGangTakenCards"),
     WeavedGangGivenOutCards = 146 UMETA(DisplayName = "WeavedGangGivenOutCards"),
 
-    CardsDistributedWaitingForLittleHuLocalCS = 150 UMETA(DisplayName = "CardsDistributedWaitingForLittleHuLocalCS"),
 
     WeavedGangSpBuZhangLocalCS = 152 UMETA(DisplayName = "WeavedGangSpBuZhangLocalCS"), //decided as buzhang, as GangYao code path we use weavedGang
     WeavedGangDicesThrownLocalCS = 153 UMETA(DisplayName = "WeavedGangDicesThrownLocalCS"),
@@ -102,7 +104,7 @@ enum class MyMJActionLoopStateCpp : uint8
 };
 
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJGameCardPackCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -120,17 +122,17 @@ public:
         m_bHaveZhongCards = false;
     };
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "have word cards"))
     bool m_bHaveWordCards;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "have hua cards"))
     bool m_bHaveHuaCards;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "have zhong cards"))
     bool m_bHaveZhongCards;
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJGameTrivialCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -149,22 +151,22 @@ public:
         m_bGangAnFlipUpCards = false;
     };
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "attender num"))
     int32 m_iGameAttenderNum; //[2, 4]
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card num per stack in untaken slot"))
     int32 m_iCardNumPerStackInUntakenSlot;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "stack num kept from untaken slot tail"))
     int32 m_iStackNumKeptFromTail;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "gang an flip up cards"))
     bool m_bGangAnFlipUpCards;
 
 };
 
 //For simple, define sub rule type cfg here
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJGameSubGuoBiaoCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -181,11 +183,11 @@ public:
     };
 
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Req MenQing for ZuHeLong"))
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Req MenQing for ZuHeLong"))
     bool m_bReqMenQingForZuHeLong;
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJGameSubLocalCSCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -200,12 +202,12 @@ public:
     {
         m_bHuBornAllowMultiple = false;
         m_bHuBornShowAllCards = false;
-        m_mHuBornScoreAttrs.Reset();
+        m_aHuBornScoreAttrs.Reset();
 
         m_i7Dui258DuiReq = 0;
 
         m_bHuAllowMultiple = true;
-        m_bHuAttednerAsZhuangScore = false;
+        m_bHuAttenderAsZhuangForScore = false;
         m_bResetAttenderPaoHuBanStateAfterWeave = false;
 
         m_iGangYaoCount = 2;
@@ -214,46 +216,68 @@ public:
         m_iZhaNiaoCount = 2;
 
         m_bAllowGangYaoAfterGangYao = false;
+
+        m_mHuBornScoreAttrs.Reset();
     };
 
-    UPROPERTY()
+    inline
+    void prepareForUse()
+    {
+        UMyMJUtilsLibrary::array2MapForHuScoreAttr(m_aHuBornScoreAttrs, m_mHuBornScoreAttrs);
+    };
+
+    inline
+    const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& getHuBornScoreAttrsRefConst() const
+    {
+        MY_VERIFY(UMyMJUtilsLibrary::checkUniformOfArrayAndMapForHuScoreAttr(m_aHuBornScoreAttrs, m_mHuBornScoreAttrs, false));
+        return m_mHuBornScoreAttrs;
+    };
+
+    TArray<FMyMJHuScoreAttrCpp>& getHuBornScoreAttrsRef()
+    {
+        return m_aHuBornScoreAttrs;
+    };
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hu born allow multiple"))
     bool m_bHuBornAllowMultiple; //Whether it allow one attender have more than 1 born hu at start
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hu born show all cards"))
     bool m_bHuBornShowAllCards;
 
-    UPROPERTY()
-    TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> m_mHuBornScoreAttrs;
-
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu 7 DUi 258 Dui Required"))
     int32 m_i7Dui258DuiReq;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hu allow multiple"))
     bool m_bHuAllowMultiple;
 
-    UPROPERTY()
-    bool m_bHuAttednerAsZhuangScore;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hu attender as zhuang for score"))
+    bool m_bHuAttenderAsZhuangForScore;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "reset attender pao hu ban state after weave"))
     bool m_bResetAttenderPaoHuBanStateAfterWeave;
 
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "gang yao count"))
     int32 m_iGangYaoCount;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "bu zhang from head"))
     bool m_bBuZhangFromHead;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "zha niao count"))
     int32 m_iZhaNiaoCount;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "allow gang yao after gang yao"))
     bool m_bAllowGangYaoAfterGangYao;
 
+protected:
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hu born score attrs"))
+    TArray<FMyMJHuScoreAttrCpp> m_aHuBornScoreAttrs;
+
+    TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> m_mHuBornScoreAttrs;
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJGameCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -275,28 +299,52 @@ public:
         m_cCardPackCfg.reset();
         m_cTrivialCfg.reset();
         m_cHuCfg.reset();
-        m_cSubGuoBiaoCfg.reset();
-        m_cSubLocalCSCfg.reset();
+        //m_cSubGuoBiaoCfg.reset();
+        //m_cSubLocalCSCfg.reset();
+        m_aSubGuoBiaoCfg.Reset();
+        m_aSubLocalCSCfg.Reset();
     };
 
-    UPROPERTY()
+    inline
+    void prepareForUse()
+    {
+        m_cHuCfg.prepareForUse();
+        int32 l = m_aSubLocalCSCfg.Num();
+        for (int32 i = 0; i < l; i++) {
+            m_aSubLocalCSCfg[i].prepareForUse();
+        }
+    };
+
+    inline const FMyMJGameSubGuoBiaoCfgCpp& getSubGuoBiaoCfgRefConst() const
+    {
+        MY_VERIFY(m_aSubGuoBiaoCfg.Num() == 1);
+        return m_aSubGuoBiaoCfg[0];
+    };
+
+    inline const FMyMJGameSubLocalCSCfgCpp& getSubLocalCSCfgRefConst() const
+    {
+        MY_VERIFY(m_aSubLocalCSCfg.Num() == 1);
+        return m_aSubLocalCSCfg[0];
+    };
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "rule type"))
     MyMJGameRuleTypeCpp m_eRuleType;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card pack cfg"))
     FMyMJGameCardPackCfgCpp m_cCardPackCfg;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "trivial cfg"))
     FMyMJGameTrivialCfgCpp m_cTrivialCfg;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hu cfg"))
     FMyMJHuCfgCpp m_cHuCfg;
 
     //sub cfg, all optional, determined by @m_eRuleType
-    UPROPERTY()
-    FMyMJGameSubGuoBiaoCfgCpp m_cSubGuoBiaoCfg;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "sub guo biao cfg"))
+    TArray<FMyMJGameSubGuoBiaoCfgCpp> m_aSubGuoBiaoCfg;
 
-    UPROPERTY()
-    FMyMJGameSubLocalCSCfgCpp m_cSubLocalCSCfg;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "sub local CS cfg"))
+    TArray<FMyMJGameSubLocalCSCfgCpp> m_aSubLocalCSCfg;
 };
 
 USTRUCT(BlueprintType)
@@ -317,12 +365,13 @@ public:
         m_bZhuangTrue = false;
     };
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx attender quan feng"))
     int32 m_iIdxAttenderQuanFeng;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx attender men feng"))
     int32 m_iIdxAttenderMenFeng; //Same As Zhuang
 
-    UPROPERTY()
+    //if true, use as socre calc, else only used in game logic such as card distribution sequence
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "zhuang true"))
     bool m_bZhuangTrue;
 };

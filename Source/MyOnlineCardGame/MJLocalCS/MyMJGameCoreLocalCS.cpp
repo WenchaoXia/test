@@ -1,7 +1,134 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MyMJGameCoreLocalCS.h"
+#include "Utils/MyMJUtilsLocalCS.h"
 #include "Kismet/KismetMathLibrary.h"
+
+void FMyMJGameCoreLocalCSCpp::genActionChoices()
+{
+    FMyMJGameCoreCpp::genActionChoices();
+
+    const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+    const FMyMJCardValuePackCpp& cardValuePack = getCardValuePackOfSysKeeperRefConst();
+
+    MyMJGameStateCpp eGameState = coreDataSelf.m_eGameState;
+
+    if (eGameState == MyMJGameStateCpp::JustHu) {
+        int32 idxHeadNow = coreDataSelf.m_cUntakenSlotInfo.m_iIdxUntakenSlotHeadNow;
+        TArray<int32> aIds;
+
+        int32 c = coreDataSelf.m_cGameCfg.getSubLocalCSCfgRefConst().m_iZhaNiaoCount;
+        if (c <= 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("zhaniao count cfg <= 0."));
+            return;
+        }
+
+        tryCollectCardsFromUntakenSlot(idxHeadNow, (uint32)c, false, aIds);
+        c = aIds.Num();
+
+        FMyMJGameActionZhaNiaoLocalCSCpp *pAction = new FMyMJGameActionZhaNiaoLocalCSCpp();
+        if (c > 0) {
+
+            for (int32 i = 0; i < c; i++) {
+                int32 idx = pAction->m_aPickedIdValues.Emplace();
+                pAction->m_aPickedIdValues[idx].m_iId = aIds[i];
+                pAction->m_aPickedIdValues[idx].m_iValue = cardValuePack.getByIdx(aIds[i]);
+            }
+
+        }
+        else {
+            //this is the last card
+            int32 idHaiDiCard = UMyMJUtilsLocalCSLibrary::getHaiDiCard(coreDataSelf.m_cHelper);
+
+            if (idHaiDiCard >= 0) {
+                //we have haidi card
+                int32 idx = pAction->m_aPickedIdValues.Emplace();
+                pAction->m_aPickedIdValues[idx].m_iId = idHaiDiCard;
+                pAction->m_aPickedIdValues[idx].m_iValue = cardValuePack.getByIdx(idHaiDiCard);
+            }
+            else {
+                delete(pAction);
+                pAction = NULL;
+            }
+
+        }
+
+        if (pAction) {
+            /*
+            int32 idxAttender = -1;
+            int32 idxBase = coreDataSelf.m_cGameRunData.m_iIdxAttenderMenFeng;
+            for (int32 i = 0; i < 4; i++) {
+                const FMyMJRoleDataAttenderPublicCpp& roleDataAttenderPublic = m_cDataAccessor.getRoleDataAttenderPublicRefConst((idxBase + 1) % 4);
+                if (roleDataAttenderPublic.m_aHuScoreResultFinalGroups.Num() <= 0) {
+                    continue;
+                }
+
+                if (roleDataAttenderPublic.m_aHuScoreResultFinalGroups.Top().m_eHuMainType == MyMJHuMainTypeCpp::Common) {
+                    idxAttender = i;
+                    break;
+                }
+            }
+
+            MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
+            */
+
+            pAction->initWithPickedIdValuesInited();
+
+            getPusherIOFullRef().GivePusher(pAction, (void **)&pAction);
+        }
+    }
+}
+
+bool FMyMJGameCoreLocalCSCpp::prevApplyPusherResult(const FMyMJGamePusherResultCpp &pusherResult)
+{
+    bool bRet = FMyMJGameCoreCpp::prevApplyPusherResult(pusherResult);
+
+    if (pusherResult.m_aResultDelta.Num() > 0) {
+        const FMyMJDataDeltaCpp& delta = pusherResult.m_aResultDelta[0];
+        MyMJGamePusherTypeCpp ePusherType = delta.getType();
+
+        if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
+            int32 idxAttender = delta.getIdxAttenderActionInitiator();
+
+            //check if need bNeedUpdateTing, the code was here because before result apply we have a chance to detect if we can skip ting update for performance
+            bool bNeedUpdateTing = true;
+
+            //only one case we can skip: the cards just taken, exactly match the cards wii be given out
+            if (delta.m_aCoreData.Num() > 0) {
+
+                const FMyMJRoleDataAttenderPublicCpp& roleDataAttenderPublic = m_cDataAccessor.getRoleDataAttenderPublicRefConst(idxAttender);
+                int32 l0 = roleDataAttenderPublic.m_aIdJustTakenCards.Num();
+
+                const FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[0];
+                int32 l1 = coreDataDelta.m_aCardInfos2Update.Num();
+                MY_VERIFY(l1 > 0);
+
+                if (l0 == l1) {
+                    bNeedUpdateTing = false;
+                    for (int32 i = 0; i < l0; i++) {
+                        int32 idCard = roleDataAttenderPublic.m_aIdJustTakenCards[i];
+                        int32 idx = FMyMJCardInfoPackCpp::helperFindCardByIdInCardInfos(coreDataDelta.m_aCardInfos2Update, idCard);
+                        if (idx >= 0 && coreDataDelta.m_aCardInfos2Update[idx].m_cPosi.m_eSlot == MyMJCardSlotTypeCpp::GivenOut) {
+
+                        }
+                        else {
+                            bNeedUpdateTing = true;
+                            break;
+                        }
+                    }
+                }
+
+
+            }
+
+            if (bNeedUpdateTing) {
+                getRealAttenderByIdx(idxAttender)->tryGenAndEnqueueUpdateTingPusher();
+            }
+        }
+    }
+
+    return bRet;
+}
 
 FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(const FMyMJGamePusherBaseCpp &pusher)
 {
@@ -9,8 +136,9 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
 
     MyMJGamePusherTypeCpp ePusherType = pPusherIn->getType();
 
-    const FMyMJCoreDataPublicCpp& coreData = getCoreDataRefConst();
-
+    const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+    const FMyMJCardInfoPackCpp&  cardInfoPack = getCardInfoPackRefConst();
+    const FMyMJCardValuePackCpp& cardValuePack = getCardValuePackOfSysKeeperRefConst();
 
     FMyMJGamePusherResultCpp* pRet = new FMyMJGamePusherResultCpp();
 
@@ -18,7 +146,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
     int32 idxDelta = pRet->m_aResultDelta.Emplace();
     FMyMJDataDeltaCpp& delta = pRet->m_aResultDelta[idxDelta];
 
-    delta.m_iGameId = coreData.m_iGameId;
+    delta.m_iGameId = coreDataSelf.m_iGameId;
     StaticCast<FMyMJGamePusherBaseCpp&>(delta) = pusher;
 
     if (ePusherType == MyMJGamePusherTypeCpp::PusherFillInActionChoices)
@@ -26,6 +154,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         const FMyMJGamePusherFillInActionChoicesCpp& pusherFillIn = StaticCast< const FMyMJGamePusherFillInActionChoicesCpp&>(pusher);
 
         int32 idxAttender = pusherFillIn.getIdxAttender();
+        //delta.m_iIdxAttenderInitiator = idxAttender;
 
         int32 idx = delta.m_aRoleDataAttender.Emplace();
         FMyMJRoleDataAttenderDeltaCpp &deltaAttender = delta.m_aRoleDataAttender[idx];
@@ -50,7 +179,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             idx = actionContainorForBP.m_aActionChoices.Emplace();
             bool bGened = p2->genActionUnified(&actionContainorForBP.m_aActionChoices[idx]);
             if (!bGened) {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("psuher %s failed to gen unified action!"),
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pusher %s failed to gen unified action!"),
                     *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)p2->getType()));
                 MY_VERIFY(false);
             }
@@ -63,6 +192,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         const FMyMJGamePusherMadeChoiceNotifyCpp& pusherMadeChoice = StaticCast< const FMyMJGamePusherMadeChoiceNotifyCpp&>(pusher);
 
         int32 idxAttender = pusherMadeChoice.getIdxAttenderConst();
+        //delta.m_iIdxAttenderInitiator = idxAttender;
 
         int32 idx = delta.m_aRoleDataAttender.Emplace();
         FMyMJRoleDataAttenderDeltaCpp &deltaAttender = delta.m_aRoleDataAttender[idx];
@@ -107,9 +237,6 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
     {
         const FMyMJGamePusherUpdateAttenderCardsAndStateCpp& pusherUpdateAttenderCardsAndState = StaticCast<const FMyMJGamePusherUpdateAttenderCardsAndStateCpp &>(pusher);
 
-        const FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPackRefConst();
-        const FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSysKeeperRefConst();
-
         TArray<FMyIdValuePair> aIdValues2Reveal;
         TArray<FMyMJCardInfoCpp> aInfos2Update;
 
@@ -119,7 +246,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         for (int32 i = 0; i < l; i++) {
             const FMyIdValuePair& targetIdValue = pusherUpdateAttenderCardsAndState.m_aIdValues[i];
 
-            const FMyMJCardInfoCpp& currentInfo = pCardInfoPack->getRefByIdxConst(targetIdValue.m_iId); //do a copy
+            const FMyMJCardInfoCpp& currentInfo = cardInfoPack.getRefByIdxConst(targetIdValue.m_iId); //do a copy
 
             //1st, check if we need to reveal card values
             //if up, it means already revealed to everyone, we don't need to reveal anymore
@@ -140,7 +267,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             FMyMJRoleDataPrivateDeltaCpp& roleDataPriv = delta.m_aRoleDataPrivate[idx];
             roleDataPriv.m_aIdValuePairs2Reveal = aIdValues2Reveal;
 
-            roleDataPriv.m_eRoleType = (MyMJGameRoleTypeCpp)idxAttender;
+            roleDataPriv.m_eRoleType = MyMJGameRoleTypeCpp::SysKeeper;
             if (pusherUpdateAttenderCardsAndState.m_eTargetState == MyMJCardFlipStateCpp::Up) {
                 roleDataPriv.m_iRoleMaskForDataPrivateClone = MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_All;
             }
@@ -201,9 +328,11 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionNoAct)
     {
         const FMyMJGameActionNoActCpp &actionNoAct = StaticCast<const FMyMJGameActionNoActCpp &>(pusher);
+        int32 idxAttender = actionNoAct.getIdxAttender(true);
+        delta.m_iIdxAttenderActionInitiator = idxAttender;
+
         bool bPassPaoHu = UMyMJUtilsLibrary::getBoolValueFromBitMask(actionNoAct.m_iMask0, (uint8)EMyMJGameActionUnfiedMask0::PassPaoHu);
         if (bPassPaoHu) {
-            int32 idxAttender = actionNoAct.getIdxAttender();
 
             int32 idx = delta.m_aRoleDataAttender.Emplace();
             FMyMJRoleDataAttenderDeltaCpp &deltaAttender = delta.m_aRoleDataAttender[idx];
@@ -219,16 +348,11 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionThrowDices)
     {
         const FMyMJGameActionThrowDicesCpp &actionThrowDice = StaticCast<const FMyMJGameActionThrowDicesCpp &>(pusher);
+        int32 idxAttender = actionThrowDice.getIdxAttender(true);
+        delta.m_iIdxAttenderActionInitiator = idxAttender;
 
         int32 idx = delta.m_aCoreData.Emplace();
         FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[idx];
-
-        //idx is always 1 - 4
-        int32 idxAttender = actionThrowDice.getIdxAttender();
-
-        idx = delta.m_aRoleDataAttender.Emplace();
-        FMyMJRoleDataAttenderDeltaCpp &deltaAttender = delta.m_aRoleDataAttender[idx];
-        deltaAttender.m_iIdxAttender = idxAttender;
 
         int32 iDiceNumberNow0, iDiceNumberNow1;
         actionThrowDice.getDiceNumbers(&iDiceNumberNow0, &iDiceNumberNow1);
@@ -236,14 +360,14 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen, iDiceNumberNow0);
         UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen, iDiceNumberNow1);
 
-        MyMJGameActionThrowDicesSubTypeCpp eSubType = actionThrowDice.getSubType();
-        if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GameStart) {
+        int32 iReason = actionThrowDice.getDiceReason();
+        if (iReason == FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart) {
             coreDataDelta.m_eGameState = MyMJGameStateCpp::CardsWaitingForDistribution;
             UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
 
             UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart);
         }
-        else if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS) {
+        else if (iReason == FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GangYaoLocalCS) {
             coreDataDelta.m_eGameState = MyMJGameStateCpp::WeavedGangDicesThrownLocalCS;
             UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
 
@@ -256,31 +380,428 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart)
     {
+        const FMyMJGameActionDistCardAtStartCpp &actionDistCardAtStart = StaticCast<const FMyMJGameActionDistCardAtStartCpp &>(pusher);
+        int32 idxAttender = actionDistCardAtStart.getIdxAttender(true);
+        delta.m_iIdxAttenderActionInitiator = idxAttender;
 
+        int32 idx = delta.m_aCoreData.Emplace();
+        FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[idx];
+
+        idx = delta.m_aRoleDataPrivate.Emplace();
+        FMyMJRoleDataPrivateDeltaCpp& roleDataPrivDelta = delta.m_aRoleDataPrivate[idx];
+        roleDataPrivDelta.m_eRoleType = MyMJGameRoleTypeCpp::SysKeeper;
+        roleDataPrivDelta.m_iRoleMaskForDataPrivateClone = MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_One(idxAttender);
+
+
+        int32 l = actionDistCardAtStart.m_aIdValuePairs.Num();
+
+        for (int32 i = 0; i < l; i++) {
+            //1, reveal value
+            int32 id = actionDistCardAtStart.m_aIdValuePairs[i].m_iId;
+            int32 value = actionDistCardAtStart.m_aIdValuePairs[i].m_iValue;
+
+            MY_VERIFY(value > 0);
+            roleDataPrivDelta.m_aIdValuePairs2Reveal.Emplace(actionDistCardAtStart.m_aIdValuePairs[i]);
+   
+            //2, move card
+            idx = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoPack.getRefByIdxConst(id));
+            FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
+            cardInfoTarget.m_cPosi.m_iIdxAttender = idxAttender;
+            cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::InHand;
+            cardInfoTarget.m_eFlipState = MyMJCardFlipStateCpp::Stand;
+
+        }
+
+        //3rd, update state
+        if (actionDistCardAtStart.m_bLastCard) {
+
+            coreDataDelta.m_eGameState = MyMJGameStateCpp::CardsDistributed;
+            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+
+        }
+        else {
+
+        }
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionTakeCards)
     {
+        const FMyMJGameActionTakeCardsCpp &actionTakeCards = StaticCast<const FMyMJGameActionTakeCardsCpp &>(pusher);
+        int32 idxAttender = actionTakeCards.getIdxAttender(true);
+        delta.m_iIdxAttenderActionInitiator = idxAttender;
 
+        int32 idx = delta.m_aCoreData.Emplace();
+        FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[idx];
+
+        idx = delta.m_aRoleDataPrivate.Emplace();
+        FMyMJRoleDataPrivateDeltaCpp& roleDataPrivDelta = delta.m_aRoleDataPrivate[idx];
+        roleDataPrivDelta.m_eRoleType = MyMJGameRoleTypeCpp::SysKeeper;
+        roleDataPrivDelta.m_iRoleMaskForDataPrivateClone = MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_One(idxAttender);
+
+
+        //move card and flip
+        int32 l = actionTakeCards.m_aIdValuePairs.Num();
+        for (int32 i = 0; i < l; i++) {
+  
+            //1, reveal value
+            int32 id = actionTakeCards.m_aIdValuePairs[i].m_iId;
+            int32 value = actionTakeCards.m_aIdValuePairs[i].m_iValue;
+
+            MY_VERIFY(value > 0);
+            roleDataPrivDelta.m_aIdValuePairs2Reveal.Emplace(actionTakeCards.m_aIdValuePairs[i]);
+
+            //2, move card
+            idx = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoPack.getRefByIdxConst(id));
+            FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
+            cardInfoTarget.m_cPosi.m_iIdxAttender = idxAttender;
+            cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::JustTaken;
+            cardInfoTarget.m_eFlipState = MyMJCardFlipStateCpp::Stand;
+        }
+
+        if (actionTakeCards.m_bIsGang) {
+            coreDataDelta.m_eGameState = MyMJGameStateCpp::WeavedGangTakenCards;
+        }
+        else {
+            coreDataDelta.m_eGameState = MyMJGameStateCpp::TakenCard;
+        }
+        UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards)
     {
+        const FMyMJGameActionGiveOutCardsCpp &actionGiveOutCards = StaticCast<const FMyMJGameActionGiveOutCardsCpp &>(pusher);
+        int32 idxAttender = actionGiveOutCards.getIdxAttender(true);
+        delta.m_iIdxAttenderActionInitiator = idxAttender;
+
+        int32 idx = delta.m_aCoreData.Emplace();
+        FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[idx];
+
+        idx = delta.m_aRoleDataPrivate.Emplace();
+        FMyMJRoleDataPrivateDeltaCpp& roleDataPrivDelta = delta.m_aRoleDataPrivate[idx];
+        roleDataPrivDelta.m_eRoleType = MyMJGameRoleTypeCpp::SysKeeper;
+        roleDataPrivDelta.m_iRoleMaskForDataPrivateClone = MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_All;
+
+        const FMyMJRoleDataAttenderPublicCpp& roleDataAttenderPublicSelf = m_cDataAccessor.getRoleDataAttenderPublicRefConst(idxAttender);
+
+        int32 selectedCount = actionGiveOutCards.m_aIdValuePairsSelected.Num();
+        MY_VERIFY(selectedCount > 0);
+
+        //1st reveal and move cards
+        for (int32 i = 0; i < selectedCount; i++) {
+            const FMyIdValuePair &pair = actionGiveOutCards.m_aIdValuePairsSelected[i];
+
+            //1, reveal value
+            int32 id = pair.m_iId;
+            int32 value = pair.m_iValue;
+
+            MY_VERIFY(value > 0);
+            roleDataPrivDelta.m_aIdValuePairs2Reveal.Emplace(pair);
+
+            //2, move card
+            idx = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoPack.getRefByIdxConst(id));
+            FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
+            cardInfoTarget.m_cPosi.m_iIdxAttender = idxAttender;
+            cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::GivenOut;
+            cardInfoTarget.m_eFlipState = MyMJCardFlipStateCpp::Up;
+        }
+
+        //any card left in just taken slot, must go
+        int32 l0 = roleDataAttenderPublicSelf.m_aIdJustTakenCards.Num();
+        for (int32 i = 0; i < l0; i++) {
+            int32 idCard = roleDataAttenderPublicSelf.m_aIdJustTakenCards[i];
+
+            int32 idxTemp = FMyMJCardInfoPackCpp::helperFindCardByIdInCardInfos(coreDataDelta.m_aCardInfos2Update, idCard);
+            if (idxTemp < 0 || coreDataDelta.m_aCardInfos2Update[idxTemp].m_cPosi.m_eSlot == MyMJCardSlotTypeCpp::JustTaken) {
+                //it is not moving out yet, make it move!
+                idx = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoPack.getRefByIdxConst(idCard));
+                FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
+
+                cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::InHand;
+                cardInfoTarget.m_eFlipState = MyMJCardFlipStateCpp::Up;
+            }
+        }
+
+        //2nd, update core state
+        if (actionGiveOutCards.m_bIsGang) {
+            coreDataDelta.m_eGameState = MyMJGameStateCpp::WeavedGangGivenOutCards;
+        }
+        else {
+            coreDataDelta.m_eGameState = MyMJGameStateCpp::GivenOutCard;
+        }
+        UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
 
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave)
     {
+        const FMyMJGameActionWeaveCpp &actionWeave = StaticCast<const FMyMJGameActionWeaveCpp &>(pusher);
+        int32 idxAttender = actionWeave.getIdxAttender(true);
+        delta.m_iIdxAttenderActionInitiator = idxAttender;
 
+        const FMyMJRoleDataAttenderPublicCpp& roleDataAttenderPublicSelf = m_cDataAccessor.getRoleDataAttenderPublicRefConst(idxAttender);
+
+        int32 idx = delta.m_aCoreData.Emplace();
+        FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[idx];
+
+        idx = delta.m_aRoleDataAttender.Emplace();
+        FMyMJRoleDataAttenderDeltaCpp &attenderDelta = delta.m_aRoleDataAttender[idx];
+        attenderDelta.m_iIdxAttender = idxAttender;
+
+        idx = attenderDelta.m_aDataPublic.Emplace();
+        FMyMJRoleDataAttenderPublicDeltaCpp& attenderPublicDelta = attenderDelta.m_aDataPublic[idx];
+
+        FMyMJRoleDataPrivateDeltaCpp* pRoleDataPrivDelta = NULL;
+
+        if (actionWeave.m_eTargetFlipState == MyMJCardFlipStateCpp::Up) {
+            idx = delta.m_aRoleDataPrivate.Emplace();
+            pRoleDataPrivDelta = &delta.m_aRoleDataPrivate[idx];
+            pRoleDataPrivDelta->m_eRoleType = MyMJGameRoleTypeCpp::SysKeeper;
+            pRoleDataPrivDelta->m_iRoleMaskForDataPrivateClone = MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_All;
+        }
+
+        //1st, reveal and move cards
+        const TArray<FMyIdValuePair> &aIdValuePairs = actionWeave.m_aCardValuesRelated;
+        int32 l = aIdValuePairs.Num();
+
+        MY_VERIFY(l > 0);
+        FMyMJCardValuePackCpp::helperVerifyValuesInIdValuePairs(aIdValuePairs);
+
+        for (int32 i = 0; i < l; i++) {
+            const FMyIdValuePair& pair = aIdValuePairs[i];
+            //pCardValuePack->revealCardValue(*pPair);
+
+            //1st, reveal value
+            if (actionWeave.m_eTargetFlipState == MyMJCardFlipStateCpp::Up) {
+                pRoleDataPrivDelta->m_aIdValuePairs2Reveal.Emplace(pair);
+            }
+
+
+            //2nd, move card and flop
+            idx = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoPack.getRefByIdxConst(pair.m_iId));
+            FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
+            cardInfoTarget.m_cPosi.m_iIdxAttender = idxAttender;
+            cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::Weaved;
+            cardInfoTarget.m_eFlipState = actionWeave.m_eTargetFlipState;
+
+        }
+
+        //any card left in just taken slot, must go
+        int32 l0 = roleDataAttenderPublicSelf.m_aIdJustTakenCards.Num();
+        for (int32 i = 0; i < l0; i++) {
+            int32 idCard = roleDataAttenderPublicSelf.m_aIdJustTakenCards[i];
+            int32 idxTemp = FMyMJCardInfoPackCpp::helperFindCardByIdInCardInfos(coreDataDelta.m_aCardInfos2Update, idCard);
+            if (idxTemp < 0 || coreDataDelta.m_aCardInfos2Update[idxTemp].m_cPosi.m_eSlot == MyMJCardSlotTypeCpp::JustTaken) {
+                //it is not moving out yet, make it move!
+                idx = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoPack.getRefByIdxConst(idCard));
+                FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
+
+                cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::InHand;
+                cardInfoTarget.m_eFlipState = MyMJCardFlipStateCpp::Up;
+            }
+        }
+
+        //2nd, form a weave and add, and update helper minor posi info
+        attenderPublicDelta.m_aWeave2Add.Emplace(actionWeave.m_cWeave);
+
+
+        //3rd, update the state
+        MyMJWeaveTypeCpp eType = actionWeave.m_cWeave.getType();
+
+        if (eType == MyMJWeaveTypeCpp::GangAn || eType == MyMJWeaveTypeCpp::GangMing) {
+            int32 reserved0 = actionWeave.m_cWeave.getReserved0();
+            bool bIsBuZhang = (reserved0 & (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang) > 0;
+
+            if (!bIsBuZhang) {
+                if (eType == MyMJWeaveTypeCpp::GangMing && actionWeave.m_cWeave.getTypeConsumed() == MyMJWeaveTypeCpp::ShunZiMing) {
+                    coreDataDelta.m_eGameState = MyMJGameStateCpp::WeavedGang;
+                }
+                else {
+                    //we can jump to next stage
+                    coreDataDelta.m_eGameState = MyMJGameStateCpp::WeavedGangQiangGangChecked;
+                }
+
+            }
+            else {
+                coreDataDelta.m_eGameState = MyMJGameStateCpp::WeavedGangSpBuZhangLocalCS;
+            }
+
+        }
+        else if (eType == MyMJWeaveTypeCpp::KeZiMing || eType == MyMJWeaveTypeCpp::ShunZiMing) {
+            coreDataDelta.m_eGameState = MyMJGameStateCpp::WeavedNotGang;
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
+        UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionHu)
     {
+        const FMyMJGameActionHuCpp &actionHu = StaticCast<const FMyMJGameActionHuCpp &>(pusher);
+        int32 idxAttender = actionHu.getIdxAttender(true);
+        delta.m_iIdxAttenderActionInitiator = idxAttender;
 
+        const FMyMJRoleDataAttenderPublicCpp& roleDataAttenderPublicSelf = m_cDataAccessor.getRoleDataAttenderPublicRefConst(idxAttender);
+
+        int32 idx = delta.m_aCoreData.Emplace();
+        FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[idx];
+
+        idx = delta.m_aRoleDataAttender.Emplace();
+        FMyMJRoleDataAttenderDeltaCpp &attenderDelta = delta.m_aRoleDataAttender[idx];
+        attenderDelta.m_iIdxAttender = idxAttender;
+
+        idx = attenderDelta.m_aDataPublic.Emplace();
+        FMyMJRoleDataAttenderPublicDeltaCpp& attenderPublicDelta = attenderDelta.m_aDataPublic[idx];
+
+        idx = delta.m_aRoleDataPrivate.Emplace();
+        FMyMJRoleDataPrivateDeltaCpp& roleDataPrivDelta = delta.m_aRoleDataPrivate[idx];
+        roleDataPrivDelta.m_eRoleType = MyMJGameRoleTypeCpp::SysKeeper;
+        roleDataPrivDelta.m_iRoleMaskForDataPrivateClone = MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_All;
+
+        //TSharedPtr<FMyMJGameAttenderCpp> pAttender = getRealAttenderByIdx(idxAttender);
+
+        //1st, reveal cards, move and flip
+        int32 l = cardInfoPack.getLength();
+        for (int32 i = 0; i < l; i++) {
+            const FMyMJCardInfoCpp& cardInfo = cardInfoPack.getRefByIdxConst(i);
+            if (cardInfo.m_eFlipState == MyMJCardFlipStateCpp::Up) {
+                continue;
+            }
+
+            idx = roleDataPrivDelta.m_aIdValuePairs2Reveal.Emplace();
+            roleDataPrivDelta.m_aIdValuePairs2Reveal[idx].m_iId = cardInfo.m_iId;
+            roleDataPrivDelta.m_aIdValuePairs2Reveal[idx].m_iValue = cardValuePack.getByIdx(cardInfo.m_iId);
+        }
+
+        //for this type of game, no more move, just flip
+        for (int32 i = 0; i < 4; i++) {
+            TSharedPtr<FMyMJGameAttenderLocalCSCpp> pAttender2 = getAttenderByIdx(i);
+            if (!pAttender2->getIsRealAttender()) {
+                continue;
+            }
+
+            const FMyMJRoleDataAttenderPublicCpp& attenderPublicSelf = pAttender2->getRoleDataAttenderPublicRefConst();
+            TArray<int32> aIds;
+            aIds.Append(attenderPublicSelf.m_aIdGivenOutCards);
+            aIds.Append(attenderPublicSelf.m_aIdHandCards);
+            aIds.Append(attenderPublicSelf.m_aIdJustTakenCards);
+            aIds.Append(attenderPublicSelf.m_aIdWinSymbolCards);
+            
+            for (int32 j = 0; j < attenderPublicSelf.m_aShowedOutWeaves.Num(); j++) {
+                aIds.Append(attenderPublicSelf.m_aShowedOutWeaves[j].getIdsRefConst());
+            }
+
+            for (int32 j = 0; j < aIds.Num(); j++) {
+                const FMyMJCardInfoCpp& cardInfoSelf = cardInfoPack.getRefByIdxConst(aIds[j]);
+                if (cardInfoSelf.m_eFlipState == MyMJCardFlipStateCpp::Up) {
+                    continue;
+                }
+
+                int32 idxTemp = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoSelf);
+                coreDataDelta.m_aCardInfos2Update[idxTemp].m_eFlipState = MyMJCardFlipStateCpp::Up;
+            }
+        }
+
+        UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave, true);
+
+        if (actionHu.m_bEndGame) {
+
+            const FMyMJRoleDataAttenderPublicCpp& attenderPublicSelf = m_cDataAccessor.getRoleDataAttenderPublicRefConst(idxAttender);
+            const FMyMJRoleDataAttenderPublicCpp *pDPubD = &m_aAttendersAll[idxAttender]->getRoleDataAttenderPublicRefConst();
+
+            idx = attenderPublicDelta.m_aHuScoreResultFinalGroup2Add.Emplace();
+            attenderPublicDelta.m_aHuScoreResultFinalGroup2Add[idx] = actionHu.m_cHuScoreResultFinalGroup;
+
+            coreDataDelta.m_eGameState = MyMJGameStateCpp::JustHu;
+            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+        }
+        else {
+            MY_VERIFY(false); //CS MJ always end game when hu in game
+        }
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionHuBornLocalCS)
     {
+        const FMyMJGameActionHuBornLocalCSCpp &actionHuBornLocalCS = StaticCast<const FMyMJGameActionHuBornLocalCSCpp &>(pusher);
+        int32 idxAttender = actionHuBornLocalCS.getIdxAttender(true);
+        delta.m_iIdxAttenderActionInitiator = idxAttender;
+
+        const FMyMJRoleDataAttenderPublicCpp& roleDataAttenderPublicSelf = m_cDataAccessor.getRoleDataAttenderPublicRefConst(idxAttender);
+
+        int32 idx = delta.m_aCoreData.Emplace();
+        FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[idx];
+
+        idx = delta.m_aRoleDataAttender.Emplace();
+        FMyMJRoleDataAttenderDeltaCpp &attenderDelta = delta.m_aRoleDataAttender[idx];
+        attenderDelta.m_iIdxAttender = idxAttender;
+
+        idx = attenderDelta.m_aDataPublic.Emplace();
+        FMyMJRoleDataAttenderPublicDeltaCpp& attenderPublicDelta = attenderDelta.m_aDataPublic[idx];
+
+        idx = delta.m_aRoleDataPrivate.Emplace();
+        FMyMJRoleDataPrivateDeltaCpp& roleDataPrivDelta = delta.m_aRoleDataPrivate[idx];
+        roleDataPrivDelta.m_eRoleType = MyMJGameRoleTypeCpp::SysKeeper;
+        roleDataPrivDelta.m_iRoleMaskForDataPrivateClone = MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_All;
+
+        int32 l = actionHuBornLocalCS.m_aShowOutIdValues.Num();
+
+        for (int32 i = 0; i < l; i++) {
+            //1, reveal value
+            const FMyIdValuePair& pair = actionHuBornLocalCS.m_aShowOutIdValues[i];
+            int32 id = pair.m_iId;
+            int32 value = pair.m_iValue;
+            MY_VERIFY(value > 0);
+            roleDataPrivDelta.m_aIdValuePairs2Reveal.Emplace(pair);
+
+            //2, move card and flip
+            idx = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoPack.getRefByIdxConst(id));
+            FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
+            cardInfoTarget.m_eFlipState = MyMJCardFlipStateCpp::Up;
+        }
+
+        idx = attenderPublicDelta.m_aHuScoreResultFinalGroup2Add.Emplace();
+        attenderPublicDelta.m_aHuScoreResultFinalGroup2Add[idx] = actionHuBornLocalCS.m_cHuScoreResultFinalGroup;
+
+        //Todo: check following logic is added when generate:
+        //scoreResultGroup.m_iIdxAttenderWin = idxAttender;
 
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionZhaNiaoLocalCS)
     {
+        const FMyMJGameActionZhaNiaoLocalCSCpp &actionZhaNiaoLocalCS = StaticCast<const FMyMJGameActionZhaNiaoLocalCSCpp &>(pusher);
+        //int32 idxAttender = actionZhaNiaoLocalCS.getIdxAttender(true);
+        //delta.m_iIdxAttenderActionInitiator = idxAttender;
 
+        int32 idx = delta.m_aCoreData.Emplace();
+        FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[idx];
+
+        idx = delta.m_aRoleDataPrivate.Emplace();
+        FMyMJRoleDataPrivateDeltaCpp& roleDataPrivDelta = delta.m_aRoleDataPrivate[idx];
+        roleDataPrivDelta.m_eRoleType = MyMJGameRoleTypeCpp::SysKeeper;
+        roleDataPrivDelta.m_iRoleMaskForDataPrivateClone = MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_All;
+
+        //int32 idxAttenderBase = coreDataSelf.m_cGameRunData.m_iIdxAttenderMenFeng;
+        //if (coreDataSelf.m_cGameCfg.getSubLocalCSCfgRefConst().m_bHuAttenderAsZhuangScore) {
+            //idxAttenderBase = idxAttender;
+        //}
+
+        int32 l = actionZhaNiaoLocalCS.m_aPickedIdValues.Num();
+        for (int32 i = 0; i < l; i++) {
+
+            //1, reveal value
+            const FMyIdValuePair& pair = actionZhaNiaoLocalCS.m_aPickedIdValues[i];
+            int32 id = pair.m_iId;
+            int32 value = pair.m_iValue;
+            MY_VERIFY(value > 0);
+            roleDataPrivDelta.m_aIdValuePairs2Reveal.Emplace(pair);
+
+            //2, move card and flip
+
+            idx = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoPack.getRefByIdxConst(id));
+            FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
+            //cardInfoTarget.m_cPosi.m_iIdxAttender = idxAttenderTarget;
+            cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::ShownOnDesktop;
+            cardInfoTarget.m_eFlipState = MyMJCardFlipStateCpp::Up;
+
+        }
+
+        UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave, true);
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pusher [%s] not valid for this core."),
@@ -293,16 +814,6 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
 void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
 {
     const FMyMJGamePusherBaseCpp *pPusher = &pusher;
-
-    const FMyMJGameActionDistCardAtStartCpp *pActionDistCardAtStart;
-    const FMyMJGameActionTakeCardsCpp *pActionTakeCards;
-    const FMyMJGameActionGiveOutCardsCpp *pActionGiveOutCards;
-    const FMyMJGameActionWeaveCpp *pActionWeave;
-
-    const FMyMJGameActionHuCpp *pActionHu;
-
-    const FMyMJGameActionHuBornLocalCSCpp  *pActionHuBornLocalCS;
-    const FMyMJGameActionZhaNiaoLocalCSCpp *pActionZhaNiaoLocalCS;
 
     MyMJGamePusherTypeCpp ePusherType = pPusher->getType();
 
@@ -337,17 +848,22 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
 
         int32 idxAttender = pusherMadeChoiceNotify.getIdxAttenderConst();
 
-        m_aAttendersAll[idxAttender]->getActionContainorRef().showSelectionOnNotify(pusherMadeChoiceNotify.m_iActionGroupId, pusherMadeChoiceNotify.m_iSelection, pusherMadeChoiceNotify.m_aSubSelections);
+        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+        if (coreDataSelf.m_iActionGroupId != pusherMadeChoiceNotify.m_iActionGroupId) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender %d's pusher makde choice have unequal pusher id, core's: %d, pusher's: %d."),
+                     idxAttender, coreDataSelf.m_iActionGroupId, pusherMadeChoiceNotify.m_iActionGroupId);
+            MY_VERIFY(false);
+        }
+        
+
+        m_aAttendersAll[idxAttender]->getActionContainorRef().showSelectionOnNotify(pusherMadeChoiceNotify.m_iSelection, pusherMadeChoiceNotify.m_aSubSelections);
     }
 
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherCountUpdate) {
         const FMyMJGamePusherCountUpdateCpp& pusherCountUpdate = StaticCast<const FMyMJGamePusherCountUpdateCpp &>(pusher);
 
-        const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
-
         if (pusherCountUpdate.m_bActionGroupIncrease) {
-            MY_VERIFY(m_pActionCollector.IsValid());
-            m_pActionCollector->setActionGroupId(pD->m_iActionGroupId);
+            resetForNewActionLoop();
         }
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherResetGame) {
@@ -374,7 +890,23 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
 
         if (actionStateUpdate.m_eStateNext != MyMJGameStateCpp::Invalid) {
             //pD->m_eGameState = pAction->m_eStateNext;
-            resetForNewLoop(NULL, NULL, actionStateUpdate.m_iAttenderMaskNext, actionStateUpdate.m_bAllowSamePriAction, actionStateUpdate.m_iIdxAttenderHavePriMax);
+            //resetForNewLoop(NULL, NULL, actionStateUpdate.m_iAttenderMaskNext, actionStateUpdate.m_bAllowSamePriAction, actionStateUpdate.m_iIdxAttenderHavePriMax);
+            m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, NULL, actionStateUpdate.m_iAttenderMaskNext, actionStateUpdate.m_bAllowSamePriAction, actionStateUpdate.m_iIdxAttenderHavePriMax);
+
+            if (actionStateUpdate.m_eStateNext == MyMJGameStateCpp::JustStarted) {
+                const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+                int32 idxZhuang = coreDataSelf.m_cGameRunData.m_iIdxAttenderMenFeng;
+                for (int32 i = 0; i < 4; i++) {
+
+                    TSharedPtr<FMyMJGameAttenderLocalCSCpp> pAttender = getAttenderByIdx(i);
+                    MY_VERIFY(pAttender.IsValid());
+                    if (i == idxZhuang || pAttender->getIsStillInGame() == false) {
+                        continue;
+                    }
+                    MY_VERIFY(pAttender->getIsRealAttender());
+                    pAttender->tryGenAndEnqueueUpdateTingPusher();
+                }
+            }
         }
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionNoAct) {
@@ -385,46 +917,172 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
         const FMyMJGameActionThrowDicesCpp& actionThrowDices = StaticCast<const FMyMJGameActionThrowDicesCpp &>(pusher);
 
         int32 idxAttender = actionThrowDices.getIdxAttender();
-        MyMJGameActionThrowDicesSubTypeCpp eSubType = actionThrowDices.getSubType();
 
-        if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GameStart) {
+        int32 uMask = genIdxAttenderStillInGameMaskOne(idxAttender);
+        m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, NULL, uMask, false, idxAttender);
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart) {
+        const FMyMJGameActionDistCardAtStartCpp& actionDistCardAtStart = StaticCast<const FMyMJGameActionDistCardAtStartCpp &>(pusher);
+        int32 idxAttender = actionDistCardAtStart.getIdxAttender();
+
+        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+        //const FMyMJCardInfoPackCpp&  cardInfoPack = getCardInfoPackRefConst();
+        //const FMyMJCardValuePackCpp& cardValuePack = getCardValuePackOfSysKeeperRefConst();
+
+        if (actionDistCardAtStart.m_bLastCard) {
+
+            getRealAttenderByIdx(idxAttender)->onNewTurn(false);
+
+            MY_VERIFY(coreDataSelf.m_eGameState == MyMJGameStateCpp::CardsDistributed);
+
+            int32 iMask = genIdxAttenderStillInGameMaskAll();
+            int32 idxZhuang = coreDataSelf.m_cGameRunData.m_iIdxAttenderMenFeng;
+
+            FMyMJGameActionStateUpdateCpp *pActionUpdate = new FMyMJGameActionStateUpdateCpp();
+            pActionUpdate->m_eStateNext = MyMJGameStateCpp::JustStarted;
+            pActionUpdate->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(idxZhuang);
+            m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, pActionUpdate, iMask, true, idxZhuang);
+
         }
-        else if (eSubType == MyMJGameActionThrowDicesSubTypeCpp::GangYaoLocalCS) {
+        else {
+            int32 idxAttenderNext = findIdxAttenderStillInGame(idxAttender, 1, false);
+            int32 iMask = genIdxAttenderStillInGameMaskOne(idxAttenderNext);
+            m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, NULL, iMask, false, idxAttenderNext);
+        }
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionTakeCards) {
+        const FMyMJGameActionTakeCardsCpp& actionTakeCards = StaticCast<const FMyMJGameActionTakeCardsCpp &>(pusher);
+        int32 idxAttender = actionTakeCards.getIdxAttender();
+
+        getRealAttenderByIdx(idxAttender)->onNewTurn(false);
+
+        int32 iMask = genIdxAttenderStillInGameMaskOne(idxAttender);
+        m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, NULL, iMask, false, idxAttender);
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
+
+        //Note: update ting code is move into preApplyPusherResult for optimization
+        const FMyMJGameActionGiveOutCardsCpp& actionGiveOutCards = StaticCast<const FMyMJGameActionGiveOutCardsCpp &>(pusher);
+        int32 idxAttender = actionGiveOutCards.getIdxAttender();
+
+        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+
+        int32 selectedCount = actionGiveOutCards.m_aIdValuePairsSelected.Num();
+        MY_VERIFY(selectedCount > 0);
+
+        //update core state
+        int32 iMask = genIdxAttenderStillInGameMaskExceptOne(idxAttender);
+        int32 idxAttenderNext = findIdxAttenderStillInGame(idxAttender, 1, false);
+
+        FMyMJGameActionStateUpdateCpp *pActionUpdate = new FMyMJGameActionStateUpdateCpp();
+        pActionUpdate->m_eStateNext = MyMJGameStateCpp::WaitingForTakeCard;
+        pActionUpdate->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(idxAttenderNext);
+        m_cActionLoopHelperData.setupDataForNextActionLoop(pActionUpdate, NULL, iMask, coreDataSelf.m_cGameCfg.getSubLocalCSCfgRefConst().m_bHuAllowMultiple, idxAttenderNext);
+
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave) {
+        const FMyMJGameActionWeaveCpp& actionWeave = StaticCast<const FMyMJGameActionWeaveCpp&>(pusher);
+        int32 idxAttender = actionWeave.getIdxAttender();
+
+        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+        //const FMyMJCardInfoPackCpp&  cardInfoPack = getCardInfoPackRefConst();
+        //const FMyMJCardValuePackCpp& cardValuePack = getCardValuePackOfSysKeeperRefConst();
+
+
+        //1st, attender apply
+        TSharedPtr<FMyMJGameAttenderLocalCSCpp> pAttender = getRealAttenderByIdx(idxAttender);
+        
+        pAttender->onNewTurn(true);
+
+        //2nd update state
+        MyMJWeaveTypeCpp eType = actionWeave.m_cWeave.getType();
+
+        int32 iAttenderMaskNow = 0;
+        bool bAllowSamePriActionNow = false;
+        int32 iIdxAttenderHavePriMaxNow = 0;
+        FMyMJGameActionStateUpdateCpp *pActionUpdatePrev = NULL;
+        if (eType == MyMJWeaveTypeCpp::GangAn || eType == MyMJWeaveTypeCpp::GangMing) {
+            
+            bool bTIngNow = pAttender->tryGenAndEnqueueUpdateTingPusher();
+
+            int32 reserved0 = actionWeave.m_cWeave.getReserved0();
+            bool bIsBuZhang = (reserved0 & (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang) > 0;
+
+            if (!bIsBuZhang) {
+                MY_VERIFY(bTIngNow);
+                if (eType == MyMJWeaveTypeCpp::GangMing && actionWeave.m_cWeave.getTypeConsumed() == MyMJWeaveTypeCpp::ShunZiMing) {
+                    //can be qiang, give others chance to check
+                    //MyMJGameStateCpp::WeavedGang;
+                    iAttenderMaskNow = genIdxAttenderStillInGameMaskExceptOne(idxAttender);
+                    bAllowSamePriActionNow = coreDataSelf.m_cGameCfg.getSubLocalCSCfgRefConst().m_bHuAllowMultiple;
+                    iIdxAttenderHavePriMaxNow = idxAttender;
+
+                    pActionUpdatePrev = new FMyMJGameActionStateUpdateCpp();
+                    pActionUpdatePrev->m_eStateNext = MyMJGameStateCpp::WeavedGangQiangGangChecked;
+                    pActionUpdatePrev->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(idxAttender);
+                    pActionUpdatePrev->m_bAllowSamePriAction = false;
+                    pActionUpdatePrev->m_iIdxAttenderHavePriMax = idxAttender;
+                }
+                else {
+                    //we can jump to next stage
+                    //MyMJGameStateCpp::WeavedGangQiangGangChecked;
+                    iAttenderMaskNow = genIdxAttenderStillInGameMaskOne(idxAttender);
+                    bAllowSamePriActionNow = false;
+                    iIdxAttenderHavePriMaxNow = idxAttender;
+                    pActionUpdatePrev = NULL;
+                }
+
+            }
+            else {
+                //MyMJGameStateCpp::WeavedGangSpBuZhangLocalCS;
+                iAttenderMaskNow = genIdxAttenderStillInGameMaskOne(idxAttender);
+                bAllowSamePriActionNow = false;
+                iIdxAttenderHavePriMaxNow = idxAttender;
+                pActionUpdatePrev = NULL;
+            }
+
+        }
+        else if (eType == MyMJWeaveTypeCpp::KeZiMing || eType == MyMJWeaveTypeCpp::ShunZiMing) {
+            //MyMJGameStateCpp::WeavedNotGang;
+            iAttenderMaskNow = genIdxAttenderStillInGameMaskOne(idxAttender);
+            bAllowSamePriActionNow = false;
+            iIdxAttenderHavePriMaxNow = idxAttender;
+            pActionUpdatePrev = NULL;
         }
         else {
             MY_VERIFY(false);
         }
 
-        int32 uMask = genIdxAttenderStillInGameMaskOne(idxAttender);
-        resetForNewLoop(NULL, NULL, uMask, false, idxAttender);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart) {
-        pActionDistCardAtStart = StaticCast<const FMyMJGameActionDistCardAtStartCpp *>(pPusher);
-        applyActionDistCardsAtStart(*pActionDistCardAtStart);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionTakeCards) {
-        pActionTakeCards = StaticCast<const FMyMJGameActionTakeCardsCpp *>(pPusher);
-        applyActionTakeCards(*pActionTakeCards);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
-        pActionGiveOutCards = StaticCast<const FMyMJGameActionGiveOutCardsCpp *>(pPusher);
-        applyActionGiveOutCards(*pActionGiveOutCards);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave) {
-        pActionWeave = StaticCast<const FMyMJGameActionWeaveCpp *>(pPusher);
-        applyActionWeave(*pActionWeave);
+        m_cActionLoopHelperData.setupDataForNextActionLoop(pActionUpdatePrev, NULL, iAttenderMaskNow, bAllowSamePriActionNow, iIdxAttenderHavePriMaxNow);
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionHu) {
-        pActionHu = StaticCast<const FMyMJGameActionHuCpp *>(pPusher);
-        applyActionHu(*pActionHu);
+        const FMyMJGameActionHuCpp& actionHu = StaticCast<const FMyMJGameActionHuCpp &>(pusher);
+        int32 idxAttender = actionHu.getIdxAttender();
+
+
+        if (actionHu.m_bEndGame) {
+
+            //pD->m_eGameState = MyMJGameStateCpp::JustHu;
+            int32 iMask = genIdxAttenderStillInGameMaskOne(idxAttender);
+
+            FMyMJGameActionStateUpdateCpp *pActionUpdate = new FMyMJGameActionStateUpdateCpp();
+            pActionUpdate->m_eStateNext = MyMJGameStateCpp::GameEnd;
+            pActionUpdate->m_iAttenderMaskNext = 0;
+            pActionUpdate->m_eReason = MyMJGameStateUpdateReasonCpp::AttenderHu;
+
+            m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, pActionUpdate, iMask, false, idxAttender);
+
+        }
+        else {
+            MY_VERIFY(false); //CS MJ always end game when hu in game
+        }
+
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionHuBornLocalCS) {
-        pActionHuBornLocalCS = StaticCast<const FMyMJGameActionHuBornLocalCSCpp *>(pPusher);
-        getRealAttenderByIdx(pActionHuBornLocalCS->getIdxAttender())->applyActionHuBornLocalCS(*pActionHuBornLocalCS);
+
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionZhaNiaoLocalCS) {
-        pActionZhaNiaoLocalCS = StaticCast<const FMyMJGameActionZhaNiaoLocalCSCpp *>(pPusher);
-        applyActionZhaNiaoLocalCS(*pActionZhaNiaoLocalCS);
+
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pusher [%s] not valid for this core."),
@@ -454,7 +1112,7 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
                 if (iGameId < 0) {
                     iGameId = 0;
                 }
-                pPusherReset->init(iGameId, RS, pCmdRestartGame->m_cGameCfg, pCmdRestartGame->m_cGameRunData, pCmdRestartGame->m_iAttenderRandomSelectMask);
+                pPusherReset->init(iGameId, RS, pCmdRestartGame->m_cGameCfg, pCmdRestartGame->m_cGameRunData, pCmdRestartGame->m_iAttendersAllRandomSelectMask);
 
                 m_pPusherIOFull->GivePusher(pPusherReset, (void**)&pPusherReset);
 
@@ -530,7 +1188,7 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
     pCardInfoPack->reset(iCardNum);
 
     //assert we are full mode
-    //if (getWorkMode() == MyMJGameCoreWorkModeCpp::Full) {
+    //if (getWorkMode() == MyMJGameElemWorkModeCpp::Full) {
     {
 
         for (int32 i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
@@ -623,6 +1281,10 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
     pD->m_cUntakenSlotInfo.initWhenCardsFilledInUntakenSlot(stackCount, cardCount, pD->m_cGameCfg.m_cTrivialCfg.m_iStackNumKeptFromTail);
 
     pCardInfoPack->helperVerifyInfos();
+
+    FMyMJDataAccessorCpp cA;
+    cA.setupTempMode(&base);
+    cA.resetForNewActionLoop();
 }
 
 
@@ -632,7 +1294,6 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(const FMyMJGamePusherResetGam
     for (int i = 0; i < 4; i++) {
         TSharedPtr<FMyMJGameAttenderCpp> pAttender = m_aAttendersAll[i];
         pAttender->resetDatasOwned();
-
     }
 
     //let's construct things
@@ -662,416 +1323,13 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(const FMyMJGamePusherResetGam
 
     MY_VERIFY(getRuleType() == pusher.m_cGameCfg.m_eRuleType)
 
-
-    if (m_pActionCollector.IsValid()) {
-        m_pActionCollector->reinit(aContainors, pusher.m_iAttenderBehaviorRandomSelectMask);
-    }
-    else {
-        MY_VERIFY(false);
-    }
-
-    int32 uMask = genIdxAttenderStillInGameMaskOne(pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
-    resetForNewLoop(NULL, NULL, uMask, false, pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
+    m_pActionCollector->reinit(aContainors, pusher.m_iAttenderBehaviorRandomSelectMask);
 
     m_cDataLogic.m_eActionLoopState = MyMJActionLoopStateCpp::WaitingToGenAction;
     m_cDataLogic.m_iMsLast = UMyMJUtilsLibrary::nowAsMsFromTick();
 
-}
+    int32 uMask = genIdxAttenderStillInGameMaskOne(pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
+    m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, NULL, uMask, false, pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
+    resetForNewActionLoop();
 
-
-void FMyMJGameCoreLocalCSCpp::applyActionDistCardsAtStart(const FMyMJGameActionDistCardAtStartCpp &action)
-{
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
-
-    const FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPackRefConst();
-    const FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSysKeeperRefConst();
-
-    int32 idxAttender = action.getIdxAttender();
-
-    int32 l = action.m_aIdValues.Num();
-
-    for (int32 i = 0; i < l; i++) {
-        //1, reveal value
-        int32 id = action.m_aIdValues[i].m_iId;
-        int32 value = action.m_aIdValues[i].m_iValue;
-        //pCardValuePack->revealCardValue(id, value);
-
-        //2, move card
-        moveCardFromOldPosi(id);
-        moveCardToNewPosi(id, idxAttender, MyMJCardSlotTypeCpp::InHand);
-    }
-    updateUntakenInfoHeadOrTail(true, false);
-
-    //3rd, update state
-    if (action.m_bLastCard) {
-
-        getRealAttenderByIdx(idxAttender)->onNewTurn(false);
-
-        //pD->m_eGameState = MyMJGameStateCpp::CardsDistributedWaitingForLittleHuLocalCS;
-        int32 iMask = genIdxAttenderStillInGameMaskAll();
-        int32 idxZhuang = pD->m_cGameRunData.m_iIdxAttenderMenFeng;
-
-        FMyMJGameActionStateUpdateCpp *pActionUpdate = new FMyMJGameActionStateUpdateCpp();
-        pActionUpdate->m_eStateNext = MyMJGameStateCpp::JustStarted;
-        pActionUpdate->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(idxZhuang);
-        resetForNewLoop(NULL, pActionUpdate, iMask, true, idxZhuang);
-
-
-            for (int32 i = 0; i < 4; i++) {
-
-                TSharedPtr<FMyMJGameAttenderLocalCSCpp> pAttender = getAttenderByIdx(i);
-                MY_VERIFY(pAttender.IsValid());
-                if (i == idxZhuang || pAttender->getIsStillInGame() == false) {
-                    continue;
-                }
-                MY_VERIFY(pAttender->getIsRealAttender());
-                pAttender->tryGenAndEnqueueUpdateTingPusher();
-            }
-
-
-    }
-    else {
-        int32 idxAttenderNext = findIdxAttenderStillInGame(idxAttender, 1, false);
-        int32 iMask = genIdxAttenderStillInGameMaskOne(idxAttenderNext);
-        resetForNewLoop(NULL, NULL, iMask, false, idxAttenderNext);
-    }
-}
-
-void FMyMJGameCoreLocalCSCpp::applyActionTakeCards(const FMyMJGameActionTakeCardsCpp& action)
-{
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
-
-    const FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPackRefConst();
-    const FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSysKeeperRefConst();
-
-    int32 idxAttender = action.getIdxAttender();
-
-    //1st, reveal value
-    //m_cCardPack.revealCardValueByIdValuePairs(pAction->m_aIdValuePairs);
-
-    //2nd, move card and flip
-    int32 l = action.m_aIdValuePairs.Num();
-    for (int32 i = 0; i < l; i++) {
-        const FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdxConst(action.m_aIdValuePairs[i].m_iId);
-        moveCardFromOldPosi(pCardInfo->m_iId);
-        moveCardToNewPosi(pCardInfo->m_iId, idxAttender, MyMJCardSlotTypeCpp::JustTaken);
-
-        //pCardInfo->m_eFlipState = MyMJCardFlipStateCpp::Stand;
-    }
-
-    MyMJGameCardTakenOrderCpp eTakenOrder = action.m_eTakenOrder;
-    bool bUpdateHead = false, bUpdateTail = false;
-    if (eTakenOrder == MyMJGameCardTakenOrderCpp::Head) {
-        bUpdateHead = true;
-    }
-    else if (eTakenOrder == MyMJGameCardTakenOrderCpp::Tail) {
-        bUpdateTail = true;
-    }
-    else if (eTakenOrder == MyMJGameCardTakenOrderCpp::NotFixed) {
-        bUpdateHead = true;
-        bUpdateTail = true;
-    }
-    else {
-        MY_VERIFY(false);
-    }
-    updateUntakenInfoHeadOrTail(bUpdateHead, bUpdateTail);
-
-    //3rd, update state
-    getRealAttenderByIdx(idxAttender)->onNewTurn(false);
-
-    if (action.m_bIsGang) {
-        //pD->m_eGameState = MyMJGameStateCpp::WeavedGangTakenCards;
-    }
-    else {
-        //pD->m_eGameState = MyMJGameStateCpp::TakenCard;
-    }
-    int32 iMask = genIdxAttenderStillInGameMaskOne(idxAttender);
-
-    resetForNewLoop(NULL, NULL, iMask, false, idxAttender);
-
-}
-
-void FMyMJGameCoreLocalCSCpp::applyActionGiveOutCards(const FMyMJGameActionGiveOutCardsCpp& action)
-{
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
-
-    const FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPackRefConst();
-    const FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSysKeeperRefConst();
-
-    int32 idxAttender = action.getIdxAttender();
-    MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
-    TSharedPtr<FMyMJGameAttenderLocalCSCpp> pAttender = getRealAttenderByIdx(idxAttender);
-    MY_VERIFY(pAttender.IsValid());
-
-    int32 selectedCount = action.m_aIdValuePairsSelected.Num();
-    MY_VERIFY(selectedCount > 0);
-
-    //1st, update card value
-    //m_cCardPack.revealCardValueByIdValuePairs(pAction->m_aIdValuePairsSelected);
-
-    //precheck if ting update is needed
-    bool bNeedUpdateTing = false;
-    
-    if (action.m_bRestrict2SelectCardsJustTaken) {
-
-    }
-    else {
-        MY_VERIFY(selectedCount == 1);
-        int32 valueSelected = pCardValuePack->getByIdx(action.m_aIdValuePairsSelected[0].m_iId);
-        MY_VERIFY(valueSelected > 0);
-
-
-        {
-            const FMyMJRoleDataAttenderPublicCpp *pDPubD = &pAttender->getRoleDataAttenderPublicRefConst();
-            MY_VERIFY(pDPubD);
-            //FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
-            //MY_VERIFY(pDPriD);
-
-            const TArray<int32> &aIdCardsTaken = pDPubD->m_aIdJustTakenCards;// pAttender->getIdJustTakenCardsRef();
-            int32 l = aIdCardsTaken.Num();
-            if (l > 0) {
-                MY_VERIFY(l == 1);
-                for (int32 i = 0; i < l; i++) {
-                    if (valueSelected != pCardValuePack->getByIdx(aIdCardsTaken[i])) {
-                        bNeedUpdateTing = true;
-                        break;
-                    }
-                }
-            }
-            else {
-                bNeedUpdateTing = true;
-            }
-        }
-    }
-
-    //2nd, move cards and flip
-    for (int32 i = 0; i < selectedCount; i++) {
-        const FMyIdValuePair &pair = action.m_aIdValuePairsSelected[i];
-        moveCardFromOldPosi(pair.m_iId);
-        moveCardToNewPosi(pair.m_iId, action.getIdxAttender(), MyMJCardSlotTypeCpp::GivenOut);
-
-        const FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdxConst(pair.m_iId);
-        //pCardInfo->m_eFlipState = MyMJCardFlipStateCpp::Up;
-    }
-
-    const FMyMJRoleDataAttenderPublicCpp *pDPubD = &pAttender->getRoleDataAttenderPublicRefConst();
-
-    TArray<int32> aIdsJustTaken = pDPubD->m_aIdJustTakenCards;// pAttender->getIdJustTakenCardsRef(); //do a copy
-    int32 l0 = aIdsJustTaken.Num();
-    for (int32 i = 0; i < l0; i++) {
-        int32 idCard = aIdsJustTaken[i];
-        moveCardFromOldPosi(idCard);
-        moveCardToNewPosi(idCard, idxAttender, MyMJCardSlotTypeCpp::InHand);
-    }
-
-    //3rd, update helper
-    //pD->m_aHelperLastCardsGivenOutOrWeave.Reset();
-    for (int32 i = 0; i < selectedCount; i++) {
-        const FMyIdValuePair &pair = action.m_aIdValuePairsSelected[i];
-        //pD->m_aHelperLastCardsGivenOutOrWeave.Emplace(pair);
-
-        m_cDataLogic.m_cHelperShowedOut2AllCards.insert(pair);
-    }
-
-
-    //4th, update core state
-    if (action.m_bIsGang) {
-        //pD->m_eGameState = MyMJGameStateCpp::WeavedGangGivenOutCards;
-    }
-    else {
-       // pD->m_eGameState = MyMJGameStateCpp::GivenOutCard;
-    }
-    int32 iMask = genIdxAttenderStillInGameMaskExceptOne(idxAttender);
-    int32 idxAttenderNext = findIdxAttenderStillInGame(idxAttender, 1, false);
-
-    FMyMJGameActionStateUpdateCpp *pActionUpdate = new FMyMJGameActionStateUpdateCpp();
-    pActionUpdate->m_eStateNext = MyMJGameStateCpp::WaitingForTakeCard;
-    pActionUpdate->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(idxAttenderNext);
-    resetForNewLoop(pActionUpdate, NULL, iMask, pD->m_cGameCfg.m_cSubLocalCSCfg.m_bHuAllowMultiple, idxAttenderNext);
-
-
-
-    //5th, updateTing
-    //if (getWorkMode() == MyMJGameCoreWorkModeCpp::Full && bNeedUpdateTing) {
-    if (bNeedUpdateTing) {
-        pAttender->tryGenAndEnqueueUpdateTingPusher();
-    }
-
-
-}
-
-//TOdo: gang code path, and TArray member delete when using tmap
-
-void FMyMJGameCoreLocalCSCpp::applyActionWeave(const FMyMJGameActionWeaveCpp& action)
-{
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
-
-    const FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPackRefConst();
-    const FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSysKeeperRefConst();
-
-    int32 idxAttender = action.getIdxAttender();
-
-    //1st, attender apply
-    getRealAttenderByIdx(idxAttender)->applyActionWeave(action);
-
-    MyMJWeaveTypeCpp eType = action.m_cWeave.getType();
-
-    //2nd, update helper
-    //pD->m_aHelperLastCardsGivenOutOrWeave.Reset();
-    if (action.m_eTargetFlipState == MyMJCardFlipStateCpp::Up) {
-        TArray<FMyIdValuePair> aIdValues;
-        action.m_cWeave.getIdValues(*pCardValuePack, aIdValues, false);
-        m_cDataLogic.m_cHelperShowedOut2AllCards.insertIdValuePairs(aIdValues, true);
-    }
-
-    //3rd, update the state
-    getRealAttenderByIdx(idxAttender)->onNewTurn(true);
-
-    MyMJGameStateCpp eGameStateNow = MyMJGameStateCpp::Invalid;
-    int32 iAttenderMaskNow = 0;
-    bool bAllowSamePriActionNow = false;
-    int32 iIdxAttenderHavePriMaxNow = 0;
-    FMyMJGameActionStateUpdateCpp *pActionUpdatePrev = NULL;
-    if (eType == MyMJWeaveTypeCpp::GangAn || eType == MyMJWeaveTypeCpp::GangMing) {
-        int32 reserved0 = action.m_cWeave.getReserved0();
-        bool bIsBuZhang = (reserved0 & (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang) > 0;
-
-        if (!bIsBuZhang) {
-            if (eType == MyMJWeaveTypeCpp::GangMing && action.m_cWeave.getTypeConsumed() == MyMJWeaveTypeCpp::ShunZiMing) {
-                //can be qiang, check first
-                eGameStateNow = MyMJGameStateCpp::WeavedGang;
-                iAttenderMaskNow = genIdxAttenderStillInGameMaskExceptOne(idxAttender);
-                bAllowSamePriActionNow = pD->m_cGameCfg.m_cSubLocalCSCfg.m_bHuAllowMultiple;
-                iIdxAttenderHavePriMaxNow = idxAttender;
-
-                pActionUpdatePrev = new FMyMJGameActionStateUpdateCpp();
-                pActionUpdatePrev->m_eStateNext = MyMJGameStateCpp::WeavedGangQiangGangChecked;
-                pActionUpdatePrev->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(idxAttender);
-                pActionUpdatePrev->m_bAllowSamePriAction = false;
-                pActionUpdatePrev->m_iIdxAttenderHavePriMax = idxAttender;
-            }
-            else {
-               //we can jump to next stage
-                eGameStateNow = MyMJGameStateCpp::WeavedGangQiangGangChecked;
-                iAttenderMaskNow = genIdxAttenderStillInGameMaskOne(idxAttender);
-                bAllowSamePriActionNow = false;
-                iIdxAttenderHavePriMaxNow = idxAttender;
-                pActionUpdatePrev = NULL;
-            }
-
-        }
-        else {
-            eGameStateNow = MyMJGameStateCpp::WeavedGangSpBuZhangLocalCS;
-            iAttenderMaskNow = genIdxAttenderStillInGameMaskOne(idxAttender);
-            bAllowSamePriActionNow = false;
-            iIdxAttenderHavePriMaxNow = idxAttender;
-            pActionUpdatePrev = NULL;
-        }
-
-    }
-    else if (eType == MyMJWeaveTypeCpp::KeZiMing || eType == MyMJWeaveTypeCpp::ShunZiMing) {
-        eGameStateNow = MyMJGameStateCpp::WeavedNotGang;
-        iAttenderMaskNow = genIdxAttenderStillInGameMaskOne(idxAttender);
-        bAllowSamePriActionNow = false;
-        iIdxAttenderHavePriMaxNow = idxAttender;
-        pActionUpdatePrev = NULL;
-    }
-    else {
-        MY_VERIFY(false);
-    }
-
-    //extra step to setup helper data
-
-    FMyIdValuePair cIdValue;
-    cIdValue.m_iId = action.m_cWeave.getRepresentCardId();
-    cIdValue.m_iValue = pCardValuePack->getByIdx(cIdValue.m_iId);
-
-    //pD->m_aHelperLastCardsGivenOutOrWeave.Reset();
-    //pD->m_aHelperLastCardsGivenOutOrWeave.Emplace(cIdValue);
-
-    //pD->m_eGameState = eGameStateNow;
-
-    resetForNewLoop(pActionUpdatePrev, NULL, iAttenderMaskNow, bAllowSamePriActionNow, iIdxAttenderHavePriMaxNow);
-}
-
-void FMyMJGameCoreLocalCSCpp::applyActionHu(const FMyMJGameActionHuCpp& action)
-{
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
-
-    int32 idxAttender = action.getIdxAttender();
-    TSharedPtr<FMyMJGameAttenderCpp> pAttender = getRealAttenderByIdx(idxAttender);
-
-    int32 l = action.m_aRevealingCards.Num();
-    for (int32 i = 0; i < l; i++) {
-        //getpCardPack()->revealCardValue(pAction->m_aRevealingCards[i]);
-    }
-
-    for (int32 i = 0; i < 4; i++) {
-        TSharedPtr<FMyMJGameAttenderLocalCSCpp> pAttender2 = getAttenderByIdx(i);
-        if (!pAttender2->getIsStillInGame()) {
-            continue;
-        }
-        pAttender2->showOutCardsAfterHu();
-    }
-
-
-    //Update state
-    //pD->m_aHelperLastCardsGivenOutOrWeave.Reset();
-
-    if (action.m_bEndGame) {
-
-        const FMyMJRoleDataAttenderPublicCpp *pDPubD = &m_aAttendersAll[idxAttender]->getRoleDataAttenderPublicRefConst();
-        MY_VERIFY(pDPubD);
-        //FMyMJRoleDataAttenderPrivateCpp *pDPriD = getDataPrivateDirect();
-        //MY_VERIFY(pDPriD);
-
-        //pAttender->getHuScoreResultFinalGroupRef() = pAction->m_cHuScoreResultFinalGroup;
-        //pDPubD->m_cHuScoreResultFinalGroup = pAction->m_cHuScoreResultFinalGroup;
-
-        //pD->m_eGameState = MyMJGameStateCpp::JustHu;
-        int32 iMask = genIdxAttenderStillInGameMaskOne(idxAttender);
-
-        FMyMJGameActionStateUpdateCpp *pActionUpdate = new FMyMJGameActionStateUpdateCpp();
-        pActionUpdate->m_eStateNext = MyMJGameStateCpp::GameEnd;
-        pActionUpdate->m_iAttenderMaskNext = 0;
-        pActionUpdate->m_eReason = MyMJGameStateUpdateReasonCpp::AttenderHu;
-
-        resetForNewLoop(NULL, pActionUpdate, iMask, false, idxAttender);
-
-    }
-    else {
-        MY_VERIFY(false); //CS MJ always end game when hu in game
-    }
-}
-
-void FMyMJGameCoreLocalCSCpp::applyActionZhaNiaoLocalCS(const FMyMJGameActionZhaNiaoLocalCSCpp& action)
-{
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
-
-    const FMyMJCardInfoPackCpp  *pCardInfoPack = &getCardInfoPackRefConst();
-    const FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSysKeeperRefConst();
-
-
-    //pCardPack->revealCardValueByIdValuePairs(pAction->m_aPickedIdValues);
-
-    int32 idxAttenderBase = action.getIdxAttender();
-    MY_VERIFY(idxAttenderBase >= 0 && idxAttenderBase < 4);
-
-    int32 l = action.m_aPickedIdValues.Num();
-    for (int32 i = 0; i < l; i++) {
-        const FMyIdValuePair &card = action.m_aPickedIdValues[i];
-        int32 cardId = card.m_iId;
-        int32 cardValue = card.m_iValue;
-        int32 modVFix = cardValue % 10 - 1;
-        MY_VERIFY(modVFix >= 0 && modVFix < 9);
-
-        int32 idxAttenderTarget = findIdxAttenderStillInGame(idxAttenderBase, modVFix, false);
-        moveCardFromOldPosi(cardId);
-        moveCardToNewPosi(cardId, idxAttenderTarget, MyMJCardSlotTypeCpp::WinSymbol); //We use WinSymbol slot as niao in local CS game
-
-        m_cDataLogic.m_cHelperShowedOut2AllCards.insert(card);
-    }
-
-    //Update state
-    //pD->m_aHelperLastCardsGivenOutOrWeave.Reset();
 }

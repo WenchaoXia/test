@@ -139,6 +139,20 @@ void FMyMJCardInfoPackCpp::helperRecalcMinorPosiOfCardsInShowedOutWeaves(const T
     }
 }
 
+int32 FMyMJCardInfoPackCpp::helperFindCardByIdInCardInfos(const TArray<FMyMJCardInfoCpp>& aCardInfos, int32 idCard)
+{
+    int32 ret = -1;
+    int32 l = aCardInfos.Num();
+
+    for (int32 i = 0; i < l; i++) {
+        if (aCardInfos[i].m_iId == idCard) {
+            ret = i;
+            break;
+        }
+    }
+
+    return ret;
+}
 
 /*
 void FMyMJCardPackCpp::reset(const TArray<FMyIdValuePair> &aShuffledIdValues)

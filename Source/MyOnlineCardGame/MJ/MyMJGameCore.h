@@ -129,9 +129,10 @@ public:
         resetDatasOwned();
     };
 
+
     virtual void resetDatasOwned()
     {
-        m_cDataLogic.reset();
+        m_cDataLogic.resetForNewGame();
     };
 
     TSharedPtr<FMyMJGameAttenderCpp> getAttenderByIdx(int32 idxAttender)
@@ -207,13 +208,6 @@ protected:
 
     //must allocate one attender on heap and return it, must be overwrite
     virtual FMyMJGameAttenderCpp* createAttender() = NULL;
-    /*
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("createAttender() must be override!"));
-        MY_VERIFY(false);
-        return NULL;
-    };
-    */
 
     //Basic facilities
     TSharedPtr<FMyMJGameAttenderCpp> m_aAttendersAll[4]; //always 4, note this should be a fixed structure, means don't change it after init()
@@ -225,6 +219,84 @@ protected:
     FMyMJDataAccessorCpp m_cDataAccessor;
 
 };
+
+class FMyMJGameCoreActionLoopHelperDataCpp
+{
+public:
+
+    FMyMJGameCoreActionLoopHelperDataCpp()
+    {
+        m_pPrevAction = NULL;
+        m_pPostAction = NULL;
+        m_iIdxAttenderMask = 0;
+        m_bAllowSamePriAction = false;
+        m_iIdxAttenderHavePriMax = 0;
+        m_bHaveSetupData = false;
+    };
+
+    virtual ~FMyMJGameCoreActionLoopHelperDataCpp()
+    {
+        clear();
+    };
+
+    void clear()
+    {
+        if (m_pPrevAction) {
+            delete(m_pPrevAction);
+            m_pPrevAction = NULL;
+        }
+        if (m_pPostAction) {
+            delete(m_pPostAction);
+            m_pPostAction = NULL;
+        }
+
+        m_iIdxAttenderMask = 0;
+        m_bAllowSamePriAction = false;
+        m_iIdxAttenderHavePriMax = 0;
+        m_bHaveSetupData = false;
+    };
+
+    bool getHaveSetupDataConst() const
+    {
+        return m_bHaveSetupData;
+    };
+
+    //Note @pPrevAction and @pPostAction will be taken ownership
+    void setupDataForNextActionLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, int32 iIdxAttenderMask, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax)
+    {
+        clear();
+        m_pPrevAction = pPrevAction;
+        m_pPostAction = pPostAction;
+        m_iIdxAttenderMask = iIdxAttenderMask;
+        m_bAllowSamePriAction = bAllowSamePriAction;
+        m_iIdxAttenderHavePriMax = iIdxAttenderHavePriMax;
+        m_bHaveSetupData = true;
+    };
+
+    FMyMJGameActionBaseCpp* takePrevAction()
+    {
+        FMyMJGameActionBaseCpp* ret = m_pPrevAction;
+        m_pPrevAction = NULL;
+        return ret;
+    };
+
+    FMyMJGameActionBaseCpp* takePostAction()
+    {
+        FMyMJGameActionBaseCpp* ret = m_pPostAction;
+        m_pPostAction = NULL;
+        return ret;
+    };
+
+    int32 m_iIdxAttenderMask;
+    bool m_bAllowSamePriAction;
+    int32 m_iIdxAttenderHavePriMax;
+
+protected:
+    FMyMJGameActionBaseCpp* m_pPrevAction;
+    FMyMJGameActionBaseCpp* m_pPostAction;
+    bool m_bHaveSetupData;
+};
+
 
 #define MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero 0x01
 #define MyMJGameCoreTrivalConfigMaskShowPusherLog 0x02
@@ -253,7 +325,7 @@ public:
 
         m_pResManager = MakeShareable<FMyMJGameResManager>(new FMyMJGameResManager(iSeed));
 
-        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("[%s] inited with seed: %d"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCoreWorkModeCpp"), (uint8)eWorkMode), iSeed);
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("[%s] inited with seed: %d"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameElemWorkModeCpp"), (uint8)eWorkMode), iSeed);
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("full core inited with seed: %d"), iSeed);
     };
 
@@ -336,7 +408,6 @@ public:
 
     void moveCardFromOldPosi(int32 id);
     void moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSlotTypeCpp eSlotDst);
-    void updateUntakenInfoHeadOrTail(bool bUpdateHead, bool bUpdateTail);
 
 
     //config
@@ -348,19 +419,20 @@ protected:
     bool actionLoop();
     bool findAndApplyPushers();
     bool findAndHandleCmd();
-    void genActionChoices();
-    void resetForNewLoop(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, int32 iIdxAttenderMask, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax);
+    void resetForNewActionLoop();
 
     //following should be implemented by child class
     //start
 
-    //optional implement
     
-    //return whether we need to verify unformation, it checks the input, and here we may apply some thing to logic
-    virtual bool prevApplyPusherResult(const FMyMJGamePusherResultCpp &pusherResult);
+    //optional implement
 
+    //gen action choices
+    virtual void genActionChoices();
+    //return whether we need to verify unformation, it checks the input, and here we may apply some thing to logic for common pushers, such as moving cards
+    virtual bool prevApplyPusherResult(const FMyMJGamePusherResultCpp &pusherResult);
     //called when both result and pusher itself applied
-    virtual bool VerifyDataUniformationAfterPusherAndResultApplied();
+    virtual bool verifyDataUniformationAfterPusherAndResultApplied();
 
 
     //must implement
@@ -379,4 +451,6 @@ protected:
     FMyMJGameIOGroupAllCpp *m_pExtIOGroupAll; //not owned by this class, also some member is used by m_pActionCollector
     TSharedPtr<FMyMJGameResManager> m_pResManager;
 
+    //helperActionLoopData
+    FMyMJGameCoreActionLoopHelperDataCpp m_cActionLoopHelperData;
 };

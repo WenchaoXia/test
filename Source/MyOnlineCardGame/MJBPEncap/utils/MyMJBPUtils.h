@@ -131,7 +131,7 @@ public:
 
 
     UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
-    static void testGameCoreInLocalThread(int32 seed);
+    static void testGameCoreInLocalThread(int32 seed, bool bAttenderRandomSelectHighPriActionFirst);
 
     UFUNCTION(BlueprintCallable)
     static float testGetRealTimeSeconds(AActor *actor);

@@ -8,112 +8,134 @@ UMyMJUtilsLocalCSLibrary::genDefaultCfg(FMyMJGameCfgCpp &outCfg)
 {
     FMyMJGameCfgCpp defaultOne;
     defaultOne.m_eRuleType = MyMJGameRuleTypeCpp::LocalCS;
-    TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> *pScoreAttrs = &defaultOne.m_cSubLocalCSCfg.m_mHuBornScoreAttrs;
+    int32 idx = defaultOne.m_aSubLocalCSCfg.Emplace();
+    FMyMJGameSubLocalCSCfgCpp& localCSCfg = defaultOne.m_aSubLocalCSCfg[idx];
+    TArray<FMyMJHuScoreAttrCpp> *pScoreAttrs = &localCSCfg.getHuBornScoreAttrsRef();
     
 
     FMyMJHuScoreAttrCpp *pAttr;
     MyMJHuScoreTypeCpp eScoreType;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalCSBornNoJiang258;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 1;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalCSBornLackNumCardType;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 1;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalCSBorn2KeZi;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 1;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalCSBornAnGangInHand;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 1;
 
 
-    pScoreAttrs = &defaultOne.m_cHuCfg.getHuScoreAttrsCfgRef();
+    pScoreAttrs = &defaultOne.m_cHuCfg.getHuScoreAttrsRef();
 
     eScoreType = MyMJHuScoreTypeCpp::PingHu;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 1;
 
     eScoreType = MyMJHuScoreTypeCpp::PengPengHu;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::QingYiSe;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalCSAllJiang258;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::QuanQiuRen;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::QiDui;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalCSHaoHuaQiDui;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalCSShuangHaoHuaQiDui;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::MiaoShouHuiChun;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalHaiDiPao;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::GangShangKaiHua;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::QiangGangHu;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalGangShangPao;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalTianHu;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::LocalDiHu;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
     eScoreType = MyMJHuScoreTypeCpp::MenQianQing;
-    pAttr = &pScoreAttrs->Add(eScoreType);
+    idx = pScoreAttrs->Emplace();
+    pAttr = &(*pScoreAttrs)[idx];
     pAttr->m_eType = eScoreType;
     pAttr->m_iScorePerAttender = 6;
 
@@ -145,7 +167,7 @@ UMyMJUtilsLocalCSLibrary::checkHuLocalCSBorn(const FMyMJGameSubLocalCSCfgCpp &lo
 {
     bool showAllCards = localCSCfg.m_bHuBornShowAllCards;
     bool allowMultipleHu = localCSCfg.m_bHuBornAllowMultiple;
-    const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> &mAllowedScoreAttrs = localCSCfg.m_mHuBornScoreAttrs;
+    const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> &mAllowedScoreAttrs = localCSCfg.getHuBornScoreAttrsRefConst();
 
     const FMyMJValueIdMapCpp *pTarget = &handCardMap;
 
@@ -358,7 +380,7 @@ UMyMJUtilsLocalCSLibrary::checkTingWithFixedCardTypeLocalCSInGame(const FMyMJHuC
 
     //int32 l = pCardTypes->Num();
 
-    const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> *pmHuAttrsCfg = &huCfg.getHuScoreAttrsCfgRef();
+    const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> *pmHuAttrsCfg = &huCfg.getHuScoreAttrsRefConst();
     //FMyMJHuScoreAttrCpp **pAttr;
 
     FMyMJWeaveTreeNodeCpp rootNode;
@@ -527,7 +549,7 @@ UMyMJUtilsLocalCSLibrary::calcScoreFinalLocalCSInGame(const FMyMJHuCfgCpp &huCfg
                                                 const FMyTriggerDataCpp *pTriggerData,
                                                 FMyMJHuScoreResultFinalCpp &outScoreResultFinal)
 {
-    const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> *pmHuScoreAttrsCfg = &huCfg.getHuScoreAttrsCfgRef();
+    const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> *pmHuScoreAttrsCfg = &huCfg.getHuScoreAttrsRefConst();
 
     bool bLastCardTurn = (inHuActionAttrBase.m_iCardNumCanBeTakenNormally == 0);
     bool bPao = (inHuActionAttrBase.m_iIdxAttenderLoseOnlyOne >= 0);
@@ -663,7 +685,7 @@ UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJCardValuePackCpp &i
         }
 
         checkingHandCards.insert(MY_MJCARD_ID_FAKE, cardValue);
-        if (UMyMJUtilsLocalCSLibrary::checkTingWithFixedCardTypeLocalCSInGame(gameCfg.m_cHuCfg, gameCfg.m_cSubLocalCSCfg, weavesShowedOut, weaveStatis, checkingHandCards, resultTing)) {
+        if (UMyMJUtilsLocalCSLibrary::checkTingWithFixedCardTypeLocalCSInGame(gameCfg.m_cHuCfg, gameCfg.getSubLocalCSCfgRefConst(), weavesShowedOut, weaveStatis, checkingHandCards, resultTing)) {
             FMyMJHuScoreResultTingCpp &item = outResultTingGroup.m_mValueTingMap.FindOrAdd(cardValue);
             item = resultTing;
 
@@ -698,6 +720,7 @@ UMyMJUtilsLocalCSLibrary::checkHuWithOutTriggerCard(const FMyMJCardValuePackCpp 
 {
     FMyMJHuScoreResultFinalGroupCpp *pGroup = &outScoreResultFinalGroup;
     pGroup->reset();
+    pGroup->m_eHuMainType = MyMJHuMainTypeCpp::Common;
 
     if (!inHuActionAttrBase.getMayHu()) {
         return false;
@@ -740,6 +763,7 @@ UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(const FMyMJCardValuePackCpp &in
                                             FMyMJHuScoreResultFinalGroupCpp &outScoreResultFinalGroup)
 {
     outScoreResultFinalGroup.reset();
+    outScoreResultFinalGroup.m_eHuMainType = MyMJHuMainTypeCpp::Common;
     if (!huActionAttr.getMayHu()) {
         return false;
     }

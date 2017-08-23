@@ -50,7 +50,7 @@ void UMyMJPusherBufferCpp::trySyncDataFromCoreFull()
     */
 };
 
-void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog)
+void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst)
 {
     int32 iMask = MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero;
     if (showCoreLog) {
@@ -61,7 +61,7 @@ void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog)
         FPlatformProcess::Sleep(0.1);
     }
 
-    startGame();
+    startGame(true, bAttenderRandomSelectHighPriActionFirst);
 }
 
 
@@ -118,13 +118,23 @@ bool UMyMJCoreFullCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTriva
 
 }
 
-bool UMyMJCoreFullCpp::startGame()
+bool UMyMJCoreFullCpp::startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst)
 {
     if (!m_pCoreFullWithThread.IsValid() || m_pCoreFullWithThread->getRuleType() == MyMJGameRuleTypeCpp::Invalid) {
         return false;
     }
+
+    int8 iAttenderRandomMask = 0;
+    if (bAttenderRandomSelectDo) {
+        iAttenderRandomMask |= MyMJGameActionContainorCpp_RandomMask_DoRandomSelect;
+    }
+    if (bAttenderRandomSelectHighPriActionFirst) {
+        iAttenderRandomMask |= MyMJGameActionContainorCpp_RandomMask_HighPriActionFirst;
+    }
+    int32 iAttendersAllRandomSelectMask = MyMJGameDup8BitMaskForSingleAttenderTo32BitMaskForAll(iAttenderRandomMask);
+
     FMyMJGameCmdRestartGameCpp *pCmdReset = new FMyMJGameCmdRestartGameCpp();
-    pCmdReset->m_iAttenderRandomSelectMask = 0x0f;
+    pCmdReset->m_iAttendersAllRandomSelectMask = iAttendersAllRandomSelectMask;
     UMyMJUtilsLocalCSLibrary::genDefaultCfg(pCmdReset->m_cGameCfg);
     m_pCoreFullWithThread->getIOGourpAll().m_aGroups[(uint8)MyMJGameRoleTypeCpp::SysKeeper].getCmdInputQueue().Enqueue(pCmdReset);
 
@@ -299,12 +309,12 @@ void AMyMJCoreMirrorCpp::loop()
                 m_iPusherApplyState = 1;
 
                 //When full mode, all values revealed in system role, but when mirror mode, we need to reveal them in each role's private data
-                //MY_VERIFY(m_pCoreMirror->getWorkMode() == MyMJGameCoreWorkModeCpp::Mirror);
+                //MY_VERIFY(m_pCoreMirror->getWorkMode() == MyMJGameElemWorkModeCpp::Mirror);
 
-                int32 iAttenderMask;
+                int32 iAttenderMask = 0;
                 TArray<FMyIdValuePair> aRevealedCardValues;
 
-                pPusher->getRevealedCardValues(iAttenderMask, aRevealedCardValues);
+                //pPusher->getRevealedCardValues(iAttenderMask, aRevealedCardValues);
                 if (iAttenderMask != 0) {
 
 

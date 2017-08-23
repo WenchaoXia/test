@@ -157,7 +157,10 @@ protected:
 #define ActionCollectEmpty 1
 #define ActionCollectWaiting 2
 
-USTRUCT(BlueprintType)
+#define MyMJGameActionContainorCpp_RandomMask_DoRandomSelect 0x01
+#define MyMJGameActionContainorCpp_RandomMask_HighPriActionFirst 0x02
+
+USTRUCT()
 struct FMyMJGameActionContainorCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -182,12 +185,12 @@ public:
     void setup(int32 idxAttender)
     {
         m_iIdxAttedner = idxAttender;
-        reinit(false);
+        reinit(0);
     };
 
-    void reinit(bool bRandomSelect)
+    void reinit(int8 iRandomMask)
     {
-        m_bRandomSelect = bRandomSelect;
+        m_iRandomMask = iRandomMask;
         resetForNewLoop();
     };
 
@@ -201,7 +204,7 @@ public:
         m_iSelectionInputed = -1;
         m_aSubSelectionsInputed.Reset();
 
-        m_iActionGroupId = -1;
+        //m_iActionGroupId = -1;
         m_iPriorityMax = -1;
         m_bAlwaysCheckDistWhenCalcPri =  false;
 
@@ -249,7 +252,7 @@ public:
     void fillInNewChoices(int32 iActionGroupId, TArray<TSharedPtr<FMyMJGameActionBaseCpp>> &actionChoices)
     {
         resetForNewLoop();
-        m_iActionGroupId = iActionGroupId;
+        //m_iActionGroupId = iActionGroupId;
         m_aActionChoices = actionChoices;
 
         int l = m_aActionChoices.Num();
@@ -267,18 +270,18 @@ public:
 
     //called only in "full" core
     inline
-    MyMJGameErrorCodeCpp makeSelection(int32 iActionGroupId, int32 iSelection)
+    MyMJGameErrorCodeCpp makeSelection(int32 iSelection)
     {
         TArray<int32> t;
-        return makeSelection(iActionGroupId, iSelection, t);
+        return makeSelection(iSelection, t);
     };
 
     //called only in "full" core, don't call dump in the code path in case of reject invalid request
-    MyMJGameErrorCodeCpp makeSelection(int32 iActionGroupId, int32 iSelection, TArray<int32> &subSelections)
+    MyMJGameErrorCodeCpp makeSelection(int32 iSelection, TArray<int32> &subSelections)
     {
-        if (m_iActionGroupId != iActionGroupId) {
-            return MyMJGameErrorCodeCpp::pusherIdNotEqual;
-        }
+        //if (m_iActionGroupId != iActionGroupId) {
+            //return MyMJGameErrorCodeCpp::pusherIdNotEqual;
+        //}
 
         if (m_pSelected.Get() != NULL) {
             return MyMJGameErrorCodeCpp::choiceAlreadyMade;
@@ -311,12 +314,12 @@ public:
     void makeRandomSelection(FRandomStream &RS);
 
     //this code path core dump if met any invalid request
-    void showSelectionOnNotify(int32 iActionGroupId, int32 iSelection, const TArray<int32> &subSelections)
+    void showSelectionOnNotify(int32 iSelection, const TArray<int32> &subSelections)
     {
-        if (m_iActionGroupId != iActionGroupId) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action group id not equal: m_iActionGroupId %d, iActionGroupId %d."), m_iActionGroupId, iActionGroupId);
-            MY_VERIFY(false);
-        }
+        //if (m_iActionGroupId != iActionGroupId) {
+            //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action group id not equal: m_iActionGroupId %d, iActionGroupId %d."), m_iActionGroupId, iActionGroupId);
+            //MY_VERIFY(false);
+        //}
 
         int l = m_aActionChoices.Num();
         MY_VERIFY(iSelection >= 0 && iSelection < l);
@@ -351,11 +354,11 @@ public:
         return m_bAlwaysCheckDistWhenCalcPri;
     };
 
-    inline
-    int32 getActionGroupId() const
-    {
-        return m_iActionGroupId;
-    };
+    //inline
+    //int32 getActionGroupId() const
+    //{
+    //    return m_iActionGroupId;
+    //};
 
 protected:
     //following is used to tell BP what we have
@@ -371,15 +374,14 @@ protected:
     int32 m_iSelectionInputed; //It is the easiest way to save it like this, kick the core and let the core pick it
     TArray<int32> m_aSubSelectionsInputed;
 
-    int32 m_iActionGroupId;
+    //int32 m_iActionGroupId;
     int32 m_iPriorityMax; //the max pri action's property
     bool  m_bAlwaysCheckDistWhenCalcPri; //the max pri action's property
 
     TSharedPtr<FMyMJGameActionBaseCpp> m_pSelected;
     bool m_bNeed2Collect;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "auto random select"))
-    bool m_bRandomSelect; //Mainly used for test and one stupid AI
+    int8 m_iRandomMask; //Mainly used for test and one stupid AI
 
     int32 m_iIdxAttedner;
 
@@ -400,7 +402,7 @@ public:
         m_pPostAction = NULL;
 
         resetForNewLoopForFullMode(NULL, NULL, false, 0, -1);
-        setActionGroupId(0);
+        //setActionGroupId(0);
     };
 
     virtual ~FMyMJGameActionCollectorCpp()
@@ -424,20 +426,19 @@ public:
     void reinit(TArray<FMyMJGameActionContainorCpp *> &aActionContainors, int32 iRandomSelectMask);
 
     //Warn: @pPreAction, @pPostAction must allocated on heap and this function will take ownership
-    //Warn: m_iActionGroupId will not be set, you need call setActionGroupId() for that
     void resetForNewLoopForFullMode(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax, int32 iExpectedContainorDebug);
 
-    inline
-    void setActionGroupId(int32 iActionGroupId)
-    {
-        m_iActionGroupId = iActionGroupId;
-    };
+    //inline
+    //void setActionGroupId(int32 iActionGroupId)
+    //{
+    //    m_iActionGroupId = iActionGroupId;
+    //};
 
-    inline
-    int32 getActionGroupId() const
-    {
-        return m_iActionGroupId;
-    };
+    //inline
+    //int32 getActionGroupId() const
+    //{
+        //return m_iActionGroupId;
+    //};
 
     inline
     TSharedPtr<FMyMJGamePusherIOComponentFullCpp> getpPusherIO()
@@ -446,7 +447,7 @@ public:
     };
 
     //return if all collected
-    bool collectAction(int32 iTimePassedMs, bool &outHaveProgress, FRandomStream &RS);
+    bool collectAction(int32 iActionGroupId, int32 iTimePassedMs, bool &outHaveProgress, FRandomStream &RS);
 
 protected:
 
@@ -464,7 +465,7 @@ protected:
     int32 m_iIdxAttenderHavePriMax; //When  m_bAllowSamePriAction = false, this decide who's choice will be pick when same priority action exist
     int32 m_iIdxContainorSearchStart;
 
-    int32 m_iActionGroupId;
+    //int32 m_iActionGroupId;
 
     bool m_bEnQueueDone;
 
@@ -485,10 +486,10 @@ public:
 
     FMyMJGameActionContainorForBPCpp()
     {
-        resetForNewLoop();
+        resetForNewActionLoop();
     };
 
-    void resetForNewLoop()
+    void resetForNewActionLoop()
     {
         m_iChoiceSelected = -1;
         m_aSubDataChoiceSelected.Reset();
