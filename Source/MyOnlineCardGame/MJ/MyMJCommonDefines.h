@@ -36,7 +36,7 @@ enum class MyMJGameErrorCodeCpp : uint8
     choiceSubSelectInvalid = 123 UMETA(DisplayName = "choiceSubSelectInvalid")
 };
 
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJGameElemWorkModeCpp : uint8
 {
     Invalid = 0  UMETA(DisplayName = "Invalid"),
@@ -104,7 +104,7 @@ enum class MyMJActionLoopStateCpp : uint8
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameCardPackCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -132,7 +132,7 @@ public:
     bool m_bHaveZhongCards;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameTrivialCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -166,7 +166,7 @@ public:
 };
 
 //For simple, define sub rule type cfg here
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameSubGuoBiaoCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -187,7 +187,7 @@ public:
     bool m_bReqMenQingForZuHeLong;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameSubLocalCSCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -347,7 +347,7 @@ public:
     TArray<FMyMJGameSubLocalCSCfgCpp> m_aSubLocalCSCfg;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameRunDataCpp
 {
     GENERATED_USTRUCT_BODY()

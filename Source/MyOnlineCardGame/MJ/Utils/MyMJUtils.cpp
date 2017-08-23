@@ -160,12 +160,20 @@ FString FMyMJHuScoreResultBaseCpp::genDebugString() const
     //FString::Printf(TEXT(" m_aWeavesShowedOut.NUm(): %d. m_aWeavesInHand.Num: %d."), m_aWeavesShowedOut.Num(), m_aWeavesInHand.Num());
     FString ret = FString::Printf(TEXT(" m_iScorePerAttenderTotal: %d. "), m_iScorePerAttenderTotal);
 
+    /*
     for (auto It = m_mScoreTypeItemMap.CreateConstIterator(); It; ++It)
     {
         MyMJHuScoreTypeCpp eType = It.Key();
 
         ret += UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)eType) + ", ";
 
+    }
+    */
+
+    int32 l = m_aScoreResultItems.Num();
+    for (int32 i = 0; i < l; i++) {
+        ret += FString::Printf(TEXT("(%s, %d, %d), "), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)m_aScoreResultItems[i].m_eType), m_aScoreResultItems[i].m_iScorePerAttender, m_aScoreResultItems[i].m_iCount);
+        //ret += UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)m_aScoreTypeItem[i].m_eType) + ", ";
     }
 
     return ret;

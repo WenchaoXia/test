@@ -686,7 +686,7 @@ UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJCardValuePackCpp &i
 
         checkingHandCards.insert(MY_MJCARD_ID_FAKE, cardValue);
         if (UMyMJUtilsLocalCSLibrary::checkTingWithFixedCardTypeLocalCSInGame(gameCfg.m_cHuCfg, gameCfg.getSubLocalCSCfgRefConst(), weavesShowedOut, weaveStatis, checkingHandCards, resultTing)) {
-            FMyMJHuScoreResultTingCpp &item = outResultTingGroup.m_mValueTingMap.FindOrAdd(cardValue);
+            FMyMJHuScoreResultTingCpp &item = outResultTingGroup.findOrAdd(cardValue);
             item = resultTing;
 
             item.m_iValueTriggerCard = cardValue;
@@ -699,7 +699,7 @@ UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJCardValuePackCpp &i
         TArray<int32> aIds;
         checkingHandCards.collectAll(aIds);
 
-        inValuePack.getValuesByIds(aIds, outResultTingGroup.m_aValuesHandCardWhenChecking);
+        inValuePack.getValuesByIds(aIds, outResultTingGroup.getValuesHandCardWhenCheckingRef());
 
         return true;
     }
@@ -779,7 +779,7 @@ UMyMJUtilsLocalCSLibrary::checkHuWithTriggerCard(const FMyMJCardValuePackCpp &in
     int32 l = aTriggerDatas.Num();
     for (int32 i = 0; i < l; i++) {
         const FMyTriggerDataCpp &triggerData = aTriggerDatas[i];
-        const FMyMJHuScoreResultTingCpp *pResultTing = tingGroup.m_mValueTingMap.Find(triggerData.m_iValue);
+        const FMyMJHuScoreResultTingCpp *pResultTing = tingGroup.findConst(triggerData.m_iValue);
         if (pResultTing == NULL) {
             continue;
         }

@@ -939,7 +939,7 @@ struct FMyMJHuCommonCfg
 };
 
 //Here we use int, to avoid mem allocation
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJHuScoreAttrCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -960,16 +960,16 @@ struct FMyMJHuScoreAttrCpp
     FString genDebugString() const;
 
     /* type */
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Type"))
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Type"))
     MyMJHuScoreTypeCpp m_eType;
 
     /* the score every attender must pay when ZiMo */
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Score Per Attender"))
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Score Per Attender"))
     int32 m_iScorePerAttender;
 
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJHuScoreResultItemCpp : public FMyMJHuScoreAttrCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -979,7 +979,7 @@ struct FMyMJHuScoreResultItemCpp : public FMyMJHuScoreAttrCpp
         m_iCount = 0;
     };
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Count"))
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Count"))
     int32 m_iCount;
 };
 
@@ -1050,7 +1050,7 @@ public:
 };
 */
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJHuScoreResultBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1074,23 +1074,10 @@ public:
         return m_iScorePerAttenderTotal;
     };
 
-
-    //inline const TArray<FMyMJHuScoreResultItemCpp>& getItems() const
-    //{
-    //    return m_aItems;
-    //}
-
     void reset()
     {
-        //m_eHuCardType = MyMJHuCardTypeCpp::Invalid;
-        //m_aItems.Reset();
-        m_mScoreTypeItemMap.Reset();
+        m_aScoreResultItems.Reset();
         m_iScorePerAttenderTotal = 0;
-
-        //m_aWeavesShowedOut.Reset();
-        //m_aWeavesInHand.Reset();
-
-
     };
 
     inline bool addType(const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> &scoreSettings,
@@ -1123,47 +1110,38 @@ public:
 
     bool removeType(MyMJHuScoreTypeCpp type)
     {
-        //FMyMJHuScoreResultItemCpp **ppItem = m_mScoreTypeItemMap.Find(type);
-        //if (ppItem == NULL) {
-            //return false;
-        //}
-
-        FMyMJHuScoreResultItemCpp *pItem = m_mScoreTypeItemMap.Find(type);
+        int32 idxFound;
+        FMyMJHuScoreResultItemCpp *pItem = findByType(type, &idxFound);
         if (pItem == NULL) {
             return false;
         }
 
         m_iScorePerAttenderTotal -= pItem->m_iScorePerAttender * pItem->m_iCount;
 
-        MY_VERIFY(m_mScoreTypeItemMap.Remove(type) == 1);
-
-        //int32 l = m_aItems.Num();
-        //int32 idxFound = -1;
-        //for (int32 i = 0; i < l; i++) {
-        //    if (m_aItems[i].m_eType == type) {
-        //        idxFound = i;
-        //        break;
-        //    }
-       // }
-
-        //MY_VERIFY(idxFound >= 0);
-       // m_aItems.RemoveAt(idxFound);
+        m_aScoreResultItems.RemoveAt(idxFound);
 
         return true;
     };
 
-    inline
-    FMyMJHuScoreResultItemCpp* findByType(MyMJHuScoreTypeCpp type)
-    {
-        //FMyMJHuScoreResultItemCpp **ppItem = m_mScoreTypeItemMap.Find(type);
-        //if (ppItem) {
-        //    return *ppItem;
-        //}
-        //else {
-        //    return NULL;
-        //}
 
-        return m_mScoreTypeItemMap.Find(type);
+    FMyMJHuScoreResultItemCpp* findByType(MyMJHuScoreTypeCpp type, int32 *pOutIdxFound = NULL)
+    {
+        FMyMJHuScoreResultItemCpp* pRet = NULL;
+        int32 IdxFound = -1;
+        int32 l = m_aScoreResultItems.Num();
+        for (int32 i = 0; i < l; i++) {
+            if (m_aScoreResultItems[i].m_eType == type) {
+                pRet = &m_aScoreResultItems[i];
+                IdxFound = i;
+                break;
+            }
+        }
+
+        if (pOutIdxFound) {
+            *pOutIdxFound = IdxFound;
+        }
+
+        return pRet;
     };
 
     int32 append(const TArray<FMyMJHuScoreResultItemCpp>& newItems)
@@ -1177,44 +1155,6 @@ public:
         return m_iScorePerAttenderTotal;
     };
 
-    /*
-    FMyMJHuScoreResultBaseCpp& operator = (const FMyMJHuScoreResultBaseCpp& rhs)
-    {
-        if (this == &rhs) {
-            return *this;
-        }
-
-        copyDeep(&rhs);
-        return *this;
-    };
-
-    void copyDeep(const FMyMJHuScoreResultBaseCpp *pOther)
-    {
-        m_aWeavesShowedOut = pOther->m_aWeavesShowedOut;
-        m_aWeavesInHand = pOther->m_aWeavesInHand;
-
-        m_iScorePerAttenderTotal = pOther->m_iScorePerAttenderTotal;
-        m_aItems = pOther->m_aItems;
-
-        buildMap();
-    };
-
-    void buildMap()
-    {
-        int32 l = m_aItems.Num();
-        m_mScoreTypeItemMap.Reset();
-        for (int32 i = 0; i < l; i++) {
-
-            FMyMJHuScoreResultItemCpp *pItem = &m_aItems[i];
-
-            MY_VERIFY(m_mScoreTypeItemMap.Find(pItem->m_eType) == NULL);
-            FMyMJHuScoreResultItemCpp *&pNewAddedRef = m_mScoreTypeItemMap.Add(pItem->m_eType);
-            pNewAddedRef = pItem;
-        }
-    };
-    */
-
-    //MyMJHuCardTypeCpp m_eHuCardType;
 
     FString genDebugString() const;
 
@@ -1223,19 +1163,10 @@ protected:
 
     inline void addItemInternal(MyMJHuScoreTypeCpp type, int32 iScorePerAttender, int32 count)
     {
-        /*
-        FMyMJHuScoreResultItemCpp **ppItem = m_mScoreTypeItemMap.Find(type);
-        FMyMJHuScoreResultItemCpp *pItem;
-        if (ppItem == NULL) {
-            pItem = m_mScoreTypeItemMap.Add(type);
-        }
-        else {
-            pItem = *ppItem;
-        }
-        */
+
         MY_VERIFY(type != MyMJHuScoreTypeCpp::Invalid);
 
-        FMyMJHuScoreResultItemCpp *pItem = &m_mScoreTypeItemMap.FindOrAdd(type);
+        FMyMJHuScoreResultItemCpp *pItem = &findOrAdd(type);
 
         if (pItem->m_eType != MyMJHuScoreTypeCpp::Invalid) {
             if (pItem->m_eType != type) {
@@ -1258,15 +1189,32 @@ protected:
         m_iScorePerAttenderTotal += pItem->m_iScorePerAttender * count;
     };
 
-    UPROPERTY()
-    TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreResultItemCpp> m_mScoreTypeItemMap;
-    //TArray<FMyMJHuScoreResultItemCpp> m_aItems;
+    inline FMyMJHuScoreResultItemCpp& findOrAdd(MyMJHuScoreTypeCpp type)
+    {
+        int32 l = m_aScoreResultItems.Num();
+        for (int32 i = 0; i < l; i++) {
+            if (m_aScoreResultItems[i].m_eType == type) {
+                return m_aScoreResultItems[i];
+            }
+        }
 
-    UPROPERTY()
+        int32 idx = m_aScoreResultItems.Emplace();
+        m_aScoreResultItems[idx].m_eType = type;
+        return m_aScoreResultItems[idx];
+    };
+
+    //UPROPERTY()
+    //TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreResultItemCpp> m_mScoreTypeItemMap;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Score Result Items"))
+    TArray<FMyMJHuScoreResultItemCpp> m_aScoreResultItems;
+
+    //score is per attender
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Score Per Attender Total"))
     int32 m_iScorePerAttenderTotal;
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJHuScoreResultFinalCpp : public FMyMJHuScoreResultBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1285,11 +1233,12 @@ public:
 
     };
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id value trigger card"))
     FMyIdValuePair m_cIdValueTriggerCard;
 };
 
 //represent one action of hus
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJHuScoreResultFinalGroupCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1315,7 +1264,7 @@ public:
     FString genDebugString() const
     {
         int32 l = m_aScoreResults.Num();
-        FString ret = FString::Printf(TEXT(" idxWin: %d, idxLoseOnlyOne %d, scoreResultNum %d. "), m_iIdxAttenderWin, m_iIdxAttenderLoseOnlyOne, l);
+        FString ret = FString::Printf(TEXT(" idxWin: %d, idxLoseOnlyOne %d,  m_eHuMainType %d, scoreResultNum %d. "), m_iIdxAttenderWin, m_iIdxAttenderLoseOnlyOne, (uint8)m_eHuMainType, l);
 
         for (int32 i = 0; i < l; i++) {
             ret += m_aScoreResults[i].genDebugString();
@@ -1325,29 +1274,29 @@ public:
         return ret;
     };
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx attender win"))
     int32 m_iIdxAttenderWin;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx attender lose only one"))
     int32 m_iIdxAttenderLoseOnlyOne; // < 0 means every one, not a pao
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "weaves showed out"))
     TArray<FMyMJWeaveCpp> m_aWeavesShowedOut;
 
     //By default, we just form a 'unweaved' for hand cards, otherwise is handweaves
     //trigger card is excluded if it exist
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "weaves in hand"))
     TArray<FMyMJWeaveCpp> m_aWeavesInHand;
 
     //one action can contains multiple Hus, every one is a affective(should be already selected as highest score before in code logic) one with different trigger and socre 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "score results"))
     TArray<FMyMJHuScoreResultFinalCpp> m_aScoreResults;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hu main type"))
     MyMJHuMainTypeCpp m_eHuMainType;
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJHuScoreResultTingCpp : public FMyMJHuScoreResultBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1385,25 +1334,29 @@ public:
         return (m_iTriggerCardLeftOnDesktop != 0) && (!m_bBanPao);
     };
 
+    FString genDebugString() const
+    {
+        FString ret = FString::Printf(TEXT(" m_iValueTriggerCard %d, m_iTriggerCardLeftOnDesktop %d, m_bBanZiMo %d, m_bBanPao %d."), m_iValueTriggerCard, m_iTriggerCardLeftOnDesktop, m_bBanZiMo, m_bBanPao);
+        return ret;
+    };
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "ban zi mo hu"))
     bool m_bBanZiMo;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "ban pao hu"))
     bool m_bBanPao;
 
-    //int32 m_iIdTriggerCard;
-
     //what value can trigger the hu
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "value trigger card"))
     int32 m_iValueTriggerCard;
 
-    //< 0 means not set
-    UPROPERTY()
+    //how many cards left on desktop which may trigger hu, < 0 means not set
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "trigger card left on desktop"))
     int32 m_iTriggerCardLeftOnDesktop;
 };
 
-USTRUCT()
+
+USTRUCT(BlueprintType)
 struct FMyMJHuScoreResultTingGroupCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1417,41 +1370,39 @@ public:
 
     void reset()
     {
-        m_mValueTingMap.Reset();
+        m_aTings.Reset();
         m_aValuesHandCardWhenChecking.Reset();
     };
 
     inline int32 getCount() const
     {
-        return m_mValueTingMap.Num();
+        return m_aTings.Num();
     };
+
 
     FString genDebugString() const
     {
-        int32 l = m_mValueTingMap.Num();
+        int32 l = m_aTings.Num();
         FString ret = FString::Printf(TEXT(" ting count %d, values count %d. "), getCount(), m_aValuesHandCardWhenChecking.Num());
 
-        for (auto It = m_mValueTingMap.CreateConstIterator(); It; ++It)
-        {
-            int32 cardValue = It.Key();
-            const FMyMJHuScoreResultTingCpp* pMapElem = &It.Value();
-
-            ret += FString::Printf(TEXT(" card Value %d, score: %s."), cardValue, *pMapElem->genDebugString());
-
+        for (int32 i = 0; i < l; i++) {
+            ret += m_aTings[i].genDebugString();
         }
 
         return ret;
     };
-
 
     bool isRealTing(bool *pbIsRealTingWhenZiMo, bool *pbIsRealTingWhenPao)
     {
         bool bIsRealTing = false;
         bool bIsRealTingWhenZiMo = false;
         bool bIsRealTingWhenPao = false;
-        for (auto It = m_mValueTingMap.CreateConstIterator(); It; ++It)
+
+        int32 l = m_aTings.Num();
+
+        for (int32 i = 0; i < l; i++)
         {
-            const FMyMJHuScoreResultTingCpp* pMapElem = &It.Value();
+            const FMyMJHuScoreResultTingCpp* pMapElem = &m_aTings[i];
 
             MY_VERIFY(!(pMapElem->m_bBanPao && pMapElem->m_bBanZiMo));
 
@@ -1482,11 +1433,55 @@ public:
 
     };
 
-    UPROPERTY()
-    TMap<int32, FMyMJHuScoreResultTingCpp> m_mValueTingMap;
+    FMyMJHuScoreResultTingCpp& findOrAdd(int32 cardValue)
+    {
+        MY_VERIFY(cardValue > 0);
+        int32 l = m_aTings.Num();
+        for (int32 i = 0; i < l; i++) {
+            if (m_aTings[i].m_iValueTriggerCard == cardValue) {
+                return m_aTings[i];
+            }
+        }
 
-    UPROPERTY()
-    TArray<int32> m_aValuesHandCardWhenChecking; //helper that identify in what condition this Ting is tested, since when ever attender weave, hand card changes, so this can identify condition is same if it is equal
+        int32 idx = m_aTings.Emplace();
+        m_aTings[idx].m_iValueTriggerCard = cardValue;
+        return m_aTings[idx];
+    };
+
+    const FMyMJHuScoreResultTingCpp* findConst(int32 cardValue) const
+    {
+        MY_VERIFY(cardValue > 0);
+        int32 l = m_aTings.Num();
+        for (int32 i = 0; i < l; i++) {
+            if (m_aTings[i].m_iValueTriggerCard == cardValue) {
+                return &m_aTings[i];
+            }
+        }
+
+        return NULL;
+    }
+
+    TArray<FMyMJHuScoreResultTingCpp>& getTingsRef()
+    {
+        return m_aTings;
+    };
+
+    TArray<int32>& getValuesHandCardWhenCheckingRef()
+    {
+        return m_aValuesHandCardWhenChecking;
+    };
+
+protected:
+
+    //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "ting results"))
+    //TMap<int32, FMyMJHuScoreResultTingCpp> m_mValueTingMap;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "tings"))
+    TArray<FMyMJHuScoreResultTingCpp> m_aTings;
+
+    //helper that identify in what condition this Ting is tested, since when ever attender weave, hand card changes, so this can identify condition is same if it is equal
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "values of hand cards when checking"))
+    TArray<int32> m_aValuesHandCardWhenChecking;
 };
 
 

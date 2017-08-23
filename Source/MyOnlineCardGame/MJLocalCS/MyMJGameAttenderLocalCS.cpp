@@ -331,14 +331,13 @@ bool FMyMJGameAttenderLocalCSCpp::tryGenAndEnqueueUpdateTingPusher()
 
     const FMyMJValueIdMapCpp *pHelperShowedOut2AllCards = &pCore->getDataLogicRefConst().m_cHelperShowedOut2AllCards;
 
-    for (auto It = pusherUpdateTing.m_cTingGroup.m_mValueTingMap.CreateIterator(); It; ++It)
-    {
-        int32 triggerValue = It.Key();
-        FMyMJHuScoreResultTingCpp *pR = &It.Value();
-
+    TArray<FMyMJHuScoreResultTingCpp>& aTings = pusherUpdateTing.m_cTingGroup.getTingsRef();
+    int32  l = aTings.Num();
+    for (int32 i = 0; i < l; i++) {
+        FMyMJHuScoreResultTingCpp *pR = &aTings[i];
+        int32 triggerValue = pR->m_iValueTriggerCard;
         pR->m_iTriggerCardLeftOnDesktop = (4 - pHelperShowedOut2AllCards->getCountByValue(triggerValue));
     }
-
 
     pusherUpdateTing.initWithTingGroupAlreadyInited(getIdx());
 
