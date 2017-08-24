@@ -15,7 +15,7 @@
 
 #define MY_MJCARD_ID_FAKE -1
 
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJCardValueTypeCpp : uint8
 {
     Invalid = 0 UMETA(DisplayName = "Invalid"),
@@ -51,7 +51,7 @@ enum class MyMJChiTypeCpp : uint8
     Max = 4 UMETA(DisplayName = "Max")
 };
 
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJWeaveTypeCpp : uint8
 {
     Invalid = 0 UMETA(DisplayName = "Invalid"),
@@ -95,7 +95,7 @@ enum class MyMJHuCardTypeCpp : uint8
     //MTE_LAST = 0x80000000 UMETA(Hidden)
 };
 
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJCardFlipStateCpp : uint8
 {
     Invalid = 0                    UMETA(DisplayName = "Invalid"),
@@ -106,7 +106,7 @@ enum class MyMJCardFlipStateCpp : uint8
 
 };
 
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJCardSlotTypeCpp : uint8
 {
     Invalid = 0                        UMETA(DisplayName = "Invalid"),
@@ -123,7 +123,7 @@ enum class MyMJCardSlotTypeCpp : uint8
 };
 
 //Todo, to support memset as init, use 0 as default for all to make it run faster
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJCardPosiCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -181,7 +181,7 @@ struct FMyMJCardPosiCpp
 
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJCardInfoCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -240,7 +240,7 @@ struct FMyMJCardCpp : public FMyMJCardInfoCpp
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJCardValuePackCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -353,7 +353,8 @@ protected:
         TArray<int32> m_aCardValues;
 };
 
-UENUM(Blueprintable, Meta = (Bitflags))
+//UENUM(Blueprintable, Meta = (Bitflags))
+UENUM(Meta = (Bitflags))
 enum class EMyMJWeaveReserved0Mask : uint8
 {
     LocalCSGangBuZhang = 0x01, //1 means BuZhang, 0 means GangYao
@@ -591,7 +592,7 @@ protected:
 
 
 //Id should be unique always
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJWeaveCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -782,7 +783,7 @@ protected:
         int32 m_iReserved0;
 };
 
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJHuMainTypeCpp : uint8
 {
     Invalid = 0                    UMETA(DisplayName = "Invalid"),
@@ -793,7 +794,7 @@ enum class MyMJHuMainTypeCpp : uint8
 };
 
 /* multiple hu score type can exist at same type.*/
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJHuScoreTypeCpp : uint8
 {
     Invalid = 0                    UMETA(DisplayName = "Invalid"),
@@ -939,7 +940,7 @@ struct FMyMJHuCommonCfg
 };
 
 //Here we use int, to avoid mem allocation
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJHuScoreAttrCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -969,7 +970,7 @@ struct FMyMJHuScoreAttrCpp
 
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJHuScoreResultItemCpp : public FMyMJHuScoreAttrCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1050,7 +1051,7 @@ public:
 };
 */
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJHuScoreResultBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1214,7 +1215,7 @@ protected:
     int32 m_iScorePerAttenderTotal;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJHuScoreResultFinalCpp : public FMyMJHuScoreResultBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1238,7 +1239,7 @@ public:
 };
 
 //represent one action of hus
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJHuScoreResultFinalGroupCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1296,7 +1297,7 @@ public:
     MyMJHuMainTypeCpp m_eHuMainType;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJHuScoreResultTingCpp : public FMyMJHuScoreResultBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1356,7 +1357,7 @@ public:
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJHuScoreResultTingGroupCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1534,7 +1535,7 @@ protected:
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJWeaveArrayCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1635,7 +1636,7 @@ protected:
 };
 
 //note three case: 1 no card, 2 single card taken or give out, 3 gang show out
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJHuTriggerCardSrcTypeCpp : uint8
 {
     None = 0                    UMETA(DisplayName = "None"),
@@ -2009,7 +2010,7 @@ public:
  * All API that take things as out, such as TArray, will empty/clear it first then try fill.
  */
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJValueIdMapCpp : public FMyValueIdMapCpp
 {
     GENERATED_USTRUCT_BODY()

@@ -12,7 +12,7 @@
 
 #include "MyMJCardPack.generated.h"
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJCardInfoPackCpp
 {
     GENERATED_USTRUCT_BODY()

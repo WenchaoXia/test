@@ -149,7 +149,7 @@ struct TIsTriviallyCopyConstructible<FMyIdValuePair>
 };
 */
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyIdCollectionCpp
 {
     GENERATED_USTRUCT_BODY()

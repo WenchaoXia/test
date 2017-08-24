@@ -477,7 +477,7 @@ protected:
     TWeakPtr<FMyMJGameCoreCpp> m_pCore;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameActionContainorForBPCpp
 {
     GENERATED_USTRUCT_BODY()

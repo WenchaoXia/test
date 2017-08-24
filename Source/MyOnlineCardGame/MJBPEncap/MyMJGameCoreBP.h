@@ -118,7 +118,7 @@ DECLARE_MULTICAST_DELEGATE(FMJGamePusherUpdatedMultcastDelegate);
 //DECLARE_MULTICAST_DELEGATE_TwoParams(FMJGamePusherSegmentMultcastDelegate, int32, const FMyMJGamePusherPointersCpp&);
 DECLARE_MULTICAST_DELEGATE_OneParam(FMJGameCmdSegmentMultcastDelegate, const FMyMJGameCmdPointersCpp&);
 
-UCLASS(BlueprintType, Blueprintable)
+UCLASS()
 class MYONLINECARDGAME_API UMyMJPusherBufferCpp : public UObject
 {
     GENERATED_BODY()
@@ -142,7 +142,7 @@ public:
     FMJGamePusherUpdatedMultcastDelegate m_cPusherUpdatedMultcastDelegate;
 };
 
-UCLASS(BlueprintType, Blueprintable)
+UCLASS()
 class MYONLINECARDGAME_API UMyMJIONodeCpp : public UObject
 {
     GENERATED_BODY()
@@ -181,7 +181,7 @@ public:
 * this only exist on server, in network env
 */
 //notplaceable
-UCLASS(BlueprintType, notplaceable, meta = (ShortTooltip = "The full game core with sub thread, should only exist on server"))
+UCLASS(notplaceable, meta = (ShortTooltip = "The full game core with sub thread, should only exist on server"))
 class MYONLINECARDGAME_API UMyMJCoreFullCpp : public UObject
 {
     GENERATED_BODY()

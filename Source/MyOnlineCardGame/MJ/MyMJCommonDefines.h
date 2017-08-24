@@ -22,7 +22,7 @@ typedef struct FMyMJDataDeltaCpp FMyMJDataDeltaCpp;
 typedef struct FMyMJGamePusherResultCpp FMyMJGamePusherResultCpp;
 
 //Warn: code use its uint8 value, don't modify it unless checked carefully
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJGameErrorCodeCpp : uint8
 {
     None = 0                     UMETA(DisplayName = "None"),
@@ -45,7 +45,7 @@ enum class MyMJGameElemWorkModeCpp : uint8
     Temp = 3     UMETA(DisplayName = "Temp"),
 };
 
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJGameRuleTypeCpp : uint8
 {
     Invalid = 0     UMETA(DisplayName = "Invalid"),
@@ -54,7 +54,7 @@ enum class MyMJGameRuleTypeCpp : uint8
 };
 
 //Warn: code use its uint8 value, don't modify it unless checked carefully
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJGameRoleTypeCpp : uint8
 {
     Attender0 = 0 UMETA(DisplayName = "Attender0"),
@@ -66,7 +66,7 @@ enum class MyMJGameRoleTypeCpp : uint8
     Max = 6       UMETA(DisplayName = "Max")
 };
 
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJGameStateCpp : uint8
 {
     Invalid = 0 UMETA(DisplayName = "Invalid"),

@@ -10,7 +10,7 @@
 
 typedef class UMyMJIONodeCpp UMyMJIONodeCpp;
 
-UCLASS(BlueprintType, Blueprintable)
+UCLASS()
 class MYONLINECARDGAME_API AMyMJAttenderPawnBPCpp : public APawn
 {
     GENERATED_BODY()

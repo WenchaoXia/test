@@ -16,7 +16,7 @@
 
 //Todo: use UE4's generated delta instead of my own
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameUntakenSlotSubSegmentInfoCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -46,7 +46,7 @@ public:
 
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameUntakenSlotInfoCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -270,7 +270,7 @@ public:
         FMyMJValueIdMapCpp m_cHelperShowedOut2AllCards;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJCoreDataHelperCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -332,7 +332,7 @@ public:
 
 //Both used for logic and visualize
 //What the fuck is, UE3 network always send all structor data in one packet even some members in it haven't change, thanks to UE4 this changed, and if Atomic specified, it goes UE3's way
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJCoreDataPublicCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -419,7 +419,7 @@ public:
 };
 
 //if not specified in member name, they are the target state
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJCoreDataDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -450,7 +450,7 @@ public:
     int32 m_iMask0;
 };
 
-UCLASS(NotBlueprintType)
+UCLASS()
 class UMyMJCoreDataForMirrorModeCpp : public UObject
 {
     GENERATED_BODY()
@@ -526,7 +526,7 @@ public:
 #define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateGangYaoedLocalCS  (1 << 17)
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJRoleDataAttenderPublicCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -591,7 +591,7 @@ public:
     int32 m_iMask0;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJRoleDataAttenderPublicDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -654,7 +654,7 @@ public:
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJRoleDataAttenderPrivateDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -678,7 +678,7 @@ public:
     int32 m_iMask0;
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJRoleDataPrivateCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -703,7 +703,7 @@ public:
 #define MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_One(idxAttender)  (1 << idxAttender)
 
 //this is mutable for different role of seeing the game, some role may be even empty
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJRoleDataPrivateDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -729,7 +729,7 @@ public:
 
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJRoleDataAttenderDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -776,7 +776,7 @@ protected:
 };
 
 
-UCLASS(BlueprintType)
+UCLASS()
 class UMyMJRoleDataAttenderPublicForMirrorModeCpp : public UObject
 {
     GENERATED_BODY()
@@ -799,7 +799,7 @@ protected:
     FMyMJRoleDataAttenderPublicCpp m_cDataAttenderPublic;
 };
 
-UCLASS(BlueprintType)
+UCLASS()
 class UMyMJRoleDataAttenderPrivateForMirrorModeCpp : public UObject
 {
     GENERATED_BODY()
@@ -821,7 +821,7 @@ protected:
     FMyMJRoleDataAttenderPrivateCpp m_cDataAttenderPrivate;
 };
 
-UCLASS(BlueprintType)
+UCLASS()
 class UMyMJRoleDataPrivateForMirrorModeCpp : public UObject
 {
     GENERATED_BODY()
@@ -843,7 +843,7 @@ protected:
     FMyMJRoleDataPrivateCpp m_cDataPrivate;
 };
 
-UCLASS(BlueprintType)
+UCLASS()
 class MYONLINECARDGAME_API UMyMJRoleDataForMirrorModeCpp : public UObject
 {
     GENERATED_BODY()
@@ -924,7 +924,7 @@ protected:
 };
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJDataDeltaCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1051,7 +1051,7 @@ protected:
 
 //all mirror data doens't decide how game progress, just represent the game state
 //Note: when using component, all outer must be actor
-UCLASS(BlueprintType, Blueprintable)
+UCLASS()
 class MYONLINECARDGAME_API UMyMJDataForMirrorModeCpp : public UActorComponent
 {
     GENERATED_BODY()

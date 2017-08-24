@@ -20,7 +20,7 @@
 
 //we don't use netserilize, since we want custom serialize code for local file usage, and net-serialize is another code path, which means a double custom code work  
 
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJGameStateUpdateReasonCpp : uint8
 {
     Invalid = 0                             UMETA(DisplayName = "Invalid"),
@@ -29,7 +29,7 @@ enum class MyMJGameStateUpdateReasonCpp : uint8
     DismissedByCmd = 50                     UMETA(DisplayName = "DismissedByCmd"),
 };
 
-UENUM(BlueprintType)
+UENUM()
 enum class MyMJGamePusherTypeCpp : uint8
 {
     Invalid = 0                         UMETA(DisplayName = "Invalid"),
@@ -870,7 +870,8 @@ protected:
 };
 
 //value must equal to (1 << n) style, but the compile not allow direct set it in enum, so check it manually when change it!
-UENUM(Blueprintable, Meta = (Bitflags))
+//UENUM(Blueprintable, Meta = (Bitflags))
+UENUM(Meta = (Bitflags))
 enum class EMyMJGameActionUnfiedMask0 : uint8
 {
     PassPaoHu = 0x01,

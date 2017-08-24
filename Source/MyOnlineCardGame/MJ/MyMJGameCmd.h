@@ -91,7 +91,7 @@ public:
 
 
 //never use it across thread
-USTRUCT(BlueprintType)
+USTRUCT()
 struct FMyMJGameCmdPointersCpp
 {
     GENERATED_USTRUCT_BODY()
