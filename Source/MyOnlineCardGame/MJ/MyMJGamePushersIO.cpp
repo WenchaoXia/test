@@ -405,6 +405,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iActionGroupId, int32 iTimePass
         }
     }
 
+    uint32 pusherGivenCount = 0;
     TSharedPtr<FMyMJGameCoreCpp> pCore = m_pCore.Pin();
 
     if (m_pPrevAction.IsValid()) {
@@ -418,6 +419,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iActionGroupId, int32 iTimePass
 
         FMyMJGamePusherBaseCpp *p = m_pPrevAction->cloneDeep();
         m_pPusherIO->GivePusher(p, (void **)&p);
+        pusherGivenCount++;
     }
 
     for (int32 i = 0; i < aPusher2Enqueue.Num(); i++) {
@@ -426,6 +428,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iActionGroupId, int32 iTimePass
 
         FMyMJGamePusherBaseCpp *p = pAction->cloneDeep();
         m_pPusherIO->GivePusher(p, (void **)&p);
+        pusherGivenCount++;
 
     }
     aPusher2Enqueue.Empty();
@@ -441,11 +444,15 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iActionGroupId, int32 iTimePass
 
         FMyMJGamePusherBaseCpp *p = m_pPostAction->cloneDeep();
         m_pPusherIO->GivePusher(p, (void **)&p);
+        pusherGivenCount++;
     }
 
-    FMyMJGamePusherCountUpdateCpp *pPusherCountUpdate = new FMyMJGamePusherCountUpdateCpp();
-    pPusherCountUpdate->m_bActionGroupIncrease = true;
-    m_pPusherIO->GivePusher(pPusherCountUpdate, (void **)(&pPusherCountUpdate));
+    //if (pusherGivenCount > 0) {
+    if (true) {
+        FMyMJGamePusherCountUpdateCpp *pPusherCountUpdate = new FMyMJGamePusherCountUpdateCpp();
+        pPusherCountUpdate->m_bActionGroupIncrease = true;
+        m_pPusherIO->GivePusher(pPusherCountUpdate, (void **)(&pPusherCountUpdate));
+    }
 
     return bAllCollected;
 }

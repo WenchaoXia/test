@@ -70,8 +70,10 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
         //OK, all data collecteed, let's gen
 
         FMyMJGameActionDistCardAtStartCpp *pAction = new FMyMJGameActionDistCardAtStartCpp();
-        pFillInPusher->m_cActionChoices.give(pAction);
+        //pFillInPusher->m_cActionChoices.give(pAction);
         pAction->init(getIdx(), aIdValuePairs, bIsLast);
+
+        pPusherIO->GivePusher(pAction, (void **)&pAction);
     }
     else if (eGameState == MyMJGameStateCpp::JustStarted) {
 
@@ -119,7 +121,8 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
             //debug
             //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("gen taken cards: %s"), *UMyMJUtilsLibrary::formatStrIdValuePairs(pAction->m_aIdValuePairs));
 
-            pFillInPusher->m_cActionChoices.give(pAction);
+            //pFillInPusher->m_cActionChoices.give(pAction);
+            pPusherIO->GivePusher(pAction, (void **)&pAction);
         }
         else {
             //Todo, let's end game
@@ -128,7 +131,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
             pActionUpdate->m_iAttenderMaskNext = 0;
             pActionUpdate->m_eReason = MyMJGameStateUpdateReasonCpp::NoCardLeft;
 
-            pCore->getPusherIOFullRef().GivePusher(pActionUpdate, (void **)&pActionUpdate);
+            pPusherIO->GivePusher(pActionUpdate, (void **)&pActionUpdate);
         }
 
     }
