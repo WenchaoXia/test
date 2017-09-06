@@ -91,7 +91,7 @@ public:
     FMyMJGamePusherBaseCpp()
     {
         m_eType = MyMJGamePusherTypeCpp::PusherBase;
-        m_iId = 0;
+        m_iId = -1;
     };
 
     virtual ~FMyMJGamePusherBaseCpp()
@@ -146,6 +146,7 @@ protected:
     //pusher id, reset game is always ID 0
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "id"))
     int32 m_iId;
+
 };
 
 //A custom struct which we will implement serialize (default UE4 did not support TArray<struct *>)
@@ -471,6 +472,11 @@ protected:
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "idx Attender"))
     int32 m_iIdxAttender;
 
+    //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "test a"))
+    //TWeakPtr<FMyMJGamePusherBaseCpp> m_pCore;
+    //FMyMJGamePusherBaseCpp
+    //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "test a"))
+    //TArray<TSharedPtr<FMyMJGamePusherBaseCpp >> m_aS;
 };
 
 

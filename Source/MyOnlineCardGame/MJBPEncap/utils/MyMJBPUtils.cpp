@@ -10,7 +10,7 @@
 void AMyTestActorBaseCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-    DOREPLIFETIME(AMyTestActorBaseCpp, m_pMJData);
+
 };
 
 bool AMyTestActorBaseCpp::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
@@ -24,7 +24,7 @@ bool AMyTestActorBaseCpp::ReplicateSubobjects(class UActorChannel *Channel, clas
 
     bool bRet = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
 
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("ReplicateSubobjects done."));
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("ReplicateSubobjects done."));
 
     return bRet;
 };
@@ -33,17 +33,7 @@ bool AMyTestActorBaseCpp::ReplicateSubobjects(class UActorChannel *Channel, clas
 
 void AMyTestActorBaseCpp::createMJData()
 {
-    //m_pMJData = CreateDefaultSubobject<UMyMJDataForMirrorModeCpp>(TEXT("UMyMJDataForMirrorModeCpp"));
-    if (m_pMJData) {
-        m_pMJData->DestroyComponent();
-        m_pMJData = NULL;
-    }
 
-
-    m_pMJData = NewObject<UMyMJDataForMirrorModeCpp>(this);
-    m_pMJData->createSubObjects(false, true);
-    m_pMJData->RegisterComponent();
-    m_pMJData->SetIsReplicated(true);
 };
 
 void AMyTestActorBaseCpp::ClientRPCFunction0_Implementation(float v1)

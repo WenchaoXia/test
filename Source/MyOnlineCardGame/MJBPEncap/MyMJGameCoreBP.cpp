@@ -2,6 +2,10 @@
 
 #include "MyMJGameCoreBP.h"
 
+#include "GameFramework/Actor.h"
+#include "UnrealNetwork.h"
+
+
 #include "TimerManager.h"
 
 #include "MJLocalCS/Utils/MyMJUtilsLocalCS.h"
@@ -24,9 +28,11 @@
 //#include "Misc/ITransaction.h"
 //#include "Engine/Level.h"
 
+
+/*
 void UMyMJPusherBufferCpp::trySyncDataFromCoreFull()
 {
-    /*
+
     MY_VERIFY(m_pConnectedCoreFull);
     if (!IsValid(m_pConnectedCoreFull)) {
         return;
@@ -47,8 +53,9 @@ void UMyMJPusherBufferCpp::trySyncDataFromCoreFull()
         m_cPusherUpdatedMultcastDelegate.Broadcast();
 
     }
-    */
+
 };
+*/
 
 void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst)
 {
@@ -163,6 +170,7 @@ void UMyMJCoreFullCpp::loop()
         return;
     }
 
+    /*
     MY_VERIFY(m_pPusherBuffer);
     if (IsValid(m_pPusherBuffer)) {
         m_pPusherBuffer->trySyncDataFromCoreFull();
@@ -188,13 +196,13 @@ void UMyMJCoreFullCpp::loop()
             }
         }
     }
-
+    */
 }
 
 void UMyMJCoreFullCpp::clearUp()
 {
-    m_pPusherBuffer = NULL;
-    m_apNextNodes.Reset();
+    //m_pPusherBuffer = NULL;
+    //m_apNextNodes.Reset();
     if (m_pCoreFullWithThread.IsValid()) {
         m_pCoreFullWithThread->Stop();
     }
@@ -213,19 +221,37 @@ void UMyMJCoreFullCpp::PostInitProperties()
 {
     Super::PostInitProperties();
 
-    m_pPusherBuffer = NewObject<UMyMJPusherBufferCpp>(this);
-    m_pPusherBuffer->m_pConnectedCoreFull = this;
+    //m_pPusherBuffer = NewObject<UMyMJPusherBufferCpp>(this);
+    //m_pPusherBuffer->m_pConnectedCoreFull = this;
 
-    m_apNextNodes.Reset();
+    //m_apNextNodes.Reset();
 
     for (int32 i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
 
-        UMyMJIONodeCpp *newNode = NewObject<UMyMJIONodeCpp>(this);
-        m_apNextNodes.Emplace(newNode);
-        newNode->m_eRoleType = (MyMJGameRoleTypeCpp)i;
+        //UMyMJIONodeCpp *newNode = NewObject<UMyMJIONodeCpp>(this);
+        //m_apNextNodes.Emplace(newNode);
+        //newNode->m_eRoleType = (MyMJGameRoleTypeCpp)i;
     }
 }
 
+
+//virtual void PostInitProperties() override;
+void AMyMJCoreMirrorCpp::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+
+    if (HasAuthority()) {
+        m_pMJDataAll = NewObject<UMyMJDataAllCpp>(this);
+        m_pMJDataAll->RegisterComponent();
+        m_pMJDataAll->SetIsReplicated(true);
+    }
+};
+
+void AMyMJCoreMirrorCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    DOREPLIFETIME(AMyMJCoreMirrorCpp, m_pMJDataAll);
+};
 
 
 FMyMJGamePusherBaseCpp* AMyMJCoreMirrorCpp::tryCheckAndGetNextPusher()
@@ -251,145 +277,60 @@ FMyMJGamePusherBaseCpp* AMyMJCoreMirrorCpp::tryCheckAndGetNextPusher()
     return NULL;
 }
 
-void AMyMJCoreMirrorCpp::loop()
+void AMyMJCoreMirrorCpp::toCoreFullLoop()
 {
+    MY_VERIFY(IsValid(m_pMJDataAll));
+    MY_VERIFY(IsValid(m_pCoreFull));
 
-    FMyMJGamePusherBaseCpp *pPusher = tryCheckAndGetNextPusher();
+    UWorld *world = GetWorld();
 
-    while (pPusher) {
-        MyMJGamePusherTypeCpp ePusherType = pPusher->getType();
+    if (!IsValid(world)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
+        MY_VERIFY(false);
+    }
 
-        //1st, make sure mirror core is correctly set
-        if (ePusherType == MyMJGamePusherTypeCpp::PusherResetGame) {
-            FMyMJGamePusherResetGameCpp* pPusherResetGame = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher);
-            MyMJGameRuleTypeCpp eDestType = pPusherResetGame->m_cGameCfg.m_eRuleType;
-            MY_VERIFY(eDestType != MyMJGameRuleTypeCpp::Invalid);
-            MyMJGameRuleTypeCpp eNowType = MyMJGameRuleTypeCpp::Invalid;
-            if (m_pCoreMirror.IsValid()) {
-                eNowType = m_pCoreMirror->getRuleType();
-            }
+    float timeNow = world->GetRealTimeSeconds();
+    uint32 timeNowMs = timeNow * 1000;
+    timeNowMs = MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(timeNowMs);
 
-            if (eNowType != eDestType) {
-                int32 iSeed;
-                if (m_iSeed2OverWrite != 0) {
-                    iSeed = m_iSeed2OverWrite;
-                }
-                else {
-                    iSeed = UMyMJUtilsLibrary::nowAsMsFromTick();
-                }
-
-                bool bOK = checkLevelSettings();
-                if (!bOK) {
-                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("level setting is not correct!"));
-                    MY_VERIFY(false);
-                }
+    //1st, handle cmd
+    //Todo:
 
 
+    //2nd, handle pusher result
+    TQueue<FMyMJGamePusherResultCpp *, EQueueMode::Spsc>* pQ = m_pCoreFull->getPusherResultQueue();
+    if (pQ == NULL) {
+        //this means core didn't setup mode yet
+        return;
+    }
+    else {
+        bool bHaveNextPuhserResult = !pQ->IsEmpty();
+        bool bIsReadyFOrNextPushserResult = m_pMJDataAll->isReadyToGiveNextPusherResult(timeNowMs);
 
-                FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(eDestType, iSeed, MyMJGameCoreTrivalConfigMaskShowPusherLog);
-                m_pCoreMirror = MakeShareable<FMyMJGameCoreCpp>(pCore);
+        bool bHaveProgress = false;
+        while (bHaveNextPuhserResult && bIsReadyFOrNextPushserResult) {
+            FMyMJGamePusherResultCpp* pPusherResult = NULL;
+            pQ->Dequeue(pPusherResult);
+            MY_VERIFY(pPusherResult);
 
-                UMyMJDataForMirrorModeCpp *pMJData = getpMJData();
+            m_pMJDataAll->addPusherResult(*pPusherResult, timeNowMs);
+            delete(pPusherResult);
+            bHaveProgress = true;
 
-                //m_pCoreMirror->initMirrorMode(m_pCoreMirror, pMJData);
-            }
-
-            m_iPusherApplyState = 0;
+            bHaveNextPuhserResult = !pQ->IsEmpty();
+            bIsReadyFOrNextPushserResult = m_pMJDataAll->isReadyToGiveNextPusherResult(timeNowMs);
         }
 
-        if (!m_pCoreMirror.IsValid()) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pCoreMirror invalid!"));
-            MY_VERIFY(false);
-            break;
+        if (bHaveProgress) {
+            m_pMJDataAll->markAllDirtyForRep();
         }
-
-        //2nd, apply
-        {
-            if (m_iPusherApplyState == 0) {
-                m_iPusherApplyState = 1;
-
-                //When full mode, all values revealed in system role, but when mirror mode, we need to reveal them in each role's private data
-                //MY_VERIFY(m_pCoreMirror->getWorkMode() == MyMJGameElemWorkModeCpp::Mirror);
-
-                int32 iAttenderMask = 0;
-                TArray<FMyIdValuePair> aRevealedCardValues;
-
-                //pPusher->getRevealedCardValues(iAttenderMask, aRevealedCardValues);
-                if (iAttenderMask != 0) {
-
-
-                    //int32 l;
-                    //l = MY_GET_ARRAY_LEN(m_aAttendersAll);
-
-                    /*
-                    TArray<AMyMJAttenderPawnBPCpp *>& aAttenderPawns = getAttenderPawnsRef();
-                    l = aAttenderPawns.Num();
-
-                    MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
-
-                    for (int32 i = 0; i < l; i++) {
-                        if ((iAttenderMask & (1 << i)) == 0) {
-                            continue;
-                        }
-                        //need update
-                        aAttenderPawns[i]->m_pDataPrivate->m_cDataPrivateDirect.m_cCardValuePack.tryRevealCardValueByIdValuePairs(aRevealedCardValues);
-                        //m_aAttendersAll[i]->getDataPrivateDirect()->m_cCardValuePack.tryRevealCardValueByIdValuePairs(aRevealedCardValues);
-                    }
-                    */
-                }
-
-
-                if (prePusherApplyForGraphic(pPusher)) {
-                    //we halt for graphic
-                    break;
-                }
-            }
-
-
-            if (m_iPusherApplyState == 1) {
-                m_iPusherApplyState = 2;
-                //m_pCoreMirror->makeProgressByPusher(pPusher);
-            }
-            
-            if (m_iPusherApplyState == 2) {
-                m_iPusherApplyState = 0;
-                if (postPusherApplyForGraphic(pPusher)) {
-                    //we halt for graphic
-                    break;
-                }
-            }
-        }
-
-
-
-        pPusher = tryCheckAndGetNextPusher();
     }
 }
 
-
-void AMyMJCoreBaseForBpCpp::PostInitializeComponents()
+void AMyMJCoreMirrorCpp::OnRep_MJDataAll()
 {
-    Super::PostInitializeComponents();
 
-    MY_VERIFY(m_aAttenderPawns.Num() <= 0);
-    MY_VERIFY(m_pMJData == NULL);
-
-    if (m_pMJData) {
-        m_pMJData->DestroyComponent();
-        m_pMJData = NULL;
-    }
-
-    m_pMJData = NewObject<UMyMJDataForMirrorModeCpp>(this);
-    m_pMJData->createSubObjects(false, true);
-    m_pMJData->RegisterComponent();
-    m_pMJData->SetIsReplicated(true);
-};
-
-void AMyMJCoreBaseForBpCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-    DOREPLIFETIME(AMyMJCoreBaseForBpCpp, m_pMJData);
-};
+}
 
 bool AMyMJCoreBaseForBpCpp::prePusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher)
 {

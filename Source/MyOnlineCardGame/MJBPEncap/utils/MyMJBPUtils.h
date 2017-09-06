@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 
 
-#include "GameFramework/Actor.h"
+//#include "GameFramework/Actor.h"
 #include "MJLocalCS/MyMJGameCoreLocalCS.h"
 
 #include "MyMJBPUtils.generated.h"
@@ -20,7 +20,7 @@ public:
 
     AMyTestActorBaseCpp()
     {
-        m_pMJData = NULL;
+
     };
 
 
@@ -55,13 +55,10 @@ public:
     UFUNCTION(BlueprintCallable, Client, unreliable)
     void testRPCWithPusherFillIn(const FMyMJGamePusherFillInActionChoicesCpp &pusherFillIn);
 
-    UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_MJData, meta = (DisplayName = "mj data"))
-    UMyMJDataForMirrorModeCpp *m_pMJData;
-
 protected:
 
-    UFUNCTION(BlueprintImplementableEvent)
-        void OnRep_MJData();
+    //UFUNCTION(BlueprintImplementableEvent)
+    //    void OnRep_MJData();
 
     /*
     {

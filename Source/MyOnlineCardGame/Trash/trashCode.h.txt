@@ -185,3 +185,85 @@ public:
     UFUNCTION(BlueprintCallable, Client, unreliable)
     void testRPCWithPusherPointers(const FMyMJGamePusherPointersCpp &pusherPointers);
 }
+
+
+
+ void clear()
+    {
+        m_aEvents.Reset();
+        m_uiLastEventEndTime_data_unit = 0;
+    };
+
+    inline
+        int32 getCount() const
+    {
+        return m_aEvents.Num();
+    };
+
+    const FMyMJEventWithTimeStampBaseCpp& getByIdx(int32 idx) const
+    {
+        MY_VERIFY(idx >= 0 && idx < getCount());
+        return m_aEvents[idx];
+    };
+
+    const FMyMJEventWithTimeStampBaseCpp* getLast() const
+    {
+        if (getCount() > 0) {
+            return &m_aEvents.Top();
+        }
+        else {
+            return NULL;
+        }
+    };
+
+    void removeByIdx(int32 idx, int32 count)
+    {
+        MY_VERIFY(idx >= 0);
+        MY_VERIFY((idx + count) <= getCount());
+        m_aEvents.RemoveAt(idx, count);
+    };
+
+    //only event that have duration records time, otherwise consdier them should be applied instantly
+    //all calc here must be resolved to resolution
+    FMyMJEventWithTimeStampBaseCpp& insert(uint32 uiTimeStamp_resolved_ms, uint32 uiDur_resolved_ms, bool bForceRecordTime)
+    {
+        MY_VERIFY(MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(uiTimeStamp_resolved_ms));
+        MY_VERIFY(MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(uiDur_resolved_ms));
+
+        int32 idx = m_aEvents.Emplace();
+        FMyMJEventWithTimeStampBaseCpp& ret = m_aEvents[idx];
+
+        if (bForceRecordTime) {
+            ret.setStartTime(uiTimeStamp_resolved_ms);
+            setLastEventEndTime(uiTimeStamp_resolved_ms);
+        }
+
+        if (uiDur_resolved_ms > 0) {
+            ret.setStartTime(uiTimeStamp_resolved_ms);
+            ret.setDuration(uiDur_resolved_ms);
+            //m_uiLastEventEndTime_10ms = uiTimeStamp_10ms + uiDur_10ms;
+
+            setLastEventEndTime(uiTimeStamp_resolved_ms + uiDur_resolved_ms);
+
+        }
+        else {
+        }
+
+
+        return ret;
+    };
+
+    void setLastEventEndTime(uint32 uiTimeStamp_resolved_ms)
+    {
+        MY_VERIFY(MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(uiTimeStamp_resolved_ms));
+        m_uiLastEventEndTime_data_unit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(uiTimeStamp_resolved_ms);
+    }
+
+    //unit is ms, resolved
+    uint32 getLastEventEndTime() const
+    {
+        return MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(m_uiLastEventEndTime_data_unit);
+    };
+
+        UPROPERTY()
+    uint32 m_uiLastEventEndTime_data_unit;

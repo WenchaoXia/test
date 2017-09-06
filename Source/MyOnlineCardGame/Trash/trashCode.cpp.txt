@@ -104,3 +104,93 @@ void UMyMJGameCoreObjFullCpp::testLocalInit()
 			WroteSomething |= Channel->ReplicateSubobject(const_cast<UAttributeSet*>(Set), *Bunch, *RepFlags);
 		}
 	}
+
+
+
+    
+void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTime_resolved_ms)
+{
+    bool bIsFull = false;
+    int32 l = m_cEventsApplyingAndApplied.getCount(&bIsFull);
+    if (l <= 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cEventsApplyingAndApplied have zero lenth: %d, not supposed to happen."), l);
+        MY_VERIFY(false);
+        return;
+    }
+
+    if (!bIsFull) {
+        return;
+    }
+
+    uint32 toApplyNum = l / 2;
+    MY_VERIFY(toApplyNum > 0);
+
+    uint32 uiDeltaRecordTimeMaxCfg = MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(m_uiDeltaRecordTimeMaxCfg_data_unit);
+    uint32 uiTimeBase = m_cBase.getTime();
+
+    if (uiTimeBase > uiServerWorldTime_resolved_ms) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Time screwed! %d, %d."), uiTimeBase, uiServerWorldTime_resolved_ms);
+        MY_VERIFY(false);
+    }
+
+    bool bCatchUpUntilValidTimeStamp = uiTimeBase == 0;
+    bool bCatchUpToTime = false;
+    uint32 uiTimeCatchUpTo = uiTimeBase;
+
+    if (!bCatchUpUntilValidTimeStamp || bForceSquash) {
+        uint32 uiTimeRecorded = uiServerWorldTime_resolved_ms - uiTimeBase;
+        if (uiTimeRecorded > uiDeltaRecordTimeMaxCfg || bForceSquash) {
+            //we need to squash to catch up
+            uiTimeCatchUpTo += uiTimeRecorded / 2;
+            uiTimeCatchUpTo = MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(uiTimeCatchUpTo);
+            bCatchUpToTime = true;
+        }
+    }
+
+
+    int32 iEventApplied = 0;
+    if (bCatchUpUntilValidTimeStamp) {
+        for (int32 i = 0; i < l; i++) {
+            const FMyMJEventWithTimeStampBaseCpp& cEvent = m_cEventsApplyingAndApplied.getByIdx(i);
+            uint32 uiEndTime = cEvent.getEndTime();
+            if (uiEndTime > 0 && uiServerWorldTime_resolved_ms < uiEndTime) {
+                //valid time stamp, and endTime not passed, yet, it is not allowed to apply yet
+                break;
+            }
+
+            const FMyMJGamePusherResultCpp* pPusherResult = cEvent.getPusherResult(true);
+            m_cAccessor.applyPusherResult(*pPusherResult);
+            iEventApplied++;
+            if (uiEndTime > 0) {
+                m_cBase.setTime(uiEndTime);
+                break;
+            }
+        }
+    }
+    else if (bCatchUpToTime) {
+        MY_VERIFY(uiTimeCatchUpTo <= uiServerWorldTime_resolved_ms);
+
+        for (int32 i = 0; i < l; i++) {
+            const FMyMJEventWithTimeStampBaseCpp& cEvent = m_cEventsApplyingAndApplied.getByIdx(i);
+            uint32 uiEndTime = cEvent.getEndTime();
+            if (uiEndTime > 0 && uiTimeCatchUpTo < uiEndTime) {
+                //valid time stamp, and endTime not passed, yet, it is not allowed to apply yet
+                break;
+            }
+
+            const FMyMJGamePusherResultCpp* pPusherResult = cEvent.getPusherResult(true);
+            m_cAccessor.applyPusherResult(*pPusherResult);
+            iEventApplied++;
+            if (uiEndTime > 0) {
+                m_cBase.setTime(uiEndTime);
+            }
+        }
+    }
+
+    if (iEventApplied > 0) {
+        m_cEventsApplyingAndApplied.removeByIdx(0, iEventApplied);
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Squashed Data Sequence: bCatchUpUntilValidTimeStamp %d, bCatchUpToTime %d, %d -> %d."), bCatchUpUntilValidTimeStamp, bCatchUpToTime, l, m_cEventsApplyingAndApplied.getCount());
+    }
+
+    MY_VERIFY(m_cBase.getTime() > 0);
+};

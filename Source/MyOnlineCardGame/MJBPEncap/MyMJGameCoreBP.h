@@ -11,10 +11,11 @@
 //#include "UObject/NoExportTypes.h"
 
 //#include "Queue.h"
-#include "GameFramework/Actor.h"
-#include "UnrealNetwork.h"
+//#include "GameFramework/Actor.h"
+//#include "UnrealNetwork.h"
 
 #include "MyMJGameAttenderBP.h"
+#include "MyMJGameEventBase.h"
 
 #include "MJLocalCS/MyMJGameCoreLocalCS.h"
 
@@ -112,70 +113,6 @@ protected:
 
 };
 
-typedef class UMyMJCoreFullCpp UMyMJCoreFullCpp;
-
-DECLARE_MULTICAST_DELEGATE(FMJGamePusherUpdatedMultcastDelegate);
-//DECLARE_MULTICAST_DELEGATE_TwoParams(FMJGamePusherSegmentMultcastDelegate, int32, const FMyMJGamePusherPointersCpp&);
-DECLARE_MULTICAST_DELEGATE_OneParam(FMJGameCmdSegmentMultcastDelegate, const FMyMJGameCmdPointersCpp&);
-
-UCLASS()
-class MYONLINECARDGAME_API UMyMJPusherBufferCpp : public UObject
-{
-    GENERATED_BODY()
-
-public:
-
-    UMyMJPusherBufferCpp() : Super()
-    {
-        m_pConnectedCoreFull = NULL;
-    };
-
-    void trySyncDataFromCoreFull();
-
-    //holds the orignial pushers, which contains all info to restore and present the core game state
-    FMyMJGamePusherPointersCpp m_cPusherBuffer;
-
-    //if set, it means it will pull data from the core at runtime periodly, otherwise it works as save-load mode used for replay
-    UPROPERTY()
-    UMyMJCoreFullCpp *m_pConnectedCoreFull;
-
-    FMJGamePusherUpdatedMultcastDelegate m_cPusherUpdatedMultcastDelegate;
-};
-
-UCLASS()
-class MYONLINECARDGAME_API UMyMJIONodeCpp : public UObject
-{
-    GENERATED_BODY()
-
-public:
-
-    UMyMJIONodeCpp() : Super()
-    {
-        clearUp();
-    }
-
-    virtual ~UMyMJIONodeCpp()
-    {
-        clearUp();
-    }
-
-    void clearUp()
-    {
-        m_eRoleType = MyMJGameRoleTypeCpp::Max;
-    };
-
-    void onCmdUpdated(const FMyMJGameCmdPointersCpp &cSegment)
-    {
-        m_cCmdUpdatedDelegate.Broadcast(cSegment);
-    };
-
-    FMJGameCmdSegmentMultcastDelegate  m_cCmdUpdatedDelegate;
-
-    //only used when contacting with core full
-    UPROPERTY()
-    MyMJGameRoleTypeCpp m_eRoleType;
-};
-
 
 /*
 * this only exist on server, in network env
@@ -191,7 +128,7 @@ public:
     UMyMJCoreFullCpp() : Super() {
 
         m_iSeed2OverWrite = 0;
-        m_pPusherBuffer = NULL;
+        //m_pPusherBuffer = NULL;
         //m_apNextNodes.Reset();
         m_pCoreFullWithThread = NULL;
     };
@@ -216,15 +153,6 @@ public:
         return NULL;
     };
 
-    inline TArray<UMyMJIONodeCpp*>& getIONodes()
-    {
-        return m_apNextNodes;
-    };
-
-    inline UMyMJPusherBufferCpp *getpPusherBuffer()
-    {
-        return m_pPusherBuffer;
-    }
 
 protected:
     virtual void PostInitProperties() override;
@@ -237,17 +165,18 @@ protected:
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "seed overwrite"))
     int32 m_iSeed2OverWrite;
 
-    UPROPERTY()
-    UMyMJPusherBufferCpp *m_pPusherBuffer;
-
-    UPROPERTY()
-    TArray<UMyMJIONodeCpp*> m_apNextNodes;
-
-
     TSharedPtr<FMyMJGameCoreThreadControlCpp> m_pCoreFullWithThread;
     FTimerHandle m_cLoopTimerHandle;
 
 };
+
+//struct FMyMJGameEventArray : public FFastArraySerializer
+//USTRUCT()
+//struct FMyMJGameEventArray : public FFastArraySerializerItem
+//{
+    //GENERATED_USTRUCT_BODY()
+//};
+
 
 #define MY_EXPECTED_MJ_PAWN_NUM ((uint8)MyMJGameRoleTypeCpp::Max)
 
@@ -260,101 +189,68 @@ public:
 
     AMyMJCoreMirrorCpp() : Super()
     {
-        m_pPusherBuffer = NULL;
+        m_pCoreFull = NULL;
         m_iPusherApplyState = 0;
         m_iSeed2OverWrite = 0;
-        m_pCoreMirror = NULL;
+
     }
 
-    virtual UMyMJDataForMirrorModeCpp* getpMJData()
+    //virtual void PostInitProperties() override;
+    virtual void PostInitializeComponents() override;
+    virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+
+
+    UFUNCTION(BlueprintCallable, Category = "AMyMJCoreMirrorCpp")
+        void doTestChange()
     {
-        MY_VERIFY(0 && "You must override this");
-        return NULL;
+        if (m_pMJDataAll) {
+            m_pMJDataAll->doTestChange();
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMJDataStorage is NULL!"));
+        }
+
     };
 
-    /*
-    virtual TArray<AMyMJAttenderPawnBPCpp *>& getAttenderPawnsRef()
+    UFUNCTION(BlueprintCallable, Category = "AMyMJCoreMirrorCpp")
+        FString genDebugMsg()
     {
-        MY_VERIFY(0 && "You must override this");
-        return *(TArray<AMyMJAttenderPawnBPCpp *>*)NULL;
+        FString ret;
+        if (m_pMJDataAll) {
+            return m_pMJDataAll->genDebugMsg();
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMJDataStorage is NULL!"));
+            return ret;
+        }
+
     };
-    */
 
     UFUNCTION(BlueprintCallable)
     void connectToCoreFull(UMyMJCoreFullCpp *pCoreFull)
     {
-        //TArray<AMyMJAttenderPawnBPCpp *>& aAttenderPawns = getAttenderPawnsRef();
-
         MY_VERIFY(pCoreFull);
         MY_VERIFY(IsValid(pCoreFull));
 
-        /*
-        TArray<UMyMJIONodeCpp*> &apIONodes = pCoreFull->getIONodes();
-        int32 l0, l1;
-        l0 = apIONodes.Num();
-        l1 = aAttenderPawns.Num();
+        MY_VERIFY(checkLevelSetting());
 
-        if (l0 == (uint8)MyMJGameRoleTypeCpp::Max && l1 <= l0 ) {
-        }
-        else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("incorrect state when setup: IONodes %d, attenderPawns %d"), l0, l1);
-            MY_VERIFY(false);
-        }
-
-        for (int32 i = 0; i < l1; i++) {
-            aAttenderPawns[i]->setup(i, apIONodes[i]);
-        }
-
-        if (l1 > (uint8)MyMJGameRoleTypeCpp::Max) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("l1 is greater than expected, now %d, pls check!"), l1);
-        }
-        */
-
-        if (IsValid(m_pPusherBuffer)) {
-            m_pPusherBuffer->m_cPusherUpdatedMultcastDelegate.RemoveAll(this);
-            m_pPusherBuffer = NULL;
-        }
-
-        m_pPusherBuffer = pCoreFull->getpPusherBuffer();
-
-        m_pPusherBuffer->m_cPusherUpdatedMultcastDelegate.AddUObject(this, &AMyMJCoreMirrorCpp::loop);
+        m_pCoreFull = pCoreFull;
 
         //we have mutlicast delegate once setupped with IO Node to trigger action, but in first we may miss some, so set a timer to do loop action once
         UWorld *world = GetWorld();
 
         if (IsValid(world)) {
-            world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
-            world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &AMyMJCoreMirrorCpp::loop, ((float)MY_MJ_GAME_CORE_MIRROR_LOOP_TIME_MS) / (float)1000, false);
+            world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
+            world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJCoreMirrorCpp::toCoreFullLoop, ((float)MY_MJ_GAME_CORE_MIRROR_LOOP_TIME_MS) / (float)1000, true);
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
+            MY_VERIFY(false);
         }
 
     };
 
-
-    inline bool checkLevelSettings()
-    {
-        UMyMJDataForMirrorModeCpp* pMJData = getpMJData();
-
-        if (pMJData == NULL) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pMJData is NULL."));
-            return false;
-        }
-
-        //int32 l = pMJData->m_aRoleDataAttenders.Num();
-
-        //if (l != (uint8)MyMJGameRoleTypeCpp::Max) {
-            //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender datas only %d present."), l);
-            //return false;
-        //}
-
-        //Todo: check more about pawns
-
-        return true;
-    };
-
-    void loop();
+    void toCoreFullLoop();
 
     virtual bool getbHaltForGraphic() const
     {
@@ -377,27 +273,35 @@ public:
     };
 
 
+    bool checkLevelSetting()
+    {
+        return m_aAttenderPawns.Num() == 4;
+    };
 
-
-    //setttings:
-
-    //if not NULL< the instance have connected to a full core
-    UPROPERTY()
-    UMyMJPusherBufferCpp* m_pPusherBuffer;
+    //the level should prepare this data
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "attender pawns"))
+        TArray<AMyMJAttenderPawnBPCpp *> m_aAttenderPawns;
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "seed overwrite"))
     int32 m_iSeed2OverWrite;
 
 protected:
 
+    UFUNCTION()
+    void OnRep_MJDataAll();
+
     FMyMJGamePusherBaseCpp* tryCheckAndGetNextPusher();
 
+    //UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "data of storage"))
+    UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MJDataAll, meta = (DisplayName = "data of all roles"))
+        UMyMJDataAllCpp* m_pMJDataAll;
+
+    UPROPERTY()
+    UMyMJCoreFullCpp *m_pCoreFull;
 
     int32 m_iPusherApplyState; //0 init, 1 pre called, 2 post called
 
-    TSharedPtr<FMyMJGameCoreCpp> m_pCoreMirror;
-
-    FTimerHandle m_cLoopTimerHandle;
+    FTimerHandle m_cToCoreFullLoopTimerHandle;
 
 };
 
@@ -412,28 +316,11 @@ public:
 
     AMyMJCoreBaseForBpCpp() : Super()
     {
-        m_pMJData = NULL;
         //m_aAttenderPawns.Reset();
         m_bHaltForGraphic = false;
     }
 
 
-    //virtual void PostInitProperties() override;
-    virtual void PostInitializeComponents() override;
-
-    virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
-
-    virtual UMyMJDataForMirrorModeCpp* getpMJData() override
-    {
-        return m_pMJData;
-    };
-
-    /*
-    virtual TArray<AMyMJAttenderPawnBPCpp *>& getAttenderPawnsRef() override
-    {
-        return m_aAttenderPawns;
-    };
-    */
 
     virtual bool getbHaltForGraphic() const override
     {
@@ -450,14 +337,10 @@ public:
     UFUNCTION(BlueprintImplementableEvent, BlueprintAuthorityOnly)
     bool postPusherApplyResetGame(const FMyMJGamePusherResetGameCpp &pusher);
 
+
+
 protected:
 
-    UPROPERTY(BlueprintReadWrite, Replicated, meta = (DisplayName = "mj data"))
-    UMyMJDataForMirrorModeCpp *m_pMJData;
-
-    //the level should prepare this data
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "attender pawns"))
-    TArray<AMyMJAttenderPawnBPCpp *> m_aAttenderPawns;
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "halt for graphic"))
     bool m_bHaltForGraphic;

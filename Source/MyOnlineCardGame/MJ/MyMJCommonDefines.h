@@ -70,9 +70,10 @@ UENUM()
 enum class MyMJGameStateCpp : uint8
 {
     Invalid = 0 UMETA(DisplayName = "Invalid"),
+    GameStart = 1 UMETA(DisplayName = "GameStart"), //just started
     GameEnd = 2 UMETA(DisplayName = "GameEnd"), //real end, calc which should happen in game, should have been done
 
-    CardsShuffled = 10 UMETA(DisplayName = "CardsShuffled"),
+    CardsWaitingForThrowDicesToDistributeCards = 10 UMETA(DisplayName = "CardsWaitingForThrowDicesToDistributeCards"),
     CardsWaitingForDistribution = 11 UMETA(DisplayName = "CardsWaitingForDistribution"),
     CardsDistributed = 12 UMETA(DisplayName = "CardsDistributed"),
 

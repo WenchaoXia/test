@@ -26,7 +26,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
 
     bool bForceActionGenTimeLeft2AutoChooseMsZero = (pCore->m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero) > 0;
 
-    if (eGameState == MyMJGameStateCpp::CardsShuffled) {
+    if (eGameState == MyMJGameStateCpp::CardsWaitingForThrowDicesToDistributeCards) {
         FMyMJGameActionThrowDicesCpp *pAction = new FMyMJGameActionThrowDicesCpp();
         pFillInPusher->m_cActionChoices.give(pAction);
         pAction->init(FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart, getIdx(), pCore->getResManagerRef().getRandomStreamRef(), bForceActionGenTimeLeft2AutoChooseMsZero);

@@ -1175,7 +1175,7 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
     pD->m_iActionGroupId = 0;
 
 
-    pD->m_eGameState = MyMJGameStateCpp::CardsShuffled;
+    pD->m_eGameState = MyMJGameStateCpp::GameStart;
 
     pD->m_iDiceNumberNowMask = 0;
     pD->m_cUntakenSlotInfo.reset();
@@ -1328,8 +1328,17 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(const FMyMJGamePusherResetGam
     m_cDataLogic.m_eActionLoopState = MyMJActionLoopStateCpp::WaitingToGenAction;
     m_cDataLogic.m_iMsLast = UMyMJUtilsLibrary::nowAsMsFromTick();
 
-    int32 uMask = genIdxAttenderStillInGameMaskOne(pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
-    m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, NULL, uMask, false, pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
-    resetForNewActionLoop();
+    //int32 uMask = genIdxAttenderStillInGameMaskOne(pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
+    //m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, NULL, uMask, false, pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
+    //resetForNewActionLoop();
 
+    //Warn: this assume the core drains out all pusher before gen next action
+    FMyMJGameActionStateUpdateCpp *pActionUpdate = new FMyMJGameActionStateUpdateCpp();
+    pActionUpdate->m_eStateNext = MyMJGameStateCpp::CardsWaitingForThrowDicesToDistributeCards;
+    pActionUpdate->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
+
+    m_pPusherIOFull->GivePusher(pActionUpdate, (void**)&pActionUpdate);
+
+    //FMyMJGamePusherCountUpdateCpp *pPusherCountUpdate = new FMyMJGamePusherCountUpdateCpp();
+    //m_pPusherIOFull->GivePusher(pPusherCountUpdate, (void**)&pPusherCountUpdate);
 }
