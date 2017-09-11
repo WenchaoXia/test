@@ -3,7 +3,34 @@
 #include "MyMJGamePushersIO.h"
 #include "MyMJGameAttender.h"
 #include "MyMJGameCore.h"
+#include "MyMJGameData.h"
 
+bool FMyMJGamePusherIOComponentFullCpp::GivePusherResult(FMyMJGamePusherResultCpp*& pPusherResult)
+{
+    MY_VERIFY(pPusherResult);
+    int32 iGameId = pPusherResult->getGameId();
+    int32 iPusherIdLast = pPusherResult->getPusherIdLast();
+
+    if (m_iEnqueuePusherCount == (0 + 1)) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("a base pusher result detected: [%d:%d]."), iGameId, iPusherIdLast);
+        MY_VERIFY(iPusherIdLast == 0);
+    }
+
+    if (m_pQueueRemote)
+    {
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("pusher result enqueued: [%d:%d]."), iGameId, iPusherIdLast);
+        m_pQueueRemote->Enqueue(pPusherResult);
+        pPusherResult = NULL;
+        return true;
+    }
+    else {
+
+        delete(pPusherResult);
+        pPusherResult = NULL;
+
+        return false;
+    }
+};
 
 TSharedPtr<FMyMJGamePusherBaseCpp> FMyMJGamePusherIOComponentFullCpp::tryPullPusherFromLocal()
 {
@@ -448,7 +475,10 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iActionGroupId, int32 iTimePass
     }
 
     //if (pusherGivenCount > 0) {
-    if (true) {
+    MY_VERIFY(m_pCore.IsValid());
+    bool bInGame = m_pCore.Pin()->getCoreDataRefConst().isInGameState();
+
+    if (bInGame) {
         FMyMJGamePusherCountUpdateCpp *pPusherCountUpdate = new FMyMJGamePusherCountUpdateCpp();
         pPusherCountUpdate->m_bActionGroupIncrease = true;
         m_pPusherIO->GivePusher(pPusherCountUpdate, (void **)(&pPusherCountUpdate));

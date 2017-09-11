@@ -70,14 +70,15 @@ UENUM()
 enum class MyMJGameStateCpp : uint8
 {
     Invalid = 0 UMETA(DisplayName = "Invalid"),
-    GameStart = 1 UMETA(DisplayName = "GameStart"), //just started
-    GameEnd = 2 UMETA(DisplayName = "GameEnd"), //real end, calc which should happen in game, should have been done
+    GameReseted = 1 UMETA(DisplayName = "GameReseted"), //just started
+    GameStarted = 2 UMETA(DisplayName = "GameStarted"), //just started
+    GameEnd = 3 UMETA(DisplayName = "GameEnd"), //real end, calc which should happen in game, should have been done
 
     CardsWaitingForThrowDicesToDistributeCards = 10 UMETA(DisplayName = "CardsWaitingForThrowDicesToDistributeCards"),
     CardsWaitingForDistribution = 11 UMETA(DisplayName = "CardsWaitingForDistribution"),
     CardsDistributed = 12 UMETA(DisplayName = "CardsDistributed"),
 
-    JustStarted = 15 UMETA(DisplayName = "JustStarted"), //Just started game, zhuang attender need to take action, Note: for simple subclass core must use action update state to enter just started state
+    JustStarted = 15 UMETA(DisplayName = "JustStarted"), //Just started game in nornal process after card dist and special hu, zhuang attender need to take action, Note: for simple subclass core must use action update state to enter just started state
     JustHu = 20      UMETA(DisplayName = "JustHu"),
 
     WaitingForTakeCard = 100 UMETA(DisplayName = "WaitingForTakeCard"), //normal take card, not in gang path
@@ -105,7 +106,7 @@ enum class MyMJActionLoopStateCpp : uint8
 };
 
 
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJGameCardPackCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -133,7 +134,7 @@ public:
     bool m_bHaveZhongCards;
 };
 
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJGameTrivialCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -167,7 +168,7 @@ public:
 };
 
 //For simple, define sub rule type cfg here
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJGameSubGuoBiaoCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -188,7 +189,7 @@ public:
     bool m_bReqMenQingForZuHeLong;
 };
 
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJGameSubLocalCSCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -337,7 +338,7 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "trivial cfg"))
     FMyMJGameTrivialCfgCpp m_cTrivialCfg;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hu cfg"))
+    UPROPERTY(meta = (DisplayName = "hu cfg"))
     FMyMJHuCfgCpp m_cHuCfg;
 
     //sub cfg, all optional, determined by @m_eRuleType
@@ -348,7 +349,7 @@ public:
     TArray<FMyMJGameSubLocalCSCfgCpp> m_aSubLocalCSCfg;
 };
 
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJGameRunDataCpp
 {
     GENERATED_USTRUCT_BODY()

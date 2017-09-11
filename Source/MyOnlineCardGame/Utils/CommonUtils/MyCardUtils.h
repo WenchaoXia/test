@@ -44,7 +44,7 @@ inline FString myGetFileNameFromFullPath(FString inPath)
        //     if (!(cond)) {UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false);}
 
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyIdValuePair
 {
     GENERATED_USTRUCT_BODY()
@@ -149,7 +149,7 @@ struct TIsTriviallyCopyConstructible<FMyIdValuePair>
 };
 */
 
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyIdCollectionCpp
 {
     GENERATED_USTRUCT_BODY()

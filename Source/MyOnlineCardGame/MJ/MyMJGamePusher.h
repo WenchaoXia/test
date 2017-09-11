@@ -140,11 +140,11 @@ public:
 protected:
 
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "type"))
+    UPROPERTY( meta = (DisplayName = "type"))
     MyMJGamePusherTypeCpp m_eType;
 
     //pusher id, reset game is always ID 0
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "id"))
+    UPROPERTY( meta = (DisplayName = "id"))
     int32 m_iId;
 
 };
@@ -387,7 +387,7 @@ protected:
     //UPROPERTY()
     //int32 m_iCount; //also use it to trigger serilaize
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "test Count"))
+    UPROPERTY( meta = (DisplayName = "test Count"))
     int32 m_iTestCount; //also use it to trigger serilaize
 
     UPROPERTY()
@@ -461,21 +461,21 @@ public:
 public:
 
     //Warn, this struct used FMyMJGamePusherPointersCpp, so use custom code for deep copy instead of operator =, so you need always modify the code when when add memebers
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "action Choices"))
+    UPROPERTY( meta = (DisplayName = "action Choices"))
     FMyMJGamePusherPointersCpp m_cActionChoices;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "action Group Id"))
+    UPROPERTY( meta = (DisplayName = "action Group Id"))
     int32 m_iActionGroupId;
 
 protected:
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "idx Attender"))
+    UPROPERTY( meta = (DisplayName = "idx Attender"))
     int32 m_iIdxAttender;
 
-    //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "test a"))
+    //UPROPERTY( meta = (DisplayName = "test a"))
     //TWeakPtr<FMyMJGamePusherBaseCpp> m_pCore;
     //FMyMJGamePusherBaseCpp
-    //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "test a"))
+    //UPROPERTY( meta = (DisplayName = "test a"))
     //TArray<TSharedPtr<FMyMJGamePusherBaseCpp >> m_aS;
 };
 
@@ -533,19 +533,19 @@ public:
 
 public:
     // < 0 means unknown, the system have made it mask
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "selection"))
+    UPROPERTY( meta = (DisplayName = "selection"))
     int32 m_iSelection;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "sub Selections"))
+    UPROPERTY( meta = (DisplayName = "sub Selections"))
     TArray<int32> m_aSubSelections;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "action Group Id"))
+    UPROPERTY( meta = (DisplayName = "action Group Id"))
     int32 m_iActionGroupId;
 
 
 protected:
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "idx Attender"))
+    UPROPERTY( meta = (DisplayName = "idx Attender"))
     int32 m_iIdxAttender;
 };
 
@@ -907,7 +907,7 @@ public:
     UPROPERTY(BlueprintReadOnly)
     FMyMJWeaveCpp m_cWeave;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0", Bitmask, BitmaskEnum = "EMyMJGameActionUnfiedMask0"))
+    UPROPERTY( meta = (DisplayName = "mask0", Bitmask, BitmaskEnum = "EMyMJGameActionUnfiedMask0"))
     int32 m_iMask0;
 };
 
@@ -1052,7 +1052,7 @@ public:
         }
     };
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0", Bitmask, BitmaskEnum = "EMyMJGameActionUnfiedMask0"))
+    UPROPERTY( meta = (DisplayName = "mask0", Bitmask, BitmaskEnum = "EMyMJGameActionUnfiedMask0"))
     int32 m_iMask0;
 };
 

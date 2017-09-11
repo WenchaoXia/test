@@ -43,17 +43,17 @@ public:
     UFUNCTION(BlueprintCallable)
     void testMulticastRPCFunction0(float v1);
 
-    UFUNCTION(BlueprintCallable)
-    void genPusherPointers(FMyMJGamePusherPointersCpp &pusherPointers);
+    //UFUNCTION(BlueprintCallable)
+    //void genPusherPointers(FMyMJGamePusherPointersCpp &pusherPointers);
 
-    UFUNCTION(BlueprintCallable, Client, unreliable)
-    void testRPCWithPusherPointers(const FMyMJGamePusherPointersCpp &pusherPointers);
+    //UFUNCTION(BlueprintCallable, Client, unreliable)
+    //void testRPCWithPusherPointers(const FMyMJGamePusherPointersCpp &pusherPointers);
 
-    UFUNCTION(BlueprintCallable, Client, unreliable)
-    void testRPCWithPusherNotify(const FMyMJGamePusherMadeChoiceNotifyCpp &pusherNotify);
+    //UFUNCTION(BlueprintCallable, Client, unreliable)
+    //void testRPCWithPusherNotify(const FMyMJGamePusherMadeChoiceNotifyCpp &pusherNotify);
 
-    UFUNCTION(BlueprintCallable, Client, unreliable)
-    void testRPCWithPusherFillIn(const FMyMJGamePusherFillInActionChoicesCpp &pusherFillIn);
+    //UFUNCTION(BlueprintCallable, Client, unreliable)
+    //void testRPCWithPusherFillIn(const FMyMJGamePusherFillInActionChoicesCpp &pusherFillIn);
 
 protected:
 
@@ -136,6 +136,9 @@ public:
     UFUNCTION(BlueprintCallable)
     static int32 getEngineNetMode(AActor *actor);
 
+
+    static bool haveServerLogicLayer(AActor *actor);
+    static bool haveClientVisualLayer(AActor *actor);
 
     //float GetRealTimeSeconds() const;
 };

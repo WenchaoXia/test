@@ -16,7 +16,7 @@
 
 //Todo: use UE4's generated delta instead of my own
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJGameUntakenSlotSubSegmentInfoCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -46,7 +46,7 @@ public:
 
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJGameUntakenSlotInfoCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -262,15 +262,15 @@ public:
     MyMJGameRuleTypeCpp m_eRuleType;
     //MyMJGameElemWorkModeCpp m_eWorkMode;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Action Loop State"))
+    UPROPERTY( meta = (DisplayName = "Action Loop State"))
     MyMJActionLoopStateCpp m_eActionLoopState;
 
     //used to calculate how many cards left possible hu
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Cards Showed Out to All"))
+    UPROPERTY( meta = (DisplayName = "Cards Showed Out to All"))
         FMyMJValueIdMapCpp m_cHelperShowedOut2AllCards;
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJCoreDataHelperCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -332,7 +332,7 @@ public:
 
 //Both used for logic and visualize
 //What the fuck is, UE3 network always send all structor data in one packet even some members in it haven't change, thanks to UE4 this changed, and if Atomic specified, it goes UE3's way
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJCoreDataPublicCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -397,7 +397,7 @@ public:
         int32 m_iGameId;
 
     // >= 0 when valid, the last pusher id we got
-    UPROPERTY(BlueprintReadWrite, NotReplicated, meta = (DisplayName = "Pusher Id Last"))
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Pusher Id Last"))
         int32 m_iPusherIdLast;
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Action Group Id"))
@@ -419,7 +419,7 @@ public:
 };
 
 //if not specified in member name, they are the target state
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJCoreDataDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -448,6 +448,8 @@ public:
     //used for bit bool and bit tip updating as delta
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
     int32 m_iMask0;
+
+
 };
 
 
@@ -482,14 +484,14 @@ public:
     //can be cast to MyMJGameRoleTypeCpp
     int32 m_iIdx;
 
-    UPROPERTY(BlueprintReadWrite, NotReplicated, meta = (DisplayName = "turn"))
+    UPROPERTY( NotReplicated, meta = (DisplayName = "turn"))
         int32 m_iTurn;
 
     //not need to duplicate, it is only used in core logic, not graphic
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "hand card Map"))
+    UPROPERTY( meta = (DisplayName = "hand card Map"))
         FMyMJValueIdMapCpp m_cHandCards;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "action containor for choices"))
+    UPROPERTY( meta = (DisplayName = "action containor for choices"))
         FMyMJGameActionContainorCpp m_cActionContainor;
 
 };
@@ -504,7 +506,7 @@ public:
 #define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateGangYaoedLocalCS  (1 << 17)
 
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJRoleDataAttenderPublicCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -569,7 +571,7 @@ public:
     int32 m_iMask0;
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJRoleDataAttenderPublicDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -632,7 +634,7 @@ public:
 };
 
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJRoleDataAttenderPrivateDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -656,7 +658,7 @@ public:
     int32 m_iMask0;
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJRoleDataPrivateCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -681,7 +683,7 @@ public:
 #define MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_One(idxAttender)  (1 << idxAttender)
 
 //this is mutable for different role of seeing the game, some role may be even empty
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJRoleDataPrivateDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -713,7 +715,7 @@ public:
 
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJRoleDataAttenderDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -762,13 +764,18 @@ public:
 
 protected:
 
+    UPROPERTY()
     FMyMJRoleDataAttenderPublicCpp  m_cDataAttenderPublic;
+    
+    UPROPERTY()
     FMyMJRoleDataAttenderPrivateCpp m_cDataAttenderPrivate;
+    
+    UPROPERTY()
     FMyMJRoleDataPrivateCpp         m_cDataPrivate;
 };
 
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJDataDeltaCpp : public FMyMJGamePusherBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -781,6 +788,21 @@ public:
         m_iGameId = -1;
         //m_uiStateServerWorldTimeStamp_10ms = 0;
         //m_uiTimeWaitForAnimation_10Ms = 0;
+    };
+
+    virtual FString genDebugString() const
+    {
+        FString ret = Super::genDebugString();
+
+        if (m_aCoreData.Num() > 0) {
+            //Todo:
+            //if (m_aCoreData[0].m_iMask0) {
+
+            //}
+        }
+
+        return ret;
+        //return FString::Printf(TEXT("%s, %d."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)m_eType), m_iId);
     };
 
     inline
@@ -796,6 +818,8 @@ public:
     void copyWithRoleFromSysKeeperRole(MyMJGameRoleTypeCpp eTargetRole, FMyMJDataDeltaCpp& cTargetDelta) const
     {
         MY_VERIFY(eTargetRole != MyMJGameRoleTypeCpp::SysKeeper)
+
+        *(StaticCast<FMyMJGamePusherBaseCpp *>(&cTargetDelta)) = *this;
 
         cTargetDelta.m_aCoreData = m_aCoreData;
         cTargetDelta.m_aRoleDataAttender = m_aRoleDataAttender;
@@ -814,10 +838,13 @@ public:
 
         l = cTargetDelta.m_aRoleDataPrivate.Num();
         MY_VERIFY(l <= 1);
-        for (int32 i = 0; i < l; i++) {
-            bool bShouldKeepInfo = (cTargetDelta.m_aRoleDataPrivate[i].m_iRoleMaskForDataPrivateClone & (uint8)eTargetRole) > 0;
-            if (!bShouldKeepInfo) {
-                cTargetDelta.m_aRoleDataPrivate[i].reset();
+        if (l > 0) {
+            bool bShouldKeepInfo = (cTargetDelta.m_aRoleDataPrivate[0].m_iRoleMaskForDataPrivateClone & (uint8)eTargetRole) > 0;
+            if (bShouldKeepInfo) {
+                cTargetDelta.m_aRoleDataPrivate[0].m_eRoleType = eTargetRole;
+            }
+            else {
+                cTargetDelta.m_aRoleDataPrivate.Reset();
             }
         }
     };
@@ -847,7 +874,7 @@ public:
 
 #define RoleDataAttenderNum (4)
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJDataStructCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1086,6 +1113,32 @@ public:
         return ret;
     };
 
+    bool isGameEndDelta() const
+    {
+        if (m_aResultDelta.Num() > 0 && m_aResultDelta[0].getType() == MyMJGamePusherTypeCpp::ActionStateUpdate &&
+            m_aResultDelta[0].m_aCoreData.Num() > 0 && m_aResultDelta[0].m_aCoreData[0].m_eGameState == MyMJGameStateCpp::GameEnd)
+        {
+            return true;
+        }
+
+        if (m_aResultBase.Num() > 0 && m_aResultBase[0].getCoreDataRefConst().m_eGameState == MyMJGameStateCpp::GameEnd) {
+            MY_VERIFY(false);
+        }
+
+        return false;
+    }
+
+    FString genDebugMsg() const
+    {
+        if (m_aResultBase.Num() > 0) {
+            return TEXT("Base");
+        }
+        else {
+            MY_VERIFY(m_aResultDelta.Num() == 1)
+            return m_aResultDelta[0].genDebugString();
+        }
+    };
+
     UPROPERTY()
     TArray<FMyMJDataStructCpp> m_aResultBase;
 
@@ -1106,6 +1159,13 @@ struct FMyMJDataAccessorCpp
         m_pDataExtTempMode = NULL;
         m_eAccessRoleType = MyMJGameRoleTypeCpp::Observer;
         m_eWorkMode = MyMJGameElemWorkModeCpp::Invalid;
+
+        m_bShowApplyInfo = false;
+    };
+
+    void setShowApplyInfo(bool bShowApplyInfo)
+    {
+        m_bShowApplyInfo = bShowApplyInfo;
     };
 
     MyMJGameRoleTypeCpp getAccessRoleType() const
@@ -1122,10 +1182,11 @@ struct FMyMJDataAccessorCpp
         m_pDataFullMode = MakeShareable<FMyMJDataStructCpp>(new FMyMJDataStructCpp());
     };
 
-    void setupTempMode(FMyMJDataStructCpp* pDataExtTempMode)
+    void setupTempMode(FMyMJDataStructCpp* pDataExtTempMode, MyMJGameRoleTypeCpp eRoleType)
     {
-        MY_VERIFY(m_eWorkMode == MyMJGameElemWorkModeCpp::Invalid);
-        m_eAccessRoleType = MyMJGameRoleTypeCpp::SysKeeper;
+        //MY_VERIFY(m_eWorkMode == MyMJGameElemWorkModeCpp::Invalid); //it is OK to change multiple times
+        MY_VERIFY((uint8)eRoleType < (uint8)MyMJGameRoleTypeCpp::Max); //it is OK to change multiple times
+        m_eAccessRoleType = eRoleType;
         m_eWorkMode = MyMJGameElemWorkModeCpp::Temp;
         m_pDataExtTempMode = pDataExtTempMode;
     };
@@ -1325,6 +1386,11 @@ protected:
         return pDRolePriv->m_cCardValuePack;
     };
 
+    FString genDebugStateString() const
+    {
+        return FString::Printf(TEXT("[%s, %s]"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRoleTypeCpp"), (uint8)m_eAccessRoleType), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameElemWorkModeCpp"), (uint8)m_eWorkMode));
+    };
+
 
     void moveCardFromOldPosi(int32 id);
     //@idxAttender can < 0
@@ -1337,4 +1403,6 @@ protected:
 
     MyMJGameRoleTypeCpp m_eAccessRoleType;
     MyMJGameElemWorkModeCpp m_eWorkMode;
+
+    bool m_bShowApplyInfo;
 };

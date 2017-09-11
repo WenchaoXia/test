@@ -12,7 +12,7 @@
 
 #include "MyMJCardPack.generated.h"
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJCardInfoPackCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -85,7 +85,7 @@ public:
 
 protected:
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card infos"))
+    UPROPERTY(meta = (DisplayName = "card infos"))
     TArray<FMyMJCardInfoCpp> m_aCardInfos;
 
 };

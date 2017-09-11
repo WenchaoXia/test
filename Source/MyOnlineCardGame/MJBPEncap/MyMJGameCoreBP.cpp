@@ -8,6 +8,7 @@
 
 #include "TimerManager.h"
 
+#include "MJBPEncap/utils/MyMJBPUtils.h"
 #include "MJLocalCS/Utils/MyMJUtilsLocalCS.h"
 //#include "Kismet/KismetNodeHelperLibrary.h"
 
@@ -240,10 +241,14 @@ void AMyMJCoreMirrorCpp::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
-    if (HasAuthority()) {
+    bool bHaveLogic = UMyMJBPUtilsLibrary::haveServerLogicLayer(this);
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("PostInitializeComponents, bHaveLogic %d."), bHaveLogic);
+    if (bHaveLogic) {
         m_pMJDataAll = NewObject<UMyMJDataAllCpp>(this);
         m_pMJDataAll->RegisterComponent();
         m_pMJDataAll->SetIsReplicated(true);
+
+        //UMyMJBPUtilsLibrary::getEngineNetMode(this) == NM_DedicatedServer;
     }
 };
 
@@ -251,31 +256,18 @@ void AMyMJCoreMirrorCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > 
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(AMyMJCoreMirrorCpp, m_pMJDataAll);
+    DOREPLIFETIME(AMyMJCoreMirrorCpp, m_iTest0);
+
 };
 
-
-FMyMJGamePusherBaseCpp* AMyMJCoreMirrorCpp::tryCheckAndGetNextPusher()
+bool AMyMJCoreMirrorCpp::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
 {
-    /*
-    int32 iGameId = -1, iPusherIdLast = -1;
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("AMyMJCoreMirrorCpp::ReplicateSubobjects()."));
 
-    if (IsValid(m_pPusherBuffer)) {
+    bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+    return WroteSomething;
+};
 
-        if (!getbHaltForGraphic()) {
-            if (m_pCoreMirror.IsValid()) {
-                m_pCoreMirror->getGameIdAndPusherIdLast(&iGameId, &iPusherIdLast);
-            }
-            return m_pPusherBuffer->m_cPusherBuffer.helperTryPullPusher(iGameId, iPusherIdLast + 1).Get();
-        }
-        else {
-        }
-    }
-    else {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pIONodeAsSys invalid!"));
-    }
-    */
-    return NULL;
-}
 
 void AMyMJCoreMirrorCpp::toCoreFullLoop()
 {
@@ -289,7 +281,7 @@ void AMyMJCoreMirrorCpp::toCoreFullLoop()
         MY_VERIFY(false);
     }
 
-    float timeNow = world->GetRealTimeSeconds();
+    float timeNow = world->GetTimeSeconds();
     uint32 timeNowMs = timeNow * 1000;
     timeNowMs = MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(timeNowMs);
 
@@ -327,68 +319,184 @@ void AMyMJCoreMirrorCpp::toCoreFullLoop()
     }
 }
 
-void AMyMJCoreMirrorCpp::OnRep_MJDataAll()
+void AMyMJCoreBaseForBpCpp::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+
+    bool bHaveVisual = UMyMJBPUtilsLibrary::haveClientVisualLayer(this);
+    if (bHaveVisual) {
+        m_pDataHistoryBuffer = NewObject<UMyMJDataSequencePerRoleCpp>(this);
+        //m_pDataHistoryBuffer->resizeEvents(64);
+
+        UWorld *world = GetWorld();
+
+        if (IsValid(world)) {
+            world->GetTimerManager().ClearTimer(m_cForVisualLoopTimerHandle);
+            //world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, ((float)MY_MJ_GAME_CORE_MIRROR_LOOP_TIME_MS) / (float)1000, true);
+            world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, 5, true);
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid, this is only valid for default object."));
+        }
+    }
+};
+
+bool AMyMJCoreBaseForBpCpp::tryAppendData2Buffer()
+{
+    MY_VERIFY(IsValid(m_pDataHistoryBuffer));
+
+    if (!IsValid(m_pMJDataAll)) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("m_pMJDataAll is still null"));
+        return false;
+    }
+
+    UMyMJDataSequencePerRoleCpp* pData = m_pMJDataAll->getDataByRoleType(m_pDataHistoryBuffer->m_eRole);
+    if (!IsValid(pData)) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("data is still null, role %d."), (uint8)m_pDataHistoryBuffer->m_eRole);
+        return false;
+    }
+
+    return m_pDataHistoryBuffer->mergeDataFromOther(*pData);
+};
+
+void AMyMJCoreBaseForBpCpp::forVisualLoop()
+{
+    tryAppendData2Buffer();
+
+    UWorld* world = GetWorld();
+    if (!IsValid(world)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world of core is not valid!"));
+        return;
+    }
+
+    uint32 clientTimeNow_ms = world->GetTimeSeconds() * 1000;
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("forVisualLoop."));
+    if (m_eVisualMode == MyMJCoreBaseForBpVisualModeCpp::Normal) {
+        forVisualLoopModeNormal(clientTimeNow_ms);
+    }
+    else if (m_eVisualMode == MyMJCoreBaseForBpVisualModeCpp::CatchUp) {
+        forVisualLoopModeCatchUp(clientTimeNow_ms);
+    }
+
+    m_uiLastVisualLoopClientTimeMs = clientTimeNow_ms;
+
+};
+
+void AMyMJCoreBaseForBpCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
 {
 
-}
+    uint32 clientTimeNow_data_unit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(clientTimeNow_ms);
 
-bool AMyMJCoreBaseForBpCpp::prePusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher)
+    //if you want to replay events that have passed, slow/faster the clock is not valid since it only affects the events in future, the only way is time revert. 
+
+    //MY_VERIFY(m_cDataNow.m_aEventApplying.Num() <= 0);
+    //MY_VERIFY(IsValid(m_pMJDataAll));
+
+    UMyMJDataSequencePerRoleCpp* pBuffer = m_pDataHistoryBuffer;
+    MY_VERIFY(IsValid(pBuffer));
+
+    //we only care about deltas, which can calculate out all info
+
+    while (pBuffer->getEventCount() > 0) {
+
+        int32 iGameIdNow = m_cDataNow.getGameIdLast();
+        int32 iPusherIdNow = m_cDataNow.getPusherIdLast();
+
+        uint32 uiServerTimeNowCalced_ms = 0;
+        bool bHaveTimeBond = m_cDataNow.m_cTimeBond.haveBond();
+        if (bHaveTimeBond) {
+            uiServerTimeNowCalced_ms = MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(m_cDataNow.m_cTimeBond.getCalculatedServerTime_data_unit(clientTimeNow_data_unit));
+        }
+
+        if (bHaveTimeBond && !m_cDataNow.isReadyToGiveNextPusherResult(uiServerTimeNowCalced_ms))
+        {
+            //previous not ended
+            break;
+        }
+
+        const FMyMJEventWithTimeStampBaseCpp& cEvent = pBuffer->peekEventRefAt(0);
+        uint32 uiEventStartTime = cEvent.getStartTime();
+
+        if (bHaveTimeBond && uiEventStartTime > 0 && uiEventStartTime > uiServerTimeNowCalced_ms) {
+            //time not reached yet
+
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time not reached, but server should have time line smoothed, not supposed to happen."));
+            break;
+        };
+
+        bool bIsGameEndOrNotStatedNow = m_cDataNow.isGameEndOrNotStarted();
+        bool bCanAppend = cEvent.canBeAppendedToPrev(iGameIdNow, iPusherIdNow, bIsGameEndOrNotStatedNow);
+
+        if (bCanAppend) {
+            m_cDataNow.applyEvent(cEvent, FMyMJDataAtOneMomentCpp_eventApplyWay_Normal);
+            if (cEvent.getDuration() > 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("event applied with dur: %s."), *cEvent.genDebugMsg());
+                onEventAppliedWithDur(cEvent);
+            }
+
+            if (uiEventStartTime > 0) { 
+                uint32 serverTimeNow_data_unit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(uiEventStartTime);
+                if (!bHaveTimeBond) {
+                    //we must form a bond, tell what time we present
+                    m_cDataNow.m_cTimeBond.rebondTime(serverTimeNow_data_unit, clientTimeNow_data_unit);
+                }
+                else {
+                    //should we update
+                    if (uiEventStartTime < uiServerTimeNowCalced_ms) {
+                        //we are reverting time, for real time game, we shuld check if current state is correct and revert some actor to it's base time point
+                        //two choice: let this action fast played, or revert and play normal
+                        //turn based game, 2nd is better, revert
+                        //note:: info actor's time affect many other actor, so for simple operate the global time for simple
+                        m_cDataNow.m_cTimeBond.rebondTime(serverTimeNow_data_unit, clientTimeNow_data_unit);
+                        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("time rebonded $d / %d."), serverTimeNow_data_unit, clientTimeNow_data_unit);
+                    }
+                    else if (uiEventStartTime == uiServerTimeNowCalced_ms) {
+                        //good, nothing to be done
+                    }
+                    else {
+                        //never happen
+                    }
+                }
+            }
+
+            pBuffer->squashEventsToBase(1);
+
+        }
+        else {
+            changeVisualMode(MyMJCoreBaseForBpVisualModeCpp::CatchUp);
+            m_cDataNow.m_cTimeBond.clearBond();
+            break;
+        }
+
+
+    }
+};
+
+void AMyMJCoreBaseForBpCpp::forVisualLoopModeCatchUp(uint32 clientTimeNow_ms)
 {
-    return false;
-}
+    int32 iGameIdNow = m_cDataNow.getGameIdLast();
+    int32 iPusherIdNow = m_cDataNow.getPusherIdLast();
 
-bool AMyMJCoreBaseForBpCpp::postPusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher)
-{
-    //let's filter out important pusher and notify blueprint
-    MyMJGamePusherTypeCpp ePusherType = pPusher->getType();
-    bool ret = false;
+    //MY_VERIFY(m_cDataNow.m_aEventApplying.Num() <= 0);
+    //MY_VERIFY(IsValid(m_pMJDataAll));
 
+    UMyMJDataSequencePerRoleCpp* pBuffer = m_pDataHistoryBuffer;
+    MY_VERIFY(IsValid(pBuffer));
 
-    if (ePusherType == MyMJGamePusherTypeCpp::PusherFillInActionChoices) {
-        FMyMJGamePusherFillInActionChoicesCpp *pPusherFillInActionChoices = StaticCast<FMyMJGamePusherFillInActionChoicesCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::PusherMadeChoiceNotify) {
-        FMyMJGamePusherMadeChoiceNotifyCpp *pPusherMadeChoiceNotify = StaticCast<FMyMJGamePusherMadeChoiceNotifyCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::PusherResetGame) {
+    //we only care about deltas, which can calculate out all info
 
-        //reflect data
-       // m_cCoreDataDirect.m_iCardNumCanBeTakenNormally = m_pCoreMirror->getUntakenSlotInfoRef().getCardNumCanBeTakenNormally();
-        //m_cCoreDataDirect.m_aUntakenCardStacks = m_pCoreMirror->getUntakenCardStacksRef();
-        //m_cCoreDataDirect.m_cGameCfg = *m_pCoreMirror->getpGameCfg();
-        FMyMJGamePusherResetGameCpp *pPusherResetGame = StaticCast<FMyMJGamePusherResetGameCpp *>(pPusher);
-        ret = postPusherApplyResetGame(*pPusherResetGame);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::PusherUpdateTing) {
-        FMyMJGamePusherUpdateTingCpp *pPusherUpdateTing = StaticCast<FMyMJGamePusherUpdateTingCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionNoAct) {
-        FMyMJGameActionNoActCpp *pActionNoAct = StaticCast<FMyMJGameActionNoActCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionThrowDices) {
-        FMyMJGameActionThrowDicesCpp *pActionThrowDices = StaticCast<FMyMJGameActionThrowDicesCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart) {
-        FMyMJGameActionDistCardAtStartCpp *pActionDistCardAtStart = StaticCast<FMyMJGameActionDistCardAtStartCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionTakeCards) {
-        FMyMJGameActionTakeCardsCpp *pActionTakeCards = StaticCast<FMyMJGameActionTakeCardsCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
-        FMyMJGameActionGiveOutCardsCpp *pActionGiveOutCards = StaticCast<FMyMJGameActionGiveOutCardsCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave) {
-        FMyMJGameActionWeaveCpp *pActionWeave = StaticCast<FMyMJGameActionWeaveCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionHu) {
-        FMyMJGameActionHuCpp *pActionHu = StaticCast<FMyMJGameActionHuCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionHuBornLocalCS) {
-        FMyMJGameActionHuBornLocalCSCpp *pActionHuBornLocalCS = StaticCast<FMyMJGameActionHuBornLocalCSCpp *>(pPusher);
-    }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionZhaNiaoLocalCS) {
-        FMyMJGameActionZhaNiaoLocalCSCpp *pActionZhaNiaoLocalCS = StaticCast<FMyMJGameActionZhaNiaoLocalCSCpp *>(pPusher);
+    int32 l = pBuffer->getEventCount();
+
+    int32 iPusherToSquash = l - 1;
+    int32 iPusherToSquashMax = 30;
+    iPusherToSquash = iPusherToSquash < iPusherToSquashMax ? iPusherToSquash : iPusherToSquashMax;
+    if (iPusherToSquash <= 0) {
+        m_cDataNow.resetWithBase(pBuffer->getBase());
+        changeVisualMode(MyMJCoreBaseForBpVisualModeCpp::Normal);
+        return;
     }
 
-    return ret;
-}
+    pBuffer->squashEventsToBase(iPusherToSquash);
+
+};

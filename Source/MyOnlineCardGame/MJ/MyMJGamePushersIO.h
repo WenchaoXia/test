@@ -122,23 +122,8 @@ public:
     };
 
     //@pPusherResult must be allocated on heap, and ownership will be taken
-    bool GivePusherResult(FMyMJGamePusherResultCpp*& pPusherResult)
-    {
-        MY_VERIFY(pPusherResult);
+    bool GivePusherResult(FMyMJGamePusherResultCpp*& pPusherResult);
 
-        if (m_pQueueRemote)
-        {
-            m_pQueueRemote->Enqueue(pPusherResult);
-            pPusherResult = NULL;
-            return true;
-        }
-        else {
-            if (m_iEnqueuePusherCount == 0) {
-                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("remote queue is NULL, this is only legal in local test case!"));
-            }
-            return false;
-        }
-    };
 
 protected:
 
@@ -477,7 +462,7 @@ protected:
     TWeakPtr<FMyMJGameCoreCpp> m_pCore;
 };
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FMyMJGameActionContainorForBPCpp
 {
     GENERATED_USTRUCT_BODY()

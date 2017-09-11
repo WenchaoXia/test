@@ -123,7 +123,7 @@ enum class MyMJCardSlotTypeCpp : uint8
 };
 
 //Todo, to support memset as init, use 0 as default for all to make it run faster
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJCardPosiCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -181,7 +181,7 @@ struct FMyMJCardPosiCpp
 
 };
 
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJCardInfoCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -240,7 +240,7 @@ struct FMyMJCardCpp : public FMyMJCardInfoCpp
 };
 
 
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJCardValuePackCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -592,7 +592,7 @@ protected:
 
 
 //Id should be unique always
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJWeaveCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -940,7 +940,7 @@ struct FMyMJHuCommonCfg
 };
 
 //Here we use int, to avoid mem allocation
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJHuScoreAttrCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1051,7 +1051,7 @@ public:
 };
 */
 
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJHuScoreResultBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1215,7 +1215,7 @@ protected:
     int32 m_iScorePerAttenderTotal;
 };
 
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJHuScoreResultFinalCpp : public FMyMJHuScoreResultBaseCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1234,12 +1234,12 @@ public:
 
     };
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id value trigger card"))
+    UPROPERTY(meta = (DisplayName = "id value trigger card"))
     FMyIdValuePair m_cIdValueTriggerCard;
 };
 
 //represent one action of hus
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJHuScoreResultFinalGroupCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1357,7 +1357,7 @@ public:
 };
 
 
-USTRUCT()
+USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJHuScoreResultTingGroupCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -1515,7 +1515,7 @@ public:
         return m_aHuScoreAttrs;
     };
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Hu Common Cfg"))
+    UPROPERTY(meta = (DisplayName = "Hu Common Cfg"))
     FMyMJHuCommonCfg m_cHuCommonCfg; //the common cfg
 
     //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Hu Card Types Cfg"))
@@ -1528,7 +1528,7 @@ protected:
     //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Hu Score Attrs Cfg"))
     //TArray<FMyMJHuScoreAttrCpp> m_aHuScoreAttrsCfg;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Hu Score Attrs"))
+    UPROPERTY(meta = (DisplayName = "Hu Score Attrs"))
     TArray<FMyMJHuScoreAttrCpp> m_aHuScoreAttrs; //always pointer to
 
     TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> m_mHuScoreAttrs;
@@ -1549,7 +1549,7 @@ struct FMyMJWeaveArrayCpp
     };
 
     /* the Weaves */
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Weave Array"))
+    UPROPERTY(meta = (DisplayName = "Weave Array"))
     TArray<FMyMJWeaveCpp> m_aWeaves;
 };
 
@@ -1777,6 +1777,11 @@ public:
         reset();
     };
 
+    virtual ~FMyMJCardParseResultSimpleCpp()
+    {
+
+    };
+
     virtual void reset() {
         m_cCardCounts.reset();
         m_mWeaveCounts.Empty();
@@ -1819,6 +1824,11 @@ struct FMyMJCardParseResultCpp : public FMyMJCardParseResultSimpleCpp
 
     FMyMJCardParseResultCpp() : Super() {
         //reset is called in parent
+    };
+
+    virtual ~FMyMJCardParseResultCpp()
+    {
+
     };
 
     virtual void reset() override {

@@ -111,7 +111,7 @@ void UMyMJGameCoreObjFullCpp::testLocalInit()
 void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTime_resolved_ms)
 {
     bool bIsFull = false;
-    int32 l = m_cEventsApplyingAndApplied.getCount(&bIsFull);
+    int32 l = m_pEventsApplyingAndApplied->getCount(&bIsFull);
     if (l <= 0) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cEventsApplyingAndApplied have zero lenth: %d, not supposed to happen."), l);
         MY_VERIFY(false);
@@ -151,7 +151,7 @@ void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTim
     int32 iEventApplied = 0;
     if (bCatchUpUntilValidTimeStamp) {
         for (int32 i = 0; i < l; i++) {
-            const FMyMJEventWithTimeStampBaseCpp& cEvent = m_cEventsApplyingAndApplied.getByIdx(i);
+            const FMyMJEventWithTimeStampBaseCpp& cEvent = m_pEventsApplyingAndApplied->getByIdx(i);
             uint32 uiEndTime = cEvent.getEndTime();
             if (uiEndTime > 0 && uiServerWorldTime_resolved_ms < uiEndTime) {
                 //valid time stamp, and endTime not passed, yet, it is not allowed to apply yet
@@ -171,7 +171,7 @@ void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTim
         MY_VERIFY(uiTimeCatchUpTo <= uiServerWorldTime_resolved_ms);
 
         for (int32 i = 0; i < l; i++) {
-            const FMyMJEventWithTimeStampBaseCpp& cEvent = m_cEventsApplyingAndApplied.getByIdx(i);
+            const FMyMJEventWithTimeStampBaseCpp& cEvent = m_pEventsApplyingAndApplied->getByIdx(i);
             uint32 uiEndTime = cEvent.getEndTime();
             if (uiEndTime > 0 && uiTimeCatchUpTo < uiEndTime) {
                 //valid time stamp, and endTime not passed, yet, it is not allowed to apply yet
@@ -188,8 +188,8 @@ void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTim
     }
 
     if (iEventApplied > 0) {
-        m_cEventsApplyingAndApplied.removeByIdx(0, iEventApplied);
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Squashed Data Sequence: bCatchUpUntilValidTimeStamp %d, bCatchUpToTime %d, %d -> %d."), bCatchUpUntilValidTimeStamp, bCatchUpToTime, l, m_cEventsApplyingAndApplied.getCount());
+        m_pEventsApplyingAndApplied->removeByIdx(0, iEventApplied);
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Squashed Data Sequence: bCatchUpUntilValidTimeStamp %d, bCatchUpToTime %d, %d -> %d."), bCatchUpUntilValidTimeStamp, bCatchUpToTime, l, m_pEventsApplyingAndApplied->getCount());
     }
 
     MY_VERIFY(m_cBase.getTime() > 0);

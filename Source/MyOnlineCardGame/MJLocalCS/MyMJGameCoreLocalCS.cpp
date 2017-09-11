@@ -893,7 +893,14 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
             //resetForNewLoop(NULL, NULL, actionStateUpdate.m_iAttenderMaskNext, actionStateUpdate.m_bAllowSamePriAction, actionStateUpdate.m_iIdxAttenderHavePriMax);
             m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, NULL, actionStateUpdate.m_iAttenderMaskNext, actionStateUpdate.m_bAllowSamePriAction, actionStateUpdate.m_iIdxAttenderHavePriMax);
 
-            if (actionStateUpdate.m_eStateNext == MyMJGameStateCpp::JustStarted) {
+            if (actionStateUpdate.m_eStateNext == MyMJGameStateCpp::GameStarted) {
+                FMyMJGameActionStateUpdateCpp *pActionUpdate = new FMyMJGameActionStateUpdateCpp();
+                pActionUpdate->m_eStateNext = MyMJGameStateCpp::CardsWaitingForThrowDicesToDistributeCards;
+                pActionUpdate->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(getCoreDataRefConst().m_cGameRunData.m_iIdxAttenderMenFeng);
+
+                m_pPusherIOFull->GivePusher(pActionUpdate, (void**)&pActionUpdate);
+            }
+            else if (actionStateUpdate.m_eStateNext == MyMJGameStateCpp::JustStarted) {
                 const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
                 int32 idxZhuang = coreDataSelf.m_cGameRunData.m_iIdxAttenderMenFeng;
                 for (int32 i = 0; i < 4; i++) {
@@ -1175,7 +1182,7 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
     pD->m_iActionGroupId = 0;
 
 
-    pD->m_eGameState = MyMJGameStateCpp::GameStart;
+    pD->m_eGameState = MyMJGameStateCpp::GameReseted;
 
     pD->m_iDiceNumberNowMask = 0;
     pD->m_cUntakenSlotInfo.reset();
@@ -1283,7 +1290,7 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
     pCardInfoPack->helperVerifyInfos();
 
     FMyMJDataAccessorCpp cA;
-    cA.setupTempMode(&base);
+    cA.setupTempMode(&base, MyMJGameRoleTypeCpp::SysKeeper);
     cA.resetForNewActionLoop();
 }
 
@@ -1334,8 +1341,8 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(const FMyMJGamePusherResetGam
 
     //Warn: this assume the core drains out all pusher before gen next action
     FMyMJGameActionStateUpdateCpp *pActionUpdate = new FMyMJGameActionStateUpdateCpp();
-    pActionUpdate->m_eStateNext = MyMJGameStateCpp::CardsWaitingForThrowDicesToDistributeCards;
-    pActionUpdate->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
+    pActionUpdate->m_eStateNext = MyMJGameStateCpp::GameStarted;
+    //pActionUpdate->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
 
     m_pPusherIOFull->GivePusher(pActionUpdate, (void**)&pActionUpdate);
 

@@ -69,7 +69,8 @@ protected:
 
     virtual void beginInRun() override
     {
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("thread started, beginInRun()"));
+        int32 testV = 1 + 3 > 2;
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("thread started, beginInRun(), testV %d"), testV);
 
         FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(m_eRuleType, m_iSeed.GetValue(), m_iTrivalConfigMask);
 
@@ -118,7 +119,7 @@ protected:
 * this only exist on server, in network env
 */
 //notplaceable
-UCLASS(notplaceable, meta = (ShortTooltip = "The full game core with sub thread, should only exist on server"))
+UCLASS(BlueprintType, notplaceable, meta = (ShortTooltip = "The full game core with sub thread, should only exist on server"))
 class MYONLINECARDGAME_API UMyMJCoreFullCpp : public UObject
 {
     GENERATED_BODY()
@@ -189,16 +190,23 @@ public:
 
     AMyMJCoreMirrorCpp() : Super()
     {
-        m_pCoreFull = NULL;
-        m_iPusherApplyState = 0;
         m_iSeed2OverWrite = 0;
+        m_iTest0 = 0;
 
+        bReplicates = true;
+        bAlwaysRelevant = true;
+        bNetLoadOnClient = true;
+        NetUpdateFrequency = 10;
+
+        m_pMJDataAll = NULL;
+
+        m_pCoreFull = NULL;
     }
 
     //virtual void PostInitProperties() override;
     virtual void PostInitializeComponents() override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
-
+    virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
 
     UFUNCTION(BlueprintCallable, Category = "AMyMJCoreMirrorCpp")
         void doTestChange()
@@ -210,29 +218,80 @@ public:
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMJDataStorage is NULL!"));
         }
 
+        m_iTest0 += 3;
     };
 
     UFUNCTION(BlueprintCallable, Category = "AMyMJCoreMirrorCpp")
         FString genDebugMsg()
     {
-        FString ret;
+        FString ret = FString::Printf(TEXT("m_iTest0 %d. "), m_iTest0);
         if (m_pMJDataAll) {
-            return m_pMJDataAll->genDebugMsg();
+            ret += m_pMJDataAll->genDebugMsg();
         }
         else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMJDataStorage is NULL!"));
-            return ret;
+            ret += TEXT("m_pMJDataStorage is NULL!");
         }
 
+        return ret;
     };
 
+    UFUNCTION(BlueprintCallable, Category = "AMyMJCoreMirrorCpp")
+    void verifyEvents() const
+    {
+        if (!IsValid(m_pMJDataAll)) {
+            return;
+        }
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("verifyEvents() exectuing."));
+
+        for (int32 i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
+            UMyMJDataSequencePerRoleCpp*pSeq = m_pMJDataAll->getDataByRoleType((MyMJGameRoleTypeCpp)i, false);
+            if (!IsValid(pSeq)) {
+                UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("skipping role %d's data since not valid."), i);
+                continue;
+            }
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("verifyEvents() for role %d."), i);
+            int32 iError = pSeq->getEventsRef().verifyData(true);
+            if (iError != 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d's data have error %d."), i, iError);
+                //MY_VERIFY(false);
+            }
+        }
+
+        UMyMJDataSequencePerRoleCpp*pSeq = m_pMJDataAll->m_pDataTest0;
+        if (!IsValid(pSeq)) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("m_pDataTest0 not valid."));
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("verifyEvents() for m_pDataTest0."));
+            int32 iError = pSeq->getEventsRef().verifyData(true);
+            if (iError != 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataTest0 data have error %d."), iError);
+                //MY_VERIFY(false);
+            }
+        }
+
+        pSeq = m_pMJDataAll->m_pDataTest1;
+        if (!IsValid(pSeq)) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("m_pDataTest1 not valid."));
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("verifyEvents() for m_pDataTest1."));
+            int32 iError = pSeq->getEventsRef().verifyData(true);
+            if (iError != 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataTest1 data have error %d."), iError);
+                //MY_VERIFY(false);
+            }
+        }
+    };
+
+
     UFUNCTION(BlueprintCallable)
-    void connectToCoreFull(UMyMJCoreFullCpp *pCoreFull)
+        void connectToCoreFull(UMyMJCoreFullCpp *pCoreFull)
     {
         MY_VERIFY(pCoreFull);
         MY_VERIFY(IsValid(pCoreFull));
 
-        MY_VERIFY(checkLevelSetting());
+        //MY_VERIFY(checkLevelSetting());
 
         m_pCoreFull = pCoreFull;
 
@@ -252,59 +311,53 @@ public:
 
     void toCoreFullLoop();
 
-    virtual bool getbHaltForGraphic() const
-    {
-        MY_VERIFY(0 && "You must override this");
-        return false;
-    };
 
-    //return true if want to pause progress
-    virtual bool prePusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher)
-    {
-        MY_VERIFY(0 && "You must override this");
-        return false;
-    };
-
-    //return true if want to pause progresss
-    virtual bool postPusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher)
-    {
-        MY_VERIFY(0 && "You must override this");
-        return false;
-    };
-
-
-    bool checkLevelSetting()
-    {
-        return m_aAttenderPawns.Num() == 4;
-    };
+    //bool checkLevelSetting()
+    //{
+        //return m_aAttenderPawns.Num() == 4;
+    //};
 
     //the level should prepare this data
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "attender pawns"))
-        TArray<AMyMJAttenderPawnBPCpp *> m_aAttenderPawns;
+    //UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "attender pawns"))
+    //    TArray<AMyMJAttenderPawnBPCpp *> m_aAttenderPawns;
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "seed overwrite"))
-    int32 m_iSeed2OverWrite;
+        int32 m_iSeed2OverWrite;
+
+    UPROPERTY(Replicated)
+        int32 m_iTest0;
 
 protected:
 
     UFUNCTION()
-    void OnRep_MJDataAll();
+    virtual void OnRep_MJDataAll()
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("OnRep_MJDataAll() 0, this is base class and shouldn't be called."), m_iTest0);
+        for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
+            UMyMJDataSequencePerRoleCpp* pSeq = m_pMJDataAll->getDataByRoleType((MyMJGameRoleTypeCpp)i);
+            MY_VERIFY(IsValid(pSeq));
+        }
+    }
 
-    FMyMJGamePusherBaseCpp* tryCheckAndGetNextPusher();
 
     //UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "data of storage"))
     UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MJDataAll, meta = (DisplayName = "data of all roles"))
-        UMyMJDataAllCpp* m_pMJDataAll;
+    UMyMJDataAllCpp* m_pMJDataAll;
 
     UPROPERTY()
     UMyMJCoreFullCpp *m_pCoreFull;
-
-    int32 m_iPusherApplyState; //0 init, 1 pre called, 2 post called
 
     FTimerHandle m_cToCoreFullLoopTimerHandle;
 
 };
 
+
+UENUM()
+enum class MyMJCoreBaseForBpVisualModeCpp : uint8
+{
+    Normal = 1                              UMETA(DisplayName = "Normal"),
+    CatchUp = 2                             UMETA(DisplayName = "CatchUp"),
+};
 
 //This level focus on BP and Graphic
 UCLASS(BlueprintType, Blueprintable)
@@ -316,32 +369,105 @@ public:
 
     AMyMJCoreBaseForBpCpp() : Super()
     {
-        //m_aAttenderPawns.Reset();
-        m_bHaltForGraphic = false;
-    }
-
-
-
-    virtual bool getbHaltForGraphic() const override
-    {
-        return m_bHaltForGraphic;
+        m_pDataHistoryBuffer = NULL;
+        m_eVisualMode = MyMJCoreBaseForBpVisualModeCpp::Normal;
+        m_uiLastVisualLoopClientTimeMs = 0;
     };
 
-    //return true if want to pause progress
-    virtual bool prePusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher) override;
-
-    //return true if want to pause progresss
-    virtual bool postPusherApplyForGraphic(FMyMJGamePusherBaseCpp *pPusher) override;
-
-
-    UFUNCTION(BlueprintImplementableEvent, BlueprintAuthorityOnly)
-    bool postPusherApplyResetGame(const FMyMJGamePusherResetGameCpp &pusher);
-
+    //UFUNCTION(BlueprintImplementableEvent, BlueprintAuthorityOnly)
 
 
 protected:
 
+    virtual void PostInitializeComponents() override;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "halt for graphic"))
-    bool m_bHaltForGraphic;
+    UFUNCTION()
+    virtual void OnRep_MJDataAll()
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("OnRep_MJDataAll() 1, m_iTest0 %d."), m_iTest0);
+        MY_VERIFY(IsValid(m_pMJDataAll));
+
+        m_pMJDataAll->m_cReplicateDelegate.Clear();
+        m_pMJDataAll->m_cReplicateDelegate.AddUObject(this, &AMyMJCoreBaseForBpCpp::onDataSeqReplicated);
+    }
+
+    void onDataSeqReplicated(UMyMJDataSequencePerRoleCpp *pSeq, int32 iExtra)
+    {
+        const UMyMJGameEventCycleBuffer* pEvents = pSeq->getEvents(false);
+        pSeq->getGameIdLast();
+        int32 eventsCount = 0;
+        if (IsValid(pEvents)) {
+            eventsCount = pEvents->getCount(NULL);
+        }
+
+        float clientTimeNow = 0;
+        UWorld* world = GetWorld();
+        if (IsValid(world)) {
+            clientTimeNow = world->GetTimeSeconds();
+        }
+
+        uint32 clientTimeNowMs = clientTimeNow * 1000;
+
+        //filter out duplicated notify
+        if ((clientTimeNowMs - m_uiLastVisualLoopClientTimeMs) <= 0) {
+            return;
+        }
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("time %.3f: onDataSeqReplicated(), role %d, %d, events valid %d, count %d, last %d:%d."), clientTimeNow, (uint8)pSeq->m_eRole, iExtra, IsValid(pEvents), eventsCount, pSeq->getGameIdLast(), pSeq->getPusherIdLast());
+        
+        forVisualLoop();
+
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("now: %s"), *genDebugMsg());
+
+        //MY_VERIFY(pSeq->getEventsRef().verifyData() == 0);
+        //m_cReplicateDelegate.Broadcast(pSeq);
+
+        //tryAppendData2Buffer();
+    };
+
+    bool tryAppendData2Buffer();
+
+    UFUNCTION(BlueprintImplementableEvent)
+    void onEventAppliedWithDur(const FMyMJEventWithTimeStampBaseCpp& newEvent);
+
+    UFUNCTION(BlueprintCallable)
+    void changeViewRole(MyMJGameRoleTypeCpp eRoleType)
+    {
+        MY_VERIFY(IsValid(m_pDataHistoryBuffer));
+
+        m_cDataNow.reinit(eRoleType);
+        m_pDataHistoryBuffer->reinit(eRoleType);
+    };
+
+    UFUNCTION(BlueprintCallable)
+    void changeVisualMode(MyMJCoreBaseForBpVisualModeCpp eVisualMode)
+    {
+        MyMJCoreBaseForBpVisualModeCpp eVisualModeOld = m_eVisualMode;
+        m_eVisualMode = eVisualMode;
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("changeVisualMode %s -> %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCoreBaseForBpVisualModeCpp"), (uint8)eVisualModeOld), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCoreBaseForBpVisualModeCpp"), (uint8)eVisualMode));
+        onVisualModeChanged(eVisualModeOld, eVisualMode);
+    };
+
+    UFUNCTION(BlueprintImplementableEvent)
+    void onVisualModeChanged(MyMJCoreBaseForBpVisualModeCpp eVisualModeOld, MyMJCoreBaseForBpVisualModeCpp eVisualMode);
+
+    void forVisualLoop();
+    void forVisualLoopModeNormal(uint32 clientTimeNow_ms);
+    void forVisualLoopModeCatchUp(uint32 clientTimeNow_ms);
+
+    //this is the visual data
+    UPROPERTY()
+    UMyMJDataSequencePerRoleCpp* m_pDataHistoryBuffer;
+
+    //this is the current state used for visualize
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "data now"))
+    FMyMJDataAtOneMomentCpp m_cDataNow;
+
+
+    MyMJCoreBaseForBpVisualModeCpp m_eVisualMode;
+
+    FTimerHandle m_cForVisualLoopTimerHandle;
+
+    uint32 m_uiLastVisualLoopClientTimeMs;
 };

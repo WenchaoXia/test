@@ -10,7 +10,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta)
 {
     FMyMJCoreDataPublicCpp &coreDataSelf = getCoreDataRef();
     if (!(coreDataSelf.m_iGameId == delta.m_iGameId && (coreDataSelf.m_iPusherIdLast + 1) == delta.getId())) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to apply delta since id mismatch: game id [%d, %d], push id [%d, %d]."), coreDataSelf.m_iGameId, delta.m_iGameId, coreDataSelf.m_iPusherIdLast, delta.getId());
+        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s failed to apply delta since id mismatch: self [%d, %d], delta [%d, %d]."), *genDebugStateString(), coreDataSelf.m_iGameId, coreDataSelf.m_iPusherIdLast, delta.m_iGameId, delta.getId());
         return;
     }
 
@@ -52,7 +52,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
     FMyMJCardInfoPackCpp  *pCardInfoPack = &coreDataSelf.m_cCardInfoPack;
 
     if (!(coreDataSelf.m_iGameId == delta.m_iGameId && (coreDataSelf.m_iPusherIdLast + 1) == delta.getId())) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to apply delta since id mismatch: game id [%d, %d], push id [%d, %d]."), coreDataSelf.m_iGameId, delta.m_iGameId, coreDataSelf.m_iPusherIdLast, delta.getId());
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s failed to apply delta since id mismatch: self [%d, %d], delta [%d, %d]."), *genDebugStateString(), coreDataSelf.m_iGameId, coreDataSelf.m_iPusherIdLast, delta.m_iGameId, delta.getId());
         return;
     }
 

@@ -78,6 +78,7 @@ void AMyTestActorBaseCpp::testMulticastRPCFunction0(float v1)
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("after testMulticastRPCFunction0 in %f, netMode %d, timeSeconds %f"), v1, netMode, timeSeconds);
 }
 
+/*
 void AMyTestActorBaseCpp::genPusherPointers(FMyMJGamePusherPointersCpp &pusherPointers)
 {
     FMyMJGamePusherPointersCpp &cPushersIn = pusherPointers;
@@ -99,6 +100,7 @@ void AMyTestActorBaseCpp::genPusherPointers(FMyMJGamePusherPointersCpp &pusherPo
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("genPusherPointers : %s"), *cPushersIn.genDebugString());
 }
 
+
 void AMyTestActorBaseCpp::testRPCWithPusherPointers_Implementation(const FMyMJGamePusherPointersCpp &pusherPointers)
 {
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherPointers_Implementation called : %p, %s"), &pusherPointers, *pusherPointers.genDebugString());
@@ -113,6 +115,7 @@ void AMyTestActorBaseCpp::testRPCWithPusherFillIn_Implementation(const FMyMJGame
 {
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherFillIn called : %s"), *pusherFillIn.genDebugString());
 }
+*/
 
 void
 UMyMJBPUtilsLibrary::testArrayPointerSerialize(AMyTestParentClass0 *pInParent, AMyTestChildClass0 *pInChild, AMyTestParentClass0 *pOutParent, int32 param)
@@ -169,8 +172,10 @@ UMyMJBPUtilsLibrary::testArrayPointerSerialize(AMyTestParentClass0 *pInParent, A
     pBase->Serialize(FromBinary2);
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FromBin2: %d, %s"), pBase->m_iTest, *(pBase->GetClass()->GetFullName()));
     */
+
     //ToBinary << p;
 }
+
 
 void UMyMJBPUtilsLibrary::testPusherSerialize0(int32 param)
 {
@@ -259,4 +264,16 @@ int32 UMyMJBPUtilsLibrary::getEngineNetMode(AActor *actor)
     else {
         return -1;
     }
+};
+
+
+bool UMyMJBPUtilsLibrary::haveServerLogicLayer(AActor *actor)
+{
+    return actor->HasAuthority();
+};
+
+bool UMyMJBPUtilsLibrary::haveClientVisualLayer(AActor *actor)
+{
+    int32 mode = getEngineNetMode(actor);
+    return mode != NM_DedicatedServer;
 };

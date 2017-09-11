@@ -213,13 +213,13 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
         }
 
         if (pusherIO.GivePusherResult(pusherResult)) {
-            MY_VERIFY(pusherResult == NULL);
+
         }
         else {
             delete(pusherResult);
             pusherResult = NULL;
         }
-
+        MY_VERIFY(pusherResult == NULL);
 
 
         /// this should be done by apply pusher
