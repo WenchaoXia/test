@@ -332,8 +332,8 @@ void AMyMJCoreBaseForBpCpp::PostInitializeComponents()
 
         if (IsValid(world)) {
             world->GetTimerManager().ClearTimer(m_cForVisualLoopTimerHandle);
-            //world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, ((float)MY_MJ_GAME_CORE_MIRROR_LOOP_TIME_MS) / (float)1000, true);
-            world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, 5, true);
+            world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, ((float)MY_MJ_GAME_CORE_MIRROR_LOOP_TIME_MS) / (float)1000, true);
+            //world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, 5, true);
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid, this is only valid for default object."));

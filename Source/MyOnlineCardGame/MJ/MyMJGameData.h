@@ -826,14 +826,12 @@ public:
         FString ret = Super::genDebugString();
 
         if (m_aCoreData.Num() > 0) {
-            //Todo:
-            //if (m_aCoreData[0].m_iMask0) {
-
-            //}
+            if (m_aCoreData[0].m_bUpdateGameState) {
+                ret += FString::Printf(TEXT("gameState %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)m_aCoreData[0].m_eGameState));
+            }
         }
 
         return ret;
-        //return FString::Printf(TEXT("%s, %d."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)m_eType), m_iId);
     };
 
     inline

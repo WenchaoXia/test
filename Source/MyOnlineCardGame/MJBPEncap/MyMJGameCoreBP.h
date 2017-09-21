@@ -445,7 +445,13 @@ protected:
         MyMJCoreBaseForBpVisualModeCpp eVisualModeOld = m_eVisualMode;
         m_eVisualMode = eVisualMode;
 
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("changeVisualMode %s -> %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCoreBaseForBpVisualModeCpp"), (uint8)eVisualModeOld), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCoreBaseForBpVisualModeCpp"), (uint8)eVisualMode));
+        float clientTimeNow = 0;
+        UWorld* world = GetWorld();
+        if (IsValid(world)) {
+            clientTimeNow = world->GetTimeSeconds();
+        }
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("time %.3f: changeVisualMode %s -> %s."), clientTimeNow, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCoreBaseForBpVisualModeCpp"), (uint8)eVisualModeOld), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCoreBaseForBpVisualModeCpp"), (uint8)eVisualMode));
         onVisualModeChanged(eVisualModeOld, eVisualMode);
     };
 

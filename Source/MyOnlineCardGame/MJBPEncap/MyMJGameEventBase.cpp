@@ -11,6 +11,57 @@
 
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
+FMyMJEventDataDeltaDurCfgBaseCpp::FMyMJEventDataDeltaDurCfgBaseCpp()
+{
+    m_uiGameStarted = 1000;
+
+    m_uiThrowDiceForDistCardsAtStart = 500;
+
+    m_uiDistCardsDone = 1000;
+
+    m_uiHuBornLocalCS = 1000;
+
+    m_uiTakeCards = 300;
+
+    m_uiGiveCards = 300;
+
+    m_uiWeaveChi = 500;
+
+    m_uiWeavePeng = 500;
+
+    m_uiWeaveGang = 500;
+
+    m_uiWeaveGangBuZhangLocalCS = 500;
+
+    m_uiHu = 1000;
+
+    m_uiZhaNiaoLocalCS = 1000;
+
+    m_uiGameEnded = 500;
+};
+
+uint32 FMyMJEventDataDeltaDurCfgBaseCpp::helperGetDeltaDur(const FMyMJDataDeltaCpp& delta) const
+{
+    uint32 ret = 0;
+    MyMJGamePusherTypeCpp ePusherType = delta.getType();
+
+    if (ePusherType == MyMJGamePusherTypeCpp::ActionStateUpdate) {
+        if (delta.m_aCoreData.Num() > 0) {
+            MyMJGameStateCpp eGameState = delta.m_aCoreData[0].m_eGameState;
+            if (eGameState == MyMJGameStateCpp::GameStarted) {
+                ret = m_uiGameStarted;
+            }
+            else if (eGameState == MyMJGameStateCpp::GameEnd) {
+                ret = m_uiGameEnded;
+            }
+        }
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave) {
+        //ret = 100;
+    }
+    return MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(ret);
+}
+
 void UMyMJGameEventCycleBuffer::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
