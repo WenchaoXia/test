@@ -23,17 +23,21 @@ const FMyMJRoleDataAttenderPrivateCpp& FMyMJGameAttenderCpp::getRoleDataAttender
 bool FMyMJGameAttenderCpp::getIsRealAttender() const
 {
     int32 idx = getIdx();
-    int32 iMask = getCoreRefConst().getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(idx).m_iMask0;
+    //int32 iMask = getCoreRefConst().getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(idx).m_iMask0;
 
-    return UMyMJUtilsLibrary::getBoolValueFromBitMask(iMask, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender);
+    //return UMyMJUtilsLibrary::getBoolValueFromBitMask(iMask, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender);
+
+    return getCoreRefConst().getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(idx).m_bIsRealAttender;
 }
 
 bool FMyMJGameAttenderCpp::getIsStillInGame() const
 {
     int32 idx = getIdx();
-    int32 iMask = getCoreRefConst().getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(idx).m_iMask0;
+    //int32 iMask = getCoreRefConst().getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(idx).m_iMask0;
 
-    return UMyMJUtilsLibrary::getBoolValueFromBitMask(iMask, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame);
+    //return UMyMJUtilsLibrary::getBoolValueFromBitMask(iMask, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame);
+
+    return getCoreRefConst().getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(idx).m_bIsStillInGame;
 }
 
 void FMyMJGameAttenderCpp::removeCard(int32 id)

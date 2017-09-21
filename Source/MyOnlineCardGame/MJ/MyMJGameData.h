@@ -310,11 +310,11 @@ public:
 
 };
 
-#define FMyMJCoreDataPublicDirectMask0_IncreaseActionGroupId (1 << 0)
+//#define FMyMJCoreDataPublicDirectMask0_IncreaseActionGroupId (1 << 0)
 
-#define FMyMJCoreDataPublicDirectMask0_UpdateGameState (1 << 3)
+//#define FMyMJCoreDataPublicDirectMask0_UpdateGameState (1 << 3)
 
-#define FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave (1 << 4)
+//#define FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave (1 << 4)
 
 #define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart (0)
 #define FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen (4)
@@ -406,15 +406,15 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Game State"))
      MyMJGameStateCpp m_eGameState;
 
-    //see mask define
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Number Now Mask"))
-    int32 m_iDiceNumberNowMask;
-
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Untaken Slot Info"))
     FMyMJGameUntakenSlotInfoCpp m_cUntakenSlotInfo;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Helper Data"))
     FMyMJCoreDataHelperCpp m_cHelper;
+
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "DiceNumberNowMask"))
+    int32 m_iDiceNumberNowMask;
 
 };
 
@@ -429,7 +429,7 @@ public:
     {
         m_eGameState = MyMJGameStateCpp::Invalid;
         m_iDiceNumberNowMask = 0;
-        m_iMask0 = 0;
+        m_bIncreaseActionGroupId = m_bUpdateGameState = m_bResetHelperLastCardsGivenOutOrWeave = false;
     };
 
     //if not empty, update them
@@ -442,13 +442,19 @@ public:
     //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Last Cards GivenOut Or Weave"))
     //TArray<FMyIdValuePair> m_aHelperLastCardsGivenOutOrWeave; //When weave, it takes trigger card(if have) or 1st card per weave
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Dice Numbers Now Mask"))
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "DiceNumberNowMask"))
     int32 m_iDiceNumberNowMask;
 
-    //used for bit bool and bit tip updating as delta
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
-    int32 m_iMask0;
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "IncreaseActionGroupId"))
+    uint32 m_bIncreaseActionGroupId : 1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UpdateGameState"))
+    uint32 m_bUpdateGameState : 1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "ResetHelperLastCardsGivenOutOrWeave"))
+        uint32 m_bResetHelperLastCardsGivenOutOrWeave : 1;
 
 };
 
@@ -496,14 +502,14 @@ public:
 
 };
 
-#define FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender       (1 << 0)
-#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsRealAttender (1 << 1)
-#define FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame        (1 << 2)
-#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsStillInGame  (1 << 3)
+//#define FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender       (1 << 0)
+//#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsRealAttender (1 << 1)
+//#define FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame        (1 << 2)
+//#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsStillInGame  (1 << 3)
 
 
-#define FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS        (1 << 16)
-#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateGangYaoedLocalCS  (1 << 17)
+//#define FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS        (1 << 16)
+//#define FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateGangYaoedLocalCS  (1 << 17)
 
 
 USTRUCT(BlueprintType)
@@ -539,7 +545,7 @@ public:
         m_cUntakenSlotSubSegmentInfo.reset();
         m_aHuScoreResultFinalGroups.Reset();
 
-        m_iMask0 = 0;
+        m_bIsRealAttender = m_bIsStillInGame = m_bGangYaoedLocalCS = false;
     };
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx Attender"))
@@ -566,9 +572,14 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final Groups"))
     TArray<FMyMJHuScoreResultFinalGroupCpp> m_aHuScoreResultFinalGroups;
 
-    //used for bit bool and bit tip updating as delta
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
-    int32 m_iMask0;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "IsRealAttender"))
+        uint32 m_bIsRealAttender : 1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "IsStillInGame"))
+        uint32 m_bIsStillInGame : 1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "GangYaoedLocalCS"))
+        uint32 m_bGangYaoedLocalCS : 1;
 };
 
 USTRUCT(BlueprintType)
@@ -580,7 +591,8 @@ public:
 
     FMyMJRoleDataAttenderPublicDeltaCpp()
     {
-        m_iMask0 = 0;
+        m_bIsRealAttender = m_bIsStillInGame = m_bGangYaoedLocalCS = false;
+        m_bUpdateIsRealAttender = m_bUpdateIsStillInGame = m_bUpdateGangYaoedLocalCS = false;
     };
 
     //if Num() > 0, it must equal to 1
@@ -591,12 +603,27 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final Group to Add"))
     TArray<FMyMJHuScoreResultFinalGroupCpp> m_aHuScoreResultFinalGroup2Add;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
-    int32 m_iMask0;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "IsRealAttender"))
+        uint32 m_bIsRealAttender : 1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "IsStillInGame"))
+        uint32 m_bIsStillInGame : 1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "GangYaoedLocalCS"))
+        uint32 m_bGangYaoedLocalCS : 1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UpdateIsRealAttender"))
+        uint32 m_bUpdateIsRealAttender : 1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UpdateIsStillInGame"))
+        uint32 m_bUpdateIsStillInGame : 1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UpdateGangYaoedLocalCS"))
+        uint32 m_bUpdateGangYaoedLocalCS : 1;
 };
 
-#define FMyMJRoleDataAttenderPrivateCpp_Mask0_BanPaoHuLocalCS         (1 << 0)
-#define FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS   (1 << 1)
+//#define FMyMJRoleDataAttenderPrivateCpp_Mask0_BanPaoHuLocalCS         (1 << 0)
+//#define FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS   (1 << 1)
 
 USTRUCT(BlueprintType)
 struct FMyMJRoleDataAttenderPrivateCpp
@@ -619,7 +646,7 @@ public:
     {
         m_cActionContainor.resetForNewActionLoop();
         m_cHuScoreResultTingGroup.reset();
-        m_iMask0 = 0;
+        m_bBanPaoHuLocalCS = false;
     };
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "action containor"))
@@ -628,8 +655,9 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Ting"))
     FMyMJHuScoreResultTingGroupCpp  m_cHuScoreResultTingGroup;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
-    int32 m_iMask0;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "BanPaoHuLocalCS"))
+    uint32 m_bBanPaoHuLocalCS : 1;
 
 };
 
@@ -643,7 +671,7 @@ public:
 
     FMyMJRoleDataAttenderPrivateDeltaCpp()
     {
-        m_iMask0 = 0;
+        m_bBanPaoHuLocalCS = m_bUpdateBanPaoHuLocalCS = false;
     };
 
     //if Num() > 0, it must equal to 1
@@ -654,8 +682,11 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Ting"))
     TArray<FMyMJHuScoreResultTingGroupCpp>  m_aHuScoreResultTingGroup;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "mask0"))
-    int32 m_iMask0;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "BanPaoHuLocalCS"))
+    uint32 m_bBanPaoHuLocalCS : 1;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UpdateBanPaoHuLocalCS"))
+    uint32 m_bUpdateBanPaoHuLocalCS : 1;
 };
 
 USTRUCT(BlueprintType)

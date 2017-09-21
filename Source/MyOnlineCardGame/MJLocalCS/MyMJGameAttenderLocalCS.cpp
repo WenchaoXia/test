@@ -97,7 +97,8 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
             pFillInPusher->m_cActionChoices.give(newAction);
         }
 
-        bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+        //bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+        bool bGangYaoedLocalCS = pDPubD->m_bGangYaoedLocalCS;
 
         MY_VERIFY(!bGangYaoedLocalCS);
         pFillInPusher->m_cActionChoices.give(genActionChoiceGiveOutCards(false, false));
@@ -164,7 +165,8 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
                 pFillInPusher->m_cActionChoices.give(newAction);
             }
 
-            bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+            //bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+            bool bGangYaoedLocalCS = pDPubD->m_bGangYaoedLocalCS;
             pFillInPusher->m_cActionChoices.give(genActionChoiceGiveOutCards(bGangYaoedLocalCS, false));
         }
     }
@@ -177,7 +179,8 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
         bool bLastCardOfGame = (pD->m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead <= 0);
         MY_VERIFY(!bLastCardOfGame);
 
-        bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+        //bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+        bool bGangYaoedLocalCS = pDPubD->m_bGangYaoedLocalCS;
         MY_VERIFY(!bGangYaoedLocalCS);
 
         pFillInPusher->m_cActionChoices.give(genActionChoiceGiveOutCards(bGangYaoedLocalCS, false));
@@ -612,7 +615,8 @@ void FMyMJGameAttenderLocalCSCpp::assembleHuActionAttr(int32 iIdxAttenderLoseOnl
     outHuActionAttr.m_iHuaCount = pDPubD->m_aIdWinSymbolCards.Num();
     outHuActionAttr.m_iTingCount = pDPriD->m_cHuScoreResultTingGroup.getCount();
 
-    bool bBanPaoHuLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPriD->m_iMask0, FMyMJRoleDataAttenderPrivateCpp_Mask0_BanPaoHuLocalCS);
+    //bool bBanPaoHuLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPriD->m_iMask0, FMyMJRoleDataAttenderPrivateCpp_Mask0_BanPaoHuLocalCS);
+    bool bBanPaoHuLocalCS = pDPriD->m_bBanPaoHuLocalCS;
 
     //special rule, CSMJ does not allow paohu always
     if (outHuActionAttr.geIsPao() && bBanPaoHuLocalCS) {
@@ -650,7 +654,8 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
     }
 
     bool bAllowBuZhangLocalCS = true;
-    bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+    //bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+    bool bGangYaoedLocalCS = pDPubD->m_bGangYaoedLocalCS;
     if (bGangYaoedLocalCS) {
         //special local CS rule, which ban card switch after GangYao
         bAllowBuZhangLocalCS = false;
@@ -831,7 +836,8 @@ bool FMyMJGameAttenderLocalCSCpp::checkPeng(const FMyMJCardCpp &triggerCard, TAr
         return false;
     }
 
-    bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+    //bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+    bool bGangYaoedLocalCS = pDPubD->m_bGangYaoedLocalCS;
     if (bGangYaoedLocalCS) {
         //special local CS rule, which ban card switch after GangYao
         return false;
@@ -886,7 +892,8 @@ bool FMyMJGameAttenderLocalCSCpp::checkChi(const FMyMJCardCpp &triggerCard, TArr
     }
 
 
-    bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+    //bool bGangYaoedLocalCS = UMyMJUtilsLibrary::getBoolValueFromBitMask(pDPubD->m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
+    bool bGangYaoedLocalCS = pDPubD->m_bGangYaoedLocalCS;
     if (bGangYaoedLocalCS) {
         //special local CS rule, which ban card switch after GangYao
         return false;

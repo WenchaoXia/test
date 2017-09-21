@@ -218,7 +218,8 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[idx];
 
         if (pusherCountUpdate.m_bActionGroupIncrease) {
-            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_IncreaseActionGroupId, true);
+            coreDataDelta.m_bIncreaseActionGroupId = true;
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_IncreaseActionGroupId, true);
         }
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherResetGame)
@@ -315,12 +316,14 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             //pD->m_eGameState = pAction->m_eStateNext;
 
             coreDataDelta.m_eGameState = actionStateUpdate.m_eStateNext;
-            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+            coreDataDelta.m_bUpdateGameState = true;
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
         }
 
         int32 iMask = actionStateUpdate.m_iMask;
         if ((iMask & MyMJGameActionStateUpdateMaskNotResetHelperLastCardsGivenOutOrWeave) == 0) {
-            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave, true);
+            coreDataDelta.m_bResetHelperLastCardsGivenOutOrWeave = true;
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave, true);
  
         }
 
@@ -341,7 +344,9 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             idx = deltaAttender.m_aDataPrivate.Emplace();
             FMyMJRoleDataAttenderPrivateDeltaCpp& deltaAttenderPrivate = deltaAttender.m_aDataPrivate[idx];
             
-            UMyMJUtilsLibrary::setUpdateFlagAndBoolValueToDeltaBitMask(deltaAttenderPrivate.m_iMask0, FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS, FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS, bPassPaoHu);
+            //UMyMJUtilsLibrary::setUpdateFlagAndBoolValueToDeltaBitMask(deltaAttenderPrivate.m_iMask0, FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS, FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS, bPassPaoHu);
+            deltaAttenderPrivate.m_bUpdateBanPaoHuLocalCS = true;
+            deltaAttenderPrivate.m_bBanPaoHuLocalCS = bPassPaoHu;
         }
 
     }
@@ -363,13 +368,15 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         int32 iReason = actionThrowDice.getDiceReason();
         if (iReason == FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart) {
             coreDataDelta.m_eGameState = MyMJGameStateCpp::CardsWaitingForDistribution;
-            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+            coreDataDelta.m_bUpdateGameState = true;
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
 
             UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart);
         }
         else if (iReason == FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GangYaoLocalCS) {
             coreDataDelta.m_eGameState = MyMJGameStateCpp::WeavedGangDicesThrownLocalCS;
-            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+            coreDataDelta.m_bUpdateGameState = true;
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
 
             UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GangYaoLocalCS);
         }
@@ -416,7 +423,8 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         if (actionDistCardAtStart.m_bLastCard) {
 
             coreDataDelta.m_eGameState = MyMJGameStateCpp::CardsDistributed;
-            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+            coreDataDelta.m_bUpdateGameState = true;
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
 
         }
         else {
@@ -463,7 +471,8 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         else {
             coreDataDelta.m_eGameState = MyMJGameStateCpp::TakenCard;
         }
-        UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+        //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+        coreDataDelta.m_bUpdateGameState = true;
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards)
     {
@@ -526,7 +535,9 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         else {
             coreDataDelta.m_eGameState = MyMJGameStateCpp::GivenOutCard;
         }
-        UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+
+        //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+        coreDataDelta.m_bUpdateGameState = true;
 
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave)
@@ -630,7 +641,8 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             MY_VERIFY(false);
         }
 
-        UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+        //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+        coreDataDelta.m_bUpdateGameState = true;
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionHu)
     {
@@ -699,7 +711,8 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             }
         }
 
-        UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave, true);
+        //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave, true);
+        coreDataDelta.m_bResetHelperLastCardsGivenOutOrWeave = true;
 
         if (actionHu.m_bEndGame) {
 
@@ -710,7 +723,8 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             attenderPublicDelta.m_aHuScoreResultFinalGroup2Add[idx] = actionHu.m_cHuScoreResultFinalGroup;
 
             coreDataDelta.m_eGameState = MyMJGameStateCpp::JustHu;
-            UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_UpdateGameState, true);
+            coreDataDelta.m_bUpdateGameState = true;
         }
         else {
             MY_VERIFY(false); //CS MJ always end game when hu in game
@@ -801,7 +815,8 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
 
         }
 
-        UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave, true);
+        //UMyMJUtilsLibrary::setBoolValueToBitMask(coreDataDelta.m_iMask0, FMyMJCoreDataPublicDirectMask0_ResetHelperLastCardsGivenOutOrWeave, true);
+        coreDataDelta.m_bResetHelperLastCardsGivenOutOrWeave = true;
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pusher [%s] not valid for this core."),
@@ -1161,16 +1176,22 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
         for (int32 i = 0; i < 2; i++) {
 
             FMyMJRoleDataAttenderPublicCpp &cRoleDataAttenderPub = const_cast<FMyMJRoleDataAttenderPublicCpp &> (base.getRoleDataAttenderPublicRefConst(i * 2));
-            UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender, true);
-            UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame, true);
+            
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender, true);
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame, true);
+            cRoleDataAttenderPub.m_bIsRealAttender = true;
+            cRoleDataAttenderPub.m_bIsStillInGame = true;
         }
     }
     else if (iRealAttenderNum >= 3 && iRealAttenderNum < 5) {
         for (int32 i = 0; i < iRealAttenderNum; i++) {
 
             FMyMJRoleDataAttenderPublicCpp &cRoleDataAttenderPub = const_cast<FMyMJRoleDataAttenderPublicCpp &>  (base.getRoleDataAttenderPublicRefConst(i));
-            UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender, true);
-            UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame, true);
+            
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender, true);
+            //UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame, true);
+            cRoleDataAttenderPub.m_bIsRealAttender = true;
+            cRoleDataAttenderPub.m_bIsStillInGame = true;
         }
     }
     else {
