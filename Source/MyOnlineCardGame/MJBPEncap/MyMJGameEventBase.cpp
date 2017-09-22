@@ -15,9 +15,9 @@ FMyMJEventDataDeltaDurCfgBaseCpp::FMyMJEventDataDeltaDurCfgBaseCpp()
 {
     m_uiGameStarted = 1000;
 
-    m_uiThrowDiceForDistCardsAtStart = 500;
+    m_uiThrowDices = 500;
 
-    m_uiDistCardsDone = 1000;
+    m_uiDistCardsDone = 0;
 
     m_uiHuBornLocalCS = 1000;
 
@@ -45,7 +45,45 @@ uint32 FMyMJEventDataDeltaDurCfgBaseCpp::helperGetDeltaDur(const FMyMJDataDeltaC
     uint32 ret = 0;
     MyMJGamePusherTypeCpp ePusherType = delta.getType();
 
-    if (ePusherType == MyMJGamePusherTypeCpp::ActionStateUpdate) {
+    if (ePusherType == MyMJGamePusherTypeCpp::ActionTakeCards) {
+        ret = m_uiTakeCards;
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
+        ret = m_uiGiveCards;
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave) {
+        MY_VERIFY(delta.m_aRoleDataAttender.Num() == 1);
+        MY_VERIFY(delta.m_aRoleDataAttender[0].m_aDataPublic.Num() == 1);
+        MY_VERIFY(delta.m_aRoleDataAttender[0].m_aDataPublic[0].m_aWeave2Add.Num() == 1);
+        const FMyMJWeaveCpp& cWeave = delta.m_aRoleDataAttender[0].m_aDataPublic[0].m_aWeave2Add[0];
+        MyMJWeaveTypeCpp eWeaveType = cWeave.getType();
+
+        if (eWeaveType == MyMJWeaveTypeCpp::ShunZiMing) {
+            ret = m_uiWeaveChi;
+        }
+        else if (eWeaveType == MyMJWeaveTypeCpp::KeZiMing) {
+            ret = m_uiWeavePeng;
+        }
+        else if (eWeaveType == MyMJWeaveTypeCpp::GangAn || eWeaveType == MyMJWeaveTypeCpp::GangMing) {
+            if (cWeave.getGangBuZhangLocalCS()) {
+                ret = m_uiWeaveGangBuZhangLocalCS;
+            }
+            else {
+                ret = m_uiWeaveGang;
+            }
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid weave type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)eWeaveType));
+            MY_VERIFY(false);
+        }
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionHu) {
+        ret = m_uiHu;
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionZhaNiaoLocalCS) {
+        ret = m_uiZhaNiaoLocalCS;
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionStateUpdate) {
         if (delta.m_aCoreData.Num() > 0) {
             MyMJGameStateCpp eGameState = delta.m_aCoreData[0].m_eGameState;
             if (eGameState == MyMJGameStateCpp::GameStarted) {
@@ -56,9 +94,14 @@ uint32 FMyMJEventDataDeltaDurCfgBaseCpp::helperGetDeltaDur(const FMyMJDataDeltaC
             }
         }
     }
-    else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave) {
-        //ret = 100;
+
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionThrowDices) {
+        ret = m_uiThrowDices;
     }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionHuBornLocalCS) {
+        ret = m_uiHuBornLocalCS;
+    }
+
     return MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(ret);
 }
 

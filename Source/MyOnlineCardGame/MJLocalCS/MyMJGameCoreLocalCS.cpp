@@ -616,8 +616,9 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         MyMJWeaveTypeCpp eType = actionWeave.m_cWeave.getType();
 
         if (eType == MyMJWeaveTypeCpp::GangAn || eType == MyMJWeaveTypeCpp::GangMing) {
-            int32 reserved0 = actionWeave.m_cWeave.getReserved0();
-            bool bIsBuZhang = (reserved0 & (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang) > 0;
+            //int32 reserved0 = actionWeave.m_cWeave.getReserved0();
+            //bool bIsBuZhang = (reserved0 & (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang) > 0;
+            bool bIsBuZhang = actionWeave.m_cWeave.getGangBuZhangLocalCS();
 
             if (!bIsBuZhang) {
                 if (eType == MyMJWeaveTypeCpp::GangMing && actionWeave.m_cWeave.getTypeConsumed() == MyMJWeaveTypeCpp::ShunZiMing) {
@@ -1027,8 +1028,9 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
             
             bool bTIngNow = pAttender->tryGenAndEnqueueUpdateTingPusher();
 
-            int32 reserved0 = actionWeave.m_cWeave.getReserved0();
-            bool bIsBuZhang = (reserved0 & (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang) > 0;
+            //int32 reserved0 = actionWeave.m_cWeave.getReserved0();
+            //bool bIsBuZhang = (reserved0 & (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang) > 0;
+            bool bIsBuZhang = actionWeave.m_cWeave.getGangBuZhangLocalCS();
 
             if (!bIsBuZhang) {
                 MY_VERIFY(bTIngNow);

@@ -712,7 +712,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
                 pWeaveInAction->appendIds(pWeave->getIdsRefConst());
                 pWeaveInAction->addCard(cardIdFound);
 
-                pWeaveInAction->initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp::GangMing, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::KeZiMing, 0 | (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang);
+                pWeaveInAction->initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp::GangMing, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::KeZiMing, true);
                 pAction->initWithWeaveAlreadyInited(*pCardValuePack, idxAttenderSelf, MyMJCardFlipStateCpp::Up);
             }
         }
@@ -761,7 +761,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
                 pWeaveInAction->addCard(pTriggerCard->m_iId);
             }
 
-            pWeaveInAction->initWitIdValuesAlreadyInited(eType, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::Invalid, 0 | (uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang);
+            pWeaveInAction->initWitIdValuesAlreadyInited(eType, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::Invalid, true);
             pAction->initWithWeaveAlreadyInited(*pCardValuePack, idxAttenderSelf, eTargetFlipState);
         }
     }
@@ -797,7 +797,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
                     int32 idx = actionWeavesGangYao.Emplace();
                     FMyMJGameActionWeaveCpp *pActionNew = &actionWeavesGangYao[idx];
                     *pActionNew = *pAction;
-                    pActionNew->m_cWeave.getReserved0Ref() = 0 & (!(uint8)EMyMJWeaveReserved0Mask::LocalCSGangBuZhang);
+                    pActionNew->m_cWeave.setGangBuZhangLocalCS(false);
                 }
             }
 

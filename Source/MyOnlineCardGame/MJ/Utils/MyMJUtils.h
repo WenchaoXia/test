@@ -354,11 +354,11 @@ protected:
 };
 
 //UENUM(Blueprintable, Meta = (Bitflags))
-UENUM(Meta = (Bitflags))
-enum class EMyMJWeaveReserved0Mask : uint8
-{
-    LocalCSGangBuZhang = 0x01, //1 means BuZhang, 0 means GangYao
-};
+//UENUM(Meta = (Bitflags))
+//enum class EMyMJWeaveReserved0Mask : uint8
+//{
+//    LocalCSGangBuZhang = 0x01, //1 means BuZhang, 0 means GangYao
+//};
 
 //Id should be unique always
 
@@ -609,7 +609,8 @@ struct FMyMJWeaveCpp
         m_iIdTriggerCard = -1;
         m_iIdxAttenderTriggerCardSrc = -1;
         m_eTypeConsumed = MyMJWeaveTypeCpp::Invalid;
-        m_iReserved0 = 0;
+
+        m_bGangBuZhangLocalCS = false;
     };
 
 
@@ -685,14 +686,14 @@ struct FMyMJWeaveCpp
         return m_eTypeConsumed;
     };
 
-    inline int32 getReserved0() const
+    inline bool getGangBuZhangLocalCS() const
     {
-        return m_iReserved0;
+        return m_bGangBuZhangLocalCS;
     };
 
-    inline int32& getReserved0Ref()
+    inline void setGangBuZhangLocalCS(bool bGangBuZhangLocalCS)
     {
-        return m_iReserved0;
+        m_bGangBuZhangLocalCS = bGangBuZhangLocalCS;
     };
 
     inline int32 getCount() const
@@ -740,13 +741,13 @@ struct FMyMJWeaveCpp
 
     };
 
-    void initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp eType, int32 iIdTriggerCard, int32 iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp eTypeConsumed, int32 iReserved0)
+    void initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp eType, int32 iIdTriggerCard, int32 iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp eTypeConsumed, bool bGangBuZhangLocalCS)
     {
         m_eType = eType;
         m_iIdTriggerCard = iIdTriggerCard;
         m_iIdxAttenderTriggerCardSrc = iIdxAttenderTriggerCardSrc;
         m_eTypeConsumed = eTypeConsumed;
-        m_iReserved0 = iReserved0;
+        m_bGangBuZhangLocalCS = bGangBuZhangLocalCS;
     };
 
     void buildUnweavedInstanceFromValueIdMapCpp(const FMyValueIdMapCpp &inMap)
@@ -779,8 +780,11 @@ protected:
 
     //in some local MJ rule, use it to distinguish weave sub type.
     //in the case of CSMJ, when type is GangAn or GangMing, 0 means it is a gangyao, 1 means a buzhang 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "reserved0", Bitmask, BitmaskEnum = "EMyMJWeaveReserved0Mask"))
-        int32 m_iReserved0;
+    //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "reserved0", Bitmask, BitmaskEnum = "EMyMJWeaveReserved0Mask"))
+    //int32 m_iReserved0;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "GangBuZhangLocalCS"))
+    uint32 m_bGangBuZhangLocalCS : 1;
 };
 
 UENUM()

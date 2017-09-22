@@ -140,7 +140,7 @@ void FMyMJWeaveCpp::addCard(int32 id)
 
 FString FMyMJWeaveCpp::genDebugString() const
 {
-    FString ret = FString::Printf(TEXT(" m_eType: %s, m_iIdTriggerCard %d, m_iIdxAttenderTriggerCardSrc %d, m_eTypeConsumed: %s, m_iReserved0: 0x%x."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eType), m_iIdTriggerCard, m_iIdxAttenderTriggerCardSrc, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eTypeConsumed), m_iReserved0);
+    FString ret = FString::Printf(TEXT(" m_eType: %s, m_iIdTriggerCard %d, m_iIdxAttenderTriggerCardSrc %d, m_eTypeConsumed: %s, m_bGangBuZhangLocalCS: %d."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eType), m_iIdTriggerCard, m_iIdxAttenderTriggerCardSrc, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eTypeConsumed), m_bGangBuZhangLocalCS);
 
     //ret += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aIdValues);
 
@@ -262,7 +262,7 @@ FMyStatisCountsPerCardValueTypeCpp::addCountByValue(int32 value, int32 count)
     for (int32 i = 0; i < l; i++) {
         type = touchedTypes[i];
         MY_VERIFY((uint8)type >= 0 && (uint8)type < (uint8)MyMJCardValueTypeCpp::ExtMax);
-        int32 &c = m_mCountPerCardType.FindOrAdd(type); //int32's default constructor we assert to be zero £¡£¡
+        int32 &c = m_mCountPerCardType.FindOrAdd(type); //int32's default constructor we assert to be zero !
         c += count;
     }
     

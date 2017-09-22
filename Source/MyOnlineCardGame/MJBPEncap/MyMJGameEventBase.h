@@ -87,7 +87,7 @@ public:
 
     uint32 m_uiGameStarted;
 
-    uint32 m_uiThrowDiceForDistCardsAtStart;
+    uint32 m_uiThrowDices;
 
     uint32 m_uiDistCardsDone;
 
