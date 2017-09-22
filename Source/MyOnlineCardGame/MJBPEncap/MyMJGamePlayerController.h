@@ -5,26 +5,34 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 
+#include "MJBPEncap/utils/MyMJBPUtils.h"
+
 //#include "UnrealNetwork.h"
 
 #include "MJBPEncap/MyMJGameCoreBP.h"
 
-#include "MyOnlineCardGamePlayerController.generated.h"
+#include "MyMJGamePlayerController.generated.h"
 
 #define MY_S2CPusherSync_DEBUG_MASK_C2S_SYNC_RESP 0x01
 /**
  * 
  */
 UCLASS()
-class MYONLINECARDGAME_API AMyOnlineCardGamePlayerController : public APlayerController
+class MYONLINECARDGAME_API AMyMJGamePlayerControllerCpp : public APlayerController
 {
 	GENERATED_BODY()
 	
-    AMyOnlineCardGamePlayerController()
+public:
+        AMyMJGamePlayerControllerCpp()
     {
+        m_eRoleType = MyMJGameRoleTypeCpp::Observer;
     };
 
     virtual void PostInitProperties() override;
+    virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+
+    UPROPERTY(Replicated)
+    MyMJGameRoleTypeCpp m_eRoleType;
 
 protected:
 

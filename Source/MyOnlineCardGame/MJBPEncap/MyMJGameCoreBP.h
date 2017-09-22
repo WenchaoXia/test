@@ -371,7 +371,7 @@ public:
     {
         m_pDataHistoryBuffer = NULL;
         m_eVisualMode = MyMJCoreBaseForBpVisualModeCpp::Normal;
-        m_uiLastVisualLoopClientTimeMs = 0;
+        m_uiReplicateClientTimeMs = 0;
     };
 
     //UFUNCTION(BlueprintImplementableEvent, BlueprintAuthorityOnly)
@@ -409,9 +409,10 @@ protected:
         uint32 clientTimeNowMs = clientTimeNow * 1000;
 
         //filter out duplicated notify
-        if ((clientTimeNowMs - m_uiLastVisualLoopClientTimeMs) <= 0) {
+        if ((clientTimeNowMs - m_uiReplicateClientTimeMs) <= 0) {
             return;
         }
+        m_uiReplicateClientTimeMs = clientTimeNowMs;
 
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("time %.3f: onDataSeqReplicated(), role %d, %d, events valid %d, count %d, last %d:%d."), clientTimeNow, (uint8)pSeq->m_eRole, iExtra, IsValid(pEvents), eventsCount, pSeq->getGameIdLast(), pSeq->getPusherIdLast());
         
@@ -475,5 +476,5 @@ protected:
 
     FTimerHandle m_cForVisualLoopTimerHandle;
 
-    uint32 m_uiLastVisualLoopClientTimeMs;
+    uint32 m_uiReplicateClientTimeMs;
 };

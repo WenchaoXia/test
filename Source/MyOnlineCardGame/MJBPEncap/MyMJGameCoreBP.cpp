@@ -384,8 +384,6 @@ void AMyMJCoreBaseForBpCpp::forVisualLoop()
         forVisualLoopModeCatchUp(clientTimeNow_ms);
     }
 
-    m_uiLastVisualLoopClientTimeMs = clientTimeNow_ms;
-
 };
 
 void AMyMJCoreBaseForBpCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
@@ -458,6 +456,10 @@ void AMyMJCoreBaseForBpCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
                     if (uiDurFixed != uiDur) {
                         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("fixing dur, calced server time %d.%03d,  %d.%03d -> %d.%03d ."), uiServerTimeNowCalced_ms / 1000, uiServerTimeNowCalced_ms % 1000, uiDur / 1000, uiDur % 1000, uiDurFixed / 1000, uiDurFixed % 1000);
                         cEvent.setDuration(uiDurFixed);
+
+                        if (uiDurFixed <= (2 * MY_MJ_GAME_WORLD_TIME_MS_RESOLUTION)) {
+                            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("the dur is too small, maybe machine too slow."));
+                        }
                     }
                 }
 

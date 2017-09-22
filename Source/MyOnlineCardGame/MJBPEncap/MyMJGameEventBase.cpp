@@ -9,6 +9,8 @@
 #include "Engine/NetConnection.h"
 #include "GameFramework/PlayerController.h"
 
+#include "MyMJGamePlayerController.h"
+
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
 FMyMJEventDataDeltaDurCfgBaseCpp::FMyMJEventDataDeltaDurCfgBaseCpp()
@@ -478,13 +480,22 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
         pc = c->GetPlayerController(w);
     }
 
-    FString pcStr = TEXT("NULL");
-    if (pc) {
-        pcStr = pc->GetClass()->GetFullName();
+    int32 l = m_aDatas.Num();
+
+    AMyMJGamePlayerControllerCpp* pCMy = Cast<AMyMJGamePlayerControllerCpp>(pc);
+
+    if (!IsValid(pCMy)) {
+        FString pcStr = TEXT("NULL");
+        if (pc) {
+            pcStr = pc->GetClass()->GetFullName();
+        }
+
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ReplicateSubobjects, pcMy is NULL, the class is not correct, datas len: %d, world %p, netconnection %p, pc %p, pc: %s."), l, w, c, pc, *pcStr);
+        return false;
     }
 
-    int32 l = m_aDatas.Num();
-    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("ReplicateSubobjects, datas len: %d, world %p, netconnection %p, pc %p, pc: %s"), l, w, c, pc, *pcStr);
+    MyMJGameRoleTypeCpp eClientRole = pCMy->m_eRoleType;
+
 
     int64 byteNum0 = Bunch->GetNumBytes();
     bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
@@ -500,6 +511,11 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
             //if (Channel->KeyNeedsToReplicate(m_iRepObjIdBase + 11 + i, pData->getRepKeyOfState()))
             if (IsValid(pData))
             {
+                MY_VERIFY((uint8)pData->m_eRole < (uint8)MyMJGameRoleTypeCpp::Max);
+                if (pData->m_eRole != eClientRole) {
+                    continue;
+                }
+
                 //if ((i) != 4) {
                     //int32 l0 = pData->getEventCount();
                     //int32 l1 = pData->getEventsRef().m_iTest;
