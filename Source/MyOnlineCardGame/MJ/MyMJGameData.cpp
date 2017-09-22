@@ -100,8 +100,10 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
             coreDataSelf.m_cHelper.m_aIdHelperLastCardsTakenInWholeGame = aIdHelperMovedFromUntakenSlot;
             coreDataSelf.m_cHelper.m_eHelperGameStateJustBeforeLastCardsTakenInWholeGame = coreDataSelf.m_eGameState;
 
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Debug: setting last cards with game state %s."),
-                      *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)coreDataSelf.m_eGameState));
+            if (m_bShowApplyInfo) {
+                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Debug: setting last cards with game state %s."),
+                    *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)coreDataSelf.m_eGameState));
+            }
         }
 
         if (aIdHelperMovedToGivenOutSlot.Num() > 0) {

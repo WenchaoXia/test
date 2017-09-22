@@ -319,7 +319,7 @@ bool UMyMJDataSequencePerRoleCpp::mergeDataFromOther(const UMyMJDataSequencePerR
     }
 
     if (bRet) {
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("role %d's data merged %d : %d, lother %d, iTest %d, event count %d, first: %d:%d, last %d:%d."), (uint8)m_eRole, bRet, bSetBase, lother, iTest, m_pEventsApplyingAndApplied->getCount(NULL), getGameIdFirst(), getPusherIdFirst(), getGameIdLast(), getPusherIdLast());
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("role %d's data merged %d : %d, lother %d, iTest %d, event count %d, first: %d:%d, last %d:%d."), (uint8)m_eRole, bRet, bSetBase, lother, iTest, m_pEventsApplyingAndApplied->getCount(NULL), getGameIdFirst(), getPusherIdFirst(), getGameIdLast(), getPusherIdLast());
     }
 
     return bRet;

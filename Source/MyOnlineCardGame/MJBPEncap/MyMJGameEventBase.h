@@ -580,7 +580,13 @@ public:
         uint32 startTime = itemOther.getStartTime();
         uint32 dur = itemOther.getDuration();
         FMyMJEventWithTimeStampBaseCpp& newAdded = addToTailWhenNotFull(startTime, dur, startTime > 0);
+        int32 oldIdxDebug = newAdded.m_iIdxDebug;
         newAdded = itemOther;
+
+        if (newAdded.m_iIdxDebug != oldIdxDebug) {
+            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("newAdded idx changing %d -> %d. "), newAdded.m_iIdxDebug, oldIdxDebug);
+            newAdded.m_iIdxDebug = oldIdxDebug;
+        }
     };
 
     FMyMJGameEventCycleBufferReplicatedDelegate m_cUpdateNotifier;
@@ -600,6 +606,7 @@ protected:
     bool addToTail(const FMyMJEventWithTimeStampBaseCpp* itemToSetAs)
     {
         int32 idxNew = -1;
+        /*
         if (m_iCount > 0) {
             MY_VERIFY(m_idxHead >= 0);
             idxNew = (m_idxHead + m_iCount) % m_iSizeMax;
@@ -610,6 +617,17 @@ protected:
         }
         else {
             MY_VERIFY(false);
+        }
+        */
+
+        if (m_idxHead >= 0) {
+            MY_VERIFY(m_idxHead >= 0);
+            idxNew = (m_idxHead + m_iCount) % m_iSizeMax;
+        }
+        else {
+            MY_VERIFY(m_iCount == 0);
+            idxNew = 0;
+            m_idxHead = 0;
         }
 
         int32 l = m_cEventArray.Items.Num();
@@ -894,6 +912,12 @@ public:
     inline const FMyMJEventWithTimeStampBaseCpp& peekEventRefAt(int32 idx) const
     {
         return m_pEventsApplyingAndApplied->peekRefAt(idx);
+    };
+
+    //will assert if out of range
+    inline FMyMJEventWithTimeStampBaseCpp& getEventRefAt(int32 idx)
+    {
+        return const_cast<FMyMJEventWithTimeStampBaseCpp&>(peekEventRefAt(idx));
     };
 
     //just like remove, but info goes to base

@@ -26,7 +26,7 @@
 class FMyMJGameCoreThreadControlCpp : public FMyThreadControlCpp
 {
 public:
-    FMyMJGameCoreThreadControlCpp(MyMJGameRuleTypeCpp eRuleType, int32 iSeed, int32 iTrivalConfigMask) : FMyThreadControlCpp(MY_MJ_GAME_CORE_FULL_LOOP_TIME_MS)
+    FMyMJGameCoreThreadControlCpp(MyMJGameRuleTypeCpp eRuleType, int32 iSeed, int32 iTrivalConfigMask) : FMyThreadControlCpp(MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS)
     {
         m_eRuleType = eRuleType;
         m_iSeed.Set(iSeed);
@@ -136,10 +136,10 @@ public:
 
     //test with a full mode core created and run in sub thread
     UFUNCTION(BlueprintCallable, Category = "UMyMJCoreFullCpp")
-    void testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst);
+    void testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst, bool bNeedLoopSelf);
 
     bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTrivalConfigMask);
-    bool startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst);
+    bool startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst, bool bNeedLoopSelf);
 
     void loop();
 
@@ -300,7 +300,7 @@ public:
 
         if (IsValid(world)) {
             world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
-            world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJCoreMirrorCpp::toCoreFullLoop, ((float)MY_MJ_GAME_CORE_MIRROR_LOOP_TIME_MS) / (float)1000, true);
+            world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJCoreMirrorCpp::toCoreFullLoop, ((float)MY_MJ_GAME_CORE_MIRROR_TO_CORE_FULL_LOOP_TIME_MS) / (float)1000, true);
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));

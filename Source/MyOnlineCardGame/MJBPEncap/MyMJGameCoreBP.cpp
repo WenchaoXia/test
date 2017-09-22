@@ -58,7 +58,7 @@ void UMyMJPusherBufferCpp::trySyncDataFromCoreFull()
 };
 */
 
-void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst)
+void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst, bool bNeedLoopSelf)
 {
     int32 iMask = MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero;
     if (showCoreLog) {
@@ -69,7 +69,7 @@ void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog, bool bAttenderR
         FPlatformProcess::Sleep(0.1);
     }
 
-    startGame(true, bAttenderRandomSelectHighPriActionFirst);
+    startGame(true, bAttenderRandomSelectHighPriActionFirst, bNeedLoopSelf);
 }
 
 
@@ -126,7 +126,7 @@ bool UMyMJCoreFullCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTriva
 
 }
 
-bool UMyMJCoreFullCpp::startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst)
+bool UMyMJCoreFullCpp::startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst, bool bNeedLoopSelf)
 {
     if (!m_pCoreFullWithThread.IsValid() || m_pCoreFullWithThread->getRuleType() == MyMJGameRuleTypeCpp::Invalid) {
         return false;
@@ -154,7 +154,9 @@ bool UMyMJCoreFullCpp::startGame(bool bAttenderRandomSelectDo, bool bAttenderRan
     
     if (IsValid(world)) {
         world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
-        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &UMyMJCoreFullCpp::loop, ((float)My_MJ_GAME_IO_DRAIN_LOOP_TIME_MS) / (float)1000, true);
+        if (bNeedLoopSelf) {
+            world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &UMyMJCoreFullCpp::loop, ((float)My_MJ_GAME_CORE_FULL_IO_DRAIN_LOOP_TIME_MS) / (float)1000, true);
+        }
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
@@ -274,6 +276,8 @@ void AMyMJCoreMirrorCpp::toCoreFullLoop()
     MY_VERIFY(IsValid(m_pMJDataAll));
     MY_VERIFY(IsValid(m_pCoreFull));
 
+    m_pCoreFull->loop();
+
     UWorld *world = GetWorld();
 
     if (!IsValid(world)) {
@@ -326,13 +330,13 @@ void AMyMJCoreBaseForBpCpp::PostInitializeComponents()
     bool bHaveVisual = UMyMJBPUtilsLibrary::haveClientVisualLayer(this);
     if (bHaveVisual) {
         m_pDataHistoryBuffer = NewObject<UMyMJDataSequencePerRoleCpp>(this);
-        //m_pDataHistoryBuffer->resizeEvents(64);
+        m_pDataHistoryBuffer->resizeEvents(128);
 
         UWorld *world = GetWorld();
 
         if (IsValid(world)) {
             world->GetTimerManager().ClearTimer(m_cForVisualLoopTimerHandle);
-            world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, ((float)MY_MJ_GAME_CORE_MIRROR_LOOP_TIME_MS) / (float)1000, true);
+            world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, ((float)MY_MJ_GAME_CORE_MIRROR_FOR_VISUAL_LOOP_TIME_MS) / (float)1000, true);
             //world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, 5, true);
         }
         else {
@@ -370,6 +374,7 @@ void AMyMJCoreBaseForBpCpp::forVisualLoop()
     }
 
     uint32 clientTimeNow_ms = world->GetTimeSeconds() * 1000;
+    clientTimeNow_ms = MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(clientTimeNow_ms);
 
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("forVisualLoop."));
     if (m_eVisualMode == MyMJCoreBaseForBpVisualModeCpp::Normal) {
@@ -415,13 +420,14 @@ void AMyMJCoreBaseForBpCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
             break;
         }
 
-        const FMyMJEventWithTimeStampBaseCpp& cEvent = pBuffer->peekEventRefAt(0);
+        FMyMJEventWithTimeStampBaseCpp& cEvent = pBuffer->getEventRefAt(0);
         uint32 uiEventStartTime = cEvent.getStartTime();
+        uint32 uiDur = cEvent.getDuration();
 
         if (bHaveTimeBond && uiEventStartTime > 0 && uiEventStartTime > uiServerTimeNowCalced_ms) {
             //time not reached yet
 
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time not reached, but server should have time line smoothed, not supposed to happen."));
+            //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time not reached, but server should have time line smoothed, not supposed to happen, event start %d.%03d, calced server time %d.%03d."), uiEventStartTime / 1000, uiEventStartTime % 1000, uiServerTimeNowCalced_ms / 1000, uiServerTimeNowCalced_ms % 1000);
             break;
         };
 
@@ -429,14 +435,51 @@ void AMyMJCoreBaseForBpCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
         bool bCanAppend = cEvent.canBeAppendedToPrev(iGameIdNow, iPusherIdNow, bIsGameEndOrNotStatedNow);
 
         if (bCanAppend) {
-            m_cDataNow.applyEvent(cEvent, FMyMJDataAtOneMomentCpp_eventApplyWay_Normal);
+
+            //try fix the time dur
+            if (uiDur > 0) {
+                MY_VERIFY(uiEventStartTime > 0);
+                if (bHaveTimeBond) {
+                    uint32 uiDurFixed = uiDur;
+                    uint32 uiServerTimeTargetEndTime = uiEventStartTime + uiDur;
+                    
+                    if (uiServerTimeTargetEndTime > uiServerTimeNowCalced_ms) {
+                        uiDurFixed = uiServerTimeTargetEndTime - uiServerTimeNowCalced_ms;
+                    }
+                    else {
+                        uiDurFixed = 0;
+                    }
+
+                    uiDurFixed = MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(uiDurFixed);
+                    if (uiDurFixed == 0) {
+                        uiDurFixed = MY_MJ_GAME_WORLD_TIME_MS_RESOLUTION;
+                    }
+
+                    if (uiDurFixed != uiDur) {
+                        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("fixing dur, calced server time %d.%03d,  %d.%03d -> %d.%03d ."), uiServerTimeNowCalced_ms / 1000, uiServerTimeNowCalced_ms % 1000, uiDur / 1000, uiDur % 1000, uiDurFixed / 1000, uiDurFixed % 1000);
+                        cEvent.setDuration(uiDurFixed);
+                    }
+                }
+
+
+            }
+
             if (cEvent.getDuration() > 0) {
-                UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("event applied with dur: %s."), *cEvent.genDebugMsg());
+                UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("applying event with dur: %s."), *cEvent.genDebugMsg());
                 onEventAppliedWithDur(cEvent);
             }
 
+            m_cDataNow.applyEvent(cEvent, FMyMJDataAtOneMomentCpp_eventApplyWay_Normal);
+
             if (uiEventStartTime > 0) { 
                 uint32 serverTimeNow_data_unit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(uiEventStartTime);
+                if (!bHaveTimeBond) {
+                    //we must form a bond, tell what time we present
+                    m_cDataNow.m_cTimeBond.rebondTime(serverTimeNow_data_unit, clientTimeNow_data_unit);
+                    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("time rebonded s: %d.%03d, c: %d.%03d."), uiEventStartTime / 1000, uiEventStartTime % 1000, clientTimeNow_ms / 1000, clientTimeNow_ms % 1000);
+                }
+
+                /*
                 if (!bHaveTimeBond) {
                     //we must form a bond, tell what time we present
                     m_cDataNow.m_cTimeBond.rebondTime(serverTimeNow_data_unit, clientTimeNow_data_unit);
@@ -449,7 +492,7 @@ void AMyMJCoreBaseForBpCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
                         //turn based game, 2nd is better, revert
                         //note:: info actor's time affect many other actor, so for simple operate the global time for simple
                         m_cDataNow.m_cTimeBond.rebondTime(serverTimeNow_data_unit, clientTimeNow_data_unit);
-                        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("time rebonded $d / %d."), serverTimeNow_data_unit, clientTimeNow_data_unit);
+                        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("time rebonded s: %d.%03d, c: %d.%03d."), uiEventStartTime/1000, uiEventStartTime%1000, clientTimeNow_ms/1000, clientTimeNow_ms%1000);
                     }
                     else if (uiEventStartTime == uiServerTimeNowCalced_ms) {
                         //good, nothing to be done
@@ -458,6 +501,7 @@ void AMyMJCoreBaseForBpCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
                         //never happen
                     }
                 }
+                */
             }
 
             pBuffer->squashEventsToBase(1);
