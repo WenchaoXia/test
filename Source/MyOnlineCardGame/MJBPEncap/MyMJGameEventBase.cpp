@@ -252,8 +252,11 @@ bool UMyMJDataSequencePerRoleCpp::mergeDataFromOther(const UMyMJDataSequencePerR
 
     if (iGameIdLastSelf < 0) {
         //we don't have anything, copy all
-        bSetBase = true;
+        
         MY_VERIFY(m_pEventsApplyingAndApplied->getCount(NULL) == 0);
+
+        bSetBase = true;
+        idxNextPusherOther = 0;
         m_pEventsApplyingAndApplied->clear();
 
     }
@@ -275,17 +278,20 @@ bool UMyMJDataSequencePerRoleCpp::mergeDataFromOther(const UMyMJDataSequencePerR
                     //fuck, other is too fast, we can't catch up
                     bSetBase = true;
                     idxNextPusherOther = 0;
+                    m_pEventsApplyingAndApplied->clear();
                     UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("merging data will reset everything since we can't catch up to target, lastSelf %d:%d, firstOther %d:%d."), iGameIdLastSelf, iPusherIdLastSelf, iGameIdFirstOther, iPusherIdFirstOther);
                 }
             }
             else {
                 if (isGameEndForLastState()) {
                     //we can gracefully append data
+                    idxNextPusherOther = 0;
                 }
                 else {
                     //fuck, other is too fast, we can't catch up
                     bSetBase = true;
                     idxNextPusherOther = 0;
+                    m_pEventsApplyingAndApplied->clear();
                     UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("merging data will reset everything since we can't catch up to target, lastSelf %d:%d, firstOther %d:%d."), iGameIdLastSelf, iPusherIdLastSelf, iGameIdFirstOther, iPusherIdFirstOther);
                 }
             }
