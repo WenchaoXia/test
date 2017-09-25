@@ -468,10 +468,13 @@ void AMyMJCoreBaseForBpCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
 
             if (cEvent.getDuration() > 0) {
                 UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("applying event with dur: %s."), *cEvent.genDebugMsg());
-                onEventAppliedWithDur(cEvent);
             }
 
             m_cDataNow.applyEvent(cEvent, FMyMJDataAtOneMomentCpp_eventApplyWay_Normal);
+
+            if (cEvent.getDuration() > 0) {
+                onEventAppliedWithDur(cEvent);
+            }
 
             if (uiEventStartTime > 0) { 
                 uint32 serverTimeNow_data_unit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(uiEventStartTime);
