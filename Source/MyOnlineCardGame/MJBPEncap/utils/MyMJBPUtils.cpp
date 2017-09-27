@@ -277,3 +277,27 @@ bool UMyMJBPUtilsLibrary::haveClientVisualLayer(AActor *actor)
     int32 mode = getEngineNetMode(actor);
     return mode != NM_DedicatedServer;
 };
+
+
+bool UMyMJBPUtilsLibrary::testLoadAsset(UObject* outer, FString fullPathName)
+{
+    UStaticMesh *pMeshAsset = NULL;
+
+    pMeshAsset = FindObject<UStaticMesh>(outer, *fullPathName);
+    if (pMeshAsset) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("FindObject: %s, pendingKill %d."), *fullPathName, pMeshAsset->IsPendingKill());
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to findObject: %s."), *fullPathName);
+    }
+
+    pMeshAsset = LoadObject<UStaticMesh>(outer, *fullPathName, NULL, LOAD_None, NULL);
+    if (pMeshAsset) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("LoadObject: %s, pendingKill %d."), *fullPathName, pMeshAsset->IsPendingKill());
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to LoadObject: %s."), *fullPathName);
+    }
+
+    return true;
+}

@@ -136,9 +136,11 @@ public:
     UFUNCTION(BlueprintCallable)
     static int32 getEngineNetMode(AActor *actor);
 
-
     static bool haveServerLogicLayer(AActor *actor);
     static bool haveClientVisualLayer(AActor *actor);
+
+    UFUNCTION(BlueprintCallable)
+    static bool testLoadAsset(UObject* outer, FString fullPathName);
 
     //float GetRealTimeSeconds() const;
 };
