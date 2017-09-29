@@ -25,8 +25,10 @@
 
 #define MyCardAssetPartialNameSuffixValueBaseColorTexture (TEXT("_baseColor"))
 
-AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp()
+AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp() : Super()
 {
+    bNetLoadOnClient = true;
+
     m_pCardBox = NULL;
     m_pCardStaticMesh = NULL;
 
@@ -71,13 +73,13 @@ void AMyMJGameCardBaseCpp::OnConstruction(const FTransform& Transform)
     }
     */
     
-    if (m_pResCardStaticMeshMITarget) {
+    if (IsValid(m_pResCardStaticMeshMITarget)) {
         UMaterialInstanceDynamic* pMID = UMaterialInstanceDynamic::Create(m_pResCardStaticMeshMITarget, m_pCardStaticMesh);
         m_pCardStaticMesh->SetMaterial(0, pMID);
         m_pResCardStaticMeshMITarget = NULL;
     }
 
-    if (m_pResCardStaticMeshMIDParamInBaseColorTarget) {
+    if (IsValid(m_pResCardStaticMeshMIDParamInBaseColorTarget)) {
         updateCardStaticMeshMIDParams(m_pResCardStaticMeshMIDParamInBaseColorTarget);
         m_pResCardStaticMeshMIDParamInBaseColorTarget = NULL;
     }
@@ -225,8 +227,8 @@ int32 AMyMJGameCardBaseCpp::changeVisualModelTypeInternal(const FString &modelAs
     m_sModelAssetPath = modelAssetPath;
 
 
-    int32 iRet = changeVisualValueInternal(m_iValueShowing, bInConstruct, true);
-
+    int32 iRet = 0;
+    iRet = changeVisualValueInternal(m_iValueShowing, bInConstruct, true);
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("changeVisualModelTypeInternal %p, %p, %p"), m_pResCardStaticMeshMITarget, m_pResCardStaticMeshMIDTarget, m_pResCardStaticMeshMIDParamInBaseColorTarget);
     return iRet;
 };
@@ -298,7 +300,7 @@ bool AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, c
 
     if (ppOutBaseColorTexture) {
         FString baseColorFullPathName = modelAssetPath + valuePrefix + MyCardAssetPartialNameSuffixValueBaseColorTexture;
-        UTexture* pTBaseColor = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UTexture>(this, baseColorFullPathName);
+        UTexture* pTBaseColor = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UTexture>(nullptr, baseColorFullPathName);
         if (IsValid(pTBaseColor)) {
             *ppOutBaseColorTexture = pTBaseColor;
         }
