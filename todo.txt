@@ -3,3 +3,8 @@ move out ue4's .h file include from game's .h files
 查看actor 动画 效果的变速
 
 preload asset
+
+确认FindObject总失败原因， 看代码好像是outer参数的原因，outer似乎代表上一级package, loadObject进他,见 ResolveName()，有时间再确认
+LoadObject（）后续call是否会触发i/o，应该是不会，里面是dict，但还没找到code
+
+确认MID无法在ctor保存的原因

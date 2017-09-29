@@ -283,6 +283,7 @@ bool UMyMJBPUtilsLibrary::testLoadAsset(UObject* outer, FString fullPathName)
 {
     UStaticMesh *pMeshAsset = NULL;
 
+    /*
     pMeshAsset = FindObject<UStaticMesh>(outer, *fullPathName);
     if (pMeshAsset) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("FindObject: %s, pendingKill %d."), *fullPathName, pMeshAsset->IsPendingKill());
@@ -298,6 +299,9 @@ bool UMyMJBPUtilsLibrary::testLoadAsset(UObject* outer, FString fullPathName)
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to LoadObject: %s."), *fullPathName);
     }
+    */
+
+    pMeshAsset = helperTryFindAndLoadAsset<UStaticMesh>(outer, fullPathName);
 
     return true;
 }

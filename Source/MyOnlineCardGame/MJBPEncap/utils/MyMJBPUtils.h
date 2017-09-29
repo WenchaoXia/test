@@ -98,6 +98,29 @@ class UMyMJBPUtilsLibrary :
     GENERATED_BODY()
 public:
 
+    template< class T >
+    static inline T* helperTryFindAndLoadAsset(UObject* outer, const FString &resFullPath)
+    {
+        //T *pRes = FindObject<T>(outer, *resFullPath);
+        T *pRes = NULL;
+        if (!IsValid(pRes)) {
+            pRes = NULL;
+            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("find object fail, maybe forgot preload it: %s."), *resFullPath);
+            pRes = LoadObject<T>(outer, *resFullPath, NULL, LOAD_None, NULL);
+            if (!IsValid(pRes)) {
+                pRes = NULL;
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("load object fail: %s."), *resFullPath);
+            }
+
+            //T *pRes2 = FindObject<T>(outer, *resFullPath);
+            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("refind object result: %d."), pRes2 != NULL);
+        }
+        
+        return pRes;
+
+        //return (T*)StaticFindObject(T::StaticClass(), Outer, Name, ExactClass);
+    }
+
     //create one instance on heap
     static FMyMJGameCoreCpp* helperCreateCoreByRuleType(MyMJGameRuleTypeCpp eRuleType, int32 iSeed, int32 iTrivalConfigMask)
     {
