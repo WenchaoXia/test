@@ -106,7 +106,7 @@ enum class MyMJCardFlipStateCpp : uint8
 
 };
 
-UENUM()
+UENUM(BlueprintType)
 enum class MyMJCardSlotTypeCpp : uint8
 {
     Invalid = 0                        UMETA(DisplayName = "Invalid"),
