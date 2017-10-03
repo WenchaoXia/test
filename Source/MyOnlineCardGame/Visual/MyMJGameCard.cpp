@@ -108,6 +108,7 @@ void AMyMJGameCardBaseCpp::createAndInitComponents()
         //pBoxComponent->InitBoxExtent(boxSizeFix);
         pBoxComponent->SetCollisionProfileName(TEXT("CollistionProfileBox"));
 
+        pBoxComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); //by default disable collision
         //pBoxComponent->RegisterComponent();
         m_pCardBox = pBoxComponent;
     }
