@@ -20,6 +20,9 @@ public:
 
     virtual ~AMyMJGameCardBaseCpp();
 
+    //nomatter whether collsion is enabled, it just return the current size
+    const class UBoxComponent& getCollisionBoxRef() const;
+
     //return 0 if no error happens and OK to do visual operations, even mode not changed since it equal to old fasion, otherwise errorcode
     //@modelAssetPath example /Game/Art/Models/MJCard/Type0/cardBox/
     UFUNCTION(BlueprintCallable)
@@ -46,6 +49,8 @@ protected:
 
     //component doesn't need uproperty
     //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "card box"))
+    class USceneComponent *m_pRootScene;
+
     class UBoxComponent *m_pCardBox;
 
     //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "card static mesh"))
@@ -66,4 +71,6 @@ protected:
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "model asset path"))
     FString m_sModelAssetPath;
+
+    int32 m_iError;
 };

@@ -5,6 +5,7 @@
 #include "MJ/Utils/MyMJUtils.h"
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
+#include "Components/SceneComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 
@@ -27,8 +28,10 @@
 
 AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp() : Super()
 {
+    m_iError = 0;
     bNetLoadOnClient = true;
 
+    m_pRootScene = NULL;
     m_pCardBox = NULL;
     m_pCardStaticMesh = NULL;
 
@@ -46,6 +49,14 @@ AMyMJGameCardBaseCpp::~AMyMJGameCardBaseCpp()
 {
 
 };
+
+const class UBoxComponent& AMyMJGameCardBaseCpp::getCollisionBoxRef() const
+{
+    MY_VERIFY(IsValid(m_pCardBox));
+
+    return *m_pCardBox;
+};
+
 
 void AMyMJGameCardBaseCpp::OnConstruction(const FTransform& Transform)
 {
@@ -96,14 +107,26 @@ void AMyMJGameCardBaseCpp::PostInitializeComponents()
 void AMyMJGameCardBaseCpp::createAndInitComponents()
 {
     //create defaults
+    if (!IsValid(m_pRootScene)) {
+        USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
+        //UBoxComponent* pBoxComponent = NewObject<UBoxComponent>(this);
+        MY_VERIFY(IsValid(pRootSceneComponent));
+
+        RootComponent = pRootSceneComponent;
+
+        m_pRootScene = pRootSceneComponent;
+    }
+
+
     if (!IsValid(m_pCardBox)) {
 
-        UBoxComponent* pBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("RootBox"));
+        UBoxComponent* pBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBox"));
         //UBoxComponent* pBoxComponent = NewObject<UBoxComponent>(this);
         MY_VERIFY(IsValid(pBoxComponent));
 
         //pBoxComponent->Rename(TEXT("RootBox"));
-        RootComponent = pBoxComponent;
+        //RootComponent = pBoxComponent;
+        pBoxComponent->SetupAttachment(m_pRootScene);
 
         //pBoxComponent->InitBoxExtent(boxSizeFix);
         pBoxComponent->SetCollisionProfileName(TEXT("CollistionProfileBox"));
@@ -127,7 +150,7 @@ void AMyMJGameCardBaseCpp::createAndInitComponents()
     }
 
     //set defaults
-    changeVisualModelTypeInternal(TEXT("/Game/Art/Models/MJCard/Type0/"), true);
+    m_iError = changeVisualModelTypeInternal(TEXT("/Game/Art/Models/MJCard/Type0/"), true);
 
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("init, m_pCardBox %p, m_pCardStaticMesh %p."), m_pCardBox, m_pCardStaticMesh);
 
@@ -157,6 +180,7 @@ int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBase
 
     return 0;
 };
+
 
 ///example: /Game/Art/Models/MJCard/Type0/cardBox/
 int32 AMyMJGameCardBaseCpp::changeVisualModelType(const FString &modelAssetPath)
@@ -192,10 +216,14 @@ int32 AMyMJGameCardBaseCpp::changeVisualModelTypeInternal(const FString &modelAs
 
     FBox box = pMeshAsset->GetBoundingBox();
     FVector boxSize = box.Max - box.Min;
-    FVector boxSizeFix;
+    FVector boxSizeFix, boxSizeFixPivotOffset;
     boxSizeFix.X = UKismetMathLibrary::FCeil(boxSize.X) / 2;
     boxSizeFix.Y = UKismetMathLibrary::FCeil(boxSize.Y) / 2;
     boxSizeFix.Z = UKismetMathLibrary::FCeil(boxSize.Z) / 2;
+
+    //boxSizeFixPivotOffset = boxSizeFix;
+    boxSizeFixPivotOffset.X = boxSizeFix.X;
+    boxSizeFixPivotOffset.Z = boxSizeFix.Z;
 
     FVector boxOrigin;
     boxOrigin.X = (box.Min.X + box.Max.X) / 2;
@@ -207,9 +235,9 @@ int32 AMyMJGameCardBaseCpp::changeVisualModelTypeInternal(const FString &modelAs
     MY_VERIFY(IsValid(m_pCardStaticMesh));
 
     m_pCardBox->SetBoxExtent(boxSizeFix);
+    m_pCardBox->SetRelativeLocation(boxSizeFixPivotOffset);
 
     m_pCardStaticMesh->SetStaticMesh(pMeshAsset);
-
     m_pCardStaticMesh->SetRelativeLocation(-boxOrigin);
     //m_pCardStaticMesh->SetWorldScale3D(FVector(1.0f));
 
