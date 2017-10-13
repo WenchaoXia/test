@@ -54,6 +54,7 @@ const class UBoxComponent& AMyMJGameCardBaseCpp::getCollisionBoxRef() const
 {
     MY_VERIFY(IsValid(m_pCardBox));
 
+    //m_pCardBox->GetScaledBoxExtent()
     return *m_pCardBox;
 };
 
@@ -84,6 +85,7 @@ void AMyMJGameCardBaseCpp::OnConstruction(const FTransform& Transform)
     }
     */
     
+    //do the jobs cab't be done in construct function
     if (IsValid(m_pResCardStaticMeshMITarget)) {
         UMaterialInstanceDynamic* pMID = UMaterialInstanceDynamic::Create(m_pResCardStaticMeshMITarget, m_pCardStaticMesh);
         m_pCardStaticMesh->SetMaterial(0, pMID);
@@ -216,7 +218,7 @@ int32 AMyMJGameCardBaseCpp::changeVisualModelTypeInternal(const FString &modelAs
 
     FBox box = pMeshAsset->GetBoundingBox();
     FVector boxSize = box.Max - box.Min;
-    FVector boxSizeFix, boxSizeFixPivotOffset;
+    FVector boxSizeFix(0), boxSizeFixPivotOffset(0);
     boxSizeFix.X = UKismetMathLibrary::FCeil(boxSize.X) / 2;
     boxSizeFix.Y = UKismetMathLibrary::FCeil(boxSize.Y) / 2;
     boxSizeFix.Z = UKismetMathLibrary::FCeil(boxSize.Z) / 2;
@@ -225,7 +227,7 @@ int32 AMyMJGameCardBaseCpp::changeVisualModelTypeInternal(const FString &modelAs
     boxSizeFixPivotOffset.X = boxSizeFix.X;
     boxSizeFixPivotOffset.Z = boxSizeFix.Z;
 
-    FVector boxOrigin;
+    FVector boxOrigin(0);
     boxOrigin.X = (box.Min.X + box.Max.X) / 2;
     boxOrigin.Y = (box.Min.Y + box.Max.Y) / 2;
     //boxOrigin.Z = box.Min.Z;
@@ -321,6 +323,14 @@ int32 AMyMJGameCardBaseCpp::changeVisualValueInternal(int32 newValue, bool bInCo
     m_iValueShowing = newValue;
 
     return 0;
+};
+
+void AMyMJGameCardBaseCpp::getModelInfo(FMyMJGameCardActorModelInfoCpp& modelInfo)
+{
+    FVector actorScale3D = GetActorScale3D();
+    modelInfo.m_cBoxExtendFinal = m_pCardBox->GetScaledBoxExtent() * actorScale3D;
+    modelInfo.m_cCenterPointFinalRelativeLocation = m_pCardBox->RelativeLocation * actorScale3D;
+
 };
 
 bool AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, const FString &valuePrefix, class UTexture** ppOutBaseColorTexture)

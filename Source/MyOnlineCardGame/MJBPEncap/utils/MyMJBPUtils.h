@@ -165,5 +165,8 @@ public:
     UFUNCTION(BlueprintCallable)
     static bool testLoadAsset(UObject* outer, FString fullPathName);
 
+    UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
+    static void rotateOriginWithPivot(const FTransform& originCurrentWorldTransform, const FVector& pivot2OriginRelativeLocation, const FRotator& originTargetWorldRotator, FTransform& originResultWorldTransform);
+
     //float GetRealTimeSeconds() const;
 };

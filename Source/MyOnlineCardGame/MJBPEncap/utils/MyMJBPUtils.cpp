@@ -305,3 +305,47 @@ bool UMyMJBPUtilsLibrary::testLoadAsset(UObject* outer, FString fullPathName)
 
     return true;
 }
+
+void UMyMJBPUtilsLibrary::rotateOriginWithPivot(const FTransform& originCurrentWorldTransform, const FVector& pivot2OriginRelativeLocation, const FRotator& originTargetWorldRotator, FTransform& originResultWorldTransform)
+{
+    //FRotator originCurrentWorldRotator(originCurrentWorldTransform.GetRotation());
+    //FVector origin2pivotRelativeLocation = -pivot2OriginRelativeLocation;
+
+    //FVector originZeroRotateWorldLocation = originCurrentWorldTransform.GetLocation() - (originCurrentWorldRotator.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation);
+
+    //originResultWorldTransform.SetLocation(originZeroRotateWorldLocation + (originTargetWorldRotator.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation));
+    //originResultWorldTransform.SetRotation(FQuat(originTargetWorldRotator));
+    //originResultWorldTransform.SetScale3D(originCurrentWorldTransform.GetScale3D());
+
+    FQuat originCurrentWorldQuat = originCurrentWorldTransform.GetRotation();
+    FVector origin2pivotRelativeLocation = -pivot2OriginRelativeLocation;
+
+    FVector testV = originCurrentWorldQuat.RotateVector(origin2pivotRelativeLocation);
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("testV: (%f, %f, %f)."), testV.X, testV.Y, testV.Z);
+    //return;
+
+    FVector originZeroRotateWorldLocation = originCurrentWorldTransform.GetLocation() - (originCurrentWorldQuat.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation);
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("originZeroRotateWorldLocation: (%f, %f, %f)."), originZeroRotateWorldLocation.X, originZeroRotateWorldLocation.Y, originZeroRotateWorldLocation.Z);
+    //return;
+    
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("originTargetWorldRotator: (%f, %f, %f)."),
+        originTargetWorldRotator.Roll, originTargetWorldRotator.Pitch, originTargetWorldRotator.Yaw);
+    //FQuat originTargetWorldQuat(originTargetWorldRotator);
+    FQuat originTargetWorldQuat = originTargetWorldRotator.Quaternion();
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("originTargetWorldQuat: (%f, %f, %f, %f)."),
+        originTargetWorldQuat.X, originTargetWorldQuat.Y, originTargetWorldQuat.Z, originTargetWorldQuat.W)
+    //return;
+    
+    FRotator originTargetWorldRotator2(originTargetWorldQuat);
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("rotator change: (%f, %f, %f) -> (%f, %f, %f)."),
+              originTargetWorldRotator.Roll, originTargetWorldRotator.Pitch, originTargetWorldRotator.Yaw,
+              originTargetWorldRotator2.Roll, originTargetWorldRotator2.Pitch, originTargetWorldRotator2.Yaw);
+    //return;
+
+    FVector locResultRotated = originTargetWorldQuat.RotateVector(origin2pivotRelativeLocation);
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("locResultRotated: (%f, %f, %f)."), locResultRotated.X, locResultRotated.Y, locResultRotated.Z);
+
+    originResultWorldTransform.SetLocation(originZeroRotateWorldLocation + (originTargetWorldQuat.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation));
+    originResultWorldTransform.SetRotation(originTargetWorldQuat);
+    originResultWorldTransform.SetScale3D(originCurrentWorldTransform.GetScale3D());
+}

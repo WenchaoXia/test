@@ -4,6 +4,10 @@
 #include "Kismet/KismetMathLibrary.h"
 
 
+FString FMyMJCardPosiCpp::genDebugMsg() const
+{
+    return FString::Printf(TEXT("[%d, %s, %d, %d]"), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardSlotTypeCpp"), (uint8)m_eSlot), m_iIdxInSlot0, m_iIdxInSlot1);
+};
 
 void FMyMJCardValuePackCpp::helperVerifyValues() const
 {

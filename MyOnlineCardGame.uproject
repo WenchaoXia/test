@@ -1,0 +1,16 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{3AD09474-4DEE-294C-F3A5-F0A9C560438B}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "MyOnlineCardGame",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
+		}
+	]
+}

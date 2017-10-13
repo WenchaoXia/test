@@ -165,6 +165,9 @@ struct FMyMJCardPosiCpp
         return !(*this == other);
     };
 
+    FString genDebugMsg() const;
+
+
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx attender"))
         int32 m_iIdxAttender;
 
