@@ -136,29 +136,50 @@ protected:
     TMap<int32, FMyMJGameDeskVisualPointCfgCpp> m_mVisualPointCache;
 };
 
-UCLASS()
-class MYONLINECARDGAME_API UMyMJGameDeskDynamicResManagerCpp : public UObject
+UCLASS(Blueprintable)
+class MYONLINECARDGAME_API UMyMJGameDeskDynamicResManagerCpp : public UActorComponent
 {
     GENERATED_BODY()
 
 public:
 
-    UMyMJGameDeskDynamicResManagerCpp() : Super()
-    {
-    };
-
-    virtual ~UMyMJGameDeskDynamicResManagerCpp()
-    {
-
-    };
+    UMyMJGameDeskDynamicResManagerCpp();
+    virtual ~UMyMJGameDeskDynamicResManagerCpp();
 
     bool checkSettings() const;
+
+    FMyMJGameCardActorModelInfoCpp& getCardModelInfoUnscaled();
+
+    UFUNCTION(BlueprintSetter)
+    void setCfgCardModelAssetPath(const FString& inPath);
+
+    UFUNCTION(BlueprintGetter)
+    const FString& getCfgCardModelAssetPath() const;
 
     UPROPERTY()
     TArray<AMyMJGameCardBaseCpp*> m_aCards;
 
-    UPROPERTY()
-    TSubclassOf<AMyMJGameCardBaseCpp> m_cCardClass;
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "cfg card class"))
+    TSubclassOf<AMyMJGameCardBaseCpp> m_cCfgCardClass;
+
+protected:
+
+    void prepareCardActor();
+
+    //it seems UBT have bug which require declare sequence
+    //UPROPERTY(BlueprintSetter = setCfgCardModelAssetPath, BlueprintSetter = getCfgCardModelAssetPath, EditAnywhere, meta = (DisplayName = "cfg card model asset path"))
+
+    //example: /Game/Art/Models/MJCard/Type0/cardBox/
+    UPROPERTY(EditAnywhere, BlueprintSetter = setCfgCardModelAssetPath, BlueprintGetter = getCfgCardModelAssetPath, meta = (DisplayName = "cfg card model asset path"))
+    FString m_sCfgCardModelAssetPath;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card model mesh asset"))
+        class UStaticMesh *m_pCardModelMeshAsset;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card model material default instance asset"))
+        class UMaterialInstance *m_pCardModelMaterialDefaultInstanceAsset;
+
+    FMyMJGameCardActorModelInfoCpp* m_pActorModelInfoCached;
 };
 
 UCLASS(Blueprintable)
@@ -168,23 +189,30 @@ class MYONLINECARDGAME_API AMyMJGameDeskSuiteCpp : public AActor
 
 public:
 
-    AMyMJGameDeskSuiteCpp() : Super()
-    {
-        m_pDeskAreaActor = NULL;
-    };
+    AMyMJGameDeskSuiteCpp();
 
-    virtual ~AMyMJGameDeskSuiteCpp()
-    {
+    virtual ~AMyMJGameDeskSuiteCpp();
 
-    };
+
 
     void helperCalcCardTransform(const FMyMJGameCardVisualInfoCpp& cCardVisualInfo, FTransform &outTransform);
 
     UFUNCTION(BlueprintCallable)
-    static int32 helperCalcCardTransformFromvisualPointCfg(const FMyMJGameCardActorModelInfoCpp& cardModelInfo, const FMyMJGameCardVisualInfoCpp& cardVisualInfo, const FMyMJGameDeskVisualPointCfgCpp& visualPointCfg, FVector& outLocationWorld, FRotator& outRotatorWorld);
+    static int32 helperCalcCardTransformFromvisualPointCfg(const FMyMJGameCardActorModelInfoCpp& cardModelInfoFinal, const FMyMJGameCardVisualInfoCpp& cardVisualInfoFinal, const FMyMJGameDeskVisualPointCfgCpp& visualPointCfg, FVector& outLocationWorld, FRotator& outRotatorWorld);
 
 protected:
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "area actor"))
+    virtual void PostInitializeComponents() override;
+
+    //UPROPERTY(BlueprintReadWrite, EditAnywhere, Instanced, meta = (DisplayName = "res manager"))
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Instanced, meta = (DisplayName = "res manager"))
+    UMyMJGameDeskDynamicResManagerCpp *m_pResManager;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "area actor"))
     AMyMJGameDeskAreaCpp* m_pDeskAreaActor;
+
+    UPROPERTY(EditAnywhere, meta = (MakeEditWidget, DisplayName = "root scene"))
+    class USceneComponent *m_pRootScene;
+
+
 };

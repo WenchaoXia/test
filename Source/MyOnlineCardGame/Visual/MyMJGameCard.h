@@ -7,6 +7,19 @@
 
 #include "MyMJGameCard.generated.h"
 
+#define MyCardStaticMeshMIDParamInBaseColor (TEXT("InBaseColor"))
+
+#define MyCardAssetPartialNameStaticMesh (TEXT("cardBox"))
+#define MyCardAssetPartialNameStaticMeshDefaultMI (TEXT("cardBoxMat0_defaultInst"))
+
+#define MyCardAssetPartialNamePrefixValueNormal (TEXT("v%02d"))
+#define MyCardAssetPartialNamePrefixValueUnknown (TEXT("vUnknown"))
+#define MyCardAssetPartialNamePrefixValueMiss (TEXT("vMiss"))
+
+#define MyCardAssetPartialNameSuffixValueBaseColorTexture (TEXT("_baseColor"))
+
+#define MyMJGameCardBaseCppDefaultShowingValue (0)
+
 USTRUCT(BlueprintType)
 struct FMyMJGameCardVisualInfoCpp
 {
@@ -64,21 +77,22 @@ public:
 //model always and must facing x axis
 USTRUCT(BlueprintType)
 struct FMyMJGameCardActorModelInfoCpp
+
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGameCardActorModelInfoCpp() : m_cBoxExtendFinal(0), m_cCenterPointFinalRelativeLocation(0)
+    FMyMJGameCardActorModelInfoCpp() : m_cBoxExtend(0), m_cCenterPointRelativeLocation(0)
     {
     };
 
     //final size after all actor scale, component scale applied
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "box extend final"))
-    FVector m_cBoxExtendFinal;
+    FVector m_cBoxExtend;
 
     //final size after all actor scale, component scale applied
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "center point final relative location"))
-    FVector m_cCenterPointFinalRelativeLocation;
+    FVector m_cCenterPointRelativeLocation;
 
 };
 
@@ -93,60 +107,78 @@ public:
 
     virtual ~AMyMJGameCardBaseCpp();
 
-    //nomatter whether collsion is enabled, it just return the current size
-    const class UBoxComponent& getCollisionBoxRef() const;
-
-    //return 0 if no error happens and OK to do visual operations, even mode not changed since it equal to old fasion, otherwise errorcode
-    //@modelAssetPath example /Game/Art/Models/MJCard/Type0/cardBox/
-    UFUNCTION(BlueprintCallable)
-    int32 changeVisualModelType(const FString &modelAssetPath);
-
-    UFUNCTION(BlueprintCallable)
-    int32 changeVisualValue(int32 newValue);
+    //AMyMJGameCardBaseCpp(const FObjectInitializer& ObjectInitializer);
 
     UFUNCTION(BlueprintCallable)
     void getModelInfo(FMyMJGameCardActorModelInfoCpp& modelInfo);
 
+    UFUNCTION(BlueprintSetter)
+    void setValueShowing(int32 newValue);
+
+    UFUNCTION(BlueprintGetter)
+    int32 getValueShowing() const;
+
+    UFUNCTION(BlueprintSetter)
+    void setResPath(const FDirectoryPath& newResPath);
+
+    UFUNCTION(BlueprintGetter)
+    const FDirectoryPath& getResPath() const;
 
 protected:
 
     virtual void OnConstruction(const FTransform& Transform) override;
     virtual void PostInitializeComponents() override;
 
-    void createAndInitComponents();
-    int32 updateCardStaticMeshMIDParams(class UTexture* InBaseColor);
+#if WITH_EDITOR
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
+#endif
 
-    int32 changeVisualModelTypeInternal(const FString &modelAssetPath, bool bInConstruct);
-    int32 changeVisualValueInternal(int32 newValue, bool bInConstruct, bool bIgnoreValueCompare);
+    void createComponentsForCDO();
+    int32 checkAndLoadCardBasicResources(const FString &inPath);
+
+    //the update rule is: always update if new settings arrive, and always reflect it even fail, never revert values
+    int32 updateVisual();
+    int32 updateWithCardBasicResources();
+    int32 updateWithValue(int32 newValue);
+
+    int32 updateCardStaticMeshMIDParams(class UTexture* InBaseColor);
 
     //return true if all res loaded
     bool helperTryLoadCardRes(const FString &modelAssetPath, const FString &valuePrefix, class UTexture** ppOutBaseColorTexture);
 
 
-    //component doesn't need uproperty
-    //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "card box"))
-    class USceneComponent *m_pRootScene;
-
-    class UBoxComponent *m_pCardBox;
-
-    //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "card static mesh"))
-    class UStaticMeshComponent *m_pCardStaticMesh;
-
-    UPROPERTY()
-    class UMaterialInstance* m_pResCardStaticMeshMITarget;
-
-    //for some reason, MID can't survive across ctor process
-    //UPROPERTY()
-    //class UMaterialInstanceDynamic* m_pResCardStaticMeshMIDTarget;
-
-    UPROPERTY()
-    class UTexture* m_pResCardStaticMeshMIDParamInBaseColorTarget;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "value showing"))
+    //important values:
+    //value showing now
+    UPROPERTY(EditAnywhere, BlueprintSetter = setValueShowing, BlueprintGetter = getValueShowing, meta = (DisplayName = "value showing"))
     int32 m_iValueShowing;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "model asset path"))
-    FString m_sModelAssetPath;
 
-    int32 m_iError;
+    //components
+    //root scene
+    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "root scene"))
+    class USceneComponent *m_pRootScene;
+
+    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "card box"))
+    class UBoxComponent *m_pCardBox;
+
+    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "card static mesh"))
+    class UStaticMeshComponent *m_pCardStaticMesh;
+
+
+    //resouce settings, the child calss should specify them
+    //Note: only one of ContentDir or RelativeToGameContentDir need to be specified to resulting relative path, their difference is dialog 
+    //UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta = (DisplayName = "card static mesh", ContentDir = "true", RelativeToGameContentDir = "true"))
+
+    //where the card resource is, have special requirement such as mesh, material, texture, etc. example: /Game/Art/Models/MJCard/Type0
+    UPROPERTY(EditDefaultsOnly, BlueprintSetter = setResPath, BlueprintGetter = getResPath, meta = (DisplayName = "resource path", ContentDir = "true"))
+    FDirectoryPath m_cResPath;
+
+    UPROPERTY(BlueprintReadOnly)
+    class UStaticMesh *m_pResMesh;
+
+    UPROPERTY(BlueprintReadOnly)
+    class UMaterialInstance *m_pResMI;
+
+
+
 };

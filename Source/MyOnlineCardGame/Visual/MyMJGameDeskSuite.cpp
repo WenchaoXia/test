@@ -18,22 +18,151 @@
 
 //#include "Runtime/CoreUObject/Public/Templates/SubclassOf.h"
 
+UMyMJGameDeskDynamicResManagerCpp::UMyMJGameDeskDynamicResManagerCpp() : Super()
+{
+    m_pCardModelMeshAsset = NULL;
+    m_pCardModelMaterialDefaultInstanceAsset = NULL;
+    m_pActorModelInfoCached = NULL;
+};
+
+UMyMJGameDeskDynamicResManagerCpp::~UMyMJGameDeskDynamicResManagerCpp()
+{
+    if (m_pActorModelInfoCached) {
+        delete(m_pActorModelInfoCached);
+        m_pActorModelInfoCached = NULL;
+    }
+};
+
 bool UMyMJGameDeskDynamicResManagerCpp::checkSettings() const
 {
-    if (!IsValid(m_cCardClass)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cCardClass is invalid: %p"), m_cCardClass.Get());
+
+    if (!IsValid(m_cCfgCardClass)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cCardClass is invalid: %p"), m_cCfgCardClass.Get());
         return false;
     }
 
-    AMyMJGameCardBaseCpp *pCDO = m_cCardClass->GetDefaultObject<AMyMJGameCardBaseCpp>();
+    AMyMJGameCardBaseCpp *pCDO = m_cCfgCardClass->GetDefaultObject<AMyMJGameCardBaseCpp>();
     if (!IsValid(pCDO)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card pCDO is invalid: %p"), pCDO);
+        return false;
+    }
+
+    if (m_sCfgCardModelAssetPath.IsEmpty()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_sCfgCardModelAssetPath does not have a valid value"));
         return false;
     }
 
     return true;
 };
 
+FMyMJGameCardActorModelInfoCpp& UMyMJGameDeskDynamicResManagerCpp::getCardModelInfoUnscaled()
+{
+    if (!m_pActorModelInfoCached) {
+        m_pActorModelInfoCached = new FMyMJGameCardActorModelInfoCpp();
+    }
+
+    if (IsValid(m_pCardModelMeshAsset)) {
+
+        if (!m_pActorModelInfoCached) {
+
+            FBox box = m_pCardModelMeshAsset->GetBoundingBox();
+            FVector boxSize = box.Max - box.Min;
+            FVector boxSizeFix(0), boxSizeFixPivotOffset(0);
+            m_pActorModelInfoCached->m_cBoxExtend.X = UKismetMathLibrary::FCeil(boxSize.X) / 2;
+            m_pActorModelInfoCached->m_cBoxExtend.Y = UKismetMathLibrary::FCeil(boxSize.Y) / 2;
+            m_pActorModelInfoCached->m_cBoxExtend.Z = UKismetMathLibrary::FCeil(boxSize.Z) / 2;
+
+            m_pActorModelInfoCached->m_cCenterPointRelativeLocation.X = m_pActorModelInfoCached->m_cBoxExtend.X;
+            m_pActorModelInfoCached->m_cCenterPointRelativeLocation.Z = m_pActorModelInfoCached->m_cBoxExtend.Z;
+        }
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pCardModelMeshAsset is not valid."));
+    }
+
+    return *m_pActorModelInfoCached;
+}
+
+void UMyMJGameDeskDynamicResManagerCpp::setCfgCardModelAssetPath(const FString& inPath)
+{
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("setCfgCardModelAssetPath() with %s."), *inPath);
+
+    if (inPath.IsEmpty()) {
+        return;
+    }
+
+    FString modelAssetPath = inPath;
+    if (!inPath.EndsWith(TEXT("/"))) {
+        modelAssetPath += TEXT("/");
+    }
+
+    FString meshFullPathName = modelAssetPath + MyCardAssetPartialNameStaticMesh;
+    FString matDefaultInstFullPathName = modelAssetPath + MyCardAssetPartialNameStaticMeshDefaultMI;
+    //FString textureMisssFullPathName = modelAssetPath + TEXT("vMiss_baseColor");
+
+    UStaticMesh *pMeshAsset = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UStaticMesh>(NULL, meshFullPathName);
+    if (!IsValid(pMeshAsset)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("setCfgCardModelAssetPath failed"));
+        return;
+    }
+
+    UMaterialInstance *pMatInstAsset = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UMaterialInstance>(NULL, matDefaultInstFullPathName);
+    if (!IsValid(pMeshAsset)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("setCfgCardModelAssetPath failed"));
+        return;
+    }
+
+    m_sCfgCardModelAssetPath = modelAssetPath;
+    m_pCardModelMeshAsset = pMeshAsset;
+    m_pCardModelMaterialDefaultInstanceAsset = pMatInstAsset;
+
+    return;
+};
+
+
+const FString& UMyMJGameDeskDynamicResManagerCpp::getCfgCardModelAssetPath() const
+{
+    return m_sCfgCardModelAssetPath;
+}
+
+
+
+void UMyMJGameDeskDynamicResManagerCpp::prepareCardActor()
+{
+    //FActorSpawnParameters
+
+    FVector Location(0.0f, 0.0f, 0.0f);
+    FRotator Rotation(0.0f, 0.0f, 0.0f);
+    FActorSpawnParameters SpawnInfo;
+
+    //AActor *parent = Cast<AActor>(GetOuter());
+    //UWorld *w = parent->GetWorld();
+    //GetWorld()->SpawnActor<AProjectile>(Location, Rotation, SpawnInfo);
+}
+
+AMyMJGameDeskSuiteCpp::AMyMJGameDeskSuiteCpp() : Super()
+{
+    m_pResManager = CreateDefaultSubobject<UMyMJGameDeskDynamicResManagerCpp>(TEXT("res manager"));
+
+    if (!IsValid(m_pRootScene)) {
+        USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
+        MY_VERIFY(IsValid(pRootSceneComponent));
+
+        RootComponent = pRootSceneComponent;
+        m_pRootScene = pRootSceneComponent;
+    }
+
+    m_pDeskAreaActor = NULL;
+};
+
+AMyMJGameDeskSuiteCpp::~AMyMJGameDeskSuiteCpp()
+{
+}
+
+void AMyMJGameDeskSuiteCpp::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+};
 
 void AMyMJGameDeskSuiteCpp::helperCalcCardTransform(const FMyMJGameCardVisualInfoCpp& cCardVisualInfo, FTransform &outTransform)
 {
@@ -241,11 +370,11 @@ void AMyMJGameDeskSuiteCpp::helperCalcCardTransform(const FMyMJGameCardVisualInf
     */
 };
 
-int32 AMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMyMJGameCardActorModelInfoCpp& cardModelInfo, const FMyMJGameCardVisualInfoCpp& cardVisualInfo, const FMyMJGameDeskVisualPointCfgCpp& visualPointCfg, FVector& outLocationWorld, FRotator& outRotatorWorld)
+int32 AMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMyMJGameCardActorModelInfoCpp& cardModelInfoFinal, const FMyMJGameCardVisualInfoCpp& cardVisualInfoFinal, const FMyMJGameDeskVisualPointCfgCpp& visualPointCfg, FVector& outLocationWorld, FRotator& outRotatorWorld)
 {
 
     const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCenter = visualPointCfg;
-    const FMyMJGameCardVisualInfoCpp& cCardVisualInfo = cardVisualInfo;
+    const FMyMJGameCardVisualInfoCpp& cCardVisualInfo = cardVisualInfoFinal;
 
     const FTransform& cTransFormCenter = cVisualPointCenter.m_cCenterPointWorldTransform;
     const FVector& cAreaBoxExtend = cVisualPointCenter.m_cAreaBoxExtendFinal;
@@ -315,7 +444,7 @@ int32 AMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMy
         eFlipState = MyMJCardFlipStateCpp::Stand;
     }
 
-    if (cardModelInfo.m_cBoxExtendFinal.IsZero()) {
+    if (cardModelInfoFinal.m_cBoxExtend.IsZero()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cardBoxExtend is zero!"));
     }
 
@@ -343,8 +472,8 @@ int32 AMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMy
     FVector upV(0, 0, 1);
 
     FVector perRowOffsetB2T(0); //bottom to top
-    FVector perColOffsetL2R = rightV * cardModelInfo.m_cBoxExtendFinal.Y * 2; //left to right
-    FVector perColOffsetX90DL2R = rightV * cardModelInfo.m_cBoxExtendFinal.Z * 2;
+    FVector perColOffsetL2R = rightV * cardModelInfoFinal.m_cBoxExtend.Y * 2; //left to right
+    FVector perColOffsetX90DL2R = rightV * cardModelInfoFinal.m_cBoxExtend.Z * 2;
     FVector perStackOffsetB2T(0); //bottom to top
 
     FRotator localRotatorRelative2StackPoint(0);
@@ -353,44 +482,44 @@ int32 AMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMy
     FVector localPointOfAttaching2StackPointRelativeLocation(0); //which will combine to stack point after rotate
     FVector localPointOfAttaching2StackPointRelativeLocationFixL2R(0);
     if (eFlipState == MyMJCardFlipStateCpp::Stand) {
-        perRowOffsetB2T = forwardV * cardModelInfo.m_cBoxExtendFinal.X * 2;
-        perStackOffsetB2T = upV * cardModelInfo.m_cBoxExtendFinal.Z * 2;
+        perRowOffsetB2T = forwardV * cardModelInfoFinal.m_cBoxExtend.X * 2;
+        perStackOffsetB2T = upV * cardModelInfoFinal.m_cBoxExtend.Z * 2;
 
-        localPointOfAttaching2StackPointRelativeLocation = cardModelInfo.m_cCenterPointFinalRelativeLocation;
-        localPointOfAttaching2StackPointRelativeLocation.Z -= cardModelInfo.m_cBoxExtendFinal.Z;
+        localPointOfAttaching2StackPointRelativeLocation = cardModelInfoFinal.m_cCenterPointRelativeLocation;
+        localPointOfAttaching2StackPointRelativeLocation.Z -= cardModelInfoFinal.m_cBoxExtend.Z;
 
         localRotatorRelative2StackPoint.Yaw = 180;
 
     }
     else if (eFlipState == MyMJCardFlipStateCpp::Up) {
-        perRowOffsetB2T = forwardV * cardModelInfo.m_cBoxExtendFinal.Z * 2;
-        perStackOffsetB2T = upV * cardModelInfo.m_cBoxExtendFinal.X * 2;
+        perRowOffsetB2T = forwardV * cardModelInfoFinal.m_cBoxExtend.Z * 2;
+        perStackOffsetB2T = upV * cardModelInfoFinal.m_cBoxExtend.X * 2;
 
         //for simple, if 90D, it always align to bottom line
         if (iXRotate90D > 0) {
-            localPointOfAttaching2StackPointRelativeLocation = cardModelInfo.m_cCenterPointFinalRelativeLocation;
-            localPointOfAttaching2StackPointRelativeLocation.X -= 1 * cardModelInfo.m_cBoxExtendFinal.X;
-            localPointOfAttaching2StackPointRelativeLocation.Y -= (cardModelInfo.m_cBoxExtendFinal.Y + cardModelInfo.m_cBoxExtendFinal.X);
-            localPointOfAttaching2StackPointRelativeLocationFixL2R.Z = - cardModelInfo.m_cBoxExtendFinal.Y + cardModelInfo.m_cBoxExtendFinal.X;
+            localPointOfAttaching2StackPointRelativeLocation = cardModelInfoFinal.m_cCenterPointRelativeLocation;
+            localPointOfAttaching2StackPointRelativeLocation.X -= 1 * cardModelInfoFinal.m_cBoxExtend.X;
+            localPointOfAttaching2StackPointRelativeLocation.Y -= (cardModelInfoFinal.m_cBoxExtend.Y + cardModelInfoFinal.m_cBoxExtend.X);
+            localPointOfAttaching2StackPointRelativeLocationFixL2R.Z = - cardModelInfoFinal.m_cBoxExtend.Y + cardModelInfoFinal.m_cBoxExtend.X;
 
             localRotatorRelative2StackPoint.Roll = 90;
             localRotatorRelative2StackPoint.Pitch = 90;
         }
         else if (iXRotate90D < 0) {
-            localPointOfAttaching2StackPointRelativeLocation = cardModelInfo.m_cCenterPointFinalRelativeLocation;
-            localPointOfAttaching2StackPointRelativeLocation.X -= 1 * cardModelInfo.m_cBoxExtendFinal.X;
-            localPointOfAttaching2StackPointRelativeLocation.Y += (cardModelInfo.m_cBoxExtendFinal.Y + cardModelInfo.m_cBoxExtendFinal.X);
-            localPointOfAttaching2StackPointRelativeLocationFixL2R.Z = -(-cardModelInfo.m_cBoxExtendFinal.Y + cardModelInfo.m_cBoxExtendFinal.X);
+            localPointOfAttaching2StackPointRelativeLocation = cardModelInfoFinal.m_cCenterPointRelativeLocation;
+            localPointOfAttaching2StackPointRelativeLocation.X -= 1 * cardModelInfoFinal.m_cBoxExtend.X;
+            localPointOfAttaching2StackPointRelativeLocation.Y += (cardModelInfoFinal.m_cBoxExtend.Y + cardModelInfoFinal.m_cBoxExtend.X);
+            localPointOfAttaching2StackPointRelativeLocationFixL2R.Z = -(-cardModelInfoFinal.m_cBoxExtend.Y + cardModelInfoFinal.m_cBoxExtend.X);
 
             localRotatorRelative2StackPoint.Roll = -90;
             localRotatorRelative2StackPoint.Pitch = 90;
         }
         else {
 
-            localPointOfAttaching2StackPointRelativeLocation = cardModelInfo.m_cCenterPointFinalRelativeLocation;
-            localPointOfAttaching2StackPointRelativeLocation.Z -= cardModelInfo.m_cBoxExtendFinal.Z;
-            localPointOfAttaching2StackPointRelativeLocation.Z -= 1 * cardModelInfo.m_cBoxExtendFinal.X;
-            localPointOfAttaching2StackPointRelativeLocation.X -= 1 * cardModelInfo.m_cBoxExtendFinal.X;
+            localPointOfAttaching2StackPointRelativeLocation = cardModelInfoFinal.m_cCenterPointRelativeLocation;
+            localPointOfAttaching2StackPointRelativeLocation.Z -= cardModelInfoFinal.m_cBoxExtend.Z;
+            localPointOfAttaching2StackPointRelativeLocation.Z -= 1 * cardModelInfoFinal.m_cBoxExtend.X;
+            localPointOfAttaching2StackPointRelativeLocation.X -= 1 * cardModelInfoFinal.m_cBoxExtend.X;
 
             localRotatorRelative2StackPoint.Pitch = 90;
             localRotatorRelative2StackPoint.Yaw = 180;
@@ -398,34 +527,34 @@ int32 AMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMy
         }
     }
     else if (eFlipState == MyMJCardFlipStateCpp::Down) {
-        perRowOffsetB2T = forwardV * cardModelInfo.m_cBoxExtendFinal.Z * 2;
-        perStackOffsetB2T = upV * cardModelInfo.m_cBoxExtendFinal.X * 2;
+        perRowOffsetB2T = forwardV * cardModelInfoFinal.m_cBoxExtend.Z * 2;
+        perStackOffsetB2T = upV * cardModelInfoFinal.m_cBoxExtend.X * 2;
 
         //for simple, if 90D, it always align to bottom line
         if (iXRotate90D > 0) {
-            localPointOfAttaching2StackPointRelativeLocation = cardModelInfo.m_cCenterPointFinalRelativeLocation;
-            localPointOfAttaching2StackPointRelativeLocation.X += 1 * cardModelInfo.m_cBoxExtendFinal.X;
-            localPointOfAttaching2StackPointRelativeLocation.Y += (cardModelInfo.m_cBoxExtendFinal.Y + cardModelInfo.m_cBoxExtendFinal.X);
-            localPointOfAttaching2StackPointRelativeLocationFixL2R.Z = -cardModelInfo.m_cBoxExtendFinal.Y + cardModelInfo.m_cBoxExtendFinal.X;
+            localPointOfAttaching2StackPointRelativeLocation = cardModelInfoFinal.m_cCenterPointRelativeLocation;
+            localPointOfAttaching2StackPointRelativeLocation.X += 1 * cardModelInfoFinal.m_cBoxExtend.X;
+            localPointOfAttaching2StackPointRelativeLocation.Y += (cardModelInfoFinal.m_cBoxExtend.Y + cardModelInfoFinal.m_cBoxExtend.X);
+            localPointOfAttaching2StackPointRelativeLocationFixL2R.Z = -cardModelInfoFinal.m_cBoxExtend.Y + cardModelInfoFinal.m_cBoxExtend.X;
 
             localRotatorRelative2StackPoint.Roll = 90;
             localRotatorRelative2StackPoint.Pitch = -90;
         }
         else if (iXRotate90D < 0) {
-            localPointOfAttaching2StackPointRelativeLocation = cardModelInfo.m_cCenterPointFinalRelativeLocation;
-            localPointOfAttaching2StackPointRelativeLocation.X += 1 * cardModelInfo.m_cBoxExtendFinal.X;
-            localPointOfAttaching2StackPointRelativeLocation.Y -= (cardModelInfo.m_cBoxExtendFinal.Y + cardModelInfo.m_cBoxExtendFinal.X);
-            localPointOfAttaching2StackPointRelativeLocationFixL2R.Z = -(-cardModelInfo.m_cBoxExtendFinal.Y + cardModelInfo.m_cBoxExtendFinal.X);
+            localPointOfAttaching2StackPointRelativeLocation = cardModelInfoFinal.m_cCenterPointRelativeLocation;
+            localPointOfAttaching2StackPointRelativeLocation.X += 1 * cardModelInfoFinal.m_cBoxExtend.X;
+            localPointOfAttaching2StackPointRelativeLocation.Y -= (cardModelInfoFinal.m_cBoxExtend.Y + cardModelInfoFinal.m_cBoxExtend.X);
+            localPointOfAttaching2StackPointRelativeLocationFixL2R.Z = -(-cardModelInfoFinal.m_cBoxExtend.Y + cardModelInfoFinal.m_cBoxExtend.X);
 
             localRotatorRelative2StackPoint.Roll = -90;
             localRotatorRelative2StackPoint.Pitch = -90;
         }
         else {
 
-            localPointOfAttaching2StackPointRelativeLocation = cardModelInfo.m_cCenterPointFinalRelativeLocation;
-            localPointOfAttaching2StackPointRelativeLocation.Z += cardModelInfo.m_cBoxExtendFinal.Z;
-            localPointOfAttaching2StackPointRelativeLocation.Z += 1 * cardModelInfo.m_cBoxExtendFinal.X;
-            localPointOfAttaching2StackPointRelativeLocation.X += 1 * cardModelInfo.m_cBoxExtendFinal.X;
+            localPointOfAttaching2StackPointRelativeLocation = cardModelInfoFinal.m_cCenterPointRelativeLocation;
+            localPointOfAttaching2StackPointRelativeLocation.Z += cardModelInfoFinal.m_cBoxExtend.Z;
+            localPointOfAttaching2StackPointRelativeLocation.Z += 1 * cardModelInfoFinal.m_cBoxExtend.X;
+            localPointOfAttaching2StackPointRelativeLocation.X += 1 * cardModelInfoFinal.m_cBoxExtend.X;
 
             localRotatorRelative2StackPoint.Pitch = -90;
             localRotatorRelative2StackPoint.Yaw = 180;

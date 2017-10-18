@@ -15,335 +15,362 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Kismet/KismetMathLibrary.h"
 
-#define MyCardStaticMeshMIDParamInBaseColor (TEXT("InBaseColor"))
-
-#define MyCardAssetPartialNameStaticMesh (TEXT("cardBox"))
-#define MyCardAssetPartialNameStaticMeshDefaultMI (TEXT("cardBoxMat0_defaultInst"))
-
-#define MyCardAssetPartialNamePrefixValueNormal (TEXT("v%02d"))
-#define MyCardAssetPartialNamePrefixValueUnknown (TEXT("vUnknown"))
-#define MyCardAssetPartialNamePrefixValueMiss (TEXT("vMiss"))
-
-#define MyCardAssetPartialNameSuffixValueBaseColorTexture (TEXT("_baseColor"))
 
 AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp() : Super()
 {
-    m_iError = 0;
+    //UClass* uc = this->GetClass();
+    //UObject* CDO = uc->GetDefaultObject();
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCardBaseCpp, %s, this: %p, uc %s, cdo %p."), *m_cResPath.Path, this, *uc->GetFullName(), CDO);
+
     bNetLoadOnClient = true;
+
+
+    m_iValueShowing = MyMJGameCardBaseCppDefaultShowingValue;
 
     m_pRootScene = NULL;
     m_pCardBox = NULL;
     m_pCardStaticMesh = NULL;
 
-    m_pResCardStaticMeshMITarget = NULL;
-    //m_pResCardStaticMeshMIDTarget = NULL;
-    m_pResCardStaticMeshMIDParamInBaseColorTarget = NULL;
+    m_cResPath.Path.Reset();
+    m_pResMesh = NULL;
+    m_pResMI = NULL;
 
-    m_iValueShowing = 0;
-    m_sModelAssetPath.Reset();
     
-    createAndInitComponents();
+    createComponentsForCDO();
 }
 
 AMyMJGameCardBaseCpp::~AMyMJGameCardBaseCpp()
 {
-
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("~AMyMJGameCardBaseCpp, this: %p."), this);
 };
 
-const class UBoxComponent& AMyMJGameCardBaseCpp::getCollisionBoxRef() const
+/* it has priority over default constructor, and we don't need it yet */
+
+/*
+AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
 {
-    MY_VERIFY(IsValid(m_pCardBox));
-
-    //m_pCardBox->GetScaledBoxExtent()
-    return *m_pCardBox;
-};
-
+    // Initialize CDO properties here.
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCardBaseCpp construct 2, %s"), *m_sModelAssetPath);
+}
+*/
 
 void AMyMJGameCardBaseCpp::OnConstruction(const FTransform& Transform)
 {
+    //UClass* uc = this->GetClass();
+    //UObject* CDO = uc->GetDefaultObject();
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnConstruction, this %p, cdo %p."), this, CDO);
     Super::OnConstruction(Transform);
 
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("OnConstruction %p, %p, %p"), m_pResCardStaticMeshMITarget, m_pResCardStaticMeshMIDTarget, m_pResCardStaticMeshMIDParamInBaseColorTarget);
-
-    /*
-    FString matDefaultInstFullPathName = m_sModelAssetPath + TEXT("cardBoxMat0_defaultInst");
-    UMaterialInstance *pMatInstAsset = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UMaterialInstance>(NULL, matDefaultInstFullPathName);
-    if (IsValid(pMatInstAsset)) {
-        UMaterialInstanceDynamic* pMID = UMaterialInstanceDynamic::Create(pMatInstAsset, m_pCardStaticMesh);
-        m_pCardStaticMesh->SetMaterial(0, pMID);
-    }
-    */
-
-    //UMaterialInterface* pMat = m_pCardStaticMesh->GetMaterial(0);
-    //pMat->GetFullName();
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("mat %s"), pMat ? *pMat->GetFullName() : TEXT("NULL"));
-
-    /*
-    if (m_pResCardStaticMeshMIDTarget) {
-        m_pCardStaticMesh->SetMaterial(0, m_pResCardStaticMeshMIDTarget);
-        m_pResCardStaticMeshMIDTarget = NULL;
-    }
-    */
-    
-    //do the jobs cab't be done in construct function
-    if (IsValid(m_pResCardStaticMeshMITarget)) {
-        UMaterialInstanceDynamic* pMID = UMaterialInstanceDynamic::Create(m_pResCardStaticMeshMITarget, m_pCardStaticMesh);
-        m_pCardStaticMesh->SetMaterial(0, pMID);
-        m_pResCardStaticMeshMITarget = NULL;
-    }
-
-    if (IsValid(m_pResCardStaticMeshMIDParamInBaseColorTarget)) {
-        updateCardStaticMeshMIDParams(m_pResCardStaticMeshMIDParamInBaseColorTarget);
-        m_pResCardStaticMeshMIDParamInBaseColorTarget = NULL;
-    }
+    updateVisual();
 }
 
 void AMyMJGameCardBaseCpp::PostInitializeComponents()
 {
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostInitializeComponents, this %p, %s, %p, %p, compo: %p."), this, *m_cResPath.Path, m_pResMesh, m_pResMI, m_pCardStaticMesh);
     Super::PostInitializeComponents();
 
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("PostInitializeComponents"));
+    updateVisual();
+}
+
+#if WITH_EDITOR
+
+void AMyMJGameCardBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty, %s"), *m_cResPath.Path);
+    FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
+
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(AMyMJGameCardBaseCpp, m_iValueShowing))
+    {
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty 1, this %p."), this);
+
+        //this may invlove CDO, so update all, since CDO may have not executed onContruct() nor PostInitializeComponents() before
+
+        updateVisual();
+        //updateWithValue(m_iValueShowing);
+    } 
+    else {
+        PropertyName = (e.MemberProperty != NULL) ? e.MemberProperty->GetFName() : NAME_None;
+
+        if (PropertyName == GET_MEMBER_NAME_CHECKED(AMyMJGameCardBaseCpp, m_cResPath))
+        {
+            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty 2, this %p, %s"), this, *m_cResPath.Path);
+            checkAndLoadCardBasicResources(m_cResPath.Path);
+            updateVisual();
+        }
+    }
+
+    Super::PostEditChangeProperty(e);
+}
+
+#endif
+
+
+void AMyMJGameCardBaseCpp::createComponentsForCDO()
+{
+
+    USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
+    MY_VERIFY(IsValid(pRootSceneComponent));
+    RootComponent = pRootSceneComponent;
+    m_pRootScene = pRootSceneComponent;
+
+
+    UBoxComponent* pBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBox"));
+    MY_VERIFY(IsValid(pBoxComponent));
+    pBoxComponent->SetupAttachment(m_pRootScene);
+    pBoxComponent->SetCollisionProfileName(TEXT("CollistionProfileBox"));
+    pBoxComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); //by default disable collision
+    m_pCardBox = pBoxComponent;
+
+
+    UStaticMeshComponent* pStaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CardStaticMesh"));
+    MY_VERIFY(IsValid(pStaticMeshComponent));
+    pStaticMeshComponent->SetupAttachment(m_pCardBox);
+    pStaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    m_pCardStaticMesh = pStaticMeshComponent;
 
 }
 
-void AMyMJGameCardBaseCpp::createAndInitComponents()
+int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath)
 {
-    //create defaults
-    if (!IsValid(m_pRootScene)) {
-        USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
-        //UBoxComponent* pBoxComponent = NewObject<UBoxComponent>(this);
-        MY_VERIFY(IsValid(pRootSceneComponent));
+    if (inPath.IsEmpty()) {
+        m_pResMesh = nullptr;
+        m_pResMI = nullptr;
+        m_cResPath.Path.Reset();
 
-        RootComponent = pRootSceneComponent;
-
-        m_pRootScene = pRootSceneComponent;
+        return 0;
     }
 
 
-    if (!IsValid(m_pCardBox)) {
+    const FString &modelAssetPath = inPath;
 
-        UBoxComponent* pBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBox"));
-        //UBoxComponent* pBoxComponent = NewObject<UBoxComponent>(this);
-        MY_VERIFY(IsValid(pBoxComponent));
+    FString meshFullPathName = modelAssetPath + TEXT("/") + MyCardAssetPartialNameStaticMesh;
+    FString matDefaultInstFullPathName = modelAssetPath + TEXT("/") + MyCardAssetPartialNameStaticMeshDefaultMI;
 
-        //pBoxComponent->Rename(TEXT("RootBox"));
-        //RootComponent = pBoxComponent;
-        pBoxComponent->SetupAttachment(m_pRootScene);
-
-        //pBoxComponent->InitBoxExtent(boxSizeFix);
-        pBoxComponent->SetCollisionProfileName(TEXT("CollistionProfileBox"));
-
-        pBoxComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); //by default disable collision
-        //pBoxComponent->RegisterComponent();
-        m_pCardBox = pBoxComponent;
+    UStaticMesh *pMeshAsset = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UStaticMesh>(NULL, meshFullPathName);
+    if (!IsValid(pMeshAsset)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to load mesh asset from %s."), *meshFullPathName);
+        m_pResMesh = nullptr;
+    }
+    else {
+        m_pResMesh = pMeshAsset;
     }
 
-    if (!IsValid(m_pCardStaticMesh)) {
-
-        UStaticMeshComponent* pStaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CardStaticMesh"));
-        //UStaticMeshComponent* pStaticMeshComponent = NewObject<UStaticMeshComponent>(this);
-        MY_VERIFY(IsValid(pStaticMeshComponent));
-
-        //pStaticMeshComponent->Rename(TEXT("CardStaticMesh"));
-        pStaticMeshComponent->SetupAttachment(m_pCardBox);
-
-        //pStaticMeshComponent->RegisterComponent();
-        m_pCardStaticMesh = pStaticMeshComponent;
+    UMaterialInstance *pMatInstAsset = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UMaterialInstance>(NULL, matDefaultInstFullPathName);
+    if (!IsValid(pMatInstAsset)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to load material default instance asset from %s."), *matDefaultInstFullPathName);
+        m_pResMI = nullptr;
+    }
+    else {
+        m_pResMI = pMatInstAsset;
     }
 
-    //set defaults
-    m_iError = changeVisualModelTypeInternal(TEXT("/Game/Art/Models/MJCard/Type0/"), true);
+    m_cResPath.Path = modelAssetPath;
 
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("init, m_pCardBox %p, m_pCardStaticMesh %p."), m_pCardBox, m_pCardStaticMesh);
+    return 0;
+}
 
+int32 AMyMJGameCardBaseCpp::updateVisual()
+{
+    updateWithCardBasicResources();
+    updateWithValue(m_iValueShowing);
+
+    return 0;
+}
+
+int32 AMyMJGameCardBaseCpp::updateWithCardBasicResources()
+{
+    MY_VERIFY(IsValid(m_pCardBox));
+    MY_VERIFY(IsValid(m_pCardStaticMesh));
+
+    UStaticMesh* pMeshNow = m_pCardStaticMesh->GetStaticMesh();
+    if (pMeshNow != m_pResMesh) {
+
+        FVector boxSizeFix(0), boxSizeFixPivotOffset(0), boxOrigin(0);
+
+        if (IsValid(m_pResMesh)) {
+            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("updating mesh and material for this %p."), this);
+
+            FBox box = m_pResMesh->GetBoundingBox();
+            FVector boxSize = box.Max - box.Min;
+
+            boxSizeFix.X = UKismetMathLibrary::FCeil(boxSize.X) / 2;
+            boxSizeFix.Y = UKismetMathLibrary::FCeil(boxSize.Y) / 2;
+            boxSizeFix.Z = UKismetMathLibrary::FCeil(boxSize.Z) / 2;
+
+            //boxSizeFixPivotOffset = boxSizeFix;
+            boxSizeFixPivotOffset.X = -boxSizeFix.X;
+            boxSizeFixPivotOffset.Z = -boxSizeFix.Z;
+
+            boxOrigin.X = (box.Min.X + box.Max.X) / 2;
+            boxOrigin.Y = (box.Min.Y + box.Max.Y) / 2;
+            boxOrigin.Z = (box.Min.Z + box.Max.Z) / 2;
+
+        }
+        else {
+
+        }
+
+        m_pCardBox->SetBoxExtent(boxSizeFix);
+        m_pCardBox->SetRelativeLocation(-boxSizeFixPivotOffset);
+
+        m_pCardStaticMesh->SetStaticMesh(m_pResMesh);
+        m_pCardStaticMesh->SetRelativeLocation(-boxOrigin);
+    }
+
+
+    UMaterialInstanceDynamic* pMIDNow = Cast<UMaterialInstanceDynamic>(m_pCardStaticMesh->GetMaterial(0));
+    if (IsValid(m_pResMI)) {
+        if (IsValid(pMIDNow) && pMIDNow->Parent == m_pResMI) {
+            //equal
+        }
+        else {
+            UMaterialInstanceDynamic* pMID = UMaterialInstanceDynamic::Create(m_pResMI, m_pCardStaticMesh);
+            MY_VERIFY(IsValid(pMID));
+            m_pCardStaticMesh->SetMaterial(0, pMID);
+        }
+    }
+    else {
+        //simple, target is to clear
+        if (!IsValid(pMIDNow)) {
+            //equal
+        }
+        else {
+            m_pCardStaticMesh->SetMaterial(0, nullptr);
+        }
+    }
+ 
+    return 0;
+}
+
+int32 AMyMJGameCardBaseCpp::updateWithValue(int32 newValue)
+{
+    UTexture* pTargetBaseColorTexture = NULL;
+
+    FString vPrefix;
+    if (!m_cResPath.Path.IsEmpty()) {
+        if (UMyMJUtilsLibrary::getCardValueType(newValue) != MyMJCardValueTypeCpp::Invalid || newValue == 0) {
+            if (newValue > 0) {
+                vPrefix = FString::Printf(MyCardAssetPartialNamePrefixValueNormal, newValue);
+            }
+            else if (newValue == 0) {
+                vPrefix = MyCardAssetPartialNamePrefixValueUnknown;
+            }
+        }
+
+    }
+
+    if (!vPrefix.IsEmpty()) {
+        helperTryLoadCardRes(m_cResPath.Path, vPrefix, &pTargetBaseColorTexture);
+    }
+
+    return updateCardStaticMeshMIDParams(pTargetBaseColorTexture);
 }
 
 int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBaseColor)
 {
+    MY_VERIFY(IsValid(m_pCardStaticMesh));
+
     UMaterialInterface* pMat = m_pCardStaticMesh->GetMaterial(0);
-    if (!IsValid(pMat)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid material on mesh."));
-        return -21;
-    }
-
-    UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(pMat);
-    if (!DynamicMaterial)
-    {
-        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("old material is not MID, it is: %s."), *pMat->GetClass()->GetFullName());
-        //DynamicMaterial = m_pCardStaticMesh->CreateAndSetMaterialInstanceDynamic(0);    //always use dynamic material
-    }
-    if (!DynamicMaterial)
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cast to dynamic material instance fail: %s."), *pMat->GetClass()->GetFullName());
-        return -30;
-    }
-
-    DynamicMaterial->SetTextureParameterValue(MyCardStaticMeshMIDParamInBaseColor, InBaseColor);
-
-    return 0;
-};
-
-
-///example: /Game/Art/Models/MJCard/Type0/cardBox/
-int32 AMyMJGameCardBaseCpp::changeVisualModelType(const FString &modelAssetPath)
-{
-    return changeVisualModelTypeInternal(modelAssetPath, false);
-};
-
-int32 AMyMJGameCardBaseCpp::changeVisualModelTypeInternal(const FString &modelAssetPath, bool bInConstruct)
-{
-    if (modelAssetPath == m_sModelAssetPath) {
-        if (m_sModelAssetPath.IsEmpty()) {
-            return -1;
+    if (IsValid(pMat)) {
+        UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(pMat);
+        if (!DynamicMaterial)
+        {
+            //our design need MID in any case
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cast to dynamic material instance fail: this %p, %s, %s."), this, *pMat->GetClass()->GetFullName(), *pMat->GetFullName());
+            if (InBaseColor == nullptr) {
+                return 0;
+            }
+            else {
+                return -30;
+            }
         }
-        else {
+
+        class UTexture* baseColorNow = NULL;
+        if (DynamicMaterial->GetTextureParameterValue(MyCardStaticMeshMIDParamInBaseColor, baseColorNow)) {
+            if (baseColorNow == InBaseColor) {
+                //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("skip SetTextureParameterValue since target is same, this %p."), this);
+                return 0;
+            }
+        }
+        
+        //if (InBaseColor == nullptr) {
+            //test
+            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("doing test."));
+            //m_pCardStaticMesh->SetMaterial(0, nullptr);
+            //return 0;
+        //}
+
+        DynamicMaterial->SetTextureParameterValue(MyCardStaticMeshMIDParamInBaseColor, InBaseColor);
+        return 0;
+    }
+    else {
+        if (InBaseColor == nullptr) {
             return 0;
         }
-    }
-
-    FString meshFullPathName = modelAssetPath + MyCardAssetPartialNameStaticMesh;
-    FString matDefaultInstFullPathName = modelAssetPath + MyCardAssetPartialNameStaticMeshDefaultMI;
-    //FString textureMisssFullPathName = modelAssetPath + TEXT("vMiss_baseColor");
-
-    UStaticMesh *pMeshAsset = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UStaticMesh>(NULL, meshFullPathName);
-    if (!IsValid(pMeshAsset)) {
-        return -2;
-    }
-
-    UMaterialInstance *pMatInstAsset = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UMaterialInstance>(NULL, matDefaultInstFullPathName);
-    if (!IsValid(pMeshAsset)) {
-        return -2;
-    }
-
-
-    FBox box = pMeshAsset->GetBoundingBox();
-    FVector boxSize = box.Max - box.Min;
-    FVector boxSizeFix(0), boxSizeFixPivotOffset(0);
-    boxSizeFix.X = UKismetMathLibrary::FCeil(boxSize.X) / 2;
-    boxSizeFix.Y = UKismetMathLibrary::FCeil(boxSize.Y) / 2;
-    boxSizeFix.Z = UKismetMathLibrary::FCeil(boxSize.Z) / 2;
-
-    //boxSizeFixPivotOffset = boxSizeFix;
-    boxSizeFixPivotOffset.X = boxSizeFix.X;
-    boxSizeFixPivotOffset.Z = boxSizeFix.Z;
-
-    FVector boxOrigin(0);
-    boxOrigin.X = (box.Min.X + box.Max.X) / 2;
-    boxOrigin.Y = (box.Min.Y + box.Max.Y) / 2;
-    //boxOrigin.Z = box.Min.Z;
-    boxOrigin.Z = (box.Min.Z + box.Max.Z) / 2;
-
-    MY_VERIFY(IsValid(m_pCardBox));
-    MY_VERIFY(IsValid(m_pCardStaticMesh));
-
-    m_pCardBox->SetBoxExtent(boxSizeFix);
-    m_pCardBox->SetRelativeLocation(boxSizeFixPivotOffset);
-
-    m_pCardStaticMesh->SetStaticMesh(pMeshAsset);
-    m_pCardStaticMesh->SetRelativeLocation(-boxOrigin);
-    //m_pCardStaticMesh->SetWorldScale3D(FVector(1.0f));
-
-    //create MID
-    //UMaterialInstanceDynamic* pMID = UMaterialInstanceDynamic::Create(pMatInstAsset, m_pCardStaticMesh);
-    if (bInConstruct) {
-        //postpond it, since in construct it is invalid to set parameters of visual unit which have not been constructed
-        m_pResCardStaticMeshMITarget = pMatInstAsset;
-        //m_pResCardStaticMeshMIDTarget = pMID;
-    }
-    else {
-        UMaterialInstanceDynamic* pMID = UMaterialInstanceDynamic::Create(pMatInstAsset, m_pCardStaticMesh);
-        m_pCardStaticMesh->SetMaterial(0, pMID);
-    }
-
-    m_sModelAssetPath = modelAssetPath;
-
-
-    int32 iRet = 0;
-    iRet = changeVisualValueInternal(m_iValueShowing, bInConstruct, true);
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("changeVisualModelTypeInternal %p, %p, %p"), m_pResCardStaticMeshMITarget, m_pResCardStaticMeshMIDTarget, m_pResCardStaticMeshMIDParamInBaseColorTarget);
-    return iRet;
-};
-
-int32 AMyMJGameCardBaseCpp::changeVisualValue(int32 newValue)
-{
-    return changeVisualValueInternal(newValue, false, false);
-};
-
-int32 AMyMJGameCardBaseCpp::changeVisualValueInternal(int32 newValue, bool bInConstruct, bool bIgnoreValueCompare)
-{
-    if (m_sModelAssetPath.IsEmpty()) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_sModelAssetPath is empty."));
-        return -10;
-    }
-
-    if (UMyMJUtilsLibrary::getCardValueType(newValue) == MyMJCardValueTypeCpp::Invalid && newValue != 0) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid newVaule %d."), newValue);
-        return -11;
-    }
-
-    if (m_iValueShowing == newValue && !bIgnoreValueCompare) {
-        return -12;
-    }
-
-
-    FString vPrefix;
-    if (newValue > 0) {
-        vPrefix = FString::Printf(MyCardAssetPartialNamePrefixValueNormal, newValue);
-    }
-    else if (newValue == 0) {
-        vPrefix = MyCardAssetPartialNamePrefixValueUnknown;
-    }
-    else {
-        return -13;
-    }
-
-    UTexture* pBaseColorTexture = NULL;
-
-    if (!helperTryLoadCardRes(m_sModelAssetPath, vPrefix, &pBaseColorTexture)) {
-        vPrefix = MyCardAssetPartialNamePrefixValueMiss;
-        if (!helperTryLoadCardRes(m_sModelAssetPath, vPrefix, &pBaseColorTexture)) {
-            return -20;
-        }
         else {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("warning: using 'miss' texture for value %d."), newValue);
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("try to set MID param but material is NULL."));
+            return -31;
         }
     }
-
-    MY_VERIFY(IsValid(pBaseColorTexture));
-    MY_VERIFY(IsValid(m_pCardStaticMesh));
-
-    if (bInConstruct) {
-        //postpond it, since in construct it is invalid to set parameters of visual unit which have not been constructed
-        m_pResCardStaticMeshMIDParamInBaseColorTarget = pBaseColorTexture;
-    }
-    else {
-        updateCardStaticMeshMIDParams(pBaseColorTexture);
-    }
-
-    m_iValueShowing = newValue;
-
-    return 0;
 };
+
 
 void AMyMJGameCardBaseCpp::getModelInfo(FMyMJGameCardActorModelInfoCpp& modelInfo)
 {
     FVector actorScale3D = GetActorScale3D();
-    modelInfo.m_cBoxExtendFinal = m_pCardBox->GetScaledBoxExtent() * actorScale3D;
-    modelInfo.m_cCenterPointFinalRelativeLocation = m_pCardBox->RelativeLocation * actorScale3D;
+    modelInfo.m_cBoxExtend = m_pCardBox->GetScaledBoxExtent() * actorScale3D;
+    modelInfo.m_cCenterPointRelativeLocation = m_pCardBox->RelativeLocation * actorScale3D;
 
 };
+
+void AMyMJGameCardBaseCpp::setValueShowing(int32 newValue)
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("setValueShowing %d."), newValue);
+
+    if (m_iValueShowing == newValue) {
+        return;
+    }
+    m_iValueShowing = newValue;
+
+    updateWithValue(m_iValueShowing);
+}
+
+int32 AMyMJGameCardBaseCpp::getValueShowing() const
+{
+    return m_iValueShowing;
+}
+
+void AMyMJGameCardBaseCpp::setResPath(const FDirectoryPath& newResPath)
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("setResPath %s."), *newResPath.Path);
+
+    if (m_cResPath.Path == newResPath.Path) {
+        return;
+    }
+    m_cResPath = newResPath;
+
+    checkAndLoadCardBasicResources(m_cResPath.Path);
+    updateVisual();
+}
+
+const FDirectoryPath& AMyMJGameCardBaseCpp::getResPath() const
+{
+    return m_cResPath;
+}
 
 bool AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, const FString &valuePrefix, class UTexture** ppOutBaseColorTexture)
 {
     bool bRet = true;
 
     if (ppOutBaseColorTexture) {
-        FString baseColorFullPathName = modelAssetPath + valuePrefix + MyCardAssetPartialNameSuffixValueBaseColorTexture;
+        FString baseColorFullPathName = modelAssetPath + TEXT("/") + valuePrefix + MyCardAssetPartialNameSuffixValueBaseColorTexture;
         UTexture* pTBaseColor = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UTexture>(nullptr, baseColorFullPathName);
         if (IsValid(pTBaseColor)) {
             *ppOutBaseColorTexture = pTBaseColor;
         }
         else {
+            *ppOutBaseColorTexture = NULL;
             bRet = false;
         }
     }
