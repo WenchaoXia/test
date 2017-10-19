@@ -136,12 +136,10 @@ public:
 
     //test with a full mode core created and run in sub thread
     UFUNCTION(BlueprintCallable, Category = "UMyMJCoreFullCpp")
-    void testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst, bool bNeedLoopSelf);
+    void testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst);
 
     bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTrivalConfigMask);
-    bool startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst, bool bNeedLoopSelf);
-
-    void loop();
+    bool startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst);
 
     void clearUp();
 
@@ -156,27 +154,14 @@ public:
 
 
 protected:
-    virtual void PostInitProperties() override;
-
-    
-    //It seems timer automaticallly check object's validation, but for safe I still stop it manually here
-    //virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
     //if not 0, it will be used as seed of random
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "seed overwrite"))
     int32 m_iSeed2OverWrite;
 
     TSharedPtr<FMyMJGameCoreThreadControlCpp> m_pCoreFullWithThread;
-    FTimerHandle m_cLoopTimerHandle;
 
 };
-
-//struct FMyMJGameEventArray : public FFastArraySerializer
-//USTRUCT()
-//struct FMyMJGameEventArray : public FFastArraySerializerItem
-//{
-    //GENERATED_USTRUCT_BODY()
-//};
 
 
 #define MY_EXPECTED_MJ_PAWN_NUM ((uint8)MyMJGameRoleTypeCpp::Max)
@@ -284,42 +269,8 @@ public:
         }
     };
 
-
-    UFUNCTION(BlueprintCallable)
-        void connectToCoreFull(UMyMJCoreFullCpp *pCoreFull)
-    {
-        MY_VERIFY(pCoreFull);
-        MY_VERIFY(IsValid(pCoreFull));
-
-        //MY_VERIFY(checkLevelSetting());
-
-        m_pCoreFull = pCoreFull;
-
-        //we have mutlicast delegate once setupped with IO Node to trigger action, but in first we may miss some, so set a timer to do loop action once
-        UWorld *world = GetWorld();
-
-        if (IsValid(world)) {
-            world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
-            world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJCoreMirrorCpp::toCoreFullLoop, ((float)MY_MJ_GAME_CORE_MIRROR_TO_CORE_FULL_LOOP_TIME_MS) / (float)1000, true);
-        }
-        else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
-            MY_VERIFY(false);
-        }
-
-    };
-
     void toCoreFullLoop();
 
-
-    //bool checkLevelSetting()
-    //{
-        //return m_aAttenderPawns.Num() == 4;
-    //};
-
-    //the level should prepare this data
-    //UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "attender pawns"))
-    //    TArray<AMyMJAttenderPawnBPCpp *> m_aAttenderPawns;
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "seed overwrite"))
         int32 m_iSeed2OverWrite;
@@ -344,7 +295,8 @@ protected:
     UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MJDataAll, meta = (DisplayName = "data of all roles"))
     UMyMJDataAllCpp* m_pMJDataAll;
 
-    UPROPERTY()
+    //exist only when we have logic layer which generate data
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "core full"))
     UMyMJCoreFullCpp *m_pCoreFull;
 
     FTimerHandle m_cToCoreFullLoopTimerHandle;
@@ -373,8 +325,6 @@ public:
         m_eVisualMode = MyMJCoreBaseForBpVisualModeCpp::Normal;
         m_uiReplicateClientTimeMs = 0;
     };
-
-    //UFUNCTION(BlueprintImplementableEvent, BlueprintAuthorityOnly)
 
 
 protected:
@@ -417,13 +367,6 @@ protected:
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("time %.3f: onDataSeqReplicated(), role %d, %d, events valid %d, count %d, last %d:%d."), clientTimeNow, (uint8)pSeq->m_eRole, iExtra, IsValid(pEvents), eventsCount, pSeq->getGameIdLast(), pSeq->getPusherIdLast());
         
         forVisualLoop();
-
-        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("now: %s"), *genDebugMsg());
-
-        //MY_VERIFY(pSeq->getEventsRef().verifyData() == 0);
-        //m_cReplicateDelegate.Broadcast(pSeq);
-
-        //tryAppendData2Buffer();
     };
 
     bool tryAppendData2Buffer();

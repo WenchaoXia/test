@@ -7,7 +7,6 @@
 #include "MyMJCommonDefines.generated.h"
 
 #define MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS 1000  //resolution is *ms plus parent thread kick
-#define My_MJ_GAME_CORE_FULL_IO_DRAIN_LOOP_TIME_MS 100
 #define MY_MJ_GAME_CORE_MIRROR_TO_CORE_FULL_LOOP_TIME_MS 50
 #define MY_MJ_GAME_CORE_MIRROR_FOR_VISUAL_LOOP_TIME_MS 50
 
