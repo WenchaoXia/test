@@ -673,10 +673,19 @@ struct FMyMJWeaveCpp
         return m_aIds;
     };
 
+    inline int32 getIdTriggerCard() const
+    {
+        return m_iIdTriggerCard;
+    };
 
     inline int32& getIdTriggerCardRef()
     {
         return m_iIdTriggerCard;
+    };
+
+    inline int32 getIdxAttenderTriggerCardSrc() const
+    {
+        return m_iIdxAttenderTriggerCardSrc;
     };
 
     inline int32& getIdxAttenderTriggerCardSrcRef()
@@ -760,9 +769,18 @@ struct FMyMJWeaveCpp
         inMap.collectAll(m_aIds);
     };
 
+    //supposed alignment is left to right
+    inline void sortWithTriggerCardRule(int32 idxAtttenderThisWeaveBelong)
+    {
+        getIdsSortedWithTriggerCardRule(idxAtttenderThisWeaveBelong, m_aIds);
+    }
+
     FString genDebugString() const;
 
 protected:
+
+    //the supposed alignment is left to right, trigger card left means triggered by previous attender's card
+    void getIdsSortedWithTriggerCardRule(int32 idxAtttenderThisWeaveBelong, TArray<int32>& outaIds) const;
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "type"))
         MyMJWeaveTypeCpp m_eType;

@@ -353,7 +353,6 @@ public:
     {
         //some data does not need to reset since reset pusher will overwrite them all
         m_aUntakenCardStacks.Reset();
-        m_aIdShownOnDesktopCards.Reset();
         m_cCardInfoPack.reset(0);
 
         m_cGameCfg.reset();
@@ -377,9 +376,6 @@ public:
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UnTaken Card Stacks"))
         TArray<FMyIdCollectionCpp> m_aUntakenCardStacks; //Always start from attender 0 to 3
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards shown on desktop"))
-    TArray<int32> m_aIdShownOnDesktopCards;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card info pack"))
         FMyMJCardInfoPackCpp  m_cCardInfoPack;
@@ -542,10 +538,13 @@ public:
         m_aIdGivenOutCards.Reset();
         m_aShowedOutWeaves.Reset();
         m_aIdWinSymbolCards.Reset();
+        m_aIdShownOnDesktopCards.Reset();
+
         m_cUntakenSlotSubSegmentInfo.reset();
         m_aHuScoreResultFinalGroups.Reset();
 
         m_bIsRealAttender = m_bIsStillInGame = m_bGangYaoedLocalCS = false;
+
     };
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx Attender"))
@@ -566,6 +565,9 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards win symbol"))
     TArray<int32> m_aIdWinSymbolCards;
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards shown on desktop"))
+    TArray<int32> m_aIdShownOnDesktopCards;
+
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id cards win symbol"))
     FMyMJGameUntakenSlotSubSegmentInfoCpp m_cUntakenSlotSubSegmentInfo;
 
@@ -580,6 +582,7 @@ public:
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "GangYaoedLocalCS"))
         uint32 m_bGangYaoedLocalCS : 1;
+
 };
 
 USTRUCT(BlueprintType)
@@ -770,6 +773,7 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx attender"))
     int32 m_iIdxAttender;
 };
+
 
 USTRUCT()
 struct FMyMJRoleDataAttenderCpp
@@ -1175,6 +1179,11 @@ public:
     TArray<FMyMJDataDeltaCpp>  m_aResultDelta;
 };
 
+#define SetMyHelperAttenderSlotDirtyMasks(paHelperAttenderSlotDirtyMasks, idxAttender, eSlot, bDirty) MY_VERIFY(idxAttender >= 0 && idxAttender < 4); MY_VERIFY((uint8)eSlot >= 0 && (uint8)eSlot < 32); if (bDirty) {paHelperAttenderSlotDirtyMasks[idxAttender] |= (1 << (uint8)eSlot);} else {paHelperAttenderSlotDirtyMasks[idxAttender] &= (!(1 << (uint8)eSlot));}
+#define GetMyHelperAttenderSlotDirtyMasks(paHelperAttenderSlotDirtyMasks, idxAttender, eSlot) ((paHelperAttenderSlotDirtyMasks[idxAttender] & (1 << (uint8)eSlot)) > 0)
+
+//#define SetMyHelperAttenderSlotDirtyMasksIfValid(paHelperAttenderSlotDirtyMasks, idxAttender, eSlot, bDirty) if (paHelperAttenderSlotDirtyMasks) {SetMyHelperAttenderSlotDirtyMasks(paHelperAttenderSlotDirtyMasks, idxAttender, eSlot, bDirty);}
+
 
 USTRUCT()
 struct FMyMJDataAccessorCpp
@@ -1190,6 +1199,65 @@ struct FMyMJDataAccessorCpp
         m_eWorkMode = MyMJGameElemWorkModeCpp::Invalid;
 
         m_bShowApplyInfo = false;
+
+        //m_paHelperAttenderSlotDirtyMasks = NULL;
+        setHelperAttenderSlotDirtyMasksEnabled(false);
+    };
+
+    virtual ~FMyMJDataAccessorCpp()
+    {
+        //setHelperAttenderSlotDirtyMasksEnabled(false);
+    };
+
+    inline bool getHelperAttenderSlotDirtyMasksEnabled() const
+    {
+        //return m_paHelperAttenderSlotDirtyMasks != NULL;
+        return m_aHelperAttenderSlotDirtyMasks.Num() == 4;
+    };
+
+    inline void setHelperAttenderSlotDirtyMasksEnabled (bool bEnabled)
+    {
+        if (bEnabled) {
+            if (!getHelperAttenderSlotDirtyMasksEnabled()) {
+                m_aHelperAttenderSlotDirtyMasks.Reset();
+                m_aHelperAttenderSlotDirtyMasks.AddZeroed(4);
+                //m_paHelperAttenderSlotDirtyMasks = new int32(4); //programming error, should be new int[4];
+                //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyMJDataAccessorCpp new,   this: %p, elem %p."), this, m_paHelperAttenderSlotDirtyMasks);
+                resetHelperAttenderSlotDirtyMasks(true);
+            }
+        }
+        else {
+            if (getHelperAttenderSlotDirtyMasksEnabled()) {
+                //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyMJDataAccessorCpp delete, this: %p, elem %p."), this, m_paHelperAttenderSlotDirtyMasks);
+                //delete(m_paHelperAttenderSlotDirtyMasks);
+            }
+            m_aHelperAttenderSlotDirtyMasks.Reset();
+        }
+    };
+
+    /*
+    inline const int32* getHelperAttenderSlotDirtyMasksConst(bool bVerifyValid) const
+    {
+        if (bVerifyValid) {
+            MY_VERIFY(getHelperAttenderSlotDirtyMasksEnabled());
+            MY_VERIFY(m_paHelperAttenderSlotDirtyMasks);
+        }
+        return m_paHelperAttenderSlotDirtyMasks;
+    };
+    */
+
+    inline const TArray<int32>& getHelperAttenderSlotDirtyMasksConst(bool bVerifyValid) const
+    {
+        if (bVerifyValid) {
+            MY_VERIFY(getHelperAttenderSlotDirtyMasksEnabled());
+        }
+        return m_aHelperAttenderSlotDirtyMasks;
+    };
+
+    inline void resetHelperAttenderSlotDirtyMasks(bool bMarkAllDirty)
+    {
+        MY_VERIFY(getHelperAttenderSlotDirtyMasksEnabled());
+        m_aHelperAttenderSlotDirtyMasks[0] = m_aHelperAttenderSlotDirtyMasks[1] = m_aHelperAttenderSlotDirtyMasks[2] = m_aHelperAttenderSlotDirtyMasks[3] = bMarkAllDirty ? 0xffffffff : 0;
     };
 
     void setShowApplyInfo(bool bShowApplyInfo)
@@ -1357,6 +1425,10 @@ struct FMyMJDataAccessorCpp
         }
 
         getCoreDataRef().m_cGameCfg.prepareForUse();
+
+        if (getHelperAttenderSlotDirtyMasksEnabled()) {
+            resetHelperAttenderSlotDirtyMasks(true);
+        }
     }
 
 
@@ -1430,6 +1502,9 @@ protected:
 
     FMyMJDataStructCpp* m_pDataExtTempMode; //not owning it
 
+    //int32* m_paHelperAttenderSlotDirtyMasks; //if valid, it's size is always 4 
+    TArray<int32> m_aHelperAttenderSlotDirtyMasks; //if valid, it's size is always 4
+    
     MyMJGameRoleTypeCpp m_eAccessRoleType;
     MyMJGameElemWorkModeCpp m_eWorkMode;
 

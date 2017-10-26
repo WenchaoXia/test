@@ -12,7 +12,7 @@
 #include "MJLocalCS/Utils/MyMJUtilsLocalCS.h"
 
 
-void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst)
+void UMyMJGameCoreFullCpp::testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst)
 {
     int32 iMask = MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero;
     if (showCoreLog) {
@@ -27,7 +27,7 @@ void UMyMJCoreFullCpp::testGameCoreInSubThread(bool showCoreLog, bool bAttenderR
 }
 
 
-bool UMyMJCoreFullCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTrivalConfigMask)
+bool UMyMJGameCoreFullCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTrivalConfigMask)
 {
 
     if (m_pCoreFullWithThread.IsValid()) {
@@ -72,7 +72,7 @@ bool UMyMJCoreFullCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTriva
 
 }
 
-bool UMyMJCoreFullCpp::startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst)
+bool UMyMJGameCoreFullCpp::startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst)
 {
     if (!m_pCoreFullWithThread.IsValid() || m_pCoreFullWithThread->getRuleType() == MyMJGameRuleTypeCpp::Invalid) {
         return false;
@@ -99,7 +99,7 @@ bool UMyMJCoreFullCpp::startGame(bool bAttenderRandomSelectDo, bool bAttenderRan
     return true;
 }
 
-void UMyMJCoreFullCpp::clearUp()
+void UMyMJGameCoreFullCpp::clearUp()
 {
     if (m_pCoreFullWithThread.IsValid()) {
         m_pCoreFullWithThread->Stop();
@@ -107,7 +107,8 @@ void UMyMJCoreFullCpp::clearUp()
 }
 
 
-void AMyMJCoreMirrorCpp::PostInitializeComponents()
+/*
+void AMyMJGameCoreMirrorCpp::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
@@ -116,7 +117,7 @@ void AMyMJCoreMirrorCpp::PostInitializeComponents()
 
     if (bHaveLogic) {
 
-        m_pCoreFull = NewObject<UMyMJCoreFullCpp>(this);
+        m_pCoreFull = NewObject<UMyMJGameCoreFullCpp>(this);
 
         m_pMJDataAll = NewObject<UMyMJDataAllCpp>(this);
         m_pMJDataAll->RegisterComponent();
@@ -126,7 +127,7 @@ void AMyMJCoreMirrorCpp::PostInitializeComponents()
         UWorld *world = GetWorld();
         if (IsValid(world)) {
             world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
-            world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJCoreMirrorCpp::toCoreFullLoop, ((float)MY_MJ_GAME_CORE_MIRROR_TO_CORE_FULL_LOOP_TIME_MS) / (float)1000, true);
+            world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJGameCoreMirrorCpp::toCoreFullLoop, ((float)MY_MJ_GAME_CORE_MIRROR_TO_CORE_FULL_LOOP_TIME_MS) / (float)1000, true);
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
@@ -134,25 +135,72 @@ void AMyMJCoreMirrorCpp::PostInitializeComponents()
         }
     }
 };
+*/
 
-void AMyMJCoreMirrorCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+void AMyMJGameCoreMirrorCpp::BeginPlay()
+{
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreMirrorCpp::BeginPlay()."));
+    Super::BeginPlay();
+
+    bool bHaveLogic = UMyMJBPUtilsLibrary::haveServerLogicLayer(this);
+    if (bHaveLogic) {
+        setCoreFullPartEnabled(true);
+    }
+};
+
+void AMyMJGameCoreMirrorCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-    DOREPLIFETIME(AMyMJCoreMirrorCpp, m_pMJDataAll);
-    DOREPLIFETIME(AMyMJCoreMirrorCpp, m_iTest0);
+    DOREPLIFETIME(AMyMJGameCoreMirrorCpp, m_pMJDataAll);
+    DOREPLIFETIME(AMyMJGameCoreMirrorCpp, m_iTest0);
 
 };
 
-bool AMyMJCoreMirrorCpp::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
+void AMyMJGameCoreMirrorCpp::setCoreFullPartEnabled(bool bEnabled)
 {
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("AMyMJCoreMirrorCpp::ReplicateSubobjects()."));
+    if (bEnabled) {
+        if (!getCoreFullPartEnabled()) {
 
-    bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
-    return WroteSomething;
+            m_pCoreFull = NewObject<UMyMJGameCoreFullCpp>(this);
+            
+            //for replication component, only authority touch it
+            if (HasAuthority()) {
+                m_pMJDataAll = NewObject<UMyMJDataAllCpp>(this);
+                m_pMJDataAll->SetIsReplicated(true);
+            }
+
+            UWorld *world = GetWorld();
+            if (IsValid(world)) {
+                world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
+                world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJGameCoreMirrorCpp::toCoreFullLoop, ((float)MY_MJ_GAME_CORE_MIRROR_TO_CORE_FULL_LOOP_TIME_MS) / (float)1000, true);
+            }
+            else {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
+                MY_VERIFY(false);
+            }
+
+        }
+    }
+    else {
+        m_pCoreFull = NULL;
+
+        if (HasAuthority()) {
+            m_pMJDataAll = NULL;
+        }
+
+        UWorld *world = GetWorld();
+        if (IsValid(world)) {
+            world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
+            MY_VERIFY(false);
+        }
+    }
 };
 
 
-void AMyMJCoreMirrorCpp::toCoreFullLoop()
+void AMyMJGameCoreMirrorCpp::toCoreFullLoop()
 {
     MY_VERIFY(IsValid(m_pMJDataAll));
     MY_VERIFY(IsValid(m_pCoreFull));
@@ -198,28 +246,76 @@ void AMyMJCoreMirrorCpp::toCoreFullLoop()
     }
 }
 
-void AMyMJCoreBaseForBpCpp::PostInitializeComponents()
+
+AMyMJGameCoreWithVisualCpp::AMyMJGameCoreWithVisualCpp() : Super()
 {
-    Super::PostInitializeComponents();
+    m_pDataHistoryBuffer = NULL;
+    m_eVisualMode = MyMJCoreBaseForBpVisualModeCpp::Normal;
+    m_uiReplicateClientTimeMs = 0;
+
+    //UClass* uc = this->GetClass();
+    //UObject* CDO = NULL;
+    //if (uc) {
+    //    CDO = uc->GetDefaultObject();
+    //}
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreWithVisualCpp(), %s, this %p, cdo %p."), uc ? *uc->GetFullName() : TEXT("NULL"), this, CDO);
+
+    m_cDataNow.getAccessorRef().setHelperAttenderSlotDirtyMasksEnabled(true);
+};
+
+AMyMJGameCoreWithVisualCpp::~AMyMJGameCoreWithVisualCpp()
+{
+    //UClass* uc = this->GetClass();
+    //UObject* CDO = NULL;
+    //if (uc) {
+        //CDO = uc->GetDefaultObject();
+    //}
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("~AMyMJGameCoreWithVisualCpp(), %s, this %p, cdo %p."), uc ? *uc->GetFullName() : TEXT("NULL"), this, CDO);
+};
+
+void AMyMJGameCoreWithVisualCpp::BeginPlay()
+{
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreWithVisualCpp::BeginPlay()."));
+    Super::BeginPlay();
 
     bool bHaveVisual = UMyMJBPUtilsLibrary::haveClientVisualLayer(this);
     if (bHaveVisual) {
-        m_pDataHistoryBuffer = NewObject<UMyMJDataSequencePerRoleCpp>(this);
-        m_pDataHistoryBuffer->resizeEvents(128);
+        setCoreMirrorPartEnabled(true);
+    }
+};
 
+void AMyMJGameCoreWithVisualCpp::setCoreMirrorPartEnabled(bool bEnabled)
+{
+    if (bEnabled) {
+        if (!getCoreMirrorPartEnabled()) {
+            m_pDataHistoryBuffer = NewObject<UMyMJDataSequencePerRoleCpp>(this);
+            m_pDataHistoryBuffer->resizeEvents(128);
+
+            UWorld *world = GetWorld();
+            if (IsValid(world)) {
+                world->GetTimerManager().ClearTimer(m_cForVisualLoopTimerHandle);
+                world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJGameCoreWithVisualCpp::forVisualLoop, ((float)MY_MJ_GAME_CORE_MIRROR_FOR_VISUAL_LOOP_TIME_MS) / (float)1000, true);
+            }
+            else {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid, this is only valid for default object."));
+            }
+        }
+    }
+    else {
+        m_pDataHistoryBuffer = NULL;
         UWorld *world = GetWorld();
         if (IsValid(world)) {
             world->GetTimerManager().ClearTimer(m_cForVisualLoopTimerHandle);
-            world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, ((float)MY_MJ_GAME_CORE_MIRROR_FOR_VISUAL_LOOP_TIME_MS) / (float)1000, true);
-            //world->GetTimerManager().SetTimer(m_cForVisualLoopTimerHandle, this, &AMyMJCoreBaseForBpCpp::forVisualLoop, 5, true);
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid, this is only valid for default object."));
         }
     }
-};
+}
 
-bool AMyMJCoreBaseForBpCpp::tryAppendData2Buffer()
+bool AMyMJGameCoreWithVisualCpp::tryAppendData2Buffer()
 {
     MY_VERIFY(IsValid(m_pDataHistoryBuffer));
 
@@ -237,8 +333,10 @@ bool AMyMJCoreBaseForBpCpp::tryAppendData2Buffer()
     return m_pDataHistoryBuffer->mergeDataFromOther(*pData);
 };
 
-void AMyMJCoreBaseForBpCpp::forVisualLoop()
+void AMyMJGameCoreWithVisualCpp::forVisualLoop()
 {
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("forVisualLoop."));
+
     tryAppendData2Buffer();
 
     UWorld* world = GetWorld();
@@ -250,7 +348,6 @@ void AMyMJCoreBaseForBpCpp::forVisualLoop()
     uint32 clientTimeNow_ms = world->GetTimeSeconds() * 1000;
     clientTimeNow_ms = MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(clientTimeNow_ms);
 
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("forVisualLoop."));
     if (m_eVisualMode == MyMJCoreBaseForBpVisualModeCpp::Normal) {
         forVisualLoopModeNormal(clientTimeNow_ms);
     }
@@ -260,7 +357,7 @@ void AMyMJCoreBaseForBpCpp::forVisualLoop()
 
 };
 
-void AMyMJCoreBaseForBpCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
+void AMyMJGameCoreWithVisualCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
 {
 
     uint32 clientTimeNow_data_unit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(clientTimeNow_ms);
@@ -396,7 +493,7 @@ void AMyMJCoreBaseForBpCpp::forVisualLoopModeNormal(uint32 clientTimeNow_ms)
     }
 };
 
-void AMyMJCoreBaseForBpCpp::forVisualLoopModeCatchUp(uint32 clientTimeNow_ms)
+void AMyMJGameCoreWithVisualCpp::forVisualLoopModeCatchUp(uint32 clientTimeNow_ms)
 {
     int32 iGameIdNow = m_cDataNow.getGameIdLast();
     int32 iPusherIdNow = m_cDataNow.getPusherIdLast();

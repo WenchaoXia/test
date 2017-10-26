@@ -25,8 +25,8 @@ bool AMyOnlineCardGameModeCpp::changeMode(bool bIsReplay)
         }
         else {
 
-            //m_pCoreFull = world->SpawnActor<UMyMJCoreFullCpp>(UMyMJCoreFullCpp::StaticClass());
-            m_pCoreFull = NewObject<UMyMJCoreFullCpp>(this);
+            //m_pCoreFull = world->SpawnActor<UMyMJGameCoreFullCpp>(UMyMJGameCoreFullCpp::StaticClass());
+            m_pCoreFull = NewObject<UMyMJGameCoreFullCpp>(this);
             if (!IsValid(m_pCoreFull)) {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to create core full!"));
                 return false;

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "MJ/Utils/MyMJUtils.h"
 
+#include "MJBPEncap/MyMJGameCoreBP.h"
 #include "MyMJGameCard.h"
 
 #include "MyMJGameDeskSuite.generated.h"
@@ -98,45 +99,49 @@ public:
         m_mVisualPointCache.Reset();
     };
 
-    UFUNCTION(BlueprintNativeEvent)
-    void retrieveVisualPointByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp slot, int32& errCode, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
-
-    void retrieveVisualPointByIdxAttenderAndSlot_Implementation(int32 idxAttender, MyMJCardSlotTypeCpp slot, int32& errCode, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
-    {
-        //must be override
-        MY_VERIFY(false);
-    };
-
-    void getVisualPointByIdxAttenderAndSlotInternal(int32 idxAttender, MyMJCardSlotTypeCpp slot, int32& errCode, FMyMJGameDeskVisualPointCfgCpp &visualPoint)
+    int32 getVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint)
     {
         MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
-        MY_VERIFY((uint8)slot < 0xff);
+        MY_VERIFY((uint8)eSlot < 0xff);
 
-        int32 key = ((idxAttender & 0xff) << 8) & ((uint8)slot & 0xff);
+        int32 key = ((idxAttender & 0xff) << 8) & ((uint8)eSlot & 0xff);
 
         const FMyMJGameDeskVisualPointCfgCpp *pV = m_mVisualPointCache.Find(key);
         if (pV) {
             visualPoint = *pV;
-            errCode = 0;
-            return;
+            return 0;
         }
 
-        retrieveVisualPointByIdxAttenderAndSlot(idxAttender, slot, errCode, visualPoint);
+        int32 errCode = retrieveVisualPointByIdxAttenderAndSlot(idxAttender, eSlot, visualPoint);
         if (errCode == 0) {
             FMyMJGameDeskVisualPointCfgCpp& newAdded = m_mVisualPointCache.Add(key);
             newAdded = visualPoint;
         }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getVisualPointCfgByIdxAttenderAndSlot() failed, idxAttender %d, eSlot %d, errorCode: %d."), idxAttender, (uint8)eSlot, errCode);
+        }
 
+        return errCode;
     };
 
 protected:
 
+    //return errcode, 0 means no error
+    UFUNCTION(BlueprintNativeEvent)
+    int32 retrieveVisualPointByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp slot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
 
+    int32 retrieveVisualPointByIdxAttenderAndSlot_Implementation(int32 idxAttender, MyMJCardSlotTypeCpp slot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
+    {
+        //must be override
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDeskAreaCpp::retrieveVisualPointByIdxAttenderAndSlot() must be overrided by blueprint subclass!"));
+        MY_VERIFY(false);
+        return 0;
+    };
 
     TMap<int32, FMyMJGameDeskVisualPointCfgCpp> m_mVisualPointCache;
 };
 
-UCLASS(Blueprintable)
+UCLASS(Blueprintable, NotBlueprintType)
 class MYONLINECARDGAME_API UMyMJGameDeskDynamicResManagerCpp : public UActorComponent
 {
     GENERATED_BODY()
@@ -148,38 +153,50 @@ public:
 
     bool checkSettings() const;
 
-    FMyMJGameCardActorModelInfoCpp& getCardModelInfoUnscaled();
+    inline int32 getCardModelInfoUnscaled(FMyMJGameCardActorModelInfoCpp& modelInfo) const
+    {
+        const AMyMJGameCardBaseCpp* pCDO = getCardCDO();
+        if (IsValid(pCDO)) {
+            pCDO->getModelInfo(modelInfo);
+            return 0;
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCDO is not valid %p."), pCDO);
+            modelInfo.reset();
+            return -1;
+        }
+    };
 
-    UFUNCTION(BlueprintSetter)
-    void setCfgCardModelAssetPath(const FString& inPath);
+    //return null if it is not spawned yet, user should call prepareCardActor() to create it.
+    UFUNCTION(BlueprintCallable)
+    AMyMJGameCardBaseCpp* getCardActorByIdx(int32 idx)
+    {
+        MY_VERIFY(idx >= 0);
+        if (idx < m_aCards.Num()) {
+            return m_aCards[idx];
+        }
 
-    UFUNCTION(BlueprintGetter)
-    const FString& getCfgCardModelAssetPath() const;
+        return NULL;
+    }
 
-    UPROPERTY()
+    UFUNCTION(BlueprintCallable)
+    int32 prepareCardActor(int32 count2reach);
+
+
+protected:
+
+    const AMyMJGameCardBaseCpp* getCardCDO() const;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "cards"))
     TArray<AMyMJGameCardBaseCpp*> m_aCards;
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "cfg card class"))
     TSubclassOf<AMyMJGameCardBaseCpp> m_cCfgCardClass;
 
-protected:
-
-    void prepareCardActor();
-
     //it seems UBT have bug which require declare sequence
     //UPROPERTY(BlueprintSetter = setCfgCardModelAssetPath, BlueprintSetter = getCfgCardModelAssetPath, EditAnywhere, meta = (DisplayName = "cfg card model asset path"))
+    //UPROPERTY(EditAnywhere, BlueprintSetter = setCfgCardModelAssetPath, BlueprintGetter = getCfgCardModelAssetPath, meta = (DisplayName = "cfg card model asset path"))
 
-    //example: /Game/Art/Models/MJCard/Type0/cardBox/
-    UPROPERTY(EditAnywhere, BlueprintSetter = setCfgCardModelAssetPath, BlueprintGetter = getCfgCardModelAssetPath, meta = (DisplayName = "cfg card model asset path"))
-    FString m_sCfgCardModelAssetPath;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card model mesh asset"))
-        class UStaticMesh *m_pCardModelMeshAsset;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card model material default instance asset"))
-        class UMaterialInstance *m_pCardModelMaterialDefaultInstanceAsset;
-
-    FMyMJGameCardActorModelInfoCpp* m_pActorModelInfoCached;
 };
 
 UCLASS(Blueprintable)
@@ -193,26 +210,41 @@ public:
 
     virtual ~AMyMJGameDeskSuiteCpp();
 
-
-
-    void helperCalcCardTransform(const FMyMJGameCardVisualInfoCpp& cCardVisualInfo, FTransform &outTransform);
-
+    //warn: this function wouldn't update visual info automatically
     UFUNCTION(BlueprintCallable)
-    static int32 helperCalcCardTransformFromvisualPointCfg(const FMyMJGameCardActorModelInfoCpp& cardModelInfoFinal, const FMyMJGameCardVisualInfoCpp& cardVisualInfoFinal, const FMyMJGameDeskVisualPointCfgCpp& visualPointCfg, FVector& outLocationWorld, FRotator& outRotatorWorld);
+    void helperResolveTargetCardVisualState(int32 idxCard, FMyMJGameCardVisualStateCpp& outTargetCardVisualState);
 
 protected:
 
     virtual void PostInitializeComponents() override;
 
+    bool verifySettings() const;
+
+    //return errcode
+    int32 helperGetColCountPerRowForDefaultAligment(int32 idxAtttender, MyMJCardSlotTypeCpp eSlot, int32& outCount) const;
+    void helperTryUpdateCardVisualInfoPack();
+
+
+    //blue print can call this to help verify test
+    UFUNCTION(BlueprintCallable)
+    static int32 helperCalcCardTransformFromvisualPointCfg(const FMyMJGameCardActorModelInfoCpp& cardModelInfoFinal, const FMyMJGameCardVisualInfoCpp& cardVisualInfoFinal, const FMyMJGameDeskVisualPointCfgCpp& visualPointCfg, FTransform& outTransform);
+    //static int32 helperCalcCardTransformFromvisualPointCfg(const FMyMJGameCardActorModelInfoCpp& cardModelInfoFinal, const FMyMJGameCardVisualInfoCpp& cardVisualInfoFinal, const FMyMJGameDeskVisualPointCfgCpp& visualPointCfg, FVector& outLocationWorld, FRotator& outRotatorWorld);
+
+
     //UPROPERTY(BlueprintReadWrite, EditAnywhere, Instanced, meta = (DisplayName = "res manager"))
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Instanced, meta = (DisplayName = "res manager"))
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Instanced, meta = (DisplayName = "res manager"))
     UMyMJGameDeskDynamicResManagerCpp *m_pResManager;
 
     UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "area actor"))
     AMyMJGameDeskAreaCpp* m_pDeskAreaActor;
 
-    UPROPERTY(EditAnywhere, meta = (MakeEditWidget, DisplayName = "root scene"))
-    class USceneComponent *m_pRootScene;
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "MJ Core actor"))
+    AMyMJGameCoreWithVisualCpp* m_pMJCore;
+
+    FMyMJCardVisualInfoPackCpp m_cCardVisualInfoPack;
+
+    //UPROPERTY(VisibleAnywhere, meta = (MakeEditWidget, DisplayName = "root scene"))
+    //class USceneComponent *m_pRootScene;
 
 
 };

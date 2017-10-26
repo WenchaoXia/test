@@ -316,7 +316,7 @@ int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBase
 };
 
 
-void AMyMJGameCardBaseCpp::getModelInfo(FMyMJGameCardActorModelInfoCpp& modelInfo)
+void AMyMJGameCardBaseCpp::getModelInfo(FMyMJGameCardActorModelInfoCpp& modelInfo) const
 {
     FVector actorScale3D = GetActorScale3D();
     modelInfo.m_cBoxExtend = m_pCardBox->GetScaledBoxExtent() * actorScale3D;

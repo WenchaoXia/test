@@ -57,6 +57,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
     }
 
     if (delta.m_aCoreData.Num() > 0) {
+        
         MY_VERIFY(delta.m_aCoreData.Num() == 1);
         const FMyMJCoreDataDeltaCpp& coreDataDelta = delta.m_aCoreData[0];
 
@@ -91,9 +92,14 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
             //flip
             if (cardInfoTarget.m_eFlipState != MyMJCardFlipStateCpp::Invalid) {
                 cardInfoSelf.m_eFlipState = cardInfoTarget.m_eFlipState;
+
+                if (getHelperAttenderSlotDirtyMasksEnabled()) {
+                    SetMyHelperAttenderSlotDirtyMasks(m_aHelperAttenderSlotDirtyMasks, cardInfoSelf.m_cPosi.m_iIdxAttender, cardInfoSelf.m_cPosi.m_eSlot, true);
+                }
             }
 
         }
+
 
         //update helper
         if (coreDataSelf.m_cUntakenSlotInfo.m_iUntakenSlotCardsLeftNumNormalFromHead <= 0 && aIdHelperMovedFromUntakenSlot.Num() > 0) {
@@ -349,15 +355,6 @@ void FMyMJDataAccessorCpp::moveCardFromOldPosi(int32 id)
         pCardInfo->m_cPosi.reset();
 
     }
-    else if (eSlotSrc == MyMJCardSlotTypeCpp::ShownOnDesktop)
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("removing card from shownOnDesktop slot, this logic is not supposed to run in current game rules."));
-
-        bool bRemovedOne = false;
-        pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(pDCoreData->m_aIdShownOnDesktopCards, id, &bRemovedOne);
-        MY_VERIFY(bRemovedOne);
-
-    }
     else if (idxAttender >= 0 && idxAttender < 4) {
 
         MyMJCardSlotTypeCpp eType = pCardInfo->m_cPosi.m_eSlot;
@@ -376,6 +373,7 @@ void FMyMJDataAccessorCpp::moveCardFromOldPosi(int32 id)
 
             pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(pDAttenderPubD->m_aIdHandCards, id, &bRemovedOne);
             MY_VERIFY(bRemovedOne);
+
         }
         else if (eType == MyMJCardSlotTypeCpp::GivenOut) {
 
@@ -398,17 +396,46 @@ void FMyMJDataAccessorCpp::moveCardFromOldPosi(int32 id)
             MY_VERIFY(bRemovedOne);
 
         }
+        else if (eType == MyMJCardSlotTypeCpp::ShownOnDesktop) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("removing card from shownOnDesktop slot, this logic is not supposed to run in current game rules."));
+
+            pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(pDAttenderPubD->m_aIdShownOnDesktopCards, id, &bRemovedOne);
+            MY_VERIFY(bRemovedOne);
+        }
         else
         {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("FMyMJDataAccessorCpp removeCard: not a valid slot type: %d"), (uint8)eType);
             MY_VERIFY(false);
         }
 
+        /*
+        if (m_bUpdateVisualData &&
+            (eType == MyMJCardSlotTypeCpp::JustTaken || eType == MyMJCardSlotTypeCpp::InHand)) {
+            pCardInfoPack->helperRemoveCardUniqueFromIdArrayWithMinorPosiCalced(pDAttenderPubD->m_aIdHandAndJustTakenCardsSortedByValueForVisual, id, &bRemovedOne);
+            MY_VERIFY(bRemovedOne);
+        }
+        */
+
         pCardInfo->m_cPosi.reset();
+
     }
     else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid idxAttender %d, eslot %d."), idxAttender, (uint8)eSlotSrc);
         MY_VERIFY(false);
     }
+
+
+    //dirty mask handle
+    if (getHelperAttenderSlotDirtyMasksEnabled()) {
+        if (idxAttender >= 0 && idxAttender < 4) {
+
+        }
+        else {
+            idxAttender = 0;
+        }
+        SetMyHelperAttenderSlotDirtyMasks(m_aHelperAttenderSlotDirtyMasks, idxAttender, eSlotSrc, true);
+    }
+
 };
 
 void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSlotTypeCpp eSlotDst)
@@ -420,10 +447,6 @@ void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCa
 
     if (eSlotDst == MyMJCardSlotTypeCpp::Untaken) {
         MY_VERIFY(false);
-    }
-    else if (eSlotDst == MyMJCardSlotTypeCpp::ShownOnDesktop)
-    {
-        pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(pCoreData->m_aIdShownOnDesktopCards, id);
     }
     else if (idxAttender >= 0 && idxAttender < 4) {
 
@@ -442,9 +465,7 @@ void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCa
             pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(pDAttenderPubD->m_aIdJustTakenCards, id);
         }
         else if (eType == MyMJCardSlotTypeCpp::InHand) {
-
             pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(pDAttenderPubD->m_aIdHandCards, id);
-
         }
         else if (eType == MyMJCardSlotTypeCpp::GivenOut) {
             pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(pDAttenderPubD->m_aIdGivenOutCards, id);
@@ -455,13 +476,29 @@ void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCa
         else if (eType == MyMJCardSlotTypeCpp::WinSymbol) {
             pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(pDAttenderPubD->m_aIdWinSymbolCards, id);
         }
+        else if (eType == MyMJCardSlotTypeCpp::ShownOnDesktop) {
+            pCardInfoPack->helperInsertCardUniqueToIdArrayWithMinorPosiCalced(pDAttenderPubD->m_aIdShownOnDesktopCards, id);
+        }
         else
         {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("insertCard: not a valid slot type: %d"), (uint8)eType);
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid idxAttender %d, eslot %d."), idxAttender, (uint8)eType);
             MY_VERIFY(false);
         }
+
     }
     else {
         MY_VERIFY(false);
+    }
+
+
+    //dirty mask handle
+    if (getHelperAttenderSlotDirtyMasksEnabled()) {
+        if (idxAttender >= 0 && idxAttender < 4) {
+
+        }
+        else {
+            idxAttender = 0;
+        }
+        SetMyHelperAttenderSlotDirtyMasks(m_aHelperAttenderSlotDirtyMasks, idxAttender, eSlotDst, true);
     }
 };

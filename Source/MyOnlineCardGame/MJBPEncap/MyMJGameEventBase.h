@@ -1077,7 +1077,6 @@ public:
 
     void reinit(MyMJGameRoleTypeCpp eRole)
     {
-        m_eRole = eRole;
         m_cAccessor.setupTempMode(&m_cBase, eRole);
         clear();
     };
@@ -1150,7 +1149,7 @@ public:
 
     FString genDebugMsg()
     {
-        FString ret = FString::Printf(TEXT("role %d, base time %d, event applying Num %d."), (uint8)m_eRole, m_cBase.getTime(), m_aEventApplying.Num());
+        FString ret = FString::Printf(TEXT("role %d, base time %d, event applying Num %d."), (uint8)getRole(), m_cBase.getTime(), m_aEventApplying.Num());
         if (m_aEventApplying.Num() > 0) {
             ret += FString::Printf(TEXT(" event time start %d, dur %d."), m_aEventApplying[0].getStartTime(), m_aEventApplying[0].getDuration());
         }
@@ -1251,6 +1250,43 @@ public:
         return bNotStated || bGameEnd;
     };
 
+    inline
+    const FMyMJDataStructWithTimeStampBaseCpp& getBaseRefConst() const
+    {
+        return m_cBase;
+    };
+
+    inline
+    FMyMJDataStructWithTimeStampBaseCpp& getBaseRef()
+    {
+        return m_cBase;
+    };
+
+    inline
+    const FMyMJEventWithTimeStampBaseCpp* getEventApplyingInProgress() const
+    {
+        if (m_aEventApplying.Num() > 0 && m_bEventApplyingAppliedAhead == false) {
+            return &m_aEventApplying[0];
+        }
+
+        return NULL;
+    };
+
+    inline MyMJGameRoleTypeCpp getRole() const
+    {
+        return m_cAccessor.getAccessRoleType();
+    };
+
+    inline FMyMJDataAccessorCpp& getAccessorRef()
+    {
+        return m_cAccessor;
+    };
+
+    inline const FMyMJDataAccessorCpp& getAccessorRefConst() const
+    {
+        return m_cAccessor;
+    };
+
     FMyMJServerClientTimeBondCpp m_cTimeBond;
 
 protected:
@@ -1281,11 +1317,6 @@ protected:
 
     //It is possible we apply the event before timestamp, to let visualization easior
     bool m_bEventApplyingAppliedAhead;
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "role"))
-    MyMJGameRoleTypeCpp m_eRole;
-
-
 
     FMyMJDataAccessorCpp m_cAccessor;
 };

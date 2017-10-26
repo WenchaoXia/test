@@ -170,6 +170,7 @@ struct FMyValueIdMapCpp
 
     FMyValueIdMapCpp()
     {
+        changeKeepOrder(false, false);
         clear();
     };
 
@@ -217,6 +218,7 @@ struct FMyValueIdMapCpp
     void collectByValueWithValue(int32 value, int32 numReq, TArray<FMyIdValuePair>& outPairs) const;
 
     void collectAll(TArray<int32>& outIds) const;
+    const TArray<int32>& getIdsAllCached();
 
     void collectAllWithValue(TArray<FMyIdValuePair> outPairs) const;
 
@@ -233,13 +235,35 @@ struct FMyValueIdMapCpp
     * return the elem count
     * @return the count in map
     */
-    int32 getCount() const;
+    inline int32 getCount() const
+    {
+        return m_iCount;
+    }
 
     /*
     * return the keys of map, correspond the the "value" part of insert API
     * @param outKeys the keys
     */
     void keys(TArray<int32>& outKeys) const;
+
+    void changeKeepOrder(bool bKeepOrder, bool bOrderBig2Little)
+    {
+        if (!bKeepOrder) {
+            m_iKeepOrder = 0;
+            //invalidCaches();
+            return;
+        }
+
+        if (bOrderBig2Little) {
+            m_iKeepOrder = 2;
+        }
+        else {
+            m_iKeepOrder = 1;
+        }
+
+        sortByValue(bOrderBig2Little);
+        invalidCaches();
+    };
 
     /*
     inline
@@ -251,12 +275,25 @@ struct FMyValueIdMapCpp
 
 protected:
 
+    void sortByValue(bool bBig2Little);
+    void invalidCaches()
+    {
+        m_aIdsAllCached.Reset();
+    };
+
     //unreal TMAp owns its member
     UPROPERTY()
     TMap<int32, FMyIdCollectionCpp> m_mValueMap;
 
     UPROPERTY()
     int32 m_iCount;
+
+    //0 not keep, 1 little to big, 2 big to little
+    UPROPERTY()
+    int32 m_iKeepOrder;
+
+    UPROPERTY()
+    TArray<int32> m_aIdsAllCached;
 };
 
 class FMyThreadControlCpp : public FRunnable

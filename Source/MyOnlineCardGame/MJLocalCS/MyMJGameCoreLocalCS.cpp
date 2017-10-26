@@ -72,7 +72,42 @@ void FMyMJGameCoreLocalCSCpp::genActionChoices()
             MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
             */
 
-            pAction->initWithPickedIdValuesInited();
+            //find first hu attender
+            int32 idxAttenderLoseOnlyOne = -1;
+            int32 idxWinnder = -1;
+            for (int32 i = 0; i < 4; i++) {
+                const FMyMJRoleDataAttenderPublicCpp& cRoleDataAttenderPublic = getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(i);
+                if (cRoleDataAttenderPublic.m_aHuScoreResultFinalGroups.Num() <= 0) {
+                    continue;
+                }
+                if (idxWinnder < 0) {
+                    idxWinnder = cRoleDataAttenderPublic.m_aHuScoreResultFinalGroups[0].m_iIdxAttenderWin;
+                    MY_VERIFY(idxWinnder == i);
+                }
+                if (cRoleDataAttenderPublic.m_aHuScoreResultFinalGroups[0].m_iIdxAttenderLoseOnlyOne >= 0) {
+                    idxAttenderLoseOnlyOne = cRoleDataAttenderPublic.m_aHuScoreResultFinalGroups[0].m_iIdxAttenderLoseOnlyOne;
+                    break;
+                }
+            }
+            MY_VERIFY(idxWinnder >= 0);
+            if (idxAttenderLoseOnlyOne >= 0) {
+                //search
+                idxWinnder = -1;
+                for (int32 i = 1; i < 4; i++) {
+                    int32 idxAttender = (idxAttenderLoseOnlyOne + 1) % 4;
+                    const FMyMJRoleDataAttenderPublicCpp& cRoleDataAttenderPublic = getDataAccessorRefConst().getRoleDataAttenderPublicRefConst(idxAttender);
+                    if (cRoleDataAttenderPublic.m_aHuScoreResultFinalGroups.Num() <= 0) {
+                        continue;
+                    }
+                    idxWinnder = cRoleDataAttenderPublic.m_aHuScoreResultFinalGroups[0].m_iIdxAttenderWin;
+                    MY_VERIFY(idxWinnder == idxAttender);
+                    break;
+                }
+                MY_VERIFY(idxWinnder >= 0);
+            }
+
+
+            pAction->initWithPickedIdValuesInited(idxWinnder);
 
             getPusherIOFullRef().GivePusher(pAction, (void **)&pAction);
         }

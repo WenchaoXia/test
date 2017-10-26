@@ -120,13 +120,13 @@ protected:
 */
 //notplaceable
 UCLASS(BlueprintType, notplaceable, meta = (ShortTooltip = "The full game core with sub thread, should only exist on server"))
-class MYONLINECARDGAME_API UMyMJCoreFullCpp : public UObject
+class MYONLINECARDGAME_API UMyMJGameCoreFullCpp : public UObject
 {
     GENERATED_BODY()
 
 public:
 
-    UMyMJCoreFullCpp() : Super() {
+    UMyMJGameCoreFullCpp() : Super() {
 
         m_iSeed2OverWrite = 0;
         //m_pPusherBuffer = NULL;
@@ -135,7 +135,7 @@ public:
     };
 
     //test with a full mode core created and run in sub thread
-    UFUNCTION(BlueprintCallable, Category = "UMyMJCoreFullCpp")
+    UFUNCTION(BlueprintCallable, Category = "UMyMJGameCoreFullCpp")
     void testGameCoreInSubThread(bool showCoreLog, bool bAttenderRandomSelectHighPriActionFirst);
 
     bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTrivalConfigMask);
@@ -167,13 +167,13 @@ protected:
 #define MY_EXPECTED_MJ_PAWN_NUM ((uint8)MyMJGameRoleTypeCpp::Max)
 
 //This level focus on logic, it may work either connected to full mode core or NULL, since for graphic and BP usage, we didn't need the full mode core
-UCLASS(Abstract)
-class MYONLINECARDGAME_API AMyMJCoreMirrorCpp : public AInfo
+UCLASS(Blueprintable)
+class MYONLINECARDGAME_API AMyMJGameCoreMirrorCpp : public AActor
 {
     GENERATED_BODY()
 public:
 
-    AMyMJCoreMirrorCpp() : Super()
+    AMyMJGameCoreMirrorCpp() : Super()
     {
         m_iSeed2OverWrite = 0;
         m_iTest0 = 0;
@@ -184,16 +184,16 @@ public:
         NetUpdateFrequency = 10;
 
         m_pMJDataAll = NULL;
-
         m_pCoreFull = NULL;
     }
 
     //virtual void PostInitProperties() override;
-    virtual void PostInitializeComponents() override;
+    //virtual void PostInitializeComponents() override;
+    virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
-    virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
+    //virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
 
-    UFUNCTION(BlueprintCallable, Category = "AMyMJCoreMirrorCpp")
+    UFUNCTION(BlueprintCallable, Category = "AMyMJGameCoreMirrorCpp")
         void doTestChange()
     {
         if (m_pMJDataAll) {
@@ -206,7 +206,7 @@ public:
         m_iTest0 += 3;
     };
 
-    UFUNCTION(BlueprintCallable, Category = "AMyMJCoreMirrorCpp")
+    UFUNCTION(BlueprintCallable, Category = "AMyMJGameCoreMirrorCpp")
         FString genDebugMsg()
     {
         FString ret = FString::Printf(TEXT("m_iTest0 %d. "), m_iTest0);
@@ -220,7 +220,7 @@ public:
         return ret;
     };
 
-    UFUNCTION(BlueprintCallable, Category = "AMyMJCoreMirrorCpp")
+    UFUNCTION(BlueprintCallable, Category = "AMyMJGameCoreMirrorCpp")
     void verifyEvents() const
     {
         if (!IsValid(m_pMJDataAll)) {
@@ -271,7 +271,6 @@ public:
 
     void toCoreFullLoop();
 
-
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "seed overwrite"))
         int32 m_iSeed2OverWrite;
 
@@ -279,6 +278,13 @@ public:
         int32 m_iTest0;
 
 protected:
+
+    inline bool getCoreFullPartEnabled() const
+    {
+        return IsValid(m_pCoreFull);
+    };
+
+    void setCoreFullPartEnabled(bool bEnabled);
 
     UFUNCTION()
     virtual void OnRep_MJDataAll()
@@ -297,7 +303,7 @@ protected:
 
     //exist only when we have logic layer which generate data
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "core full"))
-    UMyMJCoreFullCpp *m_pCoreFull;
+    UMyMJGameCoreFullCpp *m_pCoreFull;
 
     FTimerHandle m_cToCoreFullLoopTimerHandle;
 
@@ -312,24 +318,40 @@ enum class MyMJCoreBaseForBpVisualModeCpp : uint8
 };
 
 //This level focus on BP and Graphic
-UCLASS(BlueprintType, Blueprintable)
-class MYONLINECARDGAME_API AMyMJCoreBaseForBpCpp : public AMyMJCoreMirrorCpp
+UCLASS(Blueprintable)
+class MYONLINECARDGAME_API AMyMJGameCoreWithVisualCpp : public AMyMJGameCoreMirrorCpp
 {
     GENERATED_BODY()
 
 public:
 
-    AMyMJCoreBaseForBpCpp() : Super()
+    AMyMJGameCoreWithVisualCpp();
+    virtual ~AMyMJGameCoreWithVisualCpp();
+
+    inline
+    const FMyMJDataAtOneMomentCpp& getDataNowRefConst() const
     {
-        m_pDataHistoryBuffer = NULL;
-        m_eVisualMode = MyMJCoreBaseForBpVisualModeCpp::Normal;
-        m_uiReplicateClientTimeMs = 0;
+        return m_cDataNow;
     };
 
+    inline
+    FMyMJDataAtOneMomentCpp& getDataNowRef()
+    {
+        return m_cDataNow;
+    };
 
 protected:
 
-    virtual void PostInitializeComponents() override;
+    //virtual void PostInitializeComponents() override;
+    virtual void BeginPlay() override;
+
+    //for visual, we need mirror data
+    inline bool getCoreMirrorPartEnabled() const
+    {
+        return IsValid(m_pDataHistoryBuffer);
+    };
+
+    void setCoreMirrorPartEnabled(bool bEnabled);
 
     UFUNCTION()
     virtual void OnRep_MJDataAll()
@@ -338,7 +360,7 @@ protected:
         MY_VERIFY(IsValid(m_pMJDataAll));
 
         m_pMJDataAll->m_cReplicateDelegate.Clear();
-        m_pMJDataAll->m_cReplicateDelegate.AddUObject(this, &AMyMJCoreBaseForBpCpp::onDataSeqReplicated);
+        m_pMJDataAll->m_cReplicateDelegate.AddUObject(this, &AMyMJGameCoreWithVisualCpp::onDataSeqReplicated);
     }
 
     void onDataSeqReplicated(UMyMJDataSequencePerRoleCpp *pSeq, int32 iExtra)
@@ -371,8 +393,8 @@ protected:
 
     bool tryAppendData2Buffer();
 
-    UFUNCTION(BlueprintImplementableEvent)
-    void onEventAppliedWithDur(const FMyMJEventWithTimeStampBaseCpp& newEvent);
+    //UFUNCTION(BlueprintImplementableEvent)
+    void onEventAppliedWithDur(const FMyMJEventWithTimeStampBaseCpp& newEvent) {};
 
     UFUNCTION(BlueprintCallable)
     void changeViewRole(MyMJGameRoleTypeCpp eRoleType)
@@ -399,8 +421,8 @@ protected:
         onVisualModeChanged(eVisualModeOld, eVisualMode);
     };
 
-    UFUNCTION(BlueprintImplementableEvent)
-    void onVisualModeChanged(MyMJCoreBaseForBpVisualModeCpp eVisualModeOld, MyMJCoreBaseForBpVisualModeCpp eVisualMode);
+    //UFUNCTION(BlueprintImplementableEvent)
+    void onVisualModeChanged(MyMJCoreBaseForBpVisualModeCpp eVisualModeOld, MyMJCoreBaseForBpVisualModeCpp eVisualMode) {};
 
     void forVisualLoop();
     void forVisualLoopModeNormal(uint32 clientTimeNow_ms);

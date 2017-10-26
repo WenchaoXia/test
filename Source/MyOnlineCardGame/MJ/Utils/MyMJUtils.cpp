@@ -151,6 +151,52 @@ FString FMyMJWeaveCpp::genDebugString() const
     return ret;
 };
 
+void FMyMJWeaveCpp::getIdsSortedWithTriggerCardRule(int32 idxAtttenderThisWeaveBelong, TArray<int32>& outaIds) const
+{
+    int32 idTriggerCard = getIdTriggerCard();
+    if (idTriggerCard >= 0 && getIdxAttenderTriggerCardSrc() >= 0 && getIdxAttenderTriggerCardSrc() != idxAtttenderThisWeaveBelong) {
+        //sort it
+        TArray<int32> aIdsWithoutTriggerCard;
+        int32 l0 = m_aIds.Num();
+        for (int32 j = 0; j < l0; j++) {
+            if (m_aIds[j] == idTriggerCard) {
+
+            }
+            else {
+                aIdsWithoutTriggerCard.Emplace(m_aIds[j]);
+            }
+        }
+
+        MY_VERIFY((l0 - 1) == aIdsWithoutTriggerCard.Num());
+
+        //the supposed alignment is left to right
+        outaIds.Reset();
+        if (getIdxAttenderTriggerCardSrc() == ((idxAtttenderThisWeaveBelong + 1) % 4)) {
+            outaIds.Append(aIdsWithoutTriggerCard);
+            outaIds.Emplace(idTriggerCard);
+        }
+        else if (getIdxAttenderTriggerCardSrc() == ((idxAtttenderThisWeaveBelong + 2) % 4)) {
+            MY_VERIFY(aIdsWithoutTriggerCard.Num() > 0);
+            outaIds.Emplace(aIdsWithoutTriggerCard[0]);
+            outaIds.Emplace(idTriggerCard);
+            for (int32 i = 1; i < aIdsWithoutTriggerCard.Num(); i++) {
+                outaIds.Emplace(aIdsWithoutTriggerCard[1]);
+            }
+        }
+        else if (getIdxAttenderTriggerCardSrc() == ((idxAtttenderThisWeaveBelong + 3) % 4)) {
+            outaIds.Emplace(idTriggerCard);
+            outaIds.Append(aIdsWithoutTriggerCard);
+        }
+        else {
+            MY_VERIFY(false);
+        }
+    }
+    else {
+        if (&outaIds != &m_aIds) {
+            outaIds = m_aIds;
+        }
+    }
+};
 
 
 FString FMyMJHuScoreAttrCpp::genDebugString() const

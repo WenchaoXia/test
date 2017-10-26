@@ -29,7 +29,7 @@ public:
     bool changeMode(bool bIsReplay);
 
     UPROPERTY()
-    UMyMJCoreFullCpp *m_pCoreFull;
+    UMyMJGameCoreFullCpp *m_pCoreFull;
 
     bool m_bReplayMode;
 	

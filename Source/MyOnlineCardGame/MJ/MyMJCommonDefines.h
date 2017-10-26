@@ -124,12 +124,33 @@ public:
         m_bHaveZhongCards = false;
     };
 
+    inline
+    int32 getSupposedCardNum() const
+    {
+        int32 ret = 9 * 3 * 4;
+
+        if (m_bHaveWordCards) {
+            ret += 7 * 4;
+        }
+
+        if (m_bHaveHuaCards) {
+            ret += 8;
+        }
+
+        if (m_bHaveZhongCards && !m_bHaveWordCards) {
+            ret += 1 * 4;
+        }
+
+        return ret;
+    };
+            
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "have word cards"))
     bool m_bHaveWordCards;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "have hua cards"))
     bool m_bHaveHuaCards;
 
+    //some rule only have zhong, but now word cards
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "have zhong cards"))
     bool m_bHaveZhongCards;
 };

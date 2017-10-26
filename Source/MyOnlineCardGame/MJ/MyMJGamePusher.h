@@ -1406,6 +1406,12 @@ public:
         return true;
     };
 
+    virtual void resolveActionResult(FMyMJGameAttenderCpp &attender) override
+    {
+        m_cWeave.sortWithTriggerCardRule(getIdxAttender());
+        return;
+    };
+
     void initWithWeaveAlreadyInited(const FMyMJCardValuePackCpp &inValuePack, int32 idxAttender, MyMJCardFlipStateCpp eTargetFlipState)
     {
         m_iIdxAttender = idxAttender;
@@ -1619,8 +1625,9 @@ public:
     };
 
     inline
-    void initWithPickedIdValuesInited()
+    void initWithPickedIdValuesInited(int32 idxAttenderFirstHu)
     {
+        m_iIdxAttender = idxAttenderFirstHu;
     };
 
 

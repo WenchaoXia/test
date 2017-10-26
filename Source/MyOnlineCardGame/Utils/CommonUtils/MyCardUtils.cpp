@@ -9,16 +9,29 @@ FMyValueIdMapCpp::clear()
 {
     m_mValueMap.Reset();
     m_iCount = 0;
+    invalidCaches();
 }
 
 bool
 FMyValueIdMapCpp::insert(int32 id, int32 value)
 {
-    FMyIdCollectionCpp* pMapElem = &m_mValueMap.FindOrAdd(value);
+    FMyIdCollectionCpp* pMapElem;
+    if (m_iKeepOrder > 0) {
+        pMapElem = m_mValueMap.Find(value);
+        if (pMapElem == NULL) {
+            pMapElem = &m_mValueMap.Add(value);
+            sortByValue((m_iKeepOrder - 1) > 0);
+        }
+    }
+    else {
+        pMapElem = &m_mValueMap.FindOrAdd(value);
+    }
+
     bool bExist = pMapElem->m_aIds.Contains(id);
     if (!bExist) {
         pMapElem->m_aIds.Add(id);
         m_iCount++;
+        invalidCaches();
     }
     return !bExist;
 }
@@ -45,9 +58,12 @@ FMyValueIdMapCpp::remove(int32 id, int32 value)
         pMapElem->m_aIds.RemoveAtSwap(idx);
         if (pMapElem->m_aIds.Num() <= 0) {
             m_mValueMap.Remove(value);
+            if (m_iKeepOrder > 0) {
+                sortByValue((m_iKeepOrder - 1) > 0);
+            }
         }
         m_iCount--;
-
+        invalidCaches();
         return true;
     }
     else {
@@ -96,6 +112,12 @@ void FMyValueIdMapCpp::removeAllByValue(int32 value, TArray<FMyIdValuePair>& out
     }
 
     MY_VERIFY(m_mValueMap.Remove(value) == 1);
+    m_iCount -= l;
+    invalidCaches();
+
+    if (m_iKeepOrder > 0) {
+        sortByValue((m_iKeepOrder - 1) > 0);
+    }
 }
 
 void
@@ -104,6 +126,9 @@ FMyValueIdMapCpp::copyDeep(const FMyValueIdMapCpp *other)
     clear();
     this->m_mValueMap = other->m_mValueMap;
     this->m_iCount = other->m_iCount;
+    this->m_iKeepOrder = other->m_iKeepOrder;
+    this->m_aIdsAllCached = other->m_aIdsAllCached;
+
 }
 
 void
@@ -161,6 +186,16 @@ FMyValueIdMapCpp::collectAll(TArray<int32>& outIds) const
         outIds.Append(pMapElem->m_aIds);
 
     }
+}
+
+const TArray<int32>& FMyValueIdMapCpp::getIdsAllCached()
+{
+    if (getCount() != m_aIdsAllCached.Num()) {
+        collectAll(m_aIdsAllCached);
+        MY_VERIFY(getCount() == m_aIdsAllCached.Num());
+    }
+
+    return m_aIdsAllCached;
 }
 
 void FMyValueIdMapCpp::collectAllWithValue(TArray<FMyIdValuePair> outPairs) const
@@ -227,17 +262,24 @@ FMyValueIdMapCpp::getOneIdValue(int32 &outId, int32 &outValue) const
     return bFound;
 }
 
-int32
-FMyValueIdMapCpp::getCount() const
-{
-    return m_iCount;
-}
-
 void
 FMyValueIdMapCpp::keys(TArray<int32>& outKeys) const
 {
     m_mValueMap.GenerateKeyArray(outKeys);
 }
 
+void FMyValueIdMapCpp::sortByValue(bool bBig2Little)
+{
+    if (bBig2Little) {
+        m_mValueMap.KeySort([](int32 v0, int32 v1) {
+            return  v0 > v1;
+        });
+    }
+    else {
+        m_mValueMap.KeySort([](int32 v0, int32 v1) {
+            return  v0 < v1;
+        });
+    }
+}
 
 FThreadSafeCounter FMyThreadControlCpp::s_iThreadCount = 0;
