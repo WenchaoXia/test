@@ -130,6 +130,7 @@ void UMyMJDataSequencePerRoleCpp::GetLifetimeReplicatedProps(TArray< FLifetimePr
     DOREPLIFETIME(UMyMJDataSequencePerRoleCpp, m_pEventsApplyingAndApplied);
 };
 
+/*
 void UMyMJDataSequencePerRoleCpp::PostInitProperties()
 {
     Super::PostInitProperties();
@@ -157,7 +158,7 @@ void UMyMJDataSequencePerRoleCpp::PostInitProperties()
             }
 
         }
-        */
+        //
 
         //Todo: when replicated on client, we don't need to new()
 
@@ -166,6 +167,7 @@ void UMyMJDataSequencePerRoleCpp::PostInitProperties()
         //m_pEventsApplyingAndApplied = NewObject<UMyMJGameEventCycleBuffer>(this);
     }
 };
+*/
 
 uint32 UMyMJDataSequencePerRoleCpp::getLastEventEndTime() const
 {
@@ -440,7 +442,6 @@ void UMyMJDataAtOneMomentPerRoleCpp::applyPusherResult(const FMyMJGamePusherResu
         m_cData. m_aEventApplying[idx].setDuration(dur_resolved_ms);
     }
 }
-*/
 
 void UMyMJDataAllCpp::PostInitProperties()
 {
@@ -463,7 +464,7 @@ void UMyMJDataAllCpp::PostInitProperties()
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Owner actor is null, this is only expected for default object creation."));
     }
 };
-
+*/
 
 
 void UMyMJDataAllCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
@@ -471,14 +472,15 @@ void UMyMJDataAllCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & O
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(UMyMJDataAllCpp, m_aDatas);
-    //DOREPLIFETIME(UMyMJDataAllCpp, m_pDataTest0);
-    //DOREPLIFETIME(UMyMJDataAllCpp, m_pDataTest1);
     DOREPLIFETIME(UMyMJDataAllCpp, m_iTest);
 };
 
 
 bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
 {
+    //const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("ReplicateSubobjects thread id: %d"), CurrentThreadId);
+
     UWorld* w = Channel->GetWorld();
     UNetConnection* c = Channel->Connection;
     APlayerController *pc = NULL;
@@ -537,6 +539,7 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
         }
     }
 
+    /*
     if (IsValid(m_pDataTest0)) {
         WroteSomething |= Channel->ReplicateSubobject(m_pDataTest0, *Bunch, *RepFlags);
         const UMyMJGameEventCycleBuffer* pB = m_pDataTest0->getEvents(false);
@@ -554,6 +557,7 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
             WroteSomething |= Channel->ReplicateSubobject(pB0, *Bunch, *RepFlags);
         }
     }
+    */
 
     int64 byteNum = Bunch->GetNumBytes();
     if (byteNum > 0) {

@@ -217,8 +217,9 @@ public:
 protected:
 
     virtual void PostInitializeComponents() override;
+    virtual void BeginPlay() override;
 
-    bool verifySettings() const;
+    bool checkSettings() const;
 
     //return errcode
     int32 helperGetColCountPerRowForDefaultAligment(int32 idxAtttender, MyMJCardSlotTypeCpp eSlot, int32& outCount) const;
@@ -235,11 +236,20 @@ protected:
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Instanced, meta = (DisplayName = "res manager"))
     UMyMJGameDeskDynamicResManagerCpp *m_pResManager;
 
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Instanced, meta = (DisplayName = "core with visual"))
+    UMyMJGameCoreWithVisualCpp *m_pCoreWithVisual;
+
     UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "area actor"))
     AMyMJGameDeskAreaCpp* m_pDeskAreaActor;
 
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "MJ Core actor"))
-    AMyMJGameCoreWithVisualCpp* m_pMJCore;
+    UPROPERTY()
+    UMyMJDataSequencePerRoleCpp* m_pDataHistoryBuffer;
+
+    UPROPERTY()
+    UMyTestObject* m_pTestObj;
+
+    //UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "MJ Core actor"))
+    //UMyMJGameCoreWithVisualCpp* m_pMJCore;
 
     FMyMJCardVisualInfoPackCpp m_cCardVisualInfoPack;
 

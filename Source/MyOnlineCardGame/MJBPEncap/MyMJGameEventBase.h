@@ -360,7 +360,7 @@ struct TStructOpsTypeTraits< FMyMJGameEventArray > : public TStructOpsTypeTraits
     };
 };
 
-
+//extra param is just for test
 DECLARE_MULTICAST_DELEGATE_OneParam(FMyMJGameEventCycleBufferReplicatedDelegate, int32);
 
 //Todo: make it template
@@ -374,7 +374,7 @@ class UMyMJGameEventCycleBuffer : public UObject
 
 public:
 
-    UMyMJGameEventCycleBuffer()
+    UMyMJGameEventCycleBuffer() : Super()
     {
         m_iTest = 0;
         resize(64);
@@ -385,13 +385,6 @@ public:
 
 
     };
-
-    virtual bool IsSupportedForNetworking() const override
-    {
-        return true;
-    };
-
-    virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
 
     void resize(int32 iNewSizeMax)
     {
@@ -409,8 +402,6 @@ public:
         m_iCount = 0;
         setLastEventEndTime(0);
     };
-
-
 
     //This will assert if not enough of items were removed
     void removeFromHead(int32 countToRemove)
@@ -596,6 +587,13 @@ public:
 
 protected:
 
+    virtual bool IsSupportedForNetworking() const override
+    {
+        return true;
+    };
+
+    virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+
     UFUNCTION()
     void OnRep_Data()
     {
@@ -681,9 +679,10 @@ protected:
     uint32 m_uiLastEventEndTime_data_unit;
 };
 
-typedef class UMyMJDataSequencePerRoleCpp UMyMJDataSequencePerRoleCpp;
+//typedef class UMyMJDataSequencePerRoleCpp UMyMJDataSequencePerRoleCpp;
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FMyMJDataSeqReplicatedDelegate, UMyMJDataSequencePerRoleCpp*, int32);
+//DECLARE_MULTICAST_DELEGATE_TwoParams(FMyMJDataSeqReplicatedDelegate, UMyMJDataSequencePerRoleCpp*, int32);
+DECLARE_MULTICAST_DELEGATE_OneParam(FMyMJDataSeqReplicatedDelegate, MyMJGameRoleTypeCpp);
 
 //mainly keeps a history, this is the logic core need to replicate
 UCLASS()
@@ -692,11 +691,12 @@ class MYONLINECARDGAME_API UMyMJDataSequencePerRoleCpp : public UObject
     GENERATED_BODY()
 
 public:
-    UMyMJDataSequencePerRoleCpp()
+    UMyMJDataSequencePerRoleCpp() : Super()
     {
         m_iRepKeyOfState = 1;
 
-        m_pEventsApplyingAndApplied = NULL;
+        m_pEventsApplyingAndApplied = CreateDefaultSubobject<UMyMJGameEventCycleBuffer>(TEXT("Events Applying And Applied"));
+        //m_pEventsApplyingAndApplied = NULL;
 
         reinit(MyMJGameRoleTypeCpp::Observer);
 
@@ -722,13 +722,6 @@ public:
         m_iEventsBasePusherCount = 0;
     };
 
-    virtual bool IsSupportedForNetworking() const override
-    {
-        return true;
-    };
-
-    virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
-    virtual void PostInitProperties() override;
 
     void markDirtyForRep()
     {
@@ -987,7 +980,7 @@ public:
             if (bVerifyValid) {
                 MY_VERIFY(false);
             }
-            return false;
+            return NULL;
         }
 
     };
@@ -999,22 +992,31 @@ public:
 
 protected:
 
+    virtual bool IsSupportedForNetworking() const override
+    {
+        return true;
+    };
+
+    virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+    //virtual void PostInitProperties() override;
+
     //make the state move forward
     void trySquashBaseAndEvents(uint32 uiServerWorldTime_resolved_ms);
 
     UFUNCTION()
-        void OnRep_Base()
+    void OnRep_Base()
     {
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's base replicated,  %d : %d."), (uint8)m_eRole, m_cBase.getCoreDataRefConst().m_iGameId, m_cBase.getCoreDataRefConst().m_iPusherIdLast);
 
-        m_cReplicateDelegate.Broadcast(this, 0);
+        //we got real values, notify it
+        m_cReplicateDelegate.Broadcast(m_eRole);
     };
 
     UFUNCTION()
     void OnRep_EventsPointer()
     {
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's events replicated."), (uint8)m_eRole);
-        m_cReplicateDelegate.Broadcast(this, 1);
+        //m_cReplicateDelegate.Broadcast(this, 1);
 
         if (IsValid(m_pEventsApplyingAndApplied)) {
             m_pEventsApplyingAndApplied->m_cUpdateNotifier.Clear();
@@ -1027,21 +1029,17 @@ protected:
     void OnRep_EventsContent(int32 iExtra)
     {
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's events replicated."), (uint8)m_eRole);
-        m_cReplicateDelegate.Broadcast(this, 2);
+        m_cReplicateDelegate.Broadcast(m_eRole);
     };
 
     //following is the core data, representing
 
     //driven by @m_cEventsApplyingAndApplied
     UPROPERTY(ReplicatedUsing = OnRep_Base)
-        FMyMJDataStructWithTimeStampBaseCpp m_cBase;
-
-    //UPROPERTY(Replicated)
-    //FMyMJDataStructWithTimeStampBaseCpp m_cBaseTest2;
+    FMyMJDataStructWithTimeStampBaseCpp m_cBase;
 
     //focused deltas, base is only used when merge or pull
     UPROPERTY(ReplicatedUsing = OnRep_EventsPointer)
-    //UPROPERTY()
     UMyMJGameEventCycleBuffer* m_pEventsApplyingAndApplied;
 
 
@@ -1456,34 +1454,21 @@ class MYONLINECARDGAME_API UMyMJDataAllCpp : public UActorComponent
 public:
 
     //we don't create members by default, since in client replication will do it, saves a memory allocate operation
-    UMyMJDataAllCpp()
+    UMyMJDataAllCpp() : Super()
     {
         m_iTest = 0;
         m_iRepObjIdBase = 200;
         m_iRepKeyOfState = 1;
 
-        m_pDataTest0 = m_pDataTest1 = NULL;
+        m_bShowDebugLog = false;
     };
 
-    virtual void PostInitProperties() override;
+    //virtual void PostInitProperties() override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
     virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
 
     void doTestChange()
     {
-        /*
-        int32 l = m_aDatas.Num();
-        for (int32 i = 0; i < l; i++) {
-            if (m_aDatas[i]) {
-                m_aDatas[i]->doTestChange();
-                //test purpse:
-                if (i != 2) {
-                    m_aDatas[i]->markDirtyForRep();
-                }
-            }
-        }
-        */
-
         m_iTest += 2;
 
         int32 l = m_aDatas.Num();
@@ -1493,20 +1478,11 @@ public:
             }
         }
 
-        if (IsValid(m_pDataTest0)) {
-            m_pDataTest0->doTestChange();
-        }
-
-        if (IsValid(m_pDataTest1)) {
-            m_pDataTest1->doTestChange();
-        }
-
         markDirtyForRep();
     };
 
     FString genDebugMsg()
     {
-
         int32 l = m_aDatas.Num();
         FString ret = FString::Printf(TEXT("m_aDatas l: %d, m_iTest %d. "), l, m_iTest);
         for (int32 i = 0; i < l; i++) {
@@ -1518,19 +1494,23 @@ public:
                 ret += FString::Printf(TEXT(" Null."), l);
             }
         }
-
-        ret += FString::Printf(TEXT(" m_pDataTest0 %d: "), IsValid(m_pDataTest0));
-        if (IsValid(m_pDataTest0)) {
-            ret += m_pDataTest0->genDebugMsg();
-        }
-
-        ret += FString::Printf(TEXT(" m_pDataTest1 %d: "), IsValid(m_pDataTest1));
-        if (IsValid(m_pDataTest1)) {
-            ret += m_pDataTest1->genDebugMsg();
-        }
-
         return ret;
 
+    };
+
+    void createSubObjects()
+    {
+        m_aDatas.Reset();
+        for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
+            if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper || i == 5) {
+                UMyMJDataSequencePerRoleCpp *pNew = NewObject<UMyMJDataSequencePerRoleCpp>(this);
+                pNew->reinit((MyMJGameRoleTypeCpp)i);
+                m_aDatas.Emplace(pNew);
+            }
+            else {
+                m_aDatas.Emplace((UMyMJDataSequencePerRoleCpp *)NULL);
+            }
+        }
     };
 
     void markDirtyForRep()
@@ -1561,17 +1541,18 @@ public:
         return m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper]->isReadyToGiveNextPusherResult(uiServerWorldTime_resolved_ms);
     };
 
-    //void applyPusherResult(const FMyMJGamePusherResultCpp& pusherResult, uint32 uiServerWorldTime_resolved_ms)
-
-    //inline
-    //void givePusherResult(FMyMJGamePusherResultCpp **ppPusherResult, uint32 uiServerWorldTime_resolved_ms)
-
     void addPusherResult(const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_resolved_ms)
     {
         int32 l = m_aDatas.Num();
         MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
         FMyMJGamePusherResultCpp cPusherNew;
+
+        if (m_bShowDebugLog) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("adding pusher result: %s"), *cPusherResult.genDebugMsg());
+        }
+
         for (int32 i = 0; i < l; i++) {
+
             if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper) {
                 MY_VERIFY(IsValid(m_aDatas[i]));
                 m_aDatas[i]->addPusherResult(m_cEventDeltaDurCfg, cPusherResult, uiServerWorldTime_resolved_ms);
@@ -1587,32 +1568,15 @@ public:
                 m_aDatas[i]->addPusherResult(m_cEventDeltaDurCfg, cPusherNew, uiServerWorldTime_resolved_ms);
             }
         }
-
-        if (IsValid(m_pDataTest0)) {
-            m_pDataTest0->addPusherResult(m_cEventDeltaDurCfg, cPusherResult, uiServerWorldTime_resolved_ms);
-        }
-
-        if (IsValid(m_pDataTest1)) {
-            m_pDataTest1->addPusherResult(m_cEventDeltaDurCfg, cPusherResult, uiServerWorldTime_resolved_ms);
-        }
     };
 
-    /*
-    void cloneDataForAllRoles()
-    {
-        int32 l = m_aDatas.Num();
-        MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
-
-        for (int32 i = 0; i < l; i++) {
-            if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper) {
-                continue;
-            }
-            m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper]->m_cData.copyWithRoleFromSysKeeperRole(m_aDatas[i]->m_cData);
-        }
-    };
-    */
-
+    inline
     UMyMJDataSequencePerRoleCpp* getDataByRoleType(MyMJGameRoleTypeCpp eRoleType, bool bVerify = true)
+    {
+        return const_cast<UMyMJDataSequencePerRoleCpp *>(getDataByRoleTypeConst(eRoleType, bVerify));
+    };
+
+    const UMyMJDataSequencePerRoleCpp* getDataByRoleTypeConst(MyMJGameRoleTypeCpp eRoleType, bool bVerify = true) const
     {
         MY_VERIFY((uint8)eRoleType < (uint8)MyMJGameRoleTypeCpp::Max);
         int32 l = m_aDatas.Num();
@@ -1630,20 +1594,18 @@ public:
         }
 
         return NULL;
- 
     };
+
+    inline
+    void setShowDebugLog(bool bShow)
+    {
+        m_bShowDebugLog = bShow;
+    }
 
     FMyMJDataSeqReplicatedDelegate m_cReplicateDelegate;
 
     UPROPERTY(Replicated)
     int32 m_iTest;
-
-    //UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Datas, meta = (DisplayName = "dataTest"))
-    UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Datas, meta = (DisplayName = "dataTest0"))
-    UMyMJDataSequencePerRoleCpp *m_pDataTest0;
-
-    UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Datas, meta = (DisplayName = "dataTest1"))
-    UMyMJDataSequencePerRoleCpp *m_pDataTest1;
 
 protected:
 
@@ -1662,44 +1624,14 @@ protected:
             pSeq->m_cReplicateDelegate.Clear();
             pSeq->m_cReplicateDelegate.AddUObject(this, &UMyMJDataAllCpp::onDataSeqReplicated);
         }
-
-        if (IsValid(m_pDataTest0)) {
-            m_pDataTest0->m_cReplicateDelegate.Clear();
-            m_pDataTest0->m_cReplicateDelegate.AddUObject(this, &UMyMJDataAllCpp::onDataSeqReplicated);
-        }
-
-        if (IsValid(m_pDataTest1)) {
-            m_pDataTest1->m_cReplicateDelegate.Clear();
-            m_pDataTest1->m_cReplicateDelegate.AddUObject(this, &UMyMJDataAllCpp::onDataSeqReplicated);
-        }
     }
 
-    void onDataSeqReplicated(UMyMJDataSequencePerRoleCpp *pSeq, int32 iExtra)
+    void onDataSeqReplicated(MyMJGameRoleTypeCpp eRole)
     {
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onDataSeqReplicated(), role %d."), (uint8)pSeq->m_eRole);
-        m_cReplicateDelegate.Broadcast(pSeq, iExtra);
+        m_cReplicateDelegate.Broadcast(eRole);
     };
 
-    void createSubObjects()
-    {
-        m_aDatas.Reset();
-        for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
-            if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper || i == 5) {
-                UMyMJDataSequencePerRoleCpp *pNew = NewObject<UMyMJDataSequencePerRoleCpp>(this);
-                pNew->reinit((MyMJGameRoleTypeCpp)i);
-                m_aDatas.Emplace(pNew);
-            }
-            else {
-                m_aDatas.Emplace((UMyMJDataSequencePerRoleCpp *)NULL);
-            }
-        }
-
-        //m_pDataTest0 = NewObject<UMyMJDataSequencePerRoleCpp>(this);
-        //m_pDataTest0->reinit(MyMJGameRoleTypeCpp::SysKeeper);
-
-        //m_pDataTest1 = NewObject<UMyMJDataSequencePerRoleCpp>(this);
-        //m_pDataTest1->reinit(MyMJGameRoleTypeCpp::SysKeeper);
-    };
 
     //basically we can make visual and logic unified by ignoring old status, but turn based game, history is also important, so we divide them, logic tells the latest state,
     //visual tells what shows to player now
@@ -1714,7 +1646,6 @@ protected:
     TArray<UMyMJDataSequencePerRoleCpp *> m_aDatas;
 
 
-
     FMyMJEventDataDeltaDurCfgBaseCpp m_cEventDeltaDurCfg;
 
     //UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "datas"))
@@ -1725,4 +1656,6 @@ protected:
     //replication helper, let's assume range is 100
     int32 m_iRepObjIdBase;
     int32 m_iRepKeyOfState;
+
+    bool m_bShowDebugLog;
 };

@@ -8,6 +8,7 @@
 
 bool AMyOnlineCardGameModeCpp::changeMode(bool bIsReplay)
 {
+    /*
     UWorld *world = GetWorld();
     if (!IsValid(world)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid world!"));
@@ -34,7 +35,7 @@ bool AMyOnlineCardGameModeCpp::changeMode(bool bIsReplay)
 
         }
     }
-
+    */
 
     return true;
 }

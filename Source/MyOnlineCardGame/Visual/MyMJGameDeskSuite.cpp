@@ -29,7 +29,14 @@ UMyMJGameDeskDynamicResManagerCpp::~UMyMJGameDeskDynamicResManagerCpp()
 
 bool UMyMJGameDeskDynamicResManagerCpp::checkSettings() const
 {
-    return (getCardCDO() != NULL);
+    const AMyMJGameCardBaseCpp* pCDO = getCardCDO();
+    if (IsValid(pCDO)) {
+        return true;
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCDO is not valid %p, possible no card class specified."), pCDO);
+        return false;
+    }
 };
 
 
@@ -87,7 +94,10 @@ const AMyMJGameCardBaseCpp* UMyMJGameDeskDynamicResManagerCpp::getCardCDO() cons
 AMyMJGameDeskSuiteCpp::AMyMJGameDeskSuiteCpp() : Super()
 {
     m_pResManager = CreateDefaultSubobject<UMyMJGameDeskDynamicResManagerCpp>(TEXT("res manager"));
+    m_pCoreWithVisual = CreateDefaultSubobject<UMyMJGameCoreWithVisualCpp>(TEXT("core with visual"));
 
+    //m_pDataHistoryBuffer = CreateDefaultSubobject<UMyMJDataSequencePerRoleCpp>(TEXT("buffer"));
+    //m_pTestObj = CreateDefaultSubobject<UMyTestObject>(TEXT("test obj"));
     //if (!IsValid(m_pRootScene)) {
         //USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
         //MY_VERIFY(IsValid(pRootSceneComponent));
@@ -97,7 +107,9 @@ AMyMJGameDeskSuiteCpp::AMyMJGameDeskSuiteCpp() : Super()
     //}
 
     m_pDeskAreaActor = NULL;
-    m_pMJCore = NULL;
+    //m_pMJCore = NULL;
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("0 this %p, m_pCoreWithVisual %p, m_pDataHistoryBuffer %p, m_pTestObj %p."), this, m_pCoreWithVisual, m_pDataHistoryBuffer, m_pTestObj);
 };
 
 AMyMJGameDeskSuiteCpp::~AMyMJGameDeskSuiteCpp()
@@ -107,6 +119,13 @@ AMyMJGameDeskSuiteCpp::~AMyMJGameDeskSuiteCpp()
 void AMyMJGameDeskSuiteCpp::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
+};
+
+void AMyMJGameDeskSuiteCpp::BeginPlay()
+{
+    Super::BeginPlay();
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("1 this %p, m_pCoreWithVisual %p, m_pDataHistoryBuffer %p, m_pTestObj %p."), this, m_pCoreWithVisual, m_pDataHistoryBuffer, m_pTestObj);
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("0 m_pResManager %p, m_pCoreWithVisual %p, m_pTestObj %p."), m_pResManager, m_pCoreWithVisual, m_pTestObj);
 };
 
 /*
@@ -317,24 +336,26 @@ void AMyMJGameDeskSuiteCpp::helperCalcCardTransform(const FMyMJGameCardVisualInf
 };
 */
 
-bool AMyMJGameDeskSuiteCpp::verifySettings() const
+bool AMyMJGameDeskSuiteCpp::checkSettings() const
 {
     MY_VERIFY(IsValid(m_pResManager));
+    if (false == m_pResManager->checkSettings()) {
+        return false;
+    }
+
+    MY_VERIFY(IsValid(m_pCoreWithVisual));
+    if (false == m_pCoreWithVisual->checkSettings()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pCoreWithVisual have incorrect settings."));
+        return false;
+    }
 
     if (!IsValid(m_pDeskAreaActor)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDeskAreaActor %p is not valid."), m_pDeskAreaActor);
         return false;
     }
 
-    if (!IsValid(m_pMJCore)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMJCore %p is not valid."), m_pMJCore);
-        return false;
-    }
 
-    if (false == m_pResManager->checkSettings()) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pResManager have incorrect settings, possible no card class specified."));
-        return false;
-    }
+
 
     return true;
 }
@@ -370,20 +391,11 @@ int32 AMyMJGameDeskSuiteCpp::helperGetColCountPerRowForDefaultAligment(int32 idx
 
 void AMyMJGameDeskSuiteCpp::helperTryUpdateCardVisualInfoPack()
 {
-    if (!IsValid(m_pMJCore)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMJCore %p is not valid."), m_pMJCore);
+    if (!checkSettings()) {
         return;
     }
 
-    if (!IsValid(m_pDeskAreaActor)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDeskAreaActor %p is not valid."), m_pDeskAreaActor);
-        return;
-    }
-
-    MY_VERIFY(IsValid(m_pResManager));
-
-
-    FMyMJDataAtOneMomentCpp& cDataNow = m_pMJCore->getDataNowRef();
+    FMyMJDataAtOneMomentCpp& cDataNow = m_pCoreWithVisual->getDataNowRef();
     FMyMJDataAccessorCpp& cAccessor = cDataNow.getAccessorRef();
     const TArray<int32>& aHelperAttenderSlotDirtyMasks = cAccessor.getHelperAttenderSlotDirtyMasksConst(true);
     if (aHelperAttenderSlotDirtyMasks[0] == 0 && aHelperAttenderSlotDirtyMasks[1] == 0 && aHelperAttenderSlotDirtyMasks[2] == 0 && aHelperAttenderSlotDirtyMasks[3] == 0) {
@@ -964,13 +976,13 @@ void AMyMJGameDeskSuiteCpp::helperResolveTargetCardVisualState(int32 idxCard, FM
 {
     outTargetCardVisualState.reset();
 
-    if (!verifySettings()) {
-        return;
-    }
+    //if (!checkSettings()) {
+        //return;
+    //}
 
     MY_VERIFY(idxCard >= 0);
 
-    const FMyMJDataAtOneMomentCpp& cDataNow = m_pMJCore->getDataNowRefConst();
+    const FMyMJDataAtOneMomentCpp& cDataNow = m_pCoreWithVisual->getDataNowRefConst();
     const FMyMJDataStructWithTimeStampBaseCpp& cBase = cDataNow.getBaseRefConst();
     const FMyMJCardInfoPackCpp& cCardInfoPack = cBase.getCoreDataRefConst().m_cCardInfoPack;
 
