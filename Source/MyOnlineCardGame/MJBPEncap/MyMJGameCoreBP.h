@@ -20,33 +20,59 @@
 #include "MJLocalCS/MyMJGameCoreLocalCS.h"
 
 #include "MJBPEncap/utils/MyMJBPUtils.h"
-
 #include "MyMJGameCoreBP.generated.h"
 
-class FMyMJGameCoreThreadControlCpp : public FMyThreadControlCpp
+#define MyMJGameVisualCoreHistoryBufferSize (256)
+#define MyMJGameVisualCoreHistoryBufferSaturatePercentage (80)
+#define MyMJGameVisualCoreHistoryMaxFallBehindTimeMs (5000)
+
+//MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS
+
+//Note once created, subthread would start working
+class FMyMJGameCoreRunnableCpp : public FMyRunnableBaseCpp
 {
 public:
-    FMyMJGameCoreThreadControlCpp(MyMJGameRuleTypeCpp eRuleType, int32 iSeed, int32 iTrivalConfigMask) : FMyThreadControlCpp(MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS)
+    FMyMJGameCoreRunnableCpp() : FMyRunnableBaseCpp(MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS)
     {
+
+        //m_ppCoreInRun = NULL;
+
+        m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
+        m_iSeed.Set(0);
+        m_iTrivalConfigMask = 0;
+
+        m_ppCore = NULL;
+
+        //MY_VERIFY(start());
+
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameCoreThreadControlCpp create()."));
+    };
+
+    virtual ~FMyMJGameCoreRunnableCpp()
+    {
+        if (!isReadyForMainThreadClean()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Runnable data is still used when destroy, check you code!"));
+            MY_VERIFY(false);
+        }
+
+        if (m_ppCore) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_ppCore is valid when destroy, this means subthread failed to reclaim it!"));
+        }
+
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("~FMyMJGameCoreThreadControlCpp destroy()."));
+
+    };
+
+    void initData(MyMJGameRuleTypeCpp eRuleType, int32 iSeed, int32 iTrivalConfigMask)
+    {
+        MY_VERIFY(isReadyForMainThreadClean()); //ready for clean, equal to ready for init
+        
         m_eRuleType = eRuleType;
         m_iSeed.Set(iSeed);
-
-        m_ppCoreInRun = NULL;
         m_iTrivalConfigMask = iTrivalConfigMask;
-        MY_VERIFY(start());
 
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameCoreThreadControlCpp create()."));
+        MY_VERIFY(m_eRuleType != MyMJGameRuleTypeCpp::Invalid);
     };
-
-    virtual ~FMyMJGameCoreThreadControlCpp()
-    {
-        //clean up ahead, otherwise it may crash since subthread may still using vtable which is cleaned here
-        cleanUp();
-
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("~FMyMJGameCoreThreadControlCpp destroy()."));
-
-    };
-
 
     inline MyMJGameRuleTypeCpp getRuleType()
     {
@@ -59,47 +85,54 @@ public:
     };
 
 
+    virtual FString genName() const override
+    {
+        return TEXT("FMyMJGameCoreRunnableCpp");
+    };
+
+    virtual bool isReadyForSubThread() const override
+    {
+        return m_eRuleType != MyMJGameRuleTypeCpp::Invalid;
+    };
+
 protected:
 
-    bool start()
+    virtual bool initBeforRun() override
     {
-        MY_VERIFY(m_eRuleType != MyMJGameRuleTypeCpp::Invalid);
-        return FMyThreadControlCpp::start();
-    }
+        if (!FMyRunnableBaseCpp::initBeforRun()) {
+            return false;
+        }
 
-    virtual void beginInRun() override
-    {
         int32 testV = 1 + 3 > 2;
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("thread started, beginInRun(), testV %d"), testV);
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("thread started, initBeforRun(), testV %d"), testV);
 
         FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(m_eRuleType, m_iSeed.GetValue(), m_iTrivalConfigMask);
 
-        if (m_ppCoreInRun) {
-            delete(m_ppCoreInRun);
-            m_ppCoreInRun = NULL;
+        if (m_ppCore) {
+            delete(m_ppCore);
+            m_ppCore = NULL;
         }
 
-        m_ppCoreInRun = new TSharedPtr<FMyMJGameCoreCpp>();
-        *m_ppCoreInRun = MakeShareable<FMyMJGameCoreCpp>(pCore);
-        pCore->initFullMode(*m_ppCoreInRun, &m_cIOGourpAll);
+        m_ppCore = new TSharedPtr<FMyMJGameCoreCpp>();
+        *m_ppCore = MakeShareable<FMyMJGameCoreCpp>(pCore);
+        pCore->initFullMode(*m_ppCore, &m_cIOGourpAll);
+
+        return true;
     };
 
     virtual void loopInRun() override
     {
-        (*m_ppCoreInRun)->tryProgressInFullMode();
+        (*m_ppCore)->tryProgressInFullMode();
     };
 
-    virtual void endInRUn() override
+    virtual void exitAfterRun() override
     {
-        if (m_ppCoreInRun) {
-            delete m_ppCoreInRun;
-            m_ppCoreInRun = NULL;
+        FMyRunnableBaseCpp::exitAfterRun();
+
+        if (m_ppCore) {
+            delete(m_ppCore);
+            m_ppCore = NULL;
         }
-    };
-
-    virtual void Exit() override
-    {
-        m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
     };
 
     //logic related, owned by this class, which means parent thread
@@ -109,9 +142,8 @@ protected:
 
     int32 m_iTrivalConfigMask;
 
-    TSharedPtr<FMyMJGameCoreCpp> *m_ppCoreInRun;
-
-
+    //completely managed in subthread
+    TSharedPtr<FMyMJGameCoreCpp>* m_ppCore;
 };
 
 
@@ -124,20 +156,9 @@ class MYONLINECARDGAME_API AMyMJGameCoreDataSourceCpp : public AActor
     GENERATED_BODY()
 public:
 
-    AMyMJGameCoreDataSourceCpp() : Super()
-    {
-        m_iTest0 = 0;
-        m_iSeed2OverWrite = 0;
-        m_pCoreFullWithThread = NULL;
-        m_pMJDataAll = NULL;
+    AMyMJGameCoreDataSourceCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-        bReplicates = true;
-        bAlwaysRelevant = true;
-        bNetLoadOnClient = true;
-        NetUpdateFrequency = 10;
-
-        m_uiLastReplicateClientTimeMs = 0;
-    };
+    virtual ~AMyMJGameCoreDataSourceCpp();
 
     //test functions start:
 
@@ -158,18 +179,21 @@ public:
     UFUNCTION(BlueprintCallable)
     void startGameCoreTestInSubThread(bool showCoreLog, bool showDataLog, bool bAttenderRandomSelectHighPriActionFirst);
 
+    //return true if changed successfully, eRuleType == MyMJGameRuleTypeCpp::Invalid means destroy but not create new one
     bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTrivalConfigMask);
     
     bool startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst);
-
-    void clearUp();
+    void stopGame();
 
     void coreDataPullLoop();
 
     //end
    
-    inline UMyMJDataAllCpp* getMJDataAll()
+    inline UMyMJDataAllCpp* getMJDataAll(bool bVerify = true)
     {
+        if (bVerify) {
+            MY_VERIFY(IsValid(m_pMJDataAll));
+        }
         return m_pMJDataAll;
     };
     
@@ -178,8 +202,7 @@ public:
         return m_pMJDataAll;
     };
 
-
-    FMyMJDataSeqReplicatedDelegate m_cReplicateFilteredDelegate;
+    //FMyMJDataSeqReplicatedDelegate m_cReplicateFilteredDelegate;
 
     UPROPERTY(Replicated)
         int32 m_iTest0;
@@ -189,50 +212,40 @@ protected:
     //virtual void PostInitProperties() override;
     //virtual void PostInitializeComponents() override;
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
     //virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
+    virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
 
     bool getCoreFullPartEnabled() const;
     void setCoreFullPartEnabled(bool bEnabled);
 
     UFUNCTION()
-    void OnRep_MJDataAll();
-
-    void OnRep_MJDataAllContent(MyMJGameRoleTypeCpp eRole);
+    void OnRep_MJDataAllPointer()
+    {
+        if (getCoreFullPartEnabled()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("MJData all is replicated but full part enabled, netmode swithced??"));
+        }
+    };
 
     //if not 0, it will be used as seed of random
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "seed overwrite"))
     int32 m_iSeed2OverWrite;
 
-    TSharedPtr<FMyMJGameCoreThreadControlCpp> m_pCoreFullWithThread;
+    TSharedPtr<FMyThreadControlCpp<FMyMJGameCoreRunnableCpp>> m_pCoreFullWithThread;
 
     //UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "data of storage"))
-    UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MJDataAll, meta = (DisplayName = "data of all roles"))
+    UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MJDataAllPointer, meta = (DisplayName = "data of all roles"))
     UMyMJDataAllCpp* m_pMJDataAll;
 
     FTimerHandle m_cToCoreFullLoopTimerHandle;
-
-    uint32 m_uiLastReplicateClientTimeMs;
+    bool m_bCoreFullPartEnabled;
+    //uint32 m_uiLastReplicateClientTimeMs;
 };
 
-UCLASS()
-class MYONLINECARDGAME_API UMyTestObject : public UObject
-{
-    GENERATED_BODY()
-
-public:
-    UMyTestObject() : Super()
-    {
-
-    };
-};
-
-UENUM()
-enum class MyMJCoreBaseForBpVisualModeCpp : uint8
-{
-    Normal = 1                              UMETA(DisplayName = "Normal"),
-    CatchUp = 2                             UMETA(DisplayName = "CatchUp"),
-};
+/*
+DECLARE_MULTICAST_DELEGATE(FMyMJGameCoreAllUpdatedDelegate);
+DECLARE_MULTICAST_DELEGATE_OneParam(FMyMJGameCoreEventAppliedDelegate, const FMyMJEventWithTimeStampBaseCpp&);
 
 //This level focus on BP and Graphic
 UCLASS()
@@ -259,6 +272,12 @@ public:
         return m_cDataNow;
     };
 
+    //play all events <= uiServerTime_ms
+    void playGameProgressTo(uint32 uiServerTimeNew_ms_unresolved, bool bCatchUp);
+
+    FMyMJGameCoreAllUpdatedDelegate m_cBaseAllUpdatedDelegate;
+    FMyMJGameCoreEventAppliedDelegate m_cEventAppliedDelegate;
+
     UFUNCTION(BlueprintCallable)
         void test0();
 
@@ -267,65 +286,29 @@ protected:
     //virtual void PostInitializeComponents() override;
     virtual void BeginPlay() override;
 
-    //bool getGameCoreDataSourceEnabled() const;
-    //void setGameCoreDataSourceEnabled(bool bEnabled);
-
     void onDataSeqReplicated(MyMJGameRoleTypeCpp eRole);
     bool tryAppendDataToHistoryBuffer();
 
 
-    //UFUNCTION(BlueprintImplementableEvent)
-    void onEventAppliedWithDur(const FMyMJEventWithTimeStampBaseCpp& newEvent) {};
+    //UFUNCTION(BlueprintCallable)
+    //void changeViewRole(MyMJGameRoleTypeCpp eRoleType)
+    //{
+        //MY_VERIFY(IsValid(m_pDataHistoryBuffer0));
 
-    UFUNCTION(BlueprintCallable)
-    void changeViewRole(MyMJGameRoleTypeCpp eRoleType)
-    {
-        MY_VERIFY(IsValid(m_pDataHistoryBuffer0));
+        //m_cDataNow.reinit(eRoleType);
+        //m_pDataHistoryBuffer0->reinit(eRoleType);
+    //};
 
-        m_cDataNow.reinit(eRoleType);
-        m_pDataHistoryBuffer0->reinit(eRoleType);
-    };
-
-    UFUNCTION(BlueprintCallable)
-    void changeVisualMode(MyMJCoreBaseForBpVisualModeCpp eVisualMode)
-    {
-        MyMJCoreBaseForBpVisualModeCpp eVisualModeOld = m_eVisualMode;
-        m_eVisualMode = eVisualMode;
-
-        float clientTimeNow = 0;
-        UWorld* world = GetWorld();
-        if (IsValid(world)) {
-            clientTimeNow = world->GetTimeSeconds();
-        }
-
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("time %.3f: changeVisualMode %s -> %s."), clientTimeNow, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCoreBaseForBpVisualModeCpp"), (uint8)eVisualModeOld), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCoreBaseForBpVisualModeCpp"), (uint8)eVisualMode));
-        onVisualModeChanged(eVisualModeOld, eVisualMode);
-    };
-
-    //UFUNCTION(BlueprintImplementableEvent)
-    void onVisualModeChanged(MyMJCoreBaseForBpVisualModeCpp eVisualModeOld, MyMJCoreBaseForBpVisualModeCpp eVisualMode) {};
-
-    void forVisualLoop();
-    void forVisualLoopModeNormal(uint32 clientTimeNow_ms);
-    void forVisualLoopModeCatchUp(uint32 clientTimeNow_ms);
-
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "data source"))
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "cfg", meta = (DisplayName = "data source"))
     AMyMJGameCoreDataSourceCpp* m_pDataSource;
-
-    //UPROPERTY()
-    //UMyTestObject* m_pTestObj;
 
     //this is the visual data
     UPROPERTY()
     UMyMJDataSequencePerRoleCpp* m_pDataHistoryBuffer0;
 
-    //only for test
-    //UPROPERTY()
-    //UMyMJDataSequencePerRoleCpp* m_pDataHistoryBuffer2;
-
     //this is the current state used for visualize
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "data now"))
     FMyMJDataAtOneMomentCpp m_cDataNow;
 
-    MyMJCoreBaseForBpVisualModeCpp m_eVisualMode;
 };
+*/

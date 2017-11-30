@@ -8,8 +8,9 @@
 bool FMyMJGamePusherIOComponentFullCpp::GivePusherResult(FMyMJGamePusherResultCpp*& pPusherResult)
 {
     MY_VERIFY(pPusherResult);
-    int32 iGameId = pPusherResult->getGameId();
-    int32 iPusherIdLast = pPusherResult->getPusherIdLast();
+    int32 iGameId, iPusherIdLast;
+
+    pPusherResult->getGameIdAndPusherId(&iGameId, &iPusherIdLast);
 
     if (m_iEnqueuePusherCount == (0 + 1)) {
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("a base pusher result detected: [%d:%d]."), iGameId, iPusherIdLast);

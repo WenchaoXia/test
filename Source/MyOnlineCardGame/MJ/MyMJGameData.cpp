@@ -5,8 +5,51 @@
 #include "UnrealNetwork.h"
 #include "Engine/ActorChannel.h"
 
+FMyMJDataStructCpp::FMyMJDataStructCpp()
+{
+    m_eRole = MyMJGameRoleTypeCpp::Max;
 
-void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta)
+
+    for (int i = 0; i < RoleDataAttenderNum; i++) {
+        int32 idx = m_aRoleDataAttenders.Emplace();
+        FMyMJRoleDataAttenderCpp *pD = &m_aRoleDataAttenders[idx];
+        pD->resetup(i);
+    }
+
+
+    /*
+    for (int i = 0; i < RoleDataAttenderNum; i++) {
+        int32 idx = m_aTestArray.Emplace();
+        m_aTestArray[idx] = idx;
+
+        m_aTestPrivArray.Emplace();
+        
+        idx = m_aRoleDataAttenders.Emplace();
+        FMyMJRoleDataAttenderCpp *pD = &m_aRoleDataAttenders[idx];
+        pD->resetup(i);
+    }
+    */
+
+};
+
+FMyMJDataStructCpp::~FMyMJDataStructCpp()
+{
+
+};
+
+void FMyMJDataStructCpp::init()
+{
+    MY_VERIFY(m_aRoleDataAttenders.Num() == 0);
+
+    for (int i = 0; i < RoleDataAttenderNum; i++) {
+        int32 idx = m_aRoleDataAttenders.Emplace();
+        FMyMJRoleDataAttenderCpp *pD = &m_aRoleDataAttenders[idx];
+        pD->resetup(i);
+    }
+};
+
+
+void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
 {
     FMyMJCoreDataPublicCpp &coreDataSelf = getCoreDataRef();
     if (!(coreDataSelf.m_iGameId == delta.m_iGameId && (coreDataSelf.m_iPusherIdLast + 1) == delta.getId())) {
@@ -19,8 +62,8 @@ void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta)
         const FMyMJRoleDataPrivateDeltaCpp& roleDataPriDelta = delta.m_aRoleDataPrivate[0];
 
         MyMJGameRoleTypeCpp eRoleType = roleDataPriDelta.m_eRoleType;
-        if (m_eAccessRoleType != eRoleType) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("tring to apply role private delta but access role is different, %d, %d."), (uint8)m_eAccessRoleType, (uint8)eRoleType);
+        if (getAccessRoleType() != eRoleType) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("tring to apply role private delta but access role is different, %d, %d."), (uint8)getAccessRoleType(), (uint8)eRoleType);
             break;
         }
 
@@ -30,7 +73,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta)
             break;
         }
 
-        if (roleDataPriDelta.m_aIdValuePairs2Reveal.Num() > 0 && m_eAccessRoleType != MyMJGameRoleTypeCpp::SysKeeper && m_eAccessRoleType < MyMJGameRoleTypeCpp::Max) {
+        if (roleDataPriDelta.m_aIdValuePairs2Reveal.Num() > 0 && getAccessRoleType() != MyMJGameRoleTypeCpp::SysKeeper) {
             //syskeeper doesn't need to update any in progress, since when reset he knows all
             getCardValuePackRef().tryRevealCardValueByIdValuePairs(roleDataPriDelta.m_aIdValuePairs2Reveal);
 
@@ -40,7 +83,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta)
     }
 }
 
-void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
+void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
 {
     FMyMJCoreDataPublicCpp &coreDataSelf = getCoreDataRef();
 
@@ -84,8 +127,8 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
                 }
 
                 //for safety, any different exist, we make movement happen
-                moveCardFromOldPosi(cardInfoTarget.m_iId);
-                moveCardToNewPosi(cardInfoTarget.m_iId, cardInfoTarget.m_cPosi.m_iIdxAttender, cardInfoTarget.m_cPosi.m_eSlot);
+                moveCardFromOldPosi(cardInfoTarget.m_iId, pDirtyRecord);
+                moveCardToNewPosi(cardInfoTarget.m_iId, cardInfoTarget.m_cPosi.m_iIdxAttender, cardInfoTarget.m_cPosi.m_eSlot, pDirtyRecord);
 
             }
 
@@ -93,8 +136,8 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
             if (cardInfoTarget.m_eFlipState != MyMJCardFlipStateCpp::Invalid) {
                 cardInfoSelf.m_eFlipState = cardInfoTarget.m_eFlipState;
 
-                if (getHelperAttenderSlotDirtyMasksEnabled()) {
-                    SetMyHelperAttenderSlotDirtyMasks(m_aHelperAttenderSlotDirtyMasks, cardInfoSelf.m_cPosi.m_iIdxAttender, cardInfoSelf.m_cPosi.m_eSlot, true);
+                if (pDirtyRecord) {
+                    pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Card, cardInfoSelf.m_cPosi.m_iIdxAttender, (int32)cardInfoSelf.m_cPosi.m_eSlot, true);
                 }
             }
 
@@ -296,10 +339,10 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta)
 }
 
 
-void FMyMJDataAccessorCpp::applyDelta(const FMyMJDataDeltaCpp &delta)
+void FMyMJDataAccessorCpp::applyDelta(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
 {
-    applyDeltaStep0(delta);
-    applyDeltaStep1(delta);
+    applyDeltaStep0(delta, pDirtyRecord);
+    applyDeltaStep1(delta, pDirtyRecord);
 
 };
 
@@ -308,7 +351,7 @@ void FMyMJDataAccessorCpp::resetForNewActionLoop()
     for (int32 i = 0; i < 4; i++) {
         FMyMJRoleDataAttenderPrivateCpp* pRoleDataAttenderPriv = getRoleDataAttenderPrivate(i);
 
-        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Full) {
+        if (m_bDebugIsFullMode) {
             MY_VERIFY(pRoleDataAttenderPriv);
         }
 
@@ -320,7 +363,7 @@ void FMyMJDataAccessorCpp::resetForNewActionLoop()
     }
 };
 
-void FMyMJDataAccessorCpp::moveCardFromOldPosi(int32 id)
+void FMyMJDataAccessorCpp::moveCardFromOldPosi(int32 id, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
 {
     FMyMJCoreDataPublicCpp *pDCoreData = &getCoreDataRef();
 
@@ -330,6 +373,14 @@ void FMyMJDataAccessorCpp::moveCardFromOldPosi(int32 id)
     FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(id);
     MyMJCardSlotTypeCpp eSlotSrc = pCardInfo->m_cPosi.m_eSlot;
     int32 idxAttender = pCardInfo->m_cPosi.m_iIdxAttender;
+
+    if (idxAttender >= 0 && idxAttender < 4 && (uint8)eSlotSrc > (uint8)MyMJCardSlotTypeCpp::InvalidIterateMin && (uint8)eSlotSrc < (uint8)MyMJCardSlotTypeCpp::InvalidIterateMax) {
+
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("found invalid idxAttender %d, eslot %d."), idxAttender, (uint8)eSlotSrc);
+    }
+
     if (eSlotSrc == MyMJCardSlotTypeCpp::Untaken) {
         MY_VERIFY(pCardInfo->m_cPosi.m_iIdxInSlot0 >= 0 && pCardInfo->m_cPosi.m_iIdxInSlot0 < pDCoreData->m_aUntakenCardStacks.Num());
         int32 idx = pCardInfo->m_cPosi.m_iIdxInSlot0;
@@ -426,24 +477,25 @@ void FMyMJDataAccessorCpp::moveCardFromOldPosi(int32 id)
 
 
     //dirty mask handle
-    if (getHelperAttenderSlotDirtyMasksEnabled()) {
-        if (idxAttender >= 0 && idxAttender < 4) {
-
-        }
-        else {
-            idxAttender = 0;
-        }
-        SetMyHelperAttenderSlotDirtyMasks(m_aHelperAttenderSlotDirtyMasks, idxAttender, eSlotSrc, true);
+    if (pDirtyRecord) {
+        pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Card, idxAttender, (int32)eSlotSrc, true);
     }
 
 };
 
-void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSlotTypeCpp eSlotDst)
+void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSlotTypeCpp eSlotDst, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
 {
     FMyMJCoreDataPublicCpp *pCoreData = &getCoreDataRef();
 
     FMyMJCardInfoPackCpp  *pCardInfoPack = &pCoreData->m_cCardInfoPack;
     FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackRef();
+
+    if (idxAttender >= 0 && idxAttender < 4 && (uint8)eSlotDst >(uint8)MyMJCardSlotTypeCpp::InvalidIterateMin && (uint8)eSlotDst < (uint8)MyMJCardSlotTypeCpp::InvalidIterateMax) {
+
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("found invalid idxAttender %d, eslot %d."), idxAttender, (uint8)eSlotDst);
+    }
 
     if (eSlotDst == MyMJCardSlotTypeCpp::Untaken) {
         MY_VERIFY(false);
@@ -492,13 +544,7 @@ void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCa
 
 
     //dirty mask handle
-    if (getHelperAttenderSlotDirtyMasksEnabled()) {
-        if (idxAttender >= 0 && idxAttender < 4) {
-
-        }
-        else {
-            idxAttender = 0;
-        }
-        SetMyHelperAttenderSlotDirtyMasks(m_aHelperAttenderSlotDirtyMasks, idxAttender, eSlotDst, true);
+    if (pDirtyRecord) {
+        pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Card, idxAttender, (int32)eSlotDst, true);
     }
 };

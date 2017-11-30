@@ -126,6 +126,7 @@ public:
 
 
 protected:
+    //todo: make it as a cycle buffer
 
     //owned by this class, can only be used in one thread, so it is safe to clear by either producer or consumer
     TQueue<FMyMJGamePusherBaseCpp *, EQueueMode::Spsc> m_cQueueLocal;

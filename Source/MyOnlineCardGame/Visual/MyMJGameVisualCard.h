@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "MJ/Utils/MyMJUtils.h"
+#include "MyMJGameVisualCommon.h"
 
-#include "MyMJGameCard.generated.h"
+#include "MyMJGameVisualCard.generated.h"
 
 #define MyCardStaticMeshMIDParamInBaseColor (TEXT("InBaseColor"))
 
@@ -19,35 +20,6 @@
 #define MyCardAssetPartialNameSuffixValueBaseColorTexture (TEXT("_baseColor"))
 
 #define MyMJGameCardBaseCppDefaultShowingValue (0)
-
-//model always and must facing x axis
-USTRUCT(BlueprintType)
-struct FMyMJGameCardActorModelInfoCpp
-
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyMJGameCardActorModelInfoCpp()
-    {
-        reset();
-    };
-
-    void reset()
-    {
-        m_cBoxExtend = FVector(1);
-        m_cCenterPointRelativeLocation = FVector(0);
-    };
-
-    //final size after all actor scale, component scale applied
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "box extend final"))
-    FVector m_cBoxExtend;
-
-    //final size after all actor scale, component scale applied
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "center point final relative location"))
-    FVector m_cCenterPointRelativeLocation;
-
-};
 
 
 USTRUCT(BlueprintType)
@@ -63,7 +35,6 @@ public:
 
     void reset()
     {
-        m_bVisible = false;
         m_eFlipState = MyMJCardFlipStateCpp::Invalid;
 
         m_iIdxAttender = 0;
@@ -79,9 +50,6 @@ public:
 
         m_iCardValue = 0;
     };
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "visible"))
-        bool m_bVisible;
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "flip state"))
         MyMJCardFlipStateCpp m_eFlipState;
@@ -120,34 +88,18 @@ public:
         int32 m_iCardValue;
 };
 
+
+//seperate the data from actor, to allow subthread handling in the future
 USTRUCT(BlueprintType)
-struct FMyMJGameCardVisualStateCpp
+struct FMyMJGameCardVisualInfoAndStateCpp
 
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGameCardVisualStateCpp()
-    {
-        reset();
-    };
 
-    void reset()
-    {
-        m_bVisible = false;
-        m_cTransform = FTransform();
-        m_iCardValue = 0;
-    };
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "visible"))
-    bool m_bVisible;
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "transform"))
-    FTransform m_cTransform;
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "card value"))
-        int32 m_iCardValue;
-
+    FMyMJGameCardVisualInfoCpp  m_cVisualInfo;
+    FMyMJGameActorVisualStateBaseCpp m_cVisualState;
 };
 
 UCLASS(Blueprintable)
@@ -164,7 +116,7 @@ public:
     //AMyMJGameCardBaseCpp(const FObjectInitializer& ObjectInitializer);
 
     UFUNCTION(BlueprintCallable)
-    void getModelInfo(FMyMJGameCardActorModelInfoCpp& modelInfo) const;
+    void getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const;
 
     UFUNCTION(BlueprintSetter)
     void setValueShowing(int32 newValue);
@@ -193,7 +145,7 @@ protected:
     //the update rule is: always update if new settings arrive, and always reflect it even fail, never revert values
     int32 updateVisual();
     int32 updateWithCardBasicResources();
-    int32 updateWithValue(int32 newValue);
+    int32 updateWithValue();
 
     int32 updateCardStaticMeshMIDParams(class UTexture* InBaseColor);
 
@@ -206,16 +158,17 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintSetter = setValueShowing, BlueprintGetter = getValueShowing, meta = (DisplayName = "value showing"))
     int32 m_iValueShowing;
 
+    int32 m_iValueUpdatedBefore;
 
     //components
     //root scene
-    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "root scene"))
+    UPROPERTY(VisibleAnywhere, meta = (DisplayName = "root scene"))
     class USceneComponent *m_pRootScene;
 
-    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "card box"))
+    UPROPERTY(VisibleAnywhere, meta = (DisplayName = "card box"))
     class UBoxComponent *m_pCardBox;
 
-    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "card static mesh"))
+    UPROPERTY(VisibleAnywhere, meta = (DisplayName = "card static mesh"))
     class UStaticMeshComponent *m_pCardStaticMesh;
 
 
@@ -236,42 +189,43 @@ protected:
 };
 
 
+//all card related visual data is here, not touched to actor, to make it possible subthread handling 
 USTRUCT(BlueprintType)
-struct FMyMJCardVisualInfoPackCpp
+struct FMyMJCardVisualPackCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJCardVisualInfoPackCpp()
+    FMyMJCardVisualPackCpp()
     {
     };
 
-    virtual ~FMyMJCardVisualInfoPackCpp()
+    virtual ~FMyMJCardVisualPackCpp()
     {
 
     };
 
     inline int32 getCount() const
     {
-        return m_aCardVisualInfos.Num();
+        return m_aCards.Num();
     }
 
     void resize(int32 l)
     {
-        int32 toAdd = l - m_aCardVisualInfos.Num();
+        int32 toAdd = l - m_aCards.Num();
         if (toAdd > 0) {
-            m_aCardVisualInfos.AddDefaulted(toAdd); //Todo: use add zeroed for optimization
+            m_aCards.AddDefaulted(toAdd); //Todo: use add zeroed for optimization
         }
         else if (toAdd < 0) {
-            m_aCardVisualInfos.RemoveAt(m_aCardVisualInfos.Num() + toAdd, -toAdd);
+            m_aCards.RemoveAt(m_aCards.Num() + toAdd, -toAdd);
         }
     };
 
-    inline FMyMJGameCardVisualInfoCpp* getByIdx(int32 idx, bool bVerifyValid) {
+    inline FMyMJGameCardVisualInfoAndStateCpp* getByIdx(int32 idx, bool bVerifyValid) {
         MY_VERIFY(idx >= 0);
-        FMyMJGameCardVisualInfoCpp* ret = NULL;
-        if (idx < m_aCardVisualInfos.Num()) {
-            ret = &m_aCardVisualInfos[idx];
+        FMyMJGameCardVisualInfoAndStateCpp* ret = NULL;
+        if (idx < m_aCards.Num()) {
+            ret = &m_aCards[idx];
         }
 
         if (ret == NULL) {
@@ -287,9 +241,7 @@ public:
 
 protected:
 
-    friend struct FMyMJDataAccessorCpp;
-
-    UPROPERTY(meta = (DisplayName = "card visual infos"))
-        TArray<FMyMJGameCardVisualInfoCpp> m_aCardVisualInfos;
+    UPROPERTY(meta = (DisplayName = "cards"))
+    TArray<FMyMJGameCardVisualInfoAndStateCpp> m_aCards;
 
 };

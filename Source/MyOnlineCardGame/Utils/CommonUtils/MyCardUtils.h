@@ -11,6 +11,13 @@
 #include "UObject/NoExportTypes.h"
 #include "MyCardUtils.generated.h"
 
+#define MyIntIdDefaultInvalidValue (-1)
+#define MyUIntIdDefaultInvalidValue (0)
+
+#define MyUInt32IdWarnBottomValue (0xF0000000)
+#define MyUInt32IdCriticalBottomValue (0xF8000000)
+#define MyUInt32IdCoreDumpBottomValue (0xFFFFFFFF - 10)
+
 DECLARE_LOG_CATEGORY_EXTERN(LogMyUtilsI, Display, All);
 
 #define LogMyUtilsInstance LogMyUtilsI
@@ -39,7 +46,7 @@ inline FString myGetFileNameFromFullPath(FString inPath)
 
 //Fatal cause log not written to disk but core dump, so we don't use Fatal anywhere
 #define MY_VERIFY(cond) \
-       if (!(cond)) { UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false£º (" #cond ")")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false); }
+       if (!(cond)) { UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false: (" #cond ")")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false); }
 
        //     if (!(cond)) {UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false);}
 
@@ -56,7 +63,7 @@ struct FMyIdValuePair
 
     void reset(bool bResetValue)
     {
-        m_iId = -1;
+        m_iId = MyIntIdDefaultInvalidValue;
         if (bResetValue) {
             m_iValue = 0;
         }
@@ -296,71 +303,94 @@ protected:
     TArray<int32> m_aIdsAllCached;
 };
 
-class FMyThreadControlCpp : public FRunnable
+class FMyRunnableBaseCpp : public FRunnable
 {
 public:
-    FMyThreadControlCpp(uint32 uLoopTimeMs) : FRunnable()
+    FMyRunnableBaseCpp(uint32 uLoopTimeMs = 1000) : FRunnable()
     {
-        m_iThreadCount = -1;
-        MY_VERIFY(uLoopTimeMs > 0);
-        m_uLoopTimeMs = uLoopTimeMs;
+        setLoopTimeMs(uLoopTimeMs);
+
         m_bKill = false;
         m_bPause = false;
-        m_bStartState = false;
+        m_bBeingUsedBySubThread = false;
+        m_bInSubThreadLoop = false;
 
         //Initialize FEvent (as a cross platform (Confirmed Mac/Windows))
         m_pSemaphore = FGenericPlatformProcess::GetSynchEventFromPool(false);
-        m_pThread = NULL;
 
-        const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
+        //const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
         //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyThreadControlCpp() thread id: %d"), CurrentThreadId);
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyThreadControlCpp() thread static count: %d"), FMyThreadControlCpp::s_iThreadCount.GetValue());
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyThreadControlCpp() thread static count: %d"), FMyThreadControlCpp::s_iThreadCount.GetValue());
     };
 
-    virtual ~FMyThreadControlCpp()
+    virtual ~FMyRunnableBaseCpp()
     {
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("~FMyThreadControlCpp(), thread count %d."), m_iThreadCount);
-        cleanUp();
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("~FMyThreadControlCpp(), thread count %d."), m_iThreadCount);
 
-    };
+        if (!isReadyForMainThreadClean()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Runnable data is still used when destroy, check you code!"));
+            MY_VERIFY(false);
+        }
 
-
-    //Use this method to kill the thread!!
-    void EnsureCompletion()
-    {
-        stopNotVirtual();
-
-        if (m_pThread)
+        if (m_pSemaphore)
         {
-            m_pThread->WaitForCompletion();
+            FGenericPlatformProcess::ReturnSynchEventToPool(m_pSemaphore);
+            m_pSemaphore = nullptr;
         }
     };
 
-    //Pause the thread 
-    void PauseThread()
+    virtual FString genName() const = NULL;
+    virtual bool isReadyForSubThread() const = NULL;
+
+    inline void setLoopTimeMs(uint32 uLoopTimeMs)
     {
-        m_bPause = true;
+        //this function is actually thread safe
+        MY_VERIFY(uLoopTimeMs > 0);
+        m_uLoopTimeMs = uLoopTimeMs;
+    }
+
+protected:
+
+    template <typename T> friend class FMyThreadControlCpp;
+
+    //called in subthread, start
+
+    virtual void loopInRun() = NULL;
+    virtual bool initBeforRun() { return true; };
+    virtual void exitAfterRun() {};
+
+    virtual bool Init() override final
+    {
+        const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Init() thread id: %d"), CurrentThreadId);
+
+        if (initBeforRun()) {
+            m_bInSubThreadLoop = true;
+            return true;
+        }
+        else {
+            m_bInSubThreadLoop = false;
+            return false;
+        }
     };
 
-    //Continue/UnPause the thread, same as kick if thread sleeped
-    void ContinueThread()
+    virtual void Exit() override final
     {
-        m_bPause = false;
-    };
+        const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Exit() thread id: %d"), CurrentThreadId);
 
-    bool IsThreadPaused()
-    {
-        return (bool)m_bPause;
+        exitAfterRun();
+
+        m_bInSubThreadLoop = false;
     };
 
     virtual uint32 Run() override
     {
+        const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Run() thread id: %d"), CurrentThreadId);
+
         //Initial wait before starting
         FPlatformProcess::Sleep(0.03);
-
-        m_bStartState = true;
-
-        beginInRun();
 
         while (!m_bKill)
         {
@@ -368,11 +398,6 @@ public:
             {
                 //FEvent->Wait(); will "sleep" the thread until it will get a signal "Trigger()"
                 m_pSemaphore->Wait();
-
-                if (m_bKill)
-                {
-                    return 0;
-                }
             }
             else
             {
@@ -382,111 +407,292 @@ public:
             }
         }
 
-        endInRUn();
-
         return 0;
     }
 
+    //end
+
+    
+    //called in main thread, start:
+
     virtual void Stop() override
     {
-        const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Stop(), thread id: %d"), CurrentThreadId);
-
-        stopNotVirtual();
+        m_bKill = true; //Thread kill condition "while (!m_Kill){...}"
+        setPause(false);
+        kick();
     };
 
-    //if false, thread not started, or will end soon
-    inline bool isInStartState()
+    inline
+    void setPause(bool bPause)
     {
-        return m_bStartState;
+        bool changed = m_bPause != bPause;
+        m_bPause = bPause;
+
+        if (changed) {
+            kick();
+        }
     };
 
+    inline
+    bool getPause() const
+    {
+        return (bool)m_bPause;
+    };
+
+    inline
     void kick()
     {
         m_pSemaphore->Trigger();
     };
 
-
-    virtual void beginInRun() = NULL;
-    virtual void loopInRun() = NULL;
-    virtual void endInRUn() = NULL;
-
-    virtual bool Init() override
+    inline bool isReadyForMainThreadClean() const
     {
-        const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Init() thread id: %d"), CurrentThreadId);
-        return true;
+        return !m_bBeingUsedBySubThread;
     };
+    //end
 
-    virtual void Exit() override
-    {
-        const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Exit() thread id: %d"), CurrentThreadId);
-        m_bStartState = false;
-    };
-
-protected:
-
-    void stopNotVirtual()
-    {
-        m_bKill = true; //Thread kill condition "while (!m_Kill){...}"
-        m_bPause = false;
-
-        if (m_pSemaphore)
-        {
-            //We shall signal "Trigger" the FEvent (in case the Thread is sleeping it shall wake up!!)
-            m_pSemaphore->Trigger();
-        }
-    }
-
-    void cleanUp()
-    {
-        if (m_pThread)
-        {
-            EnsureCompletion();
-
-            //Cleanup the worker thread
-            delete m_pThread;
-            m_pThread = nullptr;
-        }
-
-        if (m_pSemaphore)
-        {
-            //Cleanup the FEvent
-            FGenericPlatformProcess::ReturnSynchEventToPool(m_pSemaphore);
-            m_pSemaphore = nullptr;
-        }
-    };
-
-
-    bool start()
-    {
-        if (m_pThread == NULL) {
-            m_iThreadCount = FMyThreadControlCpp::s_iThreadCount.GetValue();
-            FString name = FString::Printf(TEXT("MyMJGAMECoreSubThread_%d"), m_iThreadCount);
-            m_pThread = FRunnableThread::Create(this, *name, 0, TPri_Normal);
-            s_iThreadCount.Increment();
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
 
     static FThreadSafeCounter s_iThreadCount;
-    int32 m_iThreadCount;
     
     //As the name states those members are Thread safe
     uint32 m_uLoopTimeMs;
 
+    FThreadSafeBool m_bBeingUsedBySubThread; //main thread to set it
+    FThreadSafeBool m_bInSubThreadLoop;
     FThreadSafeBool m_bKill;
     FThreadSafeBool m_bPause;
-    FThreadSafeBool m_bStartState;
+
 
     //FCriticalSection m_mutex;
 
     FEvent* m_pSemaphore;
-    //Thread to run the worker FRunnable on
-    FRunnableThread* m_pThread;
+};
 
+//Controller's function can be only called in one thread.
+template<typename RunnableType>
+class FMyThreadControlCpp
+{
+
+public:
+    FMyThreadControlCpp()
+    {
+        m_pThread = NULL;
+    };
+
+    virtual ~FMyThreadControlCpp()
+    {
+        destroy();
+    };
+
+    inline
+    bool isCreated() const
+    {
+        return m_pThread != NULL;
+    };
+
+    inline RunnableType& getRunnableRef()
+    {
+        return m_cRunnable;
+    };
+
+    //return true if subthread exist, either new created or exist already
+    bool create(EThreadPriority ePri = EThreadPriority::TPri_Normal)
+    {
+        if (!isCreated()) {
+            const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("create(), thread id: %d"), CurrentThreadId);
+
+            if (!m_cRunnable.isReadyForSubThread()) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("not ready for usage, runnable name %s."), *m_cRunnable.genName());
+                return false;
+            }
+
+            FString name = FString::Printf(TEXT("MyControlledThread_%d_%s"), FMyRunnableBaseCpp::s_iThreadCount.GetValue(), *m_cRunnable.genName());
+
+            m_cRunnable.m_bBeingUsedBySubThread = true;
+            m_cRunnable.m_bInSubThreadLoop = true;
+            m_pThread = FRunnableThread::Create(&m_cRunnable, *name, 0, ePri);
+
+            FMyRunnableBaseCpp::s_iThreadCount.Increment();
+
+            return true;
+        }
+       
+        return true;
+    };
+
+    //will halt until subthread detroyed
+    void destroy()
+    {
+        if (isCreated()) {
+            const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Destroy(), thread id: %d"), CurrentThreadId);
+
+            m_pThread->Kill(true);
+            delete m_pThread;
+            m_pThread = nullptr;
+
+            m_cRunnable.m_bBeingUsedBySubThread = false;
+            m_cRunnable.m_bInSubThreadLoop = false;
+
+            FMyRunnableBaseCpp::s_iThreadCount.Decrement();
+        }
+    };
+
+    inline void kick()
+    {
+        m_cRunnable.kick();
+    };
+
+    //will return quickly
+    inline void requestDestroy()
+    {
+        m_cRunnable.Stop();
+    };
+
+    inline bool canBeDestroyedQuickly()
+    {
+        return !m_cRunnable.m_bInSubThreadLoop;
+    };
+
+protected:
+
+    RunnableType m_cRunnable; //owned by main thread
+    FRunnableThread* m_pThread;
+};
+
+//Warning:: don't use Uobject * here!
+template<typename ItemType, EQueueMode Mode = EQueueMode::Spsc>
+struct FMyQueueWithLimitBuffer
+{
+    FMyQueueWithLimitBuffer(uint32 uiBufferCount = 32)
+    {
+        m_uiBufferCount = 0;
+        addBuffer(uiBufferCount);
+    };
+
+    virtual ~FMyQueueWithLimitBuffer()
+    {
+        ItemType *pRet;
+        pRet = NULL;
+        while (m_cQueueProduced.Dequeue(pRet)) {
+            delete(pRet);
+        };
+        pRet = NULL;
+        while (m_cQueueConsumed.Dequeue(pRet)) {
+            delete(pRet);
+        };
+    };
+
+    inline void addBuffer(uint32 uiBufferCount)
+    {
+        ItemType* pNew = NULL;
+        for (uint32 i = 0; i < uiBufferCount; i++) {
+            pNew = new ItemType();
+            m_cQueueConsumed.Enqueue(pNew);
+        }
+        m_uiBufferCount += uiBufferCount;
+
+        checkType2(pNew);
+    };
+
+    //void checkType();
+
+    void checkType2(UObject* p)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("we don't support UObject* as itemType yet!"));
+        //MY_VERIFY(false);
+    };
+
+    void checkType2(...)
+    {
+
+    };
+
+    inline
+    ItemType* getItemForProduce()
+    {
+        ItemType *pItem = NULL;
+        m_cQueueConsumed.Dequeue(pItem);
+        return pItem;
+    };
+
+    inline
+    void putInProducedItem(ItemType* &pItem)
+    {
+        MY_VERIFY(pItem);
+        m_cQueueProduced.Enqueue(pItem);
+        pItem = NULL;
+    };
+
+    inline
+    ItemType* getItemForConsume()
+    {
+        ItemType *pItem = NULL;
+        m_cQueueProduced.Dequeue(pItem);
+        return pItem;
+    };
+
+    inline
+    void putInConsumedItem(ItemType* &pItem)
+    {
+        MY_VERIFY(pItem);
+        m_cQueueConsumed.Enqueue(pItem);
+        pItem = NULL;
+    };
+
+protected:
+    TQueue<ItemType*, Mode> m_cQueueProduced;
+    TQueue<ItemType*, Mode> m_cQueueConsumed;
+
+    uint32 m_uiBufferCount;
+};
+
+/*
+template<EQueueMode Mode>
+void FMyQueueWithLimitBuffer<UObject, Mode>::checkType()
+{
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("we don't support UObject* as itemType yet!"));
+    MY_VERIFY(false);
+};
+
+template<typename ItemType, EQueueMode Mode>
+void FMyQueueWithLimitBuffer<ItemType, Mode>::checkType()
+{
+
+};
+
+template<typename T, typename U>
+class Conversion
+{
+private:
+typedef char Small;
+struct Big{ char big[2]; };
+
+static Small _helper_fun(U);
+static Big _helper_fun(...);
+static T _make_T();
+public:
+enum {
+Exists = (sizeof(_helper_fun(_make_T())) == sizeof(Small)),
+Exists2Way = ( Exists && Conversion<U,T>::Exists),
+Same = false
+};
+};
+*/
+
+
+UCLASS()
+class UMyCommonUtilsLibrary :
+    public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+
+    inline
+    static FString genTimeStrFromTimeMs(uint32 uiTime_ms)
+    {
+        return FString::Printf(TEXT("%d.%03d"), uiTime_ms / 1000, uiTime_ms % 1000);
+    };
 };

@@ -1347,8 +1347,10 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
 
     pCardInfoPack->helperVerifyInfos();
 
+    base.setRole(MyMJGameRoleTypeCpp::SysKeeper);
+
     FMyMJDataAccessorCpp cA;
-    cA.setupTempMode(&base, MyMJGameRoleTypeCpp::SysKeeper);
+    cA.setupDataExt(&base, true);
     cA.resetForNewActionLoop();
 }
 

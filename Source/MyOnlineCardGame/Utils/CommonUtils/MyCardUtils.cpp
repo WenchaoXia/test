@@ -282,4 +282,4 @@ void FMyValueIdMapCpp::sortByValue(bool bBig2Little)
     }
 }
 
-FThreadSafeCounter FMyThreadControlCpp::s_iThreadCount = 0;
+FThreadSafeCounter FMyRunnableBaseCpp::s_iThreadCount = 0;

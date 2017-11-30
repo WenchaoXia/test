@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "MyMJGameCard.h"
+#include "MyMJGameVisualCard.h"
 
 #include "MJ/Utils/MyMJUtils.h"
 #include "MJBPEncap/utils/MyMJBPUtils.h"
@@ -26,6 +26,7 @@ AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp() : Super()
 
 
     m_iValueShowing = MyMJGameCardBaseCppDefaultShowingValue;
+    m_iValueUpdatedBefore = MyMJGameCardBaseCppDefaultShowingValue - 1;
 
     m_pRootScene = NULL;
     m_pCardBox = NULL;
@@ -173,7 +174,7 @@ int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath
 int32 AMyMJGameCardBaseCpp::updateVisual()
 {
     updateWithCardBasicResources();
-    updateWithValue(m_iValueShowing);
+    updateWithValue();
 
     return 0;
 }
@@ -243,8 +244,14 @@ int32 AMyMJGameCardBaseCpp::updateWithCardBasicResources()
     return 0;
 }
 
-int32 AMyMJGameCardBaseCpp::updateWithValue(int32 newValue)
+int32 AMyMJGameCardBaseCpp::updateWithValue()
 {
+    if (m_iValueUpdatedBefore == m_iValueShowing) {
+        return 0;
+    }
+    m_iValueUpdatedBefore = m_iValueShowing;
+
+    int32 newValue = m_iValueShowing;
     UTexture* pTargetBaseColorTexture = NULL;
 
     FString vPrefix;
@@ -316,7 +323,7 @@ int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBase
 };
 
 
-void AMyMJGameCardBaseCpp::getModelInfo(FMyMJGameCardActorModelInfoCpp& modelInfo) const
+void AMyMJGameCardBaseCpp::getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const
 {
     FVector actorScale3D = GetActorScale3D();
     modelInfo.m_cBoxExtend = m_pCardBox->GetScaledBoxExtent() * actorScale3D;
@@ -333,7 +340,7 @@ void AMyMJGameCardBaseCpp::setValueShowing(int32 newValue)
     }
     m_iValueShowing = newValue;
 
-    updateWithValue(m_iValueShowing);
+    updateWithValue();
 }
 
 int32 AMyMJGameCardBaseCpp::getValueShowing() const
@@ -376,4 +383,4 @@ bool AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, c
     }
 
     return bRet;
-}
+};

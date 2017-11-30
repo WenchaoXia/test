@@ -269,13 +269,18 @@ int32 UMyMJBPUtilsLibrary::getEngineNetMode(AActor *actor)
 
 bool UMyMJBPUtilsLibrary::haveServerLogicLayer(AActor *actor)
 {
-    return actor->HasAuthority();
+    ENetMode mode = actor->GetNetMode();
+
+    return mode == ENetMode::NM_Standalone || mode == ENetMode::NM_ListenServer || mode == ENetMode::NM_DedicatedServer;
+
+    //return actor->HasAuthority();
 };
 
 bool UMyMJBPUtilsLibrary::haveClientVisualLayer(AActor *actor)
 {
-    int32 mode = getEngineNetMode(actor);
-    return mode != NM_DedicatedServer;
+    ENetMode mode = actor->GetNetMode();
+
+    return mode == ENetMode::NM_Standalone || mode == ENetMode::NM_ListenServer || mode == ENetMode::NM_Client;
 };
 
 

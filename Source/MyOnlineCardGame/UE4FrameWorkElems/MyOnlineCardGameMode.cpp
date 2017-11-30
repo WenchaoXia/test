@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 //#include "MyOnLineCardGame.h"
-#include "MyOnlineCardGameModeCpp.h"
+#include "MyOnlineCardGameMode.h"
 
 #include "Engine/World.h"
 #include "Runtime/Engine/Classes/Engine//World.h"

@@ -121,7 +121,7 @@ public:
         //return (T*)StaticFindObject(T::StaticClass(), Outer, Name, ExactClass);
     }
 
-    //create one instance on heap
+    //create one instance on heap, caller need call delete() after usage
     static FMyMJGameCoreCpp* helperCreateCoreByRuleType(MyMJGameRuleTypeCpp eRuleType, int32 iSeed, int32 iTrivalConfigMask)
     {
         FMyMJGameCoreCpp *pRet = NULL;

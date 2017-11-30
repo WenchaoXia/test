@@ -206,10 +206,10 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
         bool bNeedVerify = prevApplyPusherResult(*pusherResult);
 
         if (pusherResult->m_aResultBase.Num() > 0) {
-            ac.applyBase(pusherResult->m_aResultBase[0]);
+            ac.applyBase(pusherResult->m_aResultBase[0], NULL);
         }
         if (pusherResult->m_aResultDelta.Num() > 0) {
-            ac.applyDelta(pusherResult->m_aResultDelta[0]);
+            ac.applyDelta(pusherResult->m_aResultDelta[0], NULL);
         }
 
         if (pusherIO.GivePusherResult(pusherResult)) {

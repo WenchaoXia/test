@@ -124,7 +124,7 @@ public:
             m_aAttendersAll[i] = MakeShareable<FMyMJGameAttenderCpp>(createAttender());
         }
 
-        m_cDataAccessor.setupFullMode();
+        m_cDataAccessor.setupDataExt(&m_cData, true);
 
         resetDatasOwned();
     };
@@ -216,6 +216,7 @@ protected:
 
     //data
     FMyMJCoreDataLogicOnlyCpp m_cDataLogic;
+    FMyMJDataStructCpp m_cData;
     FMyMJDataAccessorCpp m_cDataAccessor;
 
 };

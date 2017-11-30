@@ -110,16 +110,15 @@ UENUM(BlueprintType)
 enum class MyMJCardSlotTypeCpp : uint8
 {
     Invalid = 0                        UMETA(DisplayName = "Invalid"),
-
-    //Keeper = 1                       UMETA(DisplayName = "Keeper"),
+    InvalidIterateMin = 1              UMETA(DisplayName = "InvalidMin"),
     Untaken = 2                        UMETA(DisplayName = "Untaken"),
     JustTaken = 3                      UMETA(DisplayName = "JustTaken"),
     InHand = 4                         UMETA(DisplayName = "InHand"),
     GivenOut = 5                       UMETA(DisplayName = "GivenOut"),
     Weaved = 6                         UMETA(DisplayName = "Weaved"),
     WinSymbol = 7                      UMETA(DisplayName = "WinSymbol"),
-    ShownOnDesktop = 8                 UMETA(DisplayName = "ShownOnDesktop")
-
+    ShownOnDesktop = 8                 UMETA(DisplayName = "ShownOnDesktop"),
+    InvalidIterateMax = 9              UMETA(DisplayName = "InvalidMax")
 };
 
 //Todo, to support memset as init, use 0 as default for all to make it run faster
@@ -2150,6 +2149,164 @@ public:
 
     int32 m_iWeaveCount;
 };
+
+
+#define GetKey_KeyAnd4IdxsMap(idx0, idx1, idx2, idx3) (((idx0 & 0xff) << 24) & ((idx1 & 0xff) << 16) & ((idx2 & 0xff) << 8) & ((idx3 & 0xff)))
+#define GetIdx0_KeyAnd4IdxsMap(key) ((key >> 24) & 0xff)
+#define GetIdx1_KeyAnd4IdxsMap(key) ((key >> 16) & 0xff)
+#define GetIdx2_KeyAnd4IdxsMap(key) ((key >> 8) & 0xff)
+#define GetIdx3_KeyAnd4IdxsMap(key) ((key) & 0xff)
+
+#define CalcKey_Macro_KeyAnd4IdxsMap(outkey, idx0, idx1, idx2, idx3) {MY_VERIFY((idx0 & (~0xff)) == 0); MY_VERIFY((idx1 & (~0xff)) == 0); MY_VERIFY((idx2 & (~0xff)) == 0); MY_VERIFY((idx3 & (~0xff)) == 0); outkey = GetKey_KeyAnd4IdxsMap(idx0, idx1, idx2, idx3);}
+
+USTRUCT()
+struct FMyDirtyRecordWithKeyAnd4IdxsMapCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyDirtyRecordWithKeyAnd4IdxsMapCpp()
+    {
+        m_uiDebugIdxUsed = 0;
+    };
+
+    virtual ~FMyDirtyRecordWithKeyAnd4IdxsMapCpp()
+    {
+
+    };
+
+    inline
+    bool getIsEnabled() const
+    {
+        return m_sRecordDefaultAllDirty.Num() > 0;
+    };
+
+    inline
+    void clearDefaultDirtyData()
+    {
+        m_sRecordDefaultAllDirty.Reset();
+    };
+
+    inline
+    void reset(bool bAllDirty)
+    {
+        if (bAllDirty) {
+            MY_VERIFY(getIsEnabled());
+            m_sRecord = m_sRecordDefaultAllDirty;
+        }
+        else {
+            m_sRecord.Reset();
+        }
+    };
+
+    inline
+    bool getDirtyWith2Idxs(int32 idx0, int32 idx1, bool bSettingDefaultAllDirty = false) const
+    {
+        if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 2) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 2!"), m_uiDebugIdxUsed);
+        };
+
+        return getDirty(0, 0, idx0, idx1, bSettingDefaultAllDirty);
+    };
+
+    inline
+    void setDirtyWith2Idxs(int32 idx0, int32 idx1, bool bDirty, bool bSettingDefaultAllDirty = false)
+    {
+        if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 2) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 2!"), m_uiDebugIdxUsed);
+        };
+
+        if (m_uiDebugIdxUsed == 0) {
+            m_uiDebugIdxUsed = 2;
+        }
+        setDirty(0, 0, idx0, idx1, bDirty, bSettingDefaultAllDirty);
+    };
+
+    inline
+        bool getDirtyWith3Idxs(int32 idx0, int32 idx1, int32 idx2, bool bSettingDefaultAllDirty = false) const
+    {
+        if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 3) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 3!"), m_uiDebugIdxUsed);
+        };
+
+        return getDirty(0, idx0, idx1, idx2, bSettingDefaultAllDirty);
+    };
+
+    inline
+        void setDirtyWith3Idxs(int32 idx0, int32 idx1, int32 idx2, bool bDirty, bool bSettingDefaultAllDirty = false)
+    {
+        if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 3) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 3!"), m_uiDebugIdxUsed);
+        };
+
+        if (m_uiDebugIdxUsed == 0) {
+            m_uiDebugIdxUsed = 3;
+        }
+        setDirty(0, idx0, idx1, idx2, bDirty, bSettingDefaultAllDirty);
+    };
+
+    inline
+    const TSet<int32>& getRecordSet() const
+    {
+        return m_sRecord;
+    };
+
+    static void helperSetupAllDefaultDirtyForAttenderAndCardSlot(FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cTarget)
+    {
+        cTarget.clearDefaultDirtyData();
+        for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
+            for (int32 eSlot = ((int32)MyMJCardSlotTypeCpp::InvalidIterateMin + 1); eSlot < ((int32)MyMJCardSlotTypeCpp::InvalidIterateMax); eSlot++) {
+                cTarget.setDirtyWith2Idxs(idxAttender, eSlot, true, true);
+            }
+        }
+    };
+
+protected:
+
+    inline
+        bool getDirty(int32 idx0, int32 idx1, int32 idx2, int32 idx3, bool bSettingDefaultAllDirty = false) const
+    {
+        const TSet<int32> *pTarget;
+        if (bSettingDefaultAllDirty) {
+            pTarget = &m_sRecordDefaultAllDirty;
+        }
+        else {
+            pTarget = &m_sRecord;
+        }
+
+        int32 key;
+        CalcKey_Macro_KeyAnd4IdxsMap(key, idx0, idx1, idx2, idx3);
+
+        return (pTarget->Find(key) != NULL);
+    };
+
+    inline
+        void setDirty(int32 idx0, int32 idx1, int32 idx2, int32 idx3, bool bDirty, bool bSettingDefaultAllDirty = false)
+    {
+        TSet<int32> *pTarget;
+        if (bSettingDefaultAllDirty) {
+            pTarget = &m_sRecordDefaultAllDirty;
+        }
+        else {
+            pTarget = &m_sRecord;
+        }
+
+        int32 key;
+        CalcKey_Macro_KeyAnd4IdxsMap(key, idx0, idx1, idx2, idx3);
+
+        if (bDirty) {
+            pTarget->Emplace(key);
+        }
+        else {
+            pTarget->Remove(key);
+        }
+    };
+
+    TSet<int32> m_sRecord;
+    TSet<int32> m_sRecordDefaultAllDirty;
+    uint8 m_uiDebugIdxUsed;
+};
+
 
 //Here, define is limited to card type, and ZuHeLong here require remaining 5 cards must be common weave, so it is different from the meaning in score calc.
 //standard hu in game

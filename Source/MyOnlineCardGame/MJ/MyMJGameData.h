@@ -358,9 +358,9 @@ public:
         m_cGameCfg.reset();
         m_cGameRunData.reset();
 
-        m_iGameId = -1;
-        m_iPusherIdLast = -1;
-        m_iActionGroupId = -1;
+        m_iGameId = MyIntIdDefaultInvalidValue;
+        m_iPusherIdLast = MyIntIdDefaultInvalidValue;
+        m_iActionGroupId = MyIntIdDefaultInvalidValue;
         m_eGameState = MyMJGameStateCpp::Invalid;
 
         m_iDiceNumberNowMask = 0;
@@ -914,14 +914,10 @@ struct FMyMJDataStructCpp
 
 public:
 
-    FMyMJDataStructCpp()
-    {
-        for (int i = 0; i < RoleDataAttenderNum; i++) {
-            int32 idx = m_aRoleDataAttenders.Emplace();
-            FMyMJRoleDataAttenderCpp *pD = &m_aRoleDataAttenders[idx];
-            pD->resetup(i);
-        }
-    };
+    FMyMJDataStructCpp();
+    virtual ~FMyMJDataStructCpp();
+
+    void init();
 
     void reset()
     {
@@ -984,9 +980,12 @@ public:
     //self must be syskeeper's role
     void copyWithRoleFromSysKeeperRole(MyMJGameRoleTypeCpp eTargetRole, FMyMJDataStructCpp& cTargetData) const
     {
-        MY_VERIFY(eTargetRole != MyMJGameRoleTypeCpp::SysKeeper)
+        MY_VERIFY(eTargetRole != MyMJGameRoleTypeCpp::SysKeeper);
+        MY_VERIFY(getRole() == MyMJGameRoleTypeCpp::SysKeeper);
 
-            cTargetData.m_cCoreData = m_cCoreData;
+        cTargetData.setRole(eTargetRole);
+
+        cTargetData.m_cCoreData = m_cCoreData;
         cTargetData.m_aRoleDataAttenders = m_aRoleDataAttenders;
         cTargetData.m_cRoleDataPrivateSysKeeper.reset();
         cTargetData.m_cRoleDataPrivateObserver = m_cRoleDataPrivateObserver;
@@ -1002,6 +1001,16 @@ public:
         if (eTargetRole != MyMJGameRoleTypeCpp::Observer) {
             cTargetData.m_cRoleDataPrivateObserver.reset();
         }
+    };
+
+    inline MyMJGameRoleTypeCpp getRole() const
+    {
+        return m_eRole;
+    };
+
+    inline void setRole(MyMJGameRoleTypeCpp eRole)
+    {
+        m_eRole = eRole;
     };
 
 protected:
@@ -1020,6 +1029,15 @@ protected:
     
     UPROPERTY()
     FMyMJRoleDataPrivateCpp m_cRoleDataPrivateObserver;
+
+    UPROPERTY()
+    MyMJGameRoleTypeCpp m_eRole;
+
+    //UPROPERTY()
+    //TArray<int32> m_aTestArray;
+
+    //UPROPERTY()
+    //TArray<FMyMJRoleDataPrivateCpp> m_aTestPrivArray;
 };
 
 USTRUCT()
@@ -1102,48 +1120,34 @@ public:
     };
 
     //return always >= 0, means valid
-    inline int32 getGameId() const
+    inline void getGameIdAndPusherId(int32 *pOutGameId, int32* pOutPusherId) const
     {
         verifyValid();
 
-        int32 ret = 0;
+        int32 iGameId, iPusherId;
+
         if (m_aResultBase.Num() > 0) {
-            ret = m_aResultBase[0].getCoreDataRefConst().m_iGameId;
-            MY_VERIFY(ret >= 0);
+            iGameId = m_aResultBase[0].getCoreDataRefConst().m_iGameId;
+            iPusherId = m_aResultBase[0].getCoreDataRefConst().m_iPusherIdLast;
         }
         else if (m_aResultDelta.Num() > 0) {
-            ret = m_aResultDelta[0].m_iGameId;
-            MY_VERIFY(ret >= 0);
+            iGameId = m_aResultDelta[0].m_iGameId;
+            iPusherId = m_aResultDelta[0].getId();
         }
         else {
             MY_VERIFY(false);
+            iGameId = iPusherId = -1;
         }
 
-        MY_VERIFY(ret >= 0);
-        return ret;
-    };
+        MY_VERIFY(iGameId >= 0);
+        MY_VERIFY(iPusherId >= 0);
 
-    //return always >= 0, means valid
-    inline int32 getPusherIdLast() const
-    {
-        verifyValid();
-
-        int32 ret = 0;
-        if (m_aResultBase.Num() > 0) {
-            ret = m_aResultBase[0].getCoreDataRefConst().m_iPusherIdLast;
-            //MY_VERIFY(ret >= 0);
-            MY_VERIFY(ret == 0);
+        if (pOutGameId) {
+            *pOutGameId = iGameId;
         }
-        else if (m_aResultDelta.Num() > 0) {
-            ret = m_aResultDelta[0].getId();
-            MY_VERIFY(ret >= 0);
+        if (pOutPusherId) {
+            *pOutPusherId = iPusherId;
         }
-        else {
-            MY_VERIFY(false);
-        }
-
-        MY_VERIFY(ret >= 0);
-        return ret;
     };
 
     bool isGameEndDelta() const
@@ -1179,11 +1183,13 @@ public:
     TArray<FMyMJDataDeltaCpp>  m_aResultDelta;
 };
 
-#define SetMyHelperAttenderSlotDirtyMasks(paHelperAttenderSlotDirtyMasks, idxAttender, eSlot, bDirty) MY_VERIFY(idxAttender >= 0 && idxAttender < 4); MY_VERIFY((uint8)eSlot >= 0 && (uint8)eSlot < 32); if (bDirty) {paHelperAttenderSlotDirtyMasks[idxAttender] |= (1 << (uint8)eSlot);} else {paHelperAttenderSlotDirtyMasks[idxAttender] &= (!(1 << (uint8)eSlot));}
-#define GetMyHelperAttenderSlotDirtyMasks(paHelperAttenderSlotDirtyMasks, idxAttender, eSlot) ((paHelperAttenderSlotDirtyMasks[idxAttender] & (1 << (uint8)eSlot)) > 0)
-
-//#define SetMyHelperAttenderSlotDirtyMasksIfValid(paHelperAttenderSlotDirtyMasks, idxAttender, eSlot, bDirty) if (paHelperAttenderSlotDirtyMasks) {SetMyHelperAttenderSlotDirtyMasks(paHelperAttenderSlotDirtyMasks, idxAttender, eSlot, bDirty);}
-
+UENUM(BlueprintType)
+enum class MyMJGameCoreDataDirtyMainTypeCpp : uint8
+{
+    Invalid = 0                        UMETA(DisplayName = "Invalid"),
+    Card = 1                           UMETA(DisplayName = "Card"),
+    Dice = 2                           UMETA(DisplayName = "Dice"),
+};
 
 USTRUCT()
 struct FMyMJDataAccessorCpp
@@ -1192,16 +1198,9 @@ struct FMyMJDataAccessorCpp
 
     FMyMJDataAccessorCpp()
     {
-        m_pDataFullMode = NULL;
-
-        m_pDataExtTempMode = NULL;
-        m_eAccessRoleType = MyMJGameRoleTypeCpp::Observer;
-        m_eWorkMode = MyMJGameElemWorkModeCpp::Invalid;
-
+        m_pDataExt = NULL;
+        m_bDebugIsFullMode = false;
         m_bShowApplyInfo = false;
-
-        //m_paHelperAttenderSlotDirtyMasks = NULL;
-        setHelperAttenderSlotDirtyMasksEnabled(false);
     };
 
     virtual ~FMyMJDataAccessorCpp()
@@ -1209,186 +1208,76 @@ struct FMyMJDataAccessorCpp
         //setHelperAttenderSlotDirtyMasksEnabled(false);
     };
 
-    inline bool getHelperAttenderSlotDirtyMasksEnabled() const
-    {
-        //return m_paHelperAttenderSlotDirtyMasks != NULL;
-        return m_aHelperAttenderSlotDirtyMasks.Num() == 4;
-    };
-
-    inline void setHelperAttenderSlotDirtyMasksEnabled (bool bEnabled)
-    {
-        if (bEnabled) {
-            if (!getHelperAttenderSlotDirtyMasksEnabled()) {
-                m_aHelperAttenderSlotDirtyMasks.Reset();
-                m_aHelperAttenderSlotDirtyMasks.AddZeroed(4);
-                //m_paHelperAttenderSlotDirtyMasks = new int32(4); //programming error, should be new int[4];
-                //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyMJDataAccessorCpp new,   this: %p, elem %p."), this, m_paHelperAttenderSlotDirtyMasks);
-                resetHelperAttenderSlotDirtyMasks(true);
-            }
-        }
-        else {
-            if (getHelperAttenderSlotDirtyMasksEnabled()) {
-                //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyMJDataAccessorCpp delete, this: %p, elem %p."), this, m_paHelperAttenderSlotDirtyMasks);
-                //delete(m_paHelperAttenderSlotDirtyMasks);
-            }
-            m_aHelperAttenderSlotDirtyMasks.Reset();
-        }
-    };
-
-    /*
-    inline const int32* getHelperAttenderSlotDirtyMasksConst(bool bVerifyValid) const
-    {
-        if (bVerifyValid) {
-            MY_VERIFY(getHelperAttenderSlotDirtyMasksEnabled());
-            MY_VERIFY(m_paHelperAttenderSlotDirtyMasks);
-        }
-        return m_paHelperAttenderSlotDirtyMasks;
-    };
-    */
-
-    inline const TArray<int32>& getHelperAttenderSlotDirtyMasksConst(bool bVerifyValid) const
-    {
-        if (bVerifyValid) {
-            MY_VERIFY(getHelperAttenderSlotDirtyMasksEnabled());
-        }
-        return m_aHelperAttenderSlotDirtyMasks;
-    };
-
-    inline void resetHelperAttenderSlotDirtyMasks(bool bMarkAllDirty)
-    {
-        MY_VERIFY(getHelperAttenderSlotDirtyMasksEnabled());
-        m_aHelperAttenderSlotDirtyMasks[0] = m_aHelperAttenderSlotDirtyMasks[1] = m_aHelperAttenderSlotDirtyMasks[2] = m_aHelperAttenderSlotDirtyMasks[3] = bMarkAllDirty ? 0xffffffff : 0;
-    };
-
     void setShowApplyInfo(bool bShowApplyInfo)
     {
         m_bShowApplyInfo = bShowApplyInfo;
     };
 
-    MyMJGameRoleTypeCpp getAccessRoleType() const
+    inline
+    MyMJGameRoleTypeCpp getAccessRoleType(bool bVerify = true) const
     {
-        //todo: make it conditional
-        return m_eAccessRoleType;
+        MyMJGameRoleTypeCpp ret = MyMJGameRoleTypeCpp::Max;
+ 
+        if (m_pDataExt) {
+            ret = m_pDataExt->getRole();
+        }
+
+        if (bVerify && (uint8)ret >= (uint8)MyMJGameRoleTypeCpp::Max) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid data role: ret %d, m_pDataExt %p."), (uint8)ret, m_pDataExt);
+            MY_VERIFY(false);
+        }
+
+        return ret;
     };
 
-    void setupFullMode()
-    {
-        MY_VERIFY(m_eWorkMode == MyMJGameElemWorkModeCpp::Invalid);
-        m_eAccessRoleType = MyMJGameRoleTypeCpp::SysKeeper;
-        m_eWorkMode = MyMJGameElemWorkModeCpp::Full;
-        m_pDataFullMode = MakeShareable<FMyMJDataStructCpp>(new FMyMJDataStructCpp());
-    };
-
-    void setupTempMode(FMyMJDataStructCpp* pDataExtTempMode, MyMJGameRoleTypeCpp eRoleType)
+    void setupDataExt(FMyMJDataStructCpp* pDataExt, bool bDebugIsFullMode = false)
     {
         //MY_VERIFY(m_eWorkMode == MyMJGameElemWorkModeCpp::Invalid); //it is OK to change multiple times
-        MY_VERIFY((uint8)eRoleType < (uint8)MyMJGameRoleTypeCpp::Max); //it is OK to change multiple times
-        m_eAccessRoleType = eRoleType;
-        m_eWorkMode = MyMJGameElemWorkModeCpp::Temp;
-        m_pDataExtTempMode = pDataExtTempMode;
+        MY_VERIFY(pDataExt);
+
+        m_pDataExt = pDataExt;
+        m_bDebugIsFullMode = bDebugIsFullMode;
+    };
+
+    inline
+    bool isSetupped() const
+    {
+        return m_pDataExt != NULL;
     };
 
     //don't store the return, it can be invalid anytime
     const FMyMJCoreDataPublicCpp& getCoreDataRefConst() const
     {
-        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Full) {
-            return m_pDataFullMode->getCoreDataRefConst();
-        }
-        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror) {
-
-        }
-        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Temp) {
-
-            MY_VERIFY(m_pDataExtTempMode);
-            return m_pDataExtTempMode->getCoreDataRefConst();
-
-        }
-        else {
-            MY_VERIFY(false);
-        }
-
-        return *(FMyMJCoreDataPublicCpp *)NULL;
+        MY_VERIFY(m_pDataExt);
+        return m_pDataExt->getCoreDataRefConst();
     };
 
     //@idxAttender equal to idxRole
     //don't store the return, it can be invalid anytime
     const FMyMJRoleDataAttenderPublicCpp& getRoleDataAttenderPublicRefConst(int32 idxAttender) const
     {
-        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Full) {
-            return m_pDataFullMode->getRoleDataAttenderPublicRefConst(idxAttender);
-        }
-        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror) {
-
-
-        }
-        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Temp) {
-
-            MY_VERIFY(m_pDataExtTempMode);
-            return m_pDataExtTempMode->getRoleDataAttenderPublicRefConst(idxAttender);
-
-        }
-        else {
-            MY_VERIFY(false);
-        }
-
-        return *(FMyMJRoleDataAttenderPublicCpp *)NULL;
+        MY_VERIFY(m_pDataExt);
+        return m_pDataExt->getRoleDataAttenderPublicRefConst(idxAttender);
     };
 
     //@idxAttender equal to idxRole
     //don't store the return, it can be invalid anytime, can return NULL
     const FMyMJRoleDataAttenderPrivateCpp *getRoleDataAttenderPrivateConst(int32 idxAttender) const
     {
-        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Full) {
-            return &m_pDataFullMode->getRoleDataAttenderPrivateRefConst(idxAttender);
-        }
-        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror) {
-
-
-        }
-        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Temp) {
-
-            MY_VERIFY(m_pDataExtTempMode);
-            return &m_pDataExtTempMode->getRoleDataAttenderPrivateRefConst(idxAttender);
-
-        }
-        else {
-            MY_VERIFY(false);
-        }
-
-        return NULL;
+        MY_VERIFY(m_pDataExt);
+        return &m_pDataExt->getRoleDataAttenderPrivateRefConst(idxAttender);
     };
 
     //@idxAttender equal to idxRole
     inline const FMyMJRoleDataPrivateCpp* getRoleDataPrivateConst(int32 idxRole) const
     {
-        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Full) {
-            return &m_pDataFullMode->getRoleDataPrivateRefConst(idxRole);
-        }
-        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror) {
-
-
-        }
-        else if (m_eWorkMode == MyMJGameElemWorkModeCpp::Temp) {
-
-            MY_VERIFY(m_pDataExtTempMode);
-            return &m_pDataExtTempMode->getRoleDataPrivateRefConst(idxRole);
-
-        }
-        else {
-            MY_VERIFY(false);
-        }
-
-        return NULL;
+        MY_VERIFY(m_pDataExt);
+        return &m_pDataExt->getRoleDataPrivateRefConst(idxRole);
     };
 
     //Note all data will be overwritten, include default values, usually used in full mode, but also possible for mirror as one way to implement replay  
-    void applyBase(const FMyMJDataStructCpp &base)
+    void applyBase(const FMyMJDataStructCpp &base, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
     {
-        if (m_eWorkMode == MyMJGameElemWorkModeCpp::Mirror) {
-            //now this is not supposed to happen unless low level replay method is used
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("apply base but mode is mirror, check it!"), );
-        }
-
         getCoreDataRef() = base.getCoreDataRefConst();
 
         int32 l = (uint8)MyMJGameRoleTypeCpp::Max;
@@ -1426,29 +1315,29 @@ struct FMyMJDataAccessorCpp
 
         getCoreDataRef().m_cGameCfg.prepareForUse();
 
-        if (getHelperAttenderSlotDirtyMasksEnabled()) {
-            resetHelperAttenderSlotDirtyMasks(true);
+        if (pDirtyRecord) {
+            pDirtyRecord->reset(true);
         }
     }
 
 
     //the delta myst be applied by two step, and after step 0 it can be visualized, can be used by both full and mirror mode
     //after step 0 we have a chance for visualize, before calling next
-    void applyDeltaStep0(const FMyMJDataDeltaCpp &delta);
-    void applyDeltaStep1(const FMyMJDataDeltaCpp &delta);
+    void applyDeltaStep0(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord);
+    void applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord);
 
     //direct to apply, don't leave a chance for visualize
-    void applyDelta(const FMyMJDataDeltaCpp &delta);
+    void applyDelta(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord);
 
 
-    void applyPusherResult(const FMyMJGamePusherResultCpp& result)
+    void applyPusherResult(const FMyMJGamePusherResultCpp& result, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
     {
         if (result.m_aResultBase.Num() > 0) {
-            applyBase(result.m_aResultBase[0]);
+            applyBase(result.m_aResultBase[0], pDirtyRecord);
         }
 
         if (result.m_aResultDelta.Num() > 0) {
-            applyDelta(result.m_aResultDelta[0]);
+            applyDelta(result.m_aResultDelta[0], pDirtyRecord);
         }
     };
 
@@ -1489,24 +1378,16 @@ protected:
 
     FString genDebugStateString() const
     {
-        return FString::Printf(TEXT("[%s, %s]"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRoleTypeCpp"), (uint8)m_eAccessRoleType), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameElemWorkModeCpp"), (uint8)m_eWorkMode));
+        return FString::Printf(TEXT("[%s]"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRoleTypeCpp"), (uint8)getAccessRoleType(false)));
     };
 
 
-    void moveCardFromOldPosi(int32 id);
+    void moveCardFromOldPosi(int32 id, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord);
     //@idxAttender can < 0
-    void moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSlotTypeCpp eSlotDst);
+    void moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCardSlotTypeCpp eSlotDst, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord);
 
-    //the really storage we point to
-    TSharedPtr<FMyMJDataStructCpp> m_pDataFullMode;
-
-    FMyMJDataStructCpp* m_pDataExtTempMode; //not owning it
-
-    //int32* m_paHelperAttenderSlotDirtyMasks; //if valid, it's size is always 4 
-    TArray<int32> m_aHelperAttenderSlotDirtyMasks; //if valid, it's size is always 4
-    
-    MyMJGameRoleTypeCpp m_eAccessRoleType;
-    MyMJGameElemWorkModeCpp m_eWorkMode;
+    FMyMJDataStructCpp* m_pDataExt; //not owning it
+    bool m_bDebugIsFullMode;
 
     bool m_bShowApplyInfo;
 };

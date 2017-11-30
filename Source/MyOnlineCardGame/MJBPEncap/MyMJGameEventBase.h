@@ -11,7 +11,9 @@
 
 #include "MyMJGameEventBase.generated.h"
 
-//16ms is precise enough
+//although 16ms is precise enough, but it may cause extra delay up to 16ms, let's remove it in data source by use precion as 1ms
+
+/*
 #define MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(dataTime)   ((dataTime) << 5)
 #define MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(worldTime_ms) ((worldTime_ms) >> 5)
 
@@ -20,9 +22,9 @@
 #define MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(worldTime_ms) (MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(worldTime_ms)))
 
 #define MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(worldTime_ms) (MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(worldTime_ms) == (worldTime_ms))
+*/
 
-
-//every actor can have it's own state about time
+//every actor can have it's own state about time, we define a common struct to calculate it, the time can be either game world time, or platform real time
 USTRUCT()
 struct FMyMJServerClientTimeBondCpp
 {
@@ -35,55 +37,82 @@ public:
         clearBond();
     };
 
-    bool rebondTime(uint32 uiServerTime_data_unit, uint32 uiClientTime_data_uint)
+    bool rebondTime(uint32 uiServerTime_ms, uint32 uiClientTime_ms)
     {
-        if (uiServerTime_data_unit == 0 && uiClientTime_data_uint == 0) {
+        if (uiServerTime_ms == 0 && uiClientTime_ms == 0) {
             return false;
         }
 
-        m_uiServerTime_data_unit = uiServerTime_data_unit;
-        m_uiClientTime_data_uint = uiClientTime_data_uint;
+        m_uiServerTime_ms = uiServerTime_ms;
+        m_uiClientTime_ms = uiClientTime_ms;
 
         return true;
     };
 
     void clearBond()
     {
-        m_uiServerTime_data_unit = 0;
-        m_uiClientTime_data_uint = 0;
+        m_uiServerTime_ms = 0;
+        m_uiClientTime_ms = 0;
     };
 
     inline
     bool haveBond() const
     {
-        return (m_uiServerTime_data_unit > 0 || m_uiClientTime_data_uint > 0);
+        return (m_uiServerTime_ms > 0 || m_uiClientTime_ms > 0);
     };
 
-    //in most case, we only care about the calculated server time the actor is on
-    uint32 getCalculatedServerTime_data_unit(uint32 uiNewClientTime_data_uint) const
+
+    inline
+    uint32 getCalculatedServerTime_ms(uint32 uiNewClientTime_ms) const
     {
         MY_VERIFY(haveBond());
-
-        return uiNewClientTime_data_uint - m_uiClientTime_data_uint + m_uiServerTime_data_unit;
+        if (uiNewClientTime_ms > m_uiClientTime_ms) {
+            return uiNewClientTime_ms - m_uiClientTime_ms + m_uiServerTime_ms;
+        }
+        else {
+            return m_uiClientTime_ms - uiNewClientTime_ms + m_uiServerTime_ms;
+        }
     };
 
-    uint32 m_uiServerTime_data_unit;
-    uint32 m_uiClientTime_data_uint;
+    inline
+    const uint32& getServerTime_ms_RefConst() const
+    {
+        return m_uiServerTime_ms;
+    };
+
+    inline
+    const uint32& getClientTime_ms_RefConst() const
+    {
+        return m_uiClientTime_ms;
+    };
+
+protected:
+
+    uint32 m_uiServerTime_ms;
+    uint32 m_uiClientTime_ms;
 };
+
+UENUM()
+enum class MyMJGameCoreRelatedEventMainTypeCpp : uint8
+{
+    Invalid = 0     UMETA(DisplayName = "Invalid"),
+    CorePusherResult = 1     UMETA(DisplayName = "CorePusherResult"),
+    Trival = 2    UMETA(DisplayName = "Trival"),
+};
+
 
 //uint is MS
 USTRUCT()
-struct FMyMJEventDataDeltaDurCfgBaseCpp
+struct FMyMJCoreRelatedEventCorePusherCfgCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyMJEventDataDeltaDurCfgBaseCpp();
+    FMyMJCoreRelatedEventCorePusherCfgCpp();
 
     //return uint is ms, resolved
     uint32 helperGetDeltaDur(const FMyMJDataDeltaCpp& delta) const;
-
 
     uint32 m_uiGameStarted;
 
@@ -112,6 +141,32 @@ public:
     uint32 m_uiGameEnded;
 };
 
+
+USTRUCT()
+struct FMyMJGameCoreRelatedEventTrivalCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGameCoreRelatedEventTrivalCpp()
+    {
+    };
+
+    virtual ~FMyMJGameCoreRelatedEventTrivalCpp()
+    {
+
+    };
+
+    FString genDebugMsg() const
+    {
+        return FString::Printf(TEXT("trival"));
+    };
+
+
+protected:
+
+};
+
 USTRUCT(BlueprintType)
 struct FMyMJDataStructWithTimeStampBaseCpp : public FMyMJDataStructCpp
 {
@@ -120,43 +175,70 @@ struct FMyMJDataStructWithTimeStampBaseCpp : public FMyMJDataStructCpp
 public:
     FMyMJDataStructWithTimeStampBaseCpp() : Super()
     {
-        m_uiTime_data_unit = 0;
+        m_uiIdEventApplied = MyUIntIdDefaultInvalidValue;
+        m_uiTime_ms = 0;
+
+        //m_cAccessor.setupDataExt(this);
+    };
+
+    virtual ~FMyMJDataStructWithTimeStampBaseCpp()
+    {
+
     };
 
     void reset()
     {
         Super::reset();
-        m_uiTime_data_unit = 0;
+        m_uiIdEventApplied = MyUIntIdDefaultInvalidValue;
+        m_uiTime_ms = 0;
     };
 
+
     //unit is ms
-    void setTime(uint32 uiTime_ms)
+    inline
+    uint32 getIdEventApplied() const
+    {
+        return m_uiIdEventApplied;
+    };
+
+    inline
+    void setTime_ms(uint32 uiTime_ms)
     {
         MY_VERIFY(uiTime_ms > 0);
-        if (!MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(uiTime_ms)) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time_ms is not resolved: %d."), uiTime_ms);
-            MY_VERIFY(false);
-        }
-        m_uiTime_data_unit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(uiTime_ms);
+        m_uiTime_ms = uiTime_ms;
     };
 
     //unit is ms
-    uint32 getTime() const
+    inline
+    uint32 getTime_ms() const
     {
-        return MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(m_uiTime_data_unit);
+        return m_uiTime_ms;
     };
+
+    void applyEvent(FMyMJDataAccessorCpp& cAccessor, const struct FMyMJEventWithTimeStampBaseCpp& cEvent);
 
     void copyWithRoleFromSysKeeperRole2(MyMJGameRoleTypeCpp eTargetRole, FMyMJDataStructWithTimeStampBaseCpp& cTargetData) const
     {
         Super::copyWithRoleFromSysKeeperRole(eTargetRole, cTargetData);
-        cTargetData.m_uiTime_data_unit = m_uiTime_data_unit;
+        cTargetData.m_uiIdEventApplied = m_uiIdEventApplied;
+        cTargetData.m_uiTime_ms = m_uiTime_ms;
     };
 
 protected:
 
-    UPROPERTY(meta = (DisplayName = "state server world time stamp"))
-    uint32 m_uiTime_data_unit;
+    UPROPERTY(meta = (DisplayName = "id of event applied"))
+    uint32 m_uiIdEventApplied;
+
+    UPROPERTY(meta = (DisplayName = "server world time stamp"))
+    uint32 m_uiTime_ms;
+
+    //FMyMJDataAccessorCpp m_cAccessor;
 };
+
+
+#define MyMJEventContinuityYes (1)
+#define MyMJEventContinuityNoPrevBaseEmpty (2)
+#define MyMJEventContinuityNoEventSkipped (3)
 
 //represent a important event, which may have visual effect, or make important change to game
 USTRUCT(BlueprintType)
@@ -177,55 +259,97 @@ public:
 
     void reset()
     {
-        m_aPusherResult.Reset();
-        m_uiStartTime_data_unit = 0;
-        m_uiDuration_data_unit = 0;
+        m_aCorePusherResult.Reset();
+        m_aTrival.Reset();
+        m_uiStartTime_ms = 0;
+        m_uiDuration_ms = 0;
+        m_uiIdEvent = MyUIntIdDefaultInvalidValue;
 
         m_iIdxDebug = 0;
     };
 
     //unit is ms
-    uint32 getEndTime() const
+    inline
+    uint32 getEndTime_ms() const
     {
-        return MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(m_uiStartTime_data_unit + m_uiDuration_data_unit);
+        return m_uiStartTime_ms + m_uiDuration_ms;
     }
 
-    void setStartTime(uint32 uiStartTime_resolved_ms)
+    inline
+    void setStartTime_ms(uint32 uiStartTime_ms)
     {
-        MY_VERIFY(uiStartTime_resolved_ms > 0);
-        MY_VERIFY(MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(uiStartTime_resolved_ms));
-        m_uiStartTime_data_unit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(uiStartTime_resolved_ms);
+        MY_VERIFY(uiStartTime_ms > 0);
+        m_uiStartTime_ms = uiStartTime_ms;
     };
 
     //unit is ms, resolved
-    uint32 getStartTime() const
+    inline
+    uint32 getStartTime_ms() const
     {
-        return MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(m_uiStartTime_data_unit);
+        return m_uiStartTime_ms;
     };
 
-    void setDuration(uint32 uiDuration_resolved_ms)
+    inline
+    void setDuration_ms(uint32 uiDuration_ms)
     {
-        MY_VERIFY(MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(uiDuration_resolved_ms));
-        m_uiDuration_data_unit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(uiDuration_resolved_ms);
+        m_uiDuration_ms = uiDuration_ms;
     };
 
     //unit is ms, resolved
-    uint32 getDuration() const
+    inline
+    uint32 getDuration_ms() const
     {
-        return MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(m_uiDuration_data_unit);
+        return m_uiDuration_ms;
+    };
+
+    inline
+        uint32 getIdEvent() const
+    {
+        return m_uiIdEvent;
+    };
+
+    inline
+        void setIdEvent(uint32 id)
+    {
+        m_uiIdEvent = id;
+        MY_VERIFY(m_uiIdEvent != MyUIntIdDefaultInvalidValue && m_uiIdEvent < MyUInt32IdCoreDumpBottomValue);
     };
 
     void setPusherResult(const FMyMJGamePusherResultCpp& pusherResult)
     {
-        MY_VERIFY(m_aPusherResult.Num() <= 0);
-        int32 idx = m_aPusherResult.Emplace();
-        m_aPusherResult[idx] = pusherResult;
+        MY_VERIFY(m_aCorePusherResult.Num() <= 0);
+        MY_VERIFY(m_aTrival.Num() <= 0);
+
+        int32 idx = m_aCorePusherResult.Emplace();
+        m_aCorePusherResult[idx] = pusherResult;
     };
 
     const FMyMJGamePusherResultCpp* getPusherResult(bool bAssertValid) const
     {
-        if (m_aPusherResult.Num() > 0) {
-            return &m_aPusherResult[0];
+        if (m_aCorePusherResult.Num() > 0) {
+            return &m_aCorePusherResult[0];
+        }
+        else {
+            if (bAssertValid) {
+                MY_VERIFY(false);
+            }
+            return NULL;
+        }
+    };
+
+    void setEventTrival(const FMyMJGameCoreRelatedEventTrivalCpp& eventTrival)
+    {
+        MY_VERIFY(m_aCorePusherResult.Num() <= 0);
+        MY_VERIFY(m_aTrival.Num() <= 0);
+
+        int32 idx = m_aTrival.Emplace();
+        m_aTrival[idx] = eventTrival;
+    };
+
+    const FMyMJGameCoreRelatedEventTrivalCpp* getEventTrival(bool bAssertValid) const
+    {
+        if (m_aTrival.Num() > 0) {
+            return &m_aTrival[0];
         }
         else {
             if (bAssertValid) {
@@ -237,17 +361,22 @@ public:
 
     void copyWithRoleFromSysKeeperRole2(MyMJGameRoleTypeCpp eTargetRole, FMyMJEventWithTimeStampBaseCpp& cTargetData) const
     {
-        cTargetData.m_aPusherResult.Reset();
-        int l = m_aPusherResult.Num();
+        cTargetData.m_aCorePusherResult.Reset();
+
+        int l = m_aCorePusherResult.Num();
         MY_VERIFY(l <= 1);
         if (l > 0) {
-            cTargetData.m_aPusherResult.Emplace();
-            m_aPusherResult[0].copyWithRoleFromSysKeeperRole(eTargetRole, cTargetData.m_aPusherResult[0]);
+            cTargetData.m_aCorePusherResult.Emplace();
+            m_aCorePusherResult[0].copyWithRoleFromSysKeeperRole(eTargetRole, cTargetData.m_aCorePusherResult[0]);
         }
 
+        cTargetData.m_aTrival = m_aTrival;
 
-        cTargetData.m_uiStartTime_data_unit = m_uiStartTime_data_unit;
-        cTargetData.m_uiDuration_data_unit  = m_uiDuration_data_unit;
+        cTargetData.m_uiStartTime_ms = m_uiStartTime_ms;
+        cTargetData.m_uiDuration_ms  = m_uiDuration_ms;
+        cTargetData.m_uiIdEvent = m_uiIdEvent;
+
+        cTargetData.m_iIdxDebug = m_iIdxDebug;
     };
 
     // Optional: debug string used with LogNetFastTArray logging
@@ -256,68 +385,118 @@ public:
         return FString::Printf(TEXT("FMyMJEventWithTimeStampBaseCpp idxDebug %d."), m_iIdxDebug);
     };
 
-    bool canBeAppendedToPrev(int32 iGameIdPrev, int32 iPusherIdLastPrev, bool bIsGameEndOrNotStartedPrev) const
+    inline
+    int32 checkContinuity(uint32 uiIdEventPrev) const
     {
-
-
-        int32 iGameIdFirst = -1;
-        int32 iPusherIdFirst = -1;
-        const FMyMJEventWithTimeStampBaseCpp* pItemFirst = this;
-
-        iGameIdFirst = pItemFirst->getPusherResult(true)->getGameId();
-        iPusherIdFirst = pItemFirst->getPusherResult(true)->getPusherIdLast();
-
-        bool bRet;
-        if (iGameIdPrev < 0) {
-            bRet = pItemFirst->getPusherResult(true)->m_aResultBase.Num() > 0;
+        //treat it carefully, when id overscrewed, it will be considered as empty
+        if (getIdEvent() == MyUIntIdDefaultInvalidValue) {
+            return MyMJEventContinuityNoPrevBaseEmpty;
         }
-        else {
-            if (iGameIdPrev == iGameIdFirst) {
-                bRet = (iPusherIdLastPrev + 1) == iPusherIdFirst;
+        else if (uiIdEventPrev == (getIdEvent() + 1)) {
+            return MyMJEventContinuityYes;
+        }
+
+        return MyMJEventContinuityNoEventSkipped;
+    };
+
+    /*
+    int32 canBeAppendedToPrevAsCorePusher(int32 iGameIdPrev, int32 iPusherIdLastPrev, bool bIsGameEndOrNotStartedPrev, int32 iTrivalIdPrev) const
+    {
+        int32 ret = 0;
+        MyMJGameCoreRelatedEventMainTypeCpp eMainType = getMainType();
+        
+        if (eMainType == MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult)
+        {
+            int32 iGameIdFirst = -1;
+            int32 iPusherIdFirst = -1;
+            const FMyMJEventWithTimeStampBaseCpp* pItemFirst = this;
+
+            pItemFirst->getPusherResult(true)->getGameIdAndPusherId(&iGameIdFirst, &iPusherIdFirst);
+
+            if (iGameIdPrev < 0 || bIsGameEndOrNotStartedPrev) {
+                ret = pItemFirst->getPusherResult(true)->m_aResultBase.Num() > 0 ? MyMJEventContinuityYes : MyMJEventContinuityNoPusherSkipped;
             }
             else {
-                bRet = bIsGameEndOrNotStartedPrev && pItemFirst->getPusherResult(true)->m_aResultBase.Num() > 0;
+                ret = iGameIdPrev == iGameIdFirst && (iPusherIdLastPrev + 1) == iPusherIdFirst ? MyMJEventContinuityYes : MyMJEventContinuityNoPusherSkipped;
+            }
+
+            if (ret == MyMJEventContinuityNoPusherSkipped) {
+                UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("canBeAppendedToPrev pusher skipped: iGameIdPrev %d, iPusherIdLastPrev %d, bIsGameEndOrNotStartedPrev %d, iGameIdFirst %d, iPusherIdFirst %d."),
+                    iGameIdPrev, iPusherIdLastPrev, bIsGameEndOrNotStartedPrev, iGameIdFirst, iPusherIdFirst);
+            }
+
+        }
+        else if (eMainType == MyMJGameCoreRelatedEventMainTypeCpp::Trival)
+        {
+            int32 iTrivalIdNew = getEventTrival(true)->getId();
+            ret = iTrivalIdPrev == MyIntIdDefaultInvalidValue || (iTrivalIdPrev + 1) == iTrivalIdNew ? MyMJEventContinuityYes : MyMJEventContinuityNoTrivalSkipped;
+
+            if (ret == MyMJEventContinuityNoTrivalSkipped) {
+                UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("canBeAppendedToPrev trival skipped: iTrivalIdPrev %d, iTrivalIdNew %d."),
+                    iTrivalIdPrev, iTrivalIdNew);
             }
         }
-
-        if (!bRet) {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("canBeAppendedToPrev false: iGameIdPrev %d, iPusherIdLastPrev %d, bIsGameEndOrNotStartedPrev %d, iGameIdFirst %d, iPusherIdFirst %d."),
-                iGameIdPrev, iPusherIdLastPrev, bIsGameEndOrNotStartedPrev, iGameIdFirst, iPusherIdFirst);
+        else
+        {
+            MY_VERIFY(false);
         }
 
-        return bRet;
+        return ret;
+        
     }
-
-    UPROPERTY()
-        int32 m_iIdxDebug;
+    */
 
     FString genDebugMsg() const
     {
-        uint32 uiStartMs = MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(m_uiStartTime_data_unit);
-        uint32 uiDurMs = MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(m_uiDuration_data_unit);
+        uint32 uiStartMs = m_uiStartTime_ms;
+        uint32 uiDurMs = m_uiDuration_ms;
         FString resultStr = TEXT("null");
-        if (m_aPusherResult.Num() > 0) {
-            resultStr = m_aPusherResult[0].genDebugMsg();
+        if (m_aCorePusherResult.Num() > 0) {
+            resultStr = m_aCorePusherResult[0].genDebugMsg();
+        }
+        else if (m_aTrival.Num() > 0) {
+            resultStr = m_aTrival[0].genDebugMsg();
         }
         return FString::Printf(TEXT("%d.%03d, %d.%03d, %s"), uiStartMs/1000, uiStartMs%1000, uiDurMs/1000, uiDurMs%1000, *resultStr);
 
     };
 
+    inline MyMJGameCoreRelatedEventMainTypeCpp getMainType() const
+    {
+        if (m_aCorePusherResult.Num() == 1 && m_aTrival.Num() == 0) {
+            return MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult;
+        }
+        else if (m_aCorePusherResult.Num() == 0 && m_aTrival.Num() == 1) {
+            return MyMJGameCoreRelatedEventMainTypeCpp::Trival;
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid core related event: %d, %d"), m_aCorePusherResult.Num(), m_aTrival.Num());
+            return MyMJGameCoreRelatedEventMainTypeCpp::Invalid;
+        }
+    };
+
+    UPROPERTY()
+    int32 m_iIdxDebug;
+
 protected:
 
     //actually union, if valid, Num() == 1 and it is a delta pusher
-    //TArray<FMyMJGamePusherResultCpp>  m_aPusherResult;
     UPROPERTY()
-    TArray<FMyMJGamePusherResultCpp>  m_aPusherResult;
+    TArray<FMyMJGamePusherResultCpp>  m_aCorePusherResult;
+
+    UPROPERTY()
+    TArray<FMyMJGameCoreRelatedEventTrivalCpp>  m_aTrival;
 
     //timestamp is from server world time
     UPROPERTY(meta = (DisplayName = "state server world time stamp"))
-        uint32 m_uiStartTime_data_unit;
+        uint32 m_uiStartTime_ms;
 
     //
     UPROPERTY(meta = (DisplayName = "time wait for animation"))
-        uint32 m_uiDuration_data_unit;
+        uint32 m_uiDuration_ms;
 
+    UPROPERTY()
+    uint32 m_uiIdEvent;
 
 };
 
@@ -330,7 +509,7 @@ public:
 
     FMyMJGameEventArray() : Super()
     {
-
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("FMyMJGameEventArray() called"));
     };
 
     virtual ~FMyMJGameEventArray()
@@ -367,6 +546,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FMyMJGameEventCycleBufferReplicatedDelegate,
 //Different game types have different datas, for a turn based one, history is important
 //it is like a queue with limited size, but don't need allocate memory, thread unsafe
 //It seems fast tarray replication, must be directly touched to a uobject!
+//range model is [min, max)
 UCLASS()
 class UMyMJGameEventCycleBuffer : public UObject
 {
@@ -374,18 +554,20 @@ class UMyMJGameEventCycleBuffer : public UObject
 
 public:
 
-    UMyMJGameEventCycleBuffer() : Super()
+    UMyMJGameEventCycleBuffer(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
     {
         m_iTest = 0;
         resize(64);
+
+        m_cEventArray.MarkArrayDirty();
     };
 
     virtual ~UMyMJGameEventCycleBuffer()
     {
 
-
     };
 
+    //will trigger a clear()
     void resize(int32 iNewSizeMax)
     {
         m_iSizeMax = iNewSizeMax;
@@ -394,13 +576,20 @@ public:
         //m_cEventArray.Items.AddZeroed(m_iSizeMax);
 
         clear();
+
+        //m_cEventArray.Items.Reset(0);
+        //m_cEventArray.MarkArrayDirty();
     };
 
     void clear()
     {
-        m_idxHead = -1;
+        m_idxHead = MyIntIdDefaultInvalidValue;
         m_iCount = 0;
-        setLastEventEndTime(0);
+        m_uiTimeRangeStart_ms = 0;
+        m_uiTimeRangeEnd_ms = 0;
+
+        //m_iHelperIdxLastCorePusherEvent = MyIntIdDefaultInvalidValue;
+        //m_iHelperIdxLastTrivalEvent = MyIntIdDefaultInvalidValue;
     };
 
     //This will assert if not enough of items were removed
@@ -415,8 +604,37 @@ public:
         else {
             MY_VERIFY(false);
         }
-    };
 
+        //m_iHelperIdxLastCorePusherEvent = m_iHelperIdxLastCorePusherEvent < countToRemove ? -1 : m_iHelperIdxLastCorePusherEvent - countToRemove;
+        //m_iHelperIdxLastTrivalEvent = m_iHelperIdxLastTrivalEvent < countToRemove ? -1 : m_iHelperIdxLastTrivalEvent - countToRemove;
+
+        if (m_iCount > 0) {
+            const FMyMJEventWithTimeStampBaseCpp& event = peekRefAt(0);
+            uint32 uiStartTime = event.getStartTime_ms();
+            uint32 uiEndTime = event.getStartTime_ms() + event.getDuration_ms();
+
+            //detect error
+            if (m_uiTimeRangeStart_ms > uiStartTime) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time screw: m_uiTimeRangeStart_ms %d, uiStartTime %d."), m_uiTimeRangeStart_ms, uiStartTime);
+                MY_VERIFY(false);
+            }
+            if (m_uiTimeRangeEnd_ms < uiEndTime) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time screw: m_uiTimeRangeEnd_ms %d, uiEndTime %d."), m_uiTimeRangeEnd_ms, uiEndTime);
+                MY_VERIFY(false);
+            }
+
+            if (m_uiTimeRangeStart_ms < uiStartTime) {
+                m_uiTimeRangeStart_ms = uiStartTime;
+            }
+
+        }
+        else {
+            m_uiTimeRangeStart_ms = 0;
+            m_uiTimeRangeEnd_ms = 0;
+        }
+    };
+    
+    inline
     int32 getCount(bool *pOutIsFull) const
     {
         if (pOutIsFull) {
@@ -424,6 +642,21 @@ public:
         }
 
         return m_iCount;
+    };
+
+    inline
+    int32 getSizeMax() const
+    {
+        return m_iSizeMax;
+    };
+
+    inline const FMyMJEventWithTimeStampBaseCpp* peekLast() const
+    {
+        if (m_iCount > 0) {
+            return &peekRefAt(m_iCount - 1);
+        }
+
+        return NULL;
     };
 
     //This will assert if out of range
@@ -443,11 +676,11 @@ public:
         const FMyMJEventWithTimeStampBaseCpp& ret = m_cEventArray.Items[idxFound];
 
         //extra check
-        uint32 time_ms = ret.getEndTime();
-        if (time_ms <= 0) {
+        //uint32 time_ms = ret.getEndTime_ms();
+        //if (time_ms <= 0) {
             //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("elem at %d have timestamp %d, not valid! internal state: m_idxHead %d, m_iCount %d."), idxFromHead, time_ms, m_idxHead, m_iCount);
             //MY_VERIFY(false);
-        }
+        //}
 
         if (bVerify) {
             if (ret.m_iIdxDebug != idxFound) {
@@ -459,57 +692,97 @@ public:
         return ret;
     };
 
-    const FMyMJEventWithTimeStampBaseCpp* getLast() const
+    /*
+    inline
+    const FMyMJEventWithTimeStampBaseCpp* getLastCorePusherEvent() const
     {
-        int32 l = getCount(NULL);
-        if (l > 0) {
-            return &peekRefAt(l - 1);
+        if (m_iHelperIdxLastCorePusherEvent >= 0) {
+            return &peekRefAt(m_iHelperIdxLastCorePusherEvent);
         }
-        else {
-            return NULL;
-        }
+
+        return NULL;
     };
 
-
-    //only event that have duration records time, otherwise consdier them should be applied instantly
-    //all calc here must be resolved to resolution
-    //will assert if buffer is full
-    FMyMJEventWithTimeStampBaseCpp& addToTailWhenNotFull(uint32 uiTimeStamp_resolved_ms, uint32 uiDur_resolved_ms, bool bForceRecordTime)
+    inline
+    const FMyMJEventWithTimeStampBaseCpp* getLastTrivalEvent() const
     {
-        MY_VERIFY(MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(uiTimeStamp_resolved_ms));
-        MY_VERIFY(MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(uiDur_resolved_ms));
+        if (m_iHelperIdxLastTrivalEvent >= 0) {
+            return &peekRefAt(m_iHelperIdxLastTrivalEvent);
+        }
 
-        //int32 idx = m_aEvents.Emplace();
-        bool bOverritten = addToTail(NULL);
+        return NULL;
+    };
+    */
+
+    //will assert if buffer is full
+    FMyMJEventWithTimeStampBaseCpp& addToTailWhenNotFull(uint32 uiTimeStamp_ms, uint32 uiDur_ms, MyMJGameCoreRelatedEventMainTypeCpp eMainType)
+    {
+        MY_VERIFY(uiTimeStamp_ms > 0);
+
+        FMyMJEventWithTimeStampBaseCpp* pRet = NULL;
+        bool bOverritten = addToTail(NULL, &pRet);
         MY_VERIFY(!bOverritten);
-        FMyMJEventWithTimeStampBaseCpp* pRet = const_cast<FMyMJEventWithTimeStampBaseCpp *>(getLast());
         MY_VERIFY(pRet);
         FMyMJEventWithTimeStampBaseCpp& ret = *pRet;;
 
-        if (bForceRecordTime) {
-            ret.setStartTime(uiTimeStamp_resolved_ms);
-            setLastEventEndTime(uiTimeStamp_resolved_ms);
+        ret.setStartTime_ms(uiTimeStamp_ms);
+        ret.setDuration_ms(uiDur_ms);
+
+        /*
+        if (eMainType == MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult) {
+            const FMyMJEventWithTimeStampBaseCpp* pE = getLastCorePusherEvent();
+            if (pE && pE->getMainType() != eMainType) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_iHelperIdxLastCorePusherEvent error detected, idx %d's have unexpected type as %d."), m_iHelperIdxLastCorePusherEvent, (uint8)pE->getMainType());
+                MY_VERIFY(false);
+            }
+            m_iHelperIdxLastCorePusherEvent = getCount(NULL) - 1;
         }
+        else if (eMainType == MyMJGameCoreRelatedEventMainTypeCpp::Trival) {
+            const FMyMJEventWithTimeStampBaseCpp* pE = getLastTrivalEvent();
+            if (pE && pE->getMainType() != eMainType) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_iHelperIdxLastCorePusherEvent error detected, idx %d's have unexpected type as %d."), m_iHelperIdxLastTrivalEvent, (uint8)pE->getMainType());
+                MY_VERIFY(false);
+            }
+            m_iHelperIdxLastTrivalEvent = getCount(NULL) - 1;
+        }
+        else {
+            MY_VERIFY(false);
+        }
+        */
 
-        if (uiDur_resolved_ms > 0) {
-            ret.setStartTime(uiTimeStamp_resolved_ms);
-            ret.setDuration(uiDur_resolved_ms);
-            //m_uiLastEventEndTime_10ms = uiTimeStamp_10ms + uiDur_10ms;
+        uint32 uiStartTime = uiTimeStamp_ms;
+        uint32 uiEndTime = uiTimeStamp_ms + uiDur_ms;
 
-            setLastEventEndTime(uiTimeStamp_resolved_ms + uiDur_resolved_ms);
+        if (m_uiTimeRangeStart_ms == 0 && m_uiTimeRangeEnd_ms == 0) {
+
+            m_uiTimeRangeStart_ms = uiStartTime;
+            m_uiTimeRangeEnd_ms = uiEndTime;
 
         }
         else {
-        }
 
+            //detect error
+            if (m_uiTimeRangeStart_ms > uiStartTime) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time screw: m_uiTimeRangeStart_ms %d, uiStartTime %d."), m_uiTimeRangeStart_ms, uiStartTime);
+                MY_VERIFY(false);
+            }
+
+            if (m_uiTimeRangeEnd_ms < uiEndTime) {
+                m_uiTimeRangeEnd_ms = uiEndTime;
+            }
+        }
 
         return ret;
     };
 
-    //unit is ms, resolved
-    uint32 getLastEventEndTime() const
+    inline uint32 getTimeRangeStart_ms() const
     {
-        return MY_MJ_GAME_DATA_TIME_TO_WORLD_TIME_MS(m_uiLastEventEndTime_data_unit);
+        return m_uiTimeRangeStart_ms;
+    };
+
+    inline uint32 getTimeRangeEnd_ms() const
+    {
+        return m_uiTimeRangeEnd_ms;
     };
 
     //return errorCode
@@ -518,6 +791,7 @@ public:
         uint32 timestamp_end = 0;
         int32 l = getCount(NULL);
         int32 iError = 0;
+        int32 idEventLast = -1;
         for (int32 i = 0; i < l; i++) {
             int32 idxInArray = -1;
             const FMyMJEventWithTimeStampBaseCpp& elem = peekRefAt(i, &idxInArray, false);
@@ -530,7 +804,14 @@ public:
                 break;
             }
 
-            uint32 te = elem.getEndTime();
+            if (idEventLast != -1 && (idEventLast + 1) != elem.getIdEvent()) {
+                iError = 1;
+                break;
+            }
+            idEventLast = elem.getIdEvent();
+
+
+            uint32 te = elem.getEndTime_ms();
             if (te > 0) {
                 if (te < timestamp_end) {
                     //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time stamp screw, prev time %d, elem time %d, idx from head %d."), timestamp_end, te, i);
@@ -550,14 +831,22 @@ public:
             for (int32 i = 0; i < l; i++) {
                 int32 idxInArray = -1;
                 const FMyMJEventWithTimeStampBaseCpp& elem = peekRefAt(i, &idxInArray, false);
-                const FMyMJGamePusherResultCpp* pResult = elem.getPusherResult(false);
-                int32 iGameId = -1;
-                int32 iPusherId = -1;
-                if (pResult) {
-                    iGameId = pResult->getGameId();
-                    iPusherId = pResult->getPusherIdLast();
+                MyMJGameCoreRelatedEventMainTypeCpp eMainType = elem.getMainType();
+                int32 idEvent = elem.getIdEvent();
+                if (eMainType == MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult) {
+                    const FMyMJGamePusherResultCpp* pResult = elem.getPusherResult(true);
+
+                    int32 iGameId, iPusherId;
+                    pResult->getGameIdAndPusherId(&iGameId, &iPusherId);
+                    ret += FString::Printf(TEXT("[p %d,%d,%d,%d,%d,%d, %d:%d], "), i, idxInArray, elem.m_iIdxDebug, elem.getStartTime_ms(), elem.getDuration_ms(), idEvent, iGameId, iPusherId);
                 }
-                ret += FString::Printf(TEXT("[%d,%d,%d,%d,%d,%d:%d], "), i, idxInArray, elem.m_iIdxDebug, elem.getStartTime(), elem.getDuration(), iGameId, iPusherId);
+                else if (eMainType == MyMJGameCoreRelatedEventMainTypeCpp::Trival) {
+                    const FMyMJGameCoreRelatedEventTrivalCpp* pEvent = elem.getEventTrival(true);
+                    ret += FString::Printf(TEXT("[t %d,%d,%d,%d,%d,%d], ")       , i, idxInArray, elem.m_iIdxDebug, elem.getStartTime_ms(), elem.getDuration_ms(), idEvent);
+                }
+                else {
+                    MY_VERIFY(false);
+                }
             }
             UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("l %d, iError %d: %s"), l, iError, *ret);
             //MY_VERIFY(false);
@@ -568,9 +857,9 @@ public:
 
     void addItemFromOther(const FMyMJEventWithTimeStampBaseCpp& itemOther)
     {
-        uint32 startTime = itemOther.getStartTime();
-        uint32 dur = itemOther.getDuration();
-        FMyMJEventWithTimeStampBaseCpp& newAdded = addToTailWhenNotFull(startTime, dur, startTime > 0);
+        uint32 startTime = itemOther.getStartTime_ms();
+        uint32 dur = itemOther.getDuration_ms();
+        FMyMJEventWithTimeStampBaseCpp& newAdded = addToTailWhenNotFull(startTime, dur, itemOther.getMainType());
         int32 oldIdxDebug = newAdded.m_iIdxDebug;
         newAdded = itemOther;
 
@@ -601,7 +890,7 @@ protected:
     };
 
     //return whether buffer overflow and old data is overwriten
-    bool addToTail(const FMyMJEventWithTimeStampBaseCpp* itemToSetAs)
+    bool addToTail(const FMyMJEventWithTimeStampBaseCpp* itemToSetAs, FMyMJEventWithTimeStampBaseCpp** ppOutNewAddedItem)
     {
         int32 idxNew = -1;
         /*
@@ -646,6 +935,10 @@ protected:
             newItem = *itemToSetAs;
         }
   
+        if (ppOutNewAddedItem) {
+            *ppOutNewAddedItem = &newItem;
+        }
+
         m_iCount++;
         if (m_iCount > m_iSizeMax) {
             m_iCount = m_iSizeMax;
@@ -655,12 +948,6 @@ protected:
 
         return false;
     };
-
-    void setLastEventEndTime(uint32 uiTimeStamp_resolved_ms)
-    {
-        MY_VERIFY(MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(uiTimeStamp_resolved_ms));
-        m_uiLastEventEndTime_data_unit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(uiTimeStamp_resolved_ms);
-    }
 
     UPROPERTY(ReplicatedUsing = OnRep_Data)
     FMyMJGameEventArray m_cEventArray;
@@ -676,52 +963,96 @@ protected:
     int32 m_iCount;
 
     UPROPERTY(ReplicatedUsing = OnRep_Data)
-    uint32 m_uiLastEventEndTime_data_unit;
+    uint32 m_uiTimeRangeStart_ms;
+
+    UPROPERTY(ReplicatedUsing = OnRep_Data)
+    uint32 m_uiTimeRangeEnd_ms;
+
+    //UPROPERTY(ReplicatedUsing = OnRep_Data)
+    //int32 m_iHelperIdxLastCorePusherEvent;
+
+    //UPROPERTY(ReplicatedUsing = OnRep_Data)
+    //int32 m_iHelperIdxLastTrivalEvent;
+
+    //UPROPERTY(ReplicatedUsing = OnRep_Data)
+    //int32 m_iHelperEventsBasePusherCount; //how many base puhser we have inside
 };
 
 //typedef class UMyMJDataSequencePerRoleCpp UMyMJDataSequencePerRoleCpp;
+#define MyMJDataSequencePerRoleFullDataRecordTypeInvalid (-1)
+#define MyMJDataSequencePerRoleFullDataRecordTypeNone (0)
+#define MyMJDataSequencePerRoleFullDataRecordTypeBottom (1)
+#define MyMJDataSequencePerRoleFullDataRecordTypeTop (2)
 
 //DECLARE_MULTICAST_DELEGATE_TwoParams(FMyMJDataSeqReplicatedDelegate, UMyMJDataSequencePerRoleCpp*, int32);
-DECLARE_MULTICAST_DELEGATE_OneParam(FMyMJDataSeqReplicatedDelegate, MyMJGameRoleTypeCpp);
+DECLARE_MULTICAST_DELEGATE(FMyMJDataSeqReplicatedDelegate);
 
-//mainly keeps a history, this is the logic core need to replicate
+//mainly keeps a history, this is the logic core need to replicate, and should only be write at producer side(the server)
 UCLASS()
 class MYONLINECARDGAME_API UMyMJDataSequencePerRoleCpp : public UObject
 {
     GENERATED_BODY()
 
 public:
-    UMyMJDataSequencePerRoleCpp() : Super()
+
+    UMyMJDataSequencePerRoleCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
+
+    //since base can't be rebuild until we start from sequence 1, so, it should only be called once in the beginning
+    void init(MyMJGameRoleTypeCpp eRoleType)
     {
-        m_iRepKeyOfState = 1;
+        //Make sure called only once
+        MY_VERIFY(m_iFullDataRecordType == MyMJDataSequencePerRoleFullDataRecordTypeInvalid);
 
-        m_pEventsApplyingAndApplied = CreateDefaultSubobject<UMyMJGameEventCycleBuffer>(TEXT("Events Applying And Applied"));
-        //m_pEventsApplyingAndApplied = NULL;
-
-        reinit(MyMJGameRoleTypeCpp::Observer);
-
-    };
-
-    void reinit(MyMJGameRoleTypeCpp eRole)
-    {
-        m_eRole = eRole;
-        m_cAccessor.setupTempMode(&m_cBase, eRole);
         clear();
         markDirtyForRep();
+
+        m_cFullData.setRole(eRoleType);
+        m_eRole = eRoleType;
+
+        m_cAccessor.setupDataExt(&m_cFullData);
+    };
+
+    inline bool isEmpty() const
+    {
+        uint32 idEventLast = 0;
+        getFullAndDeltaLastData(&idEventLast, NULL);
+
+        return idEventLast == 0;
+    };
+
+    void setFullDataRecordType(int32 iFullDataRecordType)
+    {
+        if (m_iFullDataRecordType == iFullDataRecordType) {
+            return;
+        }
+
+        MY_VERIFY(isEmpty());
+
+        m_iFullDataRecordType = iFullDataRecordType;
+    };
+
+    void setHelperProduceMode(bool bHelperProduceMode)
+    {
+        if (m_bHelperProduceMode == bHelperProduceMode) {
+            return;
+        }
+
+        MY_VERIFY(isEmpty());
+
+        m_bHelperProduceMode = bHelperProduceMode;
     };
 
     void clear()
     {
-        m_cBase.reset();
-        if (IsValid(m_pEventsApplyingAndApplied)) {
-            m_pEventsApplyingAndApplied->clear();
+        m_cFullData.reset();
+        if (IsValid(m_pDeltaDataEvents)) {
+            m_pDeltaDataEvents->clear();
         }
+        m_uiServerWorldTime_ms = 0;
 
-        m_iHelperGameIdLast = -1;
-        m_iHelperPusherIdLast = -1;
-        m_iEventsBasePusherCount = 0;
+        m_uiHelerIdEventConsumed = 0;
     };
-
 
     void markDirtyForRep()
     {
@@ -736,126 +1067,94 @@ public:
         return m_iRepKeyOfState;
     };
 
+    /*
     //return < 0 means empty, no valid data inside
-    int32 getGameIdLast() const
+    void getGameIdAndPusherIdLast(int32 *pOutGameIdLast, int32* pOutPusherIdLast) const
     {
-        const FMyMJEventWithTimeStampBaseCpp* pElemLast = NULL;
-        
+        const FMyMJEventWithTimeStampBaseCpp* pLastCorePusherEvent = NULL;
+
         if (IsValid(m_pEventsApplyingAndApplied)) {
-            pElemLast = m_pEventsApplyingAndApplied->getLast();
+            pLastCorePusherEvent = m_pEventsApplyingAndApplied->getLastCorePusherEvent();
         }
 
-        if (pElemLast)
+        if (pLastCorePusherEvent)
         {
-            const FMyMJGamePusherResultCpp* pResult = pElemLast->getPusherResult(true);
-            return pResult->getGameId();
+            pLastCorePusherEvent->getPusherResult(true)->getGameIdAndPusherId(pOutGameIdLast, pOutPusherIdLast);
         }
         else {
-            int32 ret = m_cBase.getCoreDataRefConst().m_iGameId;
+
+            if (pOutGameIdLast) {
+                *pOutGameIdLast = m_cBase.getCoreDataRefConst().m_iGameId;
+                if (*pOutGameIdLast > 0) {
+                    MY_VERIFY(m_cBase.getTime_ms() > 0);
+                }
+            }
+            if (pOutPusherIdLast) {
+                *pOutPusherIdLast = m_cBase.getCoreDataRefConst().m_iPusherIdLast;
+            }
+
+        }
+    };
+
+    //return < 0 means empty, no valid data inside
+    int32 getTrivalIdLast() const
+    {
+        const FMyMJEventWithTimeStampBaseCpp* pLastTrivalEvent = NULL;
+
+        if (IsValid(m_pEventsApplyingAndApplied)) {
+            pLastTrivalEvent = m_pEventsApplyingAndApplied->getLastTrivalEvent();
+        }
+
+        if (pLastTrivalEvent)
+        {
+            return pLastTrivalEvent->getEventTrival(true)->getId();
+        }
+        else {
+            int32 ret = m_cBase.getTrivalIdLast();
             if (ret >= 0) {
-                MY_VERIFY(m_cBase.getTime() > 0); //we presume timestamp must e attached in our user case
+                MY_VERIFY(m_cBase.getTime_ms() > 0); //we presume timestamp must e attached in our user case
             }
 
             return ret;
         }
     };
 
-    //return < 0 means empty, no valid data inside
-    int32 getPusherIdLast() const
+
+    bool isGameEndForLastCoreState() const
     {
-        const FMyMJEventWithTimeStampBaseCpp* pElemLast = NULL;
+        const FMyMJEventWithTimeStampBaseCpp* pLastCorePusherEvent = NULL;
 
         if (IsValid(m_pEventsApplyingAndApplied)) {
-            pElemLast = m_pEventsApplyingAndApplied->getLast();
+            pLastCorePusherEvent = m_pEventsApplyingAndApplied->getLastCorePusherEvent();
         }
 
-        if (pElemLast)
+        if (pLastCorePusherEvent)
         {
-            const FMyMJGamePusherResultCpp* pResult = pElemLast->getPusherResult(true);
-            return pResult->getPusherIdLast();
-        }
-        else {
-            int32 ret = m_cBase.getCoreDataRefConst().m_iPusherIdLast;
-            if (ret >= 0) {
-                MY_VERIFY(m_cBase.getTime() > 0); //we presume timestamp must e attached in our user case
-            }
-
-            return ret;
-        }
-    };
-
-    //all data's first id, not first event's id
-    int32 getGameIdFirst() const
-    {
-        if (m_cBase.getCoreDataRefConst().m_iGameId >= 0) {
-            return m_cBase.getCoreDataRefConst().m_iGameId;
-        }
-        else {
-            if (IsValid(m_pEventsApplyingAndApplied)) {
-                int32 l = m_pEventsApplyingAndApplied->getCount(NULL);
-                if (l > 0) {
-                    return m_pEventsApplyingAndApplied->peekRefAt(0).getPusherResult(true)->getGameId();
-                }
-            }
-
-            return -1;
-
-        }
-    };
-
-    //all data's first id, not first event's id
-    int32 getPusherIdFirst() const
-    {
-        if (m_cBase.getCoreDataRefConst().m_iPusherIdLast >= 0) {
-            return m_cBase.getCoreDataRefConst().m_iPusherIdLast;
-        }
-        else {
-            if (IsValid(m_pEventsApplyingAndApplied)) {
-                int32 l = m_pEventsApplyingAndApplied->getCount(NULL);
-                if (l > 0) {
-                    return m_pEventsApplyingAndApplied->peekRefAt(0).getPusherResult(true)->getPusherIdLast();
-                }
-            }
-
-            return -1;
-
-        }
-    };
-
-
-    bool isGameEndForLastState() const
-    {
-        const FMyMJEventWithTimeStampBaseCpp* pElemLast = NULL;
-
-        if (IsValid(m_pEventsApplyingAndApplied)) {
-            pElemLast = m_pEventsApplyingAndApplied->getLast();
-        }
-
-        if (pElemLast)
-        {
-            const FMyMJGamePusherResultCpp* pResult = pElemLast->getPusherResult(true);
+            const FMyMJGamePusherResultCpp* pResult = pLastCorePusherEvent->getPusherResult(true);
             return pResult->isGameEndDelta();
         }
         else {
             int32 ret = m_cBase.getCoreDataRefConst().m_iPusherIdLast;
             if (ret >= 0) {
-                MY_VERIFY(m_cBase.getTime() > 0); //we presume timestamp must e attached in our user case
+                MY_VERIFY(m_cBase.getTime_ms() > 0); //we presume timestamp must e attached in our user case
                 return m_cBase.getCoreDataRefConst().m_eGameState == MyMJGameStateCpp::GameEnd;
             }
         }
 
         return false;
     };
+    */
 
-    //unit is ms, resolved
-    uint32 getLastEventEndTime() const;
+    //in most cases, we care about only deltas
+    
+    //unit is ms
+    void getFullAndDeltaLastData(uint32 *pOutLastEventId, uint32 *pOutLastEndTime) const;
 
-    bool isReadyToGiveNextPusherResult(uint32 uiServerWorldTime_resolved_ms) const;
-    void addPusherResult(const FMyMJEventDataDeltaDurCfgBaseCpp &inEventDeltaDurCfg, const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_resolved_ms);
+    bool isReadyToGiveNextEvent(uint32 uiServerWorldTime_ms) const;
 
-    //enable merging is good, let client have more chance to buffer data
-    //return true if new data merged
-    bool mergeDataFromOther(const UMyMJDataSequencePerRoleCpp& other);
+    //return the new added event's id
+    uint32 addPusherResult(const FMyMJCoreRelatedEventCorePusherCfgCpp &inEventCorePusherCfg, const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms);
+
 
     void doTestChange()
     {
@@ -874,19 +1173,19 @@ public:
             }
         }
         */
-        if (IsValid(m_pEventsApplyingAndApplied)) {
-            m_pEventsApplyingAndApplied->m_iTest++;
+        if (IsValid(m_pDeltaDataEvents)) {
+            m_pDeltaDataEvents->m_iTest++;
         }
     };
 
     FString genDebugMsg()
     {
-        const FMyMJCoreDataPublicCpp& coreData = m_cBase.getCoreDataRefConst();
+        const FMyMJCoreDataPublicCpp& coreData = m_cFullData.getCoreDataRefConst();
         //int32 l = m_pEventsApplyingAndApplied->getCount(NULL);
-        FString ret = FString::Printf(TEXT("role %d, base time %d [%d:%d:%d:%d], m_pEventsApplyingAndApplied valid %d."), (uint8)m_eRole, m_cBase.getTime(), coreData.m_iGameId, coreData.m_iPusherIdLast, coreData.m_iActionGroupId, (uint8)coreData.m_eGameState, IsValid(m_pEventsApplyingAndApplied));
-        if (IsValid(m_pEventsApplyingAndApplied)) {
-            int32 l = m_pEventsApplyingAndApplied->getCount(NULL);
-            ret += FString::Printf(TEXT("event count %d, event's m_iTest %d."), l, m_pEventsApplyingAndApplied->m_iTest);
+        FString ret = FString::Printf(TEXT("role %d, base time %d [%d:%d:%d:%d], m_pEventsApplyingAndApplied valid %d."), (uint8)m_cFullData.getRole(), m_cFullData.getTime_ms(), coreData.m_iGameId, coreData.m_iPusherIdLast, coreData.m_iActionGroupId, (uint8)coreData.m_eGameState, IsValid(m_pDeltaDataEvents));
+        if (IsValid(m_pDeltaDataEvents)) {
+            int32 l = m_pDeltaDataEvents->getCount(NULL);
+            ret += FString::Printf(TEXT("event count %d, event's m_iTest %d."), l, m_pDeltaDataEvents->m_iTest);
         }
         //for (int32 i = 0; i < l; i++) {
             //const FMyMJEventWithTimeStampBaseCpp& e = m_pEventsApplyingAndApplied->peekRefAt(i);
@@ -896,85 +1195,16 @@ public:
         return ret;
     };
 
-    inline const FMyMJDataStructWithTimeStampBaseCpp& getBase() const
+    inline const FMyMJDataStructWithTimeStampBaseCpp& getFullData() const
     {
-        return m_cBase;
+        return m_cFullData;
     };
 
-    //will assert if out of range
-    inline const FMyMJEventWithTimeStampBaseCpp& peekEventRefAt(int32 idx) const
+    //warn: may return NULL if not replicated yet
+    inline const UMyMJGameEventCycleBuffer* getDeltaDataEvents(bool bVerifyValid = false) const
     {
-        return m_pEventsApplyingAndApplied->peekRefAt(idx);
-    };
-
-    //will assert if out of range
-    inline FMyMJEventWithTimeStampBaseCpp& getEventRefAt(int32 idx)
-    {
-        return const_cast<FMyMJEventWithTimeStampBaseCpp&>(peekEventRefAt(idx));
-    };
-
-    //just like remove, but info goes to base
-    void squashEventsToBase(int32 count)
-    {
-        if (!IsValid(m_pEventsApplyingAndApplied)) {
-            return;
-        }
-
-        MY_VERIFY(count <= m_pEventsApplyingAndApplied->getCount(NULL));
-        for (int32 i = 0; i < count; i++) {
-            const FMyMJEventWithTimeStampBaseCpp& cEvent = m_pEventsApplyingAndApplied->peekRefAt(0);
-            uint32 uiEndTime = cEvent.getEndTime();
-
-            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's squashing Events, base %d : %d."), (uint8)m_eRole, m_cBase.getCoreDataRefConst().m_iGameId, m_cBase.getCoreDataRefConst().m_iPusherIdLast);
-
-            const FMyMJGamePusherResultCpp* pPusherResult = cEvent.getPusherResult(true);
-            m_cAccessor.applyPusherResult(*pPusherResult);
-
-            if (uiEndTime > 0) {
-                m_cBase.setTime(uiEndTime);
-            }
-
-            if (pPusherResult->m_aResultBase.Num() > 0) {
-                m_iEventsBasePusherCount--;
-            }
-
-            m_pEventsApplyingAndApplied->removeFromHead(1);
-        }
-
-        //m_cBaseTest2 = m_cBase;
-    };
-
-    inline
-    int32 getEventCount() const
-    {
-        if (!IsValid(m_pEventsApplyingAndApplied)) {
-            MY_VERIFY(false);
-        }
-        return m_pEventsApplyingAndApplied->getCount(NULL);
-    };
-
-    inline
-    void resizeEvents(int32 newSize)
-    {
-        m_cBase.reset();
-        if (IsValid(m_pEventsApplyingAndApplied)) {
-            m_pEventsApplyingAndApplied->resize(newSize);
-        }
-        markDirtyForRep();
-    }
-
-    inline
-    const UMyMJGameEventCycleBuffer& getEventsRef() const
-    {
-        return *getEvents(true);
-    };
-
-    inline 
-        const UMyMJGameEventCycleBuffer* getEvents(bool bVerifyValid) const
-    {
-
-        if (IsValid(m_pEventsApplyingAndApplied)) {
-            return m_pEventsApplyingAndApplied;
+        if (IsValid(m_pDeltaDataEvents)) {
+            return m_pDeltaDataEvents;
         }
         else {
             if (bVerifyValid) {
@@ -982,13 +1212,58 @@ public:
             }
             return NULL;
         }
+    };
 
+    inline MyMJGameRoleTypeCpp getRole() const
+    {
+        return m_eRole;
+    };
+
+    inline uint32 getServerWorldTime_ms() const
+    {
+        return m_uiServerWorldTime_ms;
+    };
+
+    inline void setServerWorldTime_ms(uint32 uiServerWorldTime_ms)
+    {
+        m_uiServerWorldTime_ms = uiServerWorldTime_ms;
+    };
+
+    inline
+    void resizeEvents(int32 newSize)
+    {
+        MY_VERIFY(m_cFullData.getIdEventApplied() == 0);
+        m_cFullData.reset();
+
+        if (IsValid(m_pDeltaDataEvents)) {
+            MY_VERIFY(m_pDeltaDataEvents->getCount(NULL) == 0);
+            m_pDeltaDataEvents->resize(newSize);
+        }
+        markDirtyForRep();
+    }
+
+    void setHelerIdEventConsumed(uint32 uiHelerIdEventConsumed)
+    {
+        m_uiHelerIdEventConsumed = uiHelerIdEventConsumed;
+    };
+
+    bool tryUpdateFullDataFromExternal(MyMJGameRoleTypeCpp eRole, const FMyMJDataStructWithTimeStampBaseCpp& cNewFullData)
+    {
+        if (m_bHelperProduceMode) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("this sequence is in produce mode, so it's full data can't be directly set."));
+            return false;
+        }
+
+        if (m_eRole != eRole) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("role is different, m_eRole %d, eRole %d."), (uint8)m_eRole, (uint8)eRole);
+            return false;
+        }
+
+        m_cFullData = cNewFullData;
+        return true;
     };
 
     FMyMJDataSeqReplicatedDelegate m_cReplicateDelegate;
-
-    UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "role"))
-        MyMJGameRoleTypeCpp m_eRole;
 
 protected:
 
@@ -1000,66 +1275,86 @@ protected:
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
     //virtual void PostInitProperties() override;
 
-    //make the state move forward
-    void trySquashBaseAndEvents(uint32 uiServerWorldTime_resolved_ms);
-
-    UFUNCTION()
-    void OnRep_Base()
+    //just like remove, but info keepet to full data if behavior type specified in init
+    void squashDeltaDataEvents(int32 count)
     {
-        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's base replicated,  %d : %d."), (uint8)m_eRole, m_cBase.getCoreDataRefConst().m_iGameId, m_cBase.getCoreDataRefConst().m_iPusherIdLast);
+        if (!IsValid(m_pDeltaDataEvents)) {
+            return;
+        }
 
-        //we got real values, notify it
-        m_cReplicateDelegate.Broadcast(m_eRole);
+        MY_VERIFY(count <= m_pDeltaDataEvents->getCount(NULL));
+
+        if (m_iFullDataRecordType == MyMJDataSequencePerRoleFullDataRecordTypeBottom) {
+            for (int32 i = 0; i < count; i++) {
+
+                const FMyMJEventWithTimeStampBaseCpp& cEvent = m_pDeltaDataEvents->peekRefAt(i);
+                m_cFullData.applyEvent(m_cAccessor, cEvent);
+
+            }
+        }
+
+        m_pDeltaDataEvents->removeFromHead(count);
+
     };
 
-    UFUNCTION()
-    void OnRep_EventsPointer()
-    {
+    //make the state move forward
+    void trySquashBaseAndEvents(uint32 uiServerWorldTime_ms);
+
+
+    //UFUNCTION()
+    //void OnRep_DeltaDataEventsPointer()
+    //{
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's events replicated."), (uint8)m_eRole);
         //m_cReplicateDelegate.Broadcast(this, 1);
 
-        if (IsValid(m_pEventsApplyingAndApplied)) {
-            m_pEventsApplyingAndApplied->m_cUpdateNotifier.Clear();
-            m_pEventsApplyingAndApplied->m_cUpdateNotifier.AddUObject(this, &UMyMJDataSequencePerRoleCpp::OnRep_EventsContent);
-        }
+        //if (IsValid(m_pDeltaDataEvents)) {
+            //m_pDeltaDataEvents->m_cUpdateNotifier.Clear();
+            //m_pDeltaDataEvents->m_cUpdateNotifier.AddUObject(this, &UMyMJDataSequencePerRoleCpp::OnRep_DeltaDataEventsContent);
+        //}
 
-    };
+    //};
 
-    UFUNCTION()
-    void OnRep_EventsContent(int32 iExtra)
-    {
+    //UFUNCTION()
+    //void OnRep_DeltaDataEventsContent(int32 iExtra)
+    //{
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's events replicated."), (uint8)m_eRole);
-        m_cReplicateDelegate.Broadcast(m_eRole);
+        //m_cReplicateDelegate.Broadcast();
+    //};
+
+    //design is simple: timestamp can represent the state's key, that means same key always have same content
+    UFUNCTION()
+    void OnRep_ServerWorldTime_ms()
+    {
+        m_cReplicateDelegate.Broadcast();
     };
 
     //following is the core data, representing
 
-    //driven by @m_cEventsApplyingAndApplied
-    UPROPERTY(ReplicatedUsing = OnRep_Base)
-    FMyMJDataStructWithTimeStampBaseCpp m_cBase;
+    UPROPERTY(Replicated)
+    FMyMJDataStructWithTimeStampBaseCpp m_cFullData;
 
     //focused deltas, base is only used when merge or pull
-    UPROPERTY(ReplicatedUsing = OnRep_EventsPointer)
-    UMyMJGameEventCycleBuffer* m_pEventsApplyingAndApplied;
+    UPROPERTY(Replicated)
+    UMyMJGameEventCycleBuffer* m_pDeltaDataEvents;
 
+    UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "role"))
+    MyMJGameRoleTypeCpp m_eRole;
 
+    UPROPERTY(ReplicatedUsing = OnRep_ServerWorldTime_ms)
+    uint32 m_uiServerWorldTime_ms;
 
-    //The base state of deltas(time of start, not end), since the delta is one way to apply(can not revert)
-    //we never store more than one base, this means when base change, all of its previouse delta data will be cleared!
-    //UMyMJDataForMirrorModeCpp *m_pBase;
     FMyMJDataAccessorCpp m_cAccessor;
 
-    int32 m_iRepKeyOfState;
+    uint32 m_uiHelerIdEventConsumed;
 
-    int32 m_iHelperGameIdLast;
-    int32 m_iHelperPusherIdLast;
-    int32 m_iEventsBasePusherCount;
+    bool m_bHelperProduceMode;
+
+    int32 m_iFullDataRecordType;
+
+    int32 m_iRepKeyOfState;
 };
 
-#define FMyMJDataAtOneMomentCpp_eventApplyWay_Normal      (0)
-#define FMyMJDataAtOneMomentCpp_eventApplyWay_ForApplyNow (1)
-#define FMyMJDataAtOneMomentCpp_eventApplyWay_ApplyAhead  (2)
-
+/*
 USTRUCT(BlueprintType)
 struct FMyMJDataAtOneMomentCpp
 {
@@ -1070,166 +1365,90 @@ public:
     FMyMJDataAtOneMomentCpp()
     {
         //m_eRole = MyMJGameRoleTypeCpp::Max;
-        reinit(MyMJGameRoleTypeCpp::Observer);
+        reinit();
     };
 
-    void reinit(MyMJGameRoleTypeCpp eRole)
+    void reinit()
     {
-        m_cAccessor.setupTempMode(&m_cBase, eRole);
+        m_cAccessor.setupDataExt(&m_cBase);
         clear();
     };
 
     void clear()
     {
         m_cBase.reset();
-        m_aEventApplying.Reset();
-        m_bEventApplyingAppliedAhead = false;
+        m_uiMinServerWorldTimeForNextEvent_ms = 0;
     };
 
     //return < 0 means empty, no valid data inside
     int32 getGameIdLast() const
     {
-        const FMyMJEventWithTimeStampBaseCpp* pElemLast = NULL;
-        if (m_aEventApplying.Num() > 0) {
-            pElemLast = &m_aEventApplying[0];
-        }
 
-        if (pElemLast)
-        {
-            const FMyMJGamePusherResultCpp* pResult = pElemLast->getPusherResult(true);
-            return pResult->getGameId();
-        }
-        else {
-            int32 ret = m_cBase.getCoreDataRefConst().m_iGameId;
-            if (ret >= 0) {
-                MY_VERIFY(m_cBase.getTime() > 0); //we presume timestamp must e attached in our user case
-            }
-
-            return ret;
-        }
-    };
-
-    //return < 0 means empty, no valid data inside
-    int32 getPusherIdLast() const
-    {
-        const FMyMJEventWithTimeStampBaseCpp* pElemLast = NULL;
-        if (m_aEventApplying.Num() > 0) {
-            pElemLast = &m_aEventApplying[0];
-        }
-
-        if (pElemLast)
-        {
-            const FMyMJGamePusherResultCpp* pResult = pElemLast->getPusherResult(true);
-            return pResult->getPusherIdLast();
-        }
-        else {
-            int32 ret = m_cBase.getCoreDataRefConst().m_iPusherIdLast;
-            if (ret >= 0) {
-                MY_VERIFY(m_cBase.getTime() > 0); //we presume timestamp must e attached in our user case
-            }
-
-            return ret;
-        }
-    };
-
-    void doTestChange()
-    {
-        m_cBase.setTime(m_cBase.getTime() + MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(1000));
-        if (m_aEventApplying.Num() > 0) {
-            m_aEventApplying.Reset();
-        }
-        else {
-            int32 idx = m_aEventApplying.Emplace();
-            m_aEventApplying[idx].setStartTime(MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(5000));
-            m_aEventApplying[idx].setDuration(MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(1500));
-        }
-    };
-
-    FString genDebugMsg()
-    {
-        FString ret = FString::Printf(TEXT("role %d, base time %d, event applying Num %d."), (uint8)getRole(), m_cBase.getTime(), m_aEventApplying.Num());
-        if (m_aEventApplying.Num() > 0) {
-            ret += FString::Printf(TEXT(" event time start %d, dur %d."), m_aEventApplying[0].getStartTime(), m_aEventApplying[0].getDuration());
+        int32 ret = m_cBase.getCoreDataRefConst().m_iGameId;
+        if (ret >= 0) {
+            MY_VERIFY(m_cBase.getTime_ms() > 0); //we presume timestamp must e attached in our user case
         }
 
         return ret;
     };
 
-
-    //unit is ms, resolved
-    uint32 getLastEventEndTime() const
+    //return < 0 means empty, no valid data inside
+    int32 getPusherIdLast() const
     {
-        uint32 uiTimeBase = m_cBase.getTime();
-        uint32 uiTimeDeltas = 0;
-        if (m_aEventApplying.Num() > 0) {
-            m_aEventApplying[0].getEndTime();
+
+        int32 ret = m_cBase.getCoreDataRefConst().m_iPusherIdLast;
+        if (ret >= 0) {
+            MY_VERIFY(m_cBase.getTime_ms() > 0); //we presume timestamp must e attached in our user case
         }
 
-        if (uiTimeDeltas > 0) {
+        return ret;
+
+    };
+
+    void doTestChange()
+    {
+        m_cBase.setTime_ms(m_cBase.getTime_ms() + (1000));
+
+    };
+
+    FString genDebugMsg()
+    {
+        FString ret = FString::Printf(TEXT("role %d, base time %s."), (uint8)getRole(), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_cBase.getTime_ms()));
+
+        return ret;
+    };
+
+
+    //unit is ms, resolved, not resolved
+    uint32 getEndTime_unresolved_ms() const
+    {
+        uint32 uiTimeBase = m_cBase.getTime_ms();
+
+        if (m_uiMinServerWorldTimeForNextEvent_ms > 0) {
             //if you have delta
-            if (uiTimeDeltas < uiTimeBase) {
-                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("timestamp chaos: base %d, delta %d."), uiTimeBase, uiTimeDeltas);
+            if (m_uiMinServerWorldTimeForNextEvent_ms < uiTimeBase) {
+                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("timestamp chaos: base %s, delta %s."), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiTimeBase), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiMinServerWorldTimeForNextEvent_ms));
                 MY_VERIFY(false);
             }
         }
 
-        return uiTimeBase > uiTimeDeltas ? uiTimeBase : uiTimeDeltas;
+        return uiTimeBase > m_uiMinServerWorldTimeForNextEvent_ms ? uiTimeBase : m_uiMinServerWorldTimeForNextEvent_ms;
     };
 
 
-    bool isReadyToGiveNextPusherResult(uint32 uiServerWorldTime_resolved_ms) const
+    bool isReadyToGiveNextPusherResult(uint32 uiServerWorldTime_ms) const
     {
-        if (uiServerWorldTime_resolved_ms == 0) {
-            return false;
-        }
-
-        bool bRet = uiServerWorldTime_resolved_ms >= getLastEventEndTime(); //use >= to allow apply multiple one time
+        bool bRet = uiServerWorldTime_ms >= m_uiMinServerWorldTimeForNextEvent_ms; //use >= to allow apply multiple one time
 
         return bRet;
     };
 
-    //@applyWay: 0 
-    void applyEvent(const FMyMJEventWithTimeStampBaseCpp& cEvent, int32 applyWay)
+    void applyEvent(const FMyMJEventWithTimeStampBaseCpp& cEvent)
     {
-        prepareFOrNextEvent();
-
-        bool bApplyNow = true;
-        if (cEvent.getDuration() > 0) {
-
-            if (applyWay == FMyMJDataAtOneMomentCpp_eventApplyWay_Normal) {
-                int32 idx = m_aEventApplying.Emplace();
-                MY_VERIFY(idx == 0);
-                m_aEventApplying[idx] = cEvent;
-
-                m_bEventApplyingAppliedAhead = false;
-                bApplyNow = false;
-            }
-            else if (applyWay == FMyMJDataAtOneMomentCpp_eventApplyWay_ForApplyNow)
-            {
-
-            }
-            else if (applyWay == FMyMJDataAtOneMomentCpp_eventApplyWay_ApplyAhead)
-            {
-                int32 idx = m_aEventApplying.Emplace();
-                MY_VERIFY(idx == 0);
-                m_aEventApplying[idx] = cEvent;
-
-                m_bEventApplyingAppliedAhead = true;
-                bApplyNow = true;
-            }
-            else {
-                MY_VERIFY(false);
-            }
-
-        }
-
-
-        if (bApplyNow) {
-            m_cAccessor.applyPusherResult(*cEvent.getPusherResult(true));
-            uint32 uiEndTime = cEvent.getEndTime();
-            if (uiEndTime > 0) {
-                m_cBase.setTime(uiEndTime);
-            }
+       m_cAccessor.applyPusherResult(*cEvent.getPusherResult(true), NULL);
+       if (cEvent.getDuration_ms() > 0) {
+            uint32 uiEndTime = cEvent.getEndTime_ms();
+            m_uiMinServerWorldTimeForNextEvent_ms = uiEndTime;
         }
 
     };
@@ -1240,11 +1459,12 @@ public:
         m_cBase = cBase;
     };
 
+    //warning: not checked whether the time passed
     inline
     bool isGameEndOrNotStarted() const
     {
         bool bNotStated = getGameIdLast() < 0;
-        bool bGameEnd = m_cBase.getCoreDataRefConst().m_eGameState == MyMJGameStateCpp::GameEnd || (m_aEventApplying.Num() > 0 && m_aEventApplying[0].getPusherResult(true)->isGameEndDelta());
+        bool bGameEnd = m_cBase.getCoreDataRefConst().m_eGameState == MyMJGameStateCpp::GameEnd;
         return bNotStated || bGameEnd;
     };
 
@@ -1258,16 +1478,6 @@ public:
     FMyMJDataStructWithTimeStampBaseCpp& getBaseRef()
     {
         return m_cBase;
-    };
-
-    inline
-    const FMyMJEventWithTimeStampBaseCpp* getEventApplyingInProgress() const
-    {
-        if (m_aEventApplying.Num() > 0 && m_bEventApplyingAppliedAhead == false) {
-            return &m_aEventApplying[0];
-        }
-
-        return NULL;
     };
 
     inline MyMJGameRoleTypeCpp getRole() const
@@ -1285,39 +1495,18 @@ public:
         return m_cAccessor;
     };
 
-    FMyMJServerClientTimeBondCpp m_cTimeBond;
 
 protected:
-
-    void prepareFOrNextEvent()
-    {
-        if (!m_bEventApplyingAppliedAhead && m_aEventApplying.Num() > 0) {
-            MY_VERIFY(m_aEventApplying.Num() == 1);
-
-            const FMyMJEventWithTimeStampBaseCpp& cEvent = m_aEventApplying[0];
-            m_cAccessor.applyPusherResult(*cEvent.getPusherResult(true));
-
-            uint32 uiEndTime = cEvent.getEndTime();
-            if (uiEndTime > 0) {
-                m_cBase.setTime(uiEndTime);
-            }
-
-            m_aEventApplying.Reset();
-            m_bEventApplyingAppliedAhead = false;
-        }
-    };
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "data base"))
     FMyMJDataStructWithTimeStampBaseCpp m_cBase;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "data delta applying"))
-    TArray<FMyMJEventWithTimeStampBaseCpp> m_aEventApplying;
-
-    //It is possible we apply the event before timestamp, to let visualization easior
-    bool m_bEventApplyingAppliedAhead;
+    //helper to let it wait a while and then allow to apply next event
+    uint32 m_uiMinServerWorldTimeForNextEvent_ms;
 
     FMyMJDataAccessorCpp m_cAccessor;
 };
+*/
 
 /*
 //Different game types have different datas, for a turn based one, history is important
@@ -1453,15 +1642,9 @@ class MYONLINECARDGAME_API UMyMJDataAllCpp : public UActorComponent
 
 public:
 
-    //we don't create members by default, since in client replication will do it, saves a memory allocate operation
-    UMyMJDataAllCpp() : Super()
-    {
-        m_iTest = 0;
-        m_iRepObjIdBase = 200;
-        m_iRepKeyOfState = 1;
+    UMyMJDataAllCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-        m_bShowDebugLog = false;
-    };
+    virtual ~UMyMJDataAllCpp();
 
     //virtual void PostInitProperties() override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
@@ -1498,18 +1681,60 @@ public:
 
     };
 
-    void createSubObjects()
+    void clear()
     {
+        for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++)
+        {
+            UMyMJDataSequencePerRoleCpp* pSeq = m_aDatas[i];
+            if (!IsValid(pSeq)) {
+                continue;
+            }
+
+            pSeq->clear();
+        }
+
+        m_mHelerReplicatePCServerTimeMap.Reset();
+        markDirtyForRep();
+    };
+
+    /*
+    void createSubObjects(bool bInConstructor)
+    {
+
         m_aDatas.Reset();
         for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
-            if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper || i == 5) {
-                UMyMJDataSequencePerRoleCpp *pNew = NewObject<UMyMJDataSequencePerRoleCpp>(this);
-                pNew->reinit((MyMJGameRoleTypeCpp)i);
-                m_aDatas.Emplace(pNew);
+            //if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper || i == 5) {
+
+            UMyMJDataSequencePerRoleCpp *pNew;
+            if (bInConstructor) {
+                FString name = FString::Printf(TEXT("mj_data_%d"), i);
+                pNew = CreateDefaultSubobject<UMyMJDataSequencePerRoleCpp>(FName(*name));
             }
             else {
-                m_aDatas.Emplace((UMyMJDataSequencePerRoleCpp *)NULL);
+                pNew = NewObject<UMyMJDataSequencePerRoleCpp>(this);
             }
+
+            pNew->init((MyMJGameRoleTypeCpp)i);
+            m_aDatas.Emplace(pNew);
+            //}
+            //else {
+                //m_aDatas.Emplace((UMyMJDataSequencePerRoleCpp *)NULL);
+            //}
+        }
+    };
+    */
+
+    void setSubobjectBehaviors(int32 iFullDataRecordType, bool bHelperProduceMode)
+    {
+        for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++)
+        {
+            UMyMJDataSequencePerRoleCpp* pSeq = m_aDatas[i];
+            if (!IsValid(pSeq)) {
+                continue;
+            }
+
+            pSeq->setFullDataRecordType(iFullDataRecordType);
+            pSeq->setHelperProduceMode(bHelperProduceMode);
         }
     };
 
@@ -1527,21 +1752,21 @@ public:
         for (int32 i = 0; i < l; i++) {
             if (IsValid(m_aDatas[i])) {
                 m_aDatas[i]->markDirtyForRep();
-                MY_VERIFY(m_aDatas[i]->getEventsRef().verifyData(false) == 0);
+                MY_VERIFY(m_aDatas[i]->getDeltaDataEvents(true)->verifyData(false) == 0);
             }
         }
         markDirtyForRep();
     };
 
     inline
-    bool isReadyToGiveNextPusherResult(uint32 uiServerWorldTime_resolved_ms) const
+    bool isReadyToGiveNextEvent(uint32 uiServerWorldTime_ms) const
     {
         MY_VERIFY(m_aDatas.Num() == (uint8)MyMJGameRoleTypeCpp::Max);
         MY_VERIFY(IsValid(m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper]));
-        return m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper]->isReadyToGiveNextPusherResult(uiServerWorldTime_resolved_ms);
+        return m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper]->isReadyToGiveNextEvent(uiServerWorldTime_ms);
     };
 
-    void addPusherResult(const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_resolved_ms)
+    void addPusherResult(const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms)
     {
         int32 l = m_aDatas.Num();
         MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
@@ -1555,17 +1780,25 @@ public:
 
             if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper) {
                 MY_VERIFY(IsValid(m_aDatas[i]));
-                m_aDatas[i]->addPusherResult(m_cEventDeltaDurCfg, cPusherResult, uiServerWorldTime_resolved_ms);
+                uint32 idEventNew = m_aDatas[i]->addPusherResult(m_cEventCorePusherCfg, cPusherResult, uiServerWorldTime_ms);
+
+                //check event id here, time_ms check should goto actor
+                if (idEventNew >= MyUInt32IdWarnBottomValue && idEventNew < (MyUInt32IdWarnBottomValue + 2)) {
+
+                    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("uint32 id is too large as %d, require reboot!"), idEventNew);
+
+                    //Todo: set flag of reboot
+                }
             }
             else {
                 MyMJGameRoleTypeCpp eRole = (MyMJGameRoleTypeCpp)i;
                 if (!IsValid(m_aDatas[i])) {
                     continue;
                 }
-                MY_VERIFY(m_aDatas[i]->m_eRole == eRole);
+                MY_VERIFY(m_aDatas[i]->getRole() == eRole);
 
                 cPusherResult.copyWithRoleFromSysKeeperRole(eRole, cPusherNew);
-                m_aDatas[i]->addPusherResult(m_cEventDeltaDurCfg, cPusherNew, uiServerWorldTime_resolved_ms);
+                m_aDatas[i]->addPusherResult(m_cEventCorePusherCfg, cPusherNew, uiServerWorldTime_ms);
             }
         }
     };
@@ -1602,7 +1835,29 @@ public:
         m_bShowDebugLog = bShow;
     }
 
-    FMyMJDataSeqReplicatedDelegate m_cReplicateDelegate;
+    inline uint32 getServerWorldTime_ms() const
+    {
+        UMyMJDataSequencePerRoleCpp* pSeq = m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper];
+        if (IsValid(pSeq)) {
+            return pSeq->getServerWorldTime_ms();
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("syskeeper's seq is not valid!, %p"), pSeq);
+            return 0;
+        }
+    };
+
+    inline void setServerWorldTime_ms(uint32 uiServerWorldTime_ms)
+    {
+
+        int32 l = m_aDatas.Num();
+        for (int32 i = 0; i < l; i++) {
+            UMyMJDataSequencePerRoleCpp* pSeq = m_aDatas[i];
+            if (IsValid(pSeq)) {
+                pSeq->setServerWorldTime_ms(uiServerWorldTime_ms);
+            }
+        }
+    };
 
     UPROPERTY(Replicated)
     int32 m_iTest;
@@ -1621,16 +1876,10 @@ protected:
                 continue;
             }
 
-            pSeq->m_cReplicateDelegate.Clear();
-            pSeq->m_cReplicateDelegate.AddUObject(this, &UMyMJDataAllCpp::onDataSeqReplicated);
+            //pSeq->m_cReplicateDelegate.Clear();
+            //pSeq->m_cReplicateDelegate.AddUObject(this, &UMyMJDataAllCpp::onDataSeqReplicated);
         }
     }
-
-    void onDataSeqReplicated(MyMJGameRoleTypeCpp eRole)
-    {
-        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onDataSeqReplicated(), role %d."), (uint8)pSeq->m_eRole);
-        m_cReplicateDelegate.Broadcast(eRole);
-    };
 
 
     //basically we can make visual and logic unified by ignoring old status, but turn based game, history is also important, so we divide them, logic tells the latest state,
@@ -1645,8 +1894,15 @@ protected:
     UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Datas, meta = (DisplayName = "datas"))
     TArray<UMyMJDataSequencePerRoleCpp *> m_aDatas;
 
+    //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "test Seq"))
+    //UMyMJDataSequencePerRoleCpp *m_pTestSeq;
 
-    FMyMJEventDataDeltaDurCfgBaseCpp m_cEventDeltaDurCfg;
+    //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "test Buffer"))
+    //UMyMJGameEventCycleBuffer *m_pTestBuffer;
+
+    TMap<uint32, uint32> m_mHelerReplicatePCServerTimeMap;
+
+    FMyMJCoreRelatedEventCorePusherCfgCpp m_cEventCorePusherCfg;
 
     //UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "datas"))
     //TArray<UMyMJDataAtOneMomentPerRoleCpp *> m_aDatas;

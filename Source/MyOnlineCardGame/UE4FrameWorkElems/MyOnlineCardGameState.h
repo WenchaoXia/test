@@ -5,7 +5,7 @@
 #include "GameFramework/GameState.h"
 #include "MJBPEncap/MyMJGameCoreBP.h"
 
-#include "MyOnlineCardGameStateCpp.generated.h"
+#include "MyOnlineCardGameState.generated.h"
 
 /**
  * 

@@ -9,11 +9,11 @@
 #include "Engine/NetConnection.h"
 #include "GameFramework/PlayerController.h"
 
-#include "MyMJGamePlayerController.h"
+#include "MyMJGameViewerPawnBase.h"
 
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
-FMyMJEventDataDeltaDurCfgBaseCpp::FMyMJEventDataDeltaDurCfgBaseCpp()
+FMyMJCoreRelatedEventCorePusherCfgCpp::FMyMJCoreRelatedEventCorePusherCfgCpp()
 {
     m_uiGameStarted = 1000;
 
@@ -42,7 +42,7 @@ FMyMJEventDataDeltaDurCfgBaseCpp::FMyMJEventDataDeltaDurCfgBaseCpp()
     m_uiGameEnded = 500;
 };
 
-uint32 FMyMJEventDataDeltaDurCfgBaseCpp::helperGetDeltaDur(const FMyMJDataDeltaCpp& delta) const
+uint32 FMyMJCoreRelatedEventCorePusherCfgCpp::helperGetDeltaDur(const FMyMJDataDeltaCpp& delta) const
 {
     uint32 ret = 0;
     MyMJGamePusherTypeCpp ePusherType = delta.getType();
@@ -104,8 +104,40 @@ uint32 FMyMJEventDataDeltaDurCfgBaseCpp::helperGetDeltaDur(const FMyMJDataDeltaC
         ret = m_uiHuBornLocalCS;
     }
 
-    return MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(ret);
+    return (ret);
 }
+
+void FMyMJDataStructWithTimeStampBaseCpp::applyEvent(FMyMJDataAccessorCpp& cAccessor, const struct FMyMJEventWithTimeStampBaseCpp& cEvent)
+{
+    MY_VERIFY(cAccessor.isSetupped());
+
+    uint32 uiEndTime = cEvent.getEndTime_ms();
+    MY_VERIFY(uiEndTime > 0);
+
+    uint32 idLast = getIdEventApplied();
+    if (idLast != MyUIntIdDefaultInvalidValue) {
+        MY_VERIFY((idLast + 1) == cEvent.getIdEvent());
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's squashing Events, base %d : %d."), (uint8)m_eRole, m_cBase.getCoreDataRefConst().m_iGameId, m_cBase.getCoreDataRefConst().m_iPusherIdLast);
+
+    if (cEvent.getMainType() == MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult) {
+        const FMyMJGamePusherResultCpp* pPusherResult = cEvent.getPusherResult(true);
+        cAccessor.applyPusherResult(*pPusherResult, NULL);
+    }
+    else if (cEvent.getMainType() == MyMJGameCoreRelatedEventMainTypeCpp::Trival) {
+        //Todo: add code to handle trival event
+    }
+    else {
+        MY_VERIFY(false);
+    }
+    
+    m_uiIdEventApplied = cEvent.getIdEvent();
+    MY_VERIFY(m_uiIdEventApplied != MyUIntIdDefaultInvalidValue);
+
+    setTime_ms(uiEndTime);
+};
+
 
 void UMyMJGameEventCycleBuffer::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
@@ -117,17 +149,37 @@ void UMyMJGameEventCycleBuffer::GetLifetimeReplicatedProps(TArray< FLifetimeProp
     DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_iSizeMax);
     DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_idxHead);
     DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_iCount);
-    DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_uiLastEventEndTime_data_unit);
+    DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_uiTimeRangeStart_ms);
+    DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_uiTimeRangeEnd_ms);
 
+    //DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_iHelperIdxLastCorePusherEvent);
+    //DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_iHelperIdxLastTrivalEvent);
+
+};
+
+
+
+UMyMJDataSequencePerRoleCpp::UMyMJDataSequencePerRoleCpp(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+{
+    m_iRepKeyOfState = 1;
+
+    m_pDeltaDataEvents = CreateDefaultSubobject<UMyMJGameEventCycleBuffer>(TEXT("Events Applying And Applied"));
+
+    m_eRole = MyMJGameRoleTypeCpp::Max;
+    m_iFullDataRecordType = MyMJDataSequencePerRoleFullDataRecordTypeInvalid;
+    m_bHelperProduceMode = false;
+
+    m_uiServerWorldTime_ms = 0;
 };
 
 void UMyMJDataSequencePerRoleCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME_CONDITION(UMyMJDataSequencePerRoleCpp, m_cFullData, COND_ReplayOnly);
+    DOREPLIFETIME(UMyMJDataSequencePerRoleCpp, m_pDeltaDataEvents);
     DOREPLIFETIME(UMyMJDataSequencePerRoleCpp, m_eRole);
-    DOREPLIFETIME(UMyMJDataSequencePerRoleCpp, m_cBase);
-    //DOREPLIFETIME(UMyMJDataSequencePerRoleCpp, m_cBaseTest2);
-    DOREPLIFETIME(UMyMJDataSequencePerRoleCpp, m_pEventsApplyingAndApplied);
+    DOREPLIFETIME(UMyMJDataSequencePerRoleCpp, m_uiServerWorldTime_ms);
 };
 
 /*
@@ -169,39 +221,107 @@ void UMyMJDataSequencePerRoleCpp::PostInitProperties()
 };
 */
 
-uint32 UMyMJDataSequencePerRoleCpp::getLastEventEndTime() const
+void UMyMJDataSequencePerRoleCpp::getFullAndDeltaLastData(uint32 *pOutLastEventId, uint32 *pOutLastEndTime) const
 {
 
-    uint32 uiTimeBase = m_cBase.getTime();
-    uint32 uiTimeDeltas = m_pEventsApplyingAndApplied->getLastEventEndTime();
+    uint32 id = 0, time = 0;
 
-    if (uiTimeDeltas > 0) {
-        //if you have delta
-        if (uiTimeDeltas < uiTimeBase) {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("timestamp chaos: base %d, delta %d."), uiTimeBase, uiTimeDeltas);
-            MY_VERIFY(false);
+    uint32 uiIdFull = getFullData().getIdEventApplied();
+    uint32 uiTimeFull = getFullData().getTime_ms();
+
+    const UMyMJGameEventCycleBuffer* pDelta = getDeltaDataEvents(true);
+    uint32 uiIdDeltas = 0;
+    const FMyMJEventWithTimeStampBaseCpp* pEventLast = pDelta->peekLast();
+    if (pEventLast) {
+        uiIdDeltas = pEventLast->getIdEvent();
+    }
+    uint32 uiTimeDeltas = pDelta->getTimeRangeEnd_ms();
+
+    bool bTimeChaos = false, bIdChaos = false;
+    if (m_iFullDataRecordType == MyMJDataSequencePerRoleFullDataRecordTypeNone) {
+        id = uiIdDeltas;
+        time = uiTimeDeltas;
+    }
+    else {
+        if (uiTimeDeltas > 0) {
+
+            //delta exist
+            MY_VERIFY(uiIdDeltas > 0);
+
+            if (m_iFullDataRecordType == MyMJDataSequencePerRoleFullDataRecordTypeBottom) {
+                if (uiIdDeltas < uiIdFull) {
+                    bIdChaos = true;
+                }
+                if (uiTimeDeltas < uiTimeFull) {
+                    bTimeChaos = true;
+                }
+            }
+            else if (m_iFullDataRecordType == MyMJDataSequencePerRoleFullDataRecordTypeTop) {
+                if (uiIdDeltas > uiIdFull) {
+                    bIdChaos = true;
+                }
+                if (uiTimeDeltas > uiTimeFull) {
+                    bTimeChaos = true;
+                }
+            }
+
+            id = uiIdDeltas;
+            time = uiTimeDeltas;
+        }
+        else {
+            //delta squashed,
+            MY_VERIFY(uiIdDeltas == 0);
+
+            id = uiIdFull;
+            time = uiTimeFull;
         }
     }
 
-    return uiTimeBase > uiTimeDeltas ? uiTimeBase : uiTimeDeltas;
+    if (bTimeChaos) {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("timestamp chaos: full %d, delta %d, m_iFullDataRecordType %d."), uiTimeFull, uiTimeDeltas, m_iFullDataRecordType);
+        MY_VERIFY(false);
+    }
+    if (bIdChaos) {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("event id chaos: full %d, delta %d, m_iFullDataRecordType %d."), uiIdFull, uiIdDeltas, m_iFullDataRecordType);
+        MY_VERIFY(false);
+    }
 
+    if (pOutLastEventId) {
+        *pOutLastEventId = id;
+    }
+
+    if (pOutLastEndTime) {
+        *pOutLastEndTime = time;
+    }
 }
 
-bool UMyMJDataSequencePerRoleCpp::isReadyToGiveNextPusherResult(uint32 uiServerWorldTime_resolved_ms) const
+bool UMyMJDataSequencePerRoleCpp::isReadyToGiveNextEvent(uint32 uiServerWorldTime_ms) const
 {
-    if (uiServerWorldTime_resolved_ms == 0) {
+    if (uiServerWorldTime_ms == 0) {
         return false;
     }
 
-    bool bRet = uiServerWorldTime_resolved_ms >= getLastEventEndTime(); //use >= to allow apply multiple one time
+    if (!m_bHelperProduceMode) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("this sequence is not in produce mode."));
+        return false;
+    }
 
-    return bRet;
+    uint32 endTime_ms;
+    getFullAndDeltaLastData(NULL, &endTime_ms);
+    return uiServerWorldTime_ms >= endTime_ms; //use >= to allow apply multiple one time
 }
 
-void UMyMJDataSequencePerRoleCpp::addPusherResult(const FMyMJEventDataDeltaDurCfgBaseCpp &inEventDeltaDurCfg, const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_resolved_ms)
+//always success, and the data may squash too fast resulting warning logs, which wll force client to do full sync later
+uint32 UMyMJDataSequencePerRoleCpp::addPusherResult(const FMyMJCoreRelatedEventCorePusherCfgCpp &inEventCorePusherCfg, const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms)
 {
-    MY_VERIFY(isReadyToGiveNextPusherResult(uiServerWorldTime_resolved_ms));
+    uint32 idEventLast;
+    getFullAndDeltaLastData(&idEventLast, NULL);
 
+    if (!m_bHelperProduceMode) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("this sequence is not in produce mode."));
+        MY_VERIFY(false);
+        return idEventLast;
+    }
 
     const FMyMJGamePusherResultCpp* pPusherResult = &cPusherResult;
 
@@ -215,28 +335,34 @@ void UMyMJDataSequencePerRoleCpp::addPusherResult(const FMyMJEventDataDeltaDurCf
     }
     */
 
-    uint32 dur_resolved_ms = 0;
+    uint32 dur_ms = 0;
 
     //only delta may have dur
     if (pPusherResult->m_aResultDelta.Num() > 0) {
         MY_VERIFY(pPusherResult->m_aResultDelta.Num() == 1);
 
         const FMyMJDataDeltaCpp& resultDelta = pPusherResult->m_aResultDelta[0];
-        dur_resolved_ms = inEventDeltaDurCfg.helperGetDeltaDur(resultDelta);
+        dur_ms = inEventCorePusherCfg.helperGetDeltaDur(resultDelta);
     }
 
-    FMyMJEventWithTimeStampBaseCpp& cInserted = m_pEventsApplyingAndApplied->addToTailWhenNotFull(uiServerWorldTime_resolved_ms, dur_resolved_ms, pPusherResult->m_aResultBase.Num() > 0);
+    MY_VERIFY(IsValid(m_pDeltaDataEvents));
+
+    FMyMJEventWithTimeStampBaseCpp& cInserted = m_pDeltaDataEvents->addToTailWhenNotFull(uiServerWorldTime_ms, dur_ms, MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult);
+
+    cInserted.setIdEvent(idEventLast + 1);
     cInserted.setPusherResult(cPusherResult);
 
-    if (cPusherResult.m_aResultBase.Num() > 0) {
-        m_iEventsBasePusherCount++;
+    if (m_iFullDataRecordType == MyMJDataSequencePerRoleFullDataRecordTypeTop) {
+        m_cFullData.applyEvent(m_cAccessor, cInserted);
     }
 
     //OK, let's check if we need to update base
-    trySquashBaseAndEvents(uiServerWorldTime_resolved_ms);
+    trySquashBaseAndEvents(uiServerWorldTime_ms);
 
+    return idEventLast + 1;
 };
 
+/*
 bool UMyMJDataSequencePerRoleCpp::mergeDataFromOther(const UMyMJDataSequencePerRoleCpp& other)
 {
     //you can append data, when two condition met: 1. same id and pusher, 2. old game ended and new reset comming 
@@ -252,7 +378,9 @@ bool UMyMJDataSequencePerRoleCpp::mergeDataFromOther(const UMyMJDataSequencePerR
 
     MY_VERIFY(IsValid(m_pEventsApplyingAndApplied));
 
-    if (iGameIdLastSelf < 0) {
+    bool bRoleChanged = m_cBase.getRole() < MyMJGameRoleTypeCpp::Max && m_cBase.getRole() != other.m_cBase.getRole();
+
+    if (iGameIdLastSelf < 0 || bRoleChanged) {
         //we don't have anything, copy all
         
         MY_VERIFY(m_pEventsApplyingAndApplied->getCount(NULL) == 0);
@@ -314,19 +442,24 @@ bool UMyMJDataSequencePerRoleCpp::mergeDataFromOther(const UMyMJDataSequencePerR
     }
 
     //let's try add data
+    //setTime_data_unit(uiSupposedTime_ms);
     MY_VERIFY(other.m_pEventsApplyingAndApplied->verifyData(false) == 0);
     for (int32 i = idxNextPusherOther; i < lother; i++) {
         bool bIsFull = false;
         int32 lSelf = m_pEventsApplyingAndApplied->getCount(&bIsFull);
+        const FMyMJEventWithTimeStampBaseCpp& itemOther = other.m_pEventsApplyingAndApplied->peekRefAt(i);
         if (bIsFull) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("buffer is full, only %d/%d merged, lenth self is %d."), i - idxNextPusherOther, lother - idxNextPusherOther, lSelf);
+            //uint32 uiDataUnit = MY_MJ_GAME_WORLD_TIME_MS_TO_DATA_TIME(itemOther.getStartTime());
+            //MY_VERIFY(uiDataUnit > 0);
+            //setTime_data_unit(uiDataUnit);
             break;
         }
-        const FMyMJEventWithTimeStampBaseCpp& itemOther = other.m_pEventsApplyingAndApplied->peekRefAt(i);
         m_pEventsApplyingAndApplied->addItemFromOther(itemOther);
 
         bRet = true;
     }
+
 
     if (bRet) {
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("role %d's data merged %d : %d, lother %d, iTest %d, event count %d, first: %d:%d, last %d:%d."), (uint8)m_eRole, bRet, bSetBase, lother, iTest, m_pEventsApplyingAndApplied->getCount(NULL), getGameIdFirst(), getPusherIdFirst(), getGameIdLast(), getPusherIdLast());
@@ -334,12 +467,14 @@ bool UMyMJDataSequencePerRoleCpp::mergeDataFromOther(const UMyMJDataSequencePerR
 
     return bRet;
 }
+*/
 
-
-void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTime_resolved_ms)
+void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTime_ms)
 {
+    MY_VERIFY(IsValid(m_pDeltaDataEvents));
+
     bool bIsFull = false;
-    int32 l = m_pEventsApplyingAndApplied->getCount(&bIsFull);
+    int32 l = m_pDeltaDataEvents->getCount(&bIsFull);
     if (l <= 0) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cEventsApplyingAndApplied have zero lenth: %d, not supposed to happen."), l);
         MY_VERIFY(false);
@@ -350,24 +485,39 @@ void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTim
         return;
     }
 
-    uint32 toApplyNum = l / 2;
-    MY_VERIFY(toApplyNum > 0);
+    uint32 toApplyNum = l / 8;
+    if (toApplyNum == 0) {
+        toApplyNum = 1;
+    }
 
-    squashEventsToBase(toApplyNum);
+    squashDeltaDataEvents(toApplyNum);
    
-    //size control
-    while (m_iEventsBasePusherCount > 2) {
-        squashEventsToBase(1);
-    }
+    //we don't allow too much base
+    //while (m_iEventsBasePusherCount > 2) {
+        //squashEventsToBase(1);
+    //}
 
- 
-    uint32 uiEndTime = m_cBase.getTime();
-    if (uiEndTime > 0 && uiServerWorldTime_resolved_ms < uiEndTime) {
+    //we don't use this method to detect
+    /*
+    uint32 uiStartTime = m_cBase.getTime_ms();
+    MY_VERIFY(uiStartTime > 0);
+
+    if (uiServerWorldTime_ms <= uiStartTime) {
         //valid time stamp, and endTime not passed, yet, it is not allowed to apply yet
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("forcing to squash events before required time passed, maybe buffer is too small."));
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("forcing to squash events before required time passed, maybe buffer is too small!, base time %d, uiServerWorldTime_ms %d."), uiStartTime, uiServerWorldTime_ms);
+    }
+    */
+
+    if (m_eRole == MyMJGameRoleTypeCpp::SysKeeper) {
+        //do more check for syskeeper seq
+        uint32 lastEventId = 0;
+        getFullAndDeltaLastData(&lastEventId, NULL);
+        if (lastEventId > m_uiHelerIdEventConsumed) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("forcing to squash events but unconsumed event have lost, producing is too fast or consuming is too slow, lastEventId %d, m_uiHelerIdEventConsumed %d."), lastEventId, m_uiHelerIdEventConsumed);
+        }
     }
 
-    MY_VERIFY(uiEndTime > 0);
+
 };
 
 /*
@@ -459,13 +609,53 @@ void UMyMJDataAllCpp::PostInitProperties()
         {
             createSubObjects();
         }
-    }
+    }bjectInitializer& ObjectInitializer 
     else {
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Owner actor is null, this is only expected for default object creation."));
     }
 };
 */
 
+UMyMJDataAllCpp::UMyMJDataAllCpp(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+{
+    m_iTest = 0;
+    m_iRepObjIdBase = 200;
+    m_iRepKeyOfState = 1;
+
+    m_bShowDebugLog = false;
+
+    m_aDatas.Reset();
+
+    bReplicates = true;
+
+    //UMyMJDataSequencePerRoleCpp *pNew;
+    //pNew = CreateDefaultSubobject<UMyMJDataSequencePerRoleCpp>((TEXT("mj data 0")));
+    //pNew->init((MyMJGameRoleTypeCpp)0);
+
+    //m_pTestSeq = CreateDefaultSubobject<UMyMJDataSequencePerRoleCpp>(TEXT("test seq c"));
+    //m_pTestBuffer = CreateDefaultSubobject<UMyMJGameEventCycleBuffer>(TEXT("test buffer c"));
+
+    //m_pTestC = pNew;
+    //m_aDatas.Emplace(pNew);
+
+
+    for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
+
+        UMyMJDataSequencePerRoleCpp *pNew;
+        FString name = FString::Printf(TEXT("mj data seq %d"), i);
+        pNew = CreateDefaultSubobject<UMyMJDataSequencePerRoleCpp>(FName(*name));
+        pNew->init((MyMJGameRoleTypeCpp)i);
+
+        m_aDatas.Emplace(pNew);
+
+    }
+
+};
+
+UMyMJDataAllCpp::~UMyMJDataAllCpp()
+{
+
+};
 
 void UMyMJDataAllCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
@@ -478,38 +668,80 @@ void UMyMJDataAllCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & O
 
 bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags)
 {
+    bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+    if (getServerWorldTime_ms() <= 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Cancel object replication since m_uiServerTime_ms_unresolved is 0."));
+        return WroteSomething;
+    }
+
     //const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("ReplicateSubobjects thread id: %d"), CurrentThreadId);
 
     UWorld* w = Channel->GetWorld();
     UNetConnection* c = Channel->Connection;
-    APlayerController *pc = NULL;
+    APlayerController *pC = NULL;
     if (c) {
-        pc = c->GetPlayerController(w);
+        pC = c->GetPlayerController(w);
     }
+
 
     int32 l = m_aDatas.Num();
 
-    AMyMJGamePlayerControllerCpp* pCMy = Cast<AMyMJGamePlayerControllerCpp>(pc);
+    MyMJGameRoleTypeCpp eClientRole = MyMJGameRoleTypeCpp::Observer;
+    if (RepFlags && RepFlags->bReplay) {
+        MyMJGameRoleTypeCpp eClientRole = MyMJGameRoleTypeCpp::SysKeeper;
+    }
+    else {
 
-    if (!IsValid(pCMy)) {
-        FString pcStr = TEXT("NULL");
-        if (pc) {
-            pcStr = pc->GetClass()->GetFullName();
+        if (!IsValid(pC)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ReplicateSubobjects, controller's is not valid, %p."), pC);
+            return WroteSomething;
+        }
+        APawn* pPawn = pC->GetPawn();
+        if (!IsValid(pPawn)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ReplicateSubobjects, controller's pawn is not valid, %p."), pPawn);
+            return WroteSomething;
         }
 
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ReplicateSubobjects, pcMy is NULL, the class is not correct, datas len: %d, world %p, netconnection %p, pc %p, pc: %s."), l, w, c, pc, *pcStr);
-        return false;
+        FString strClass = pPawn->GetClass()->GetFullName();
+        AMyMJGameViewerPawnBaseCpp* pMyPawn = Cast<AMyMJGameViewerPawnBaseCpp>(pPawn);
+        if (!IsValid(pPawn)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ReplicateSubobjects, cast failed, it's class is %s."), *strClass);
+            return WroteSomething;
+        }
+
+        eClientRole = pMyPawn->getRoleType();
     }
 
-    MyMJGameRoleTypeCpp eClientRole = pCMy->m_eRoleType;
+    if (eClientRole >= MyMJGameRoleTypeCpp::Max) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("ReplicateSubobjects, will not replicate since role is %d."), (uint8)eClientRole);
+        return WroteSomething;
+    }
+    
+    /*
+    uint32 id = pCMy->GetUniqueID();
 
+    uint32 uiTimeLast = 0;
+    uint32 uiTimeNew = getServerWorldTime_ms();
+    uint32* puiTImeLast = m_mHelerReplicatePCServerTimeMap.Find(id);
+    if (puiTImeLast) {
+        uiTimeLast = *puiTImeLast;
+    }
+
+    if (uiTimeLast == uiTimeNew) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("uiTimeLast is same as %d, to keep data unique, we will skip this loop."), uiTimeLast);
+        return WroteSomething;
+    }
+    uint32& newTime = m_mHelerReplicatePCServerTimeMap.FindOrAdd(id);
+    newTime = uiTimeNew;
+    */
 
     int64 byteNum0 = Bunch->GetNumBytes();
-    bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
     int64 byteNum1 = Bunch->GetNumBytes();
 
     //if (Channel->KeyNeedsToReplicate(m_iRepObjIdBase + 10, m_iRepKeyOfState))
+    bool bReplicated = false;
     {
         for (int32 i = 0; i < l; i++) 
         {
@@ -519,8 +751,9 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
             //if (Channel->KeyNeedsToReplicate(m_iRepObjIdBase + 11 + i, pData->getRepKeyOfState()))
             if (IsValid(pData))
             {
-                MY_VERIFY((uint8)pData->m_eRole < (uint8)MyMJGameRoleTypeCpp::Max);
-                if (pData->m_eRole != eClientRole) {
+
+                MY_VERIFY((uint8)pData->getRole() < (uint8)MyMJGameRoleTypeCpp::Max);
+                if (pData->getRole() != eClientRole) {
                     continue;
                 }
 
@@ -529,12 +762,33 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
                     //int32 l1 = pData->getEventsRef().m_iTest;
                     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Replicating %d, %d, %d, %d."), i, l0, l1, m_iTest);
                     WroteSomething |= Channel->ReplicateSubobject(pData, *Bunch, *RepFlags);
-                    const UMyMJGameEventCycleBuffer* pB = pData->getEvents(false);
+                    const UMyMJGameEventCycleBuffer* pB = pData->getDeltaDataEvents(false);
                     if (IsValid(pB)) {
                         UMyMJGameEventCycleBuffer* pB0 = const_cast<UMyMJGameEventCycleBuffer *>(pB);
                         WroteSomething |= Channel->ReplicateSubobject(pB0, *Bunch, *RepFlags);
+                        bReplicated = true;
                     }
                 //}
+            }
+        }
+    }
+
+    //set helper data to detect producing too fast
+    if (bReplicated) {
+        UMyMJDataSequencePerRoleCpp* pData = m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper];
+        if (IsValid(pData))
+        {
+            uint32 uiIdEventLast = 0;
+            const UMyMJGameEventCycleBuffer* pEvents = pData->getDeltaDataEvents();
+            if (IsValid(pEvents)) {
+                const FMyMJEventWithTimeStampBaseCpp* pLast = pEvents->peekLast();
+                if (pLast) {
+                    uiIdEventLast = pLast->getIdEvent();
+                }
+            }
+
+            if (uiIdEventLast > 0) {
+                pData->setHelerIdEventConsumed(uiIdEventLast);
             }
         }
     }

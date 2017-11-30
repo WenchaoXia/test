@@ -6,9 +6,9 @@
 
 #include "MyMJCommonDefines.generated.h"
 
-#define MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS 1000  //resolution is *ms plus parent thread kick
-#define MY_MJ_GAME_CORE_MIRROR_TO_CORE_FULL_LOOP_TIME_MS 50
-#define MY_MJ_GAME_CORE_MIRROR_FOR_VISUAL_LOOP_TIME_MS 50
+#define MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS 33  //resolution is *ms plus parent thread kick
+#define MY_MJ_GAME_CORE_FULL_MAIN_THREAD_LOOP_TIME_MS 50
+
 
 #define MyMJGameDup8BitMaskForSingleAttenderTo32BitMaskForAll(iMaskSingle) ( ((iMaskSingle & 0xff) << 24) | ((iMaskSingle & 0xff) << 16) | ((iMaskSingle & 0xff) << 8) | ((iMaskSingle & 0xff) << 0) )
 
@@ -34,15 +34,6 @@ enum class MyMJGameErrorCodeCpp : uint8
     choiceAlreadyMade = 121      UMETA(DisplayName = "choiceAlreadyMade"),
     choiceOutOfRange = 122       UMETA(DisplayName = "choiceOutOfRange"),
     choiceSubSelectInvalid = 123 UMETA(DisplayName = "choiceSubSelectInvalid")
-};
-
-UENUM()
-enum class MyMJGameElemWorkModeCpp : uint8
-{
-    Invalid = 0  UMETA(DisplayName = "Invalid"),
-    Full = 1     UMETA(DisplayName = "Full"), //Full Function mode
-    Mirror = 2   UMETA(DisplayName = "Mirror"), //Mirror mode, doesn't produce any thing, just consume the pushers
-    Temp = 3     UMETA(DisplayName = "Temp"),
 };
 
 UENUM()
