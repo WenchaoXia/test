@@ -91,6 +91,17 @@ public:
 };
 
 
+UENUM()
+enum class MyLogVerbosity : uint8
+{
+    None = 0                     UMETA(DisplayName = "None"),
+    Log = 10               UMETA(DisplayName = "Log"),
+    Display = 20         UMETA(DisplayName = "Display"),
+    Warning = 30    UMETA(DisplayName = "Warning"),
+    Error = 40    UMETA(DisplayName = "Error"),
+
+};
+
 UCLASS()
 class UMyMJBPUtilsLibrary :
     public UBlueprintFunctionLibrary
@@ -168,5 +179,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
     static void rotateOriginWithPivot(const FTransform& originCurrentWorldTransform, const FVector& pivot2OriginRelativeLocation, const FRotator& originTargetWorldRotator, FTransform& originResultWorldTransform);
 
+    static FString getDebugStringFromEWorldType(EWorldType::Type t);
+    static FString getDebugStringFromENetMode(ENetMode t);
+
+    UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", CallableWithoutWorldContext, Keywords = "log print", AdvancedDisplay = "2"), Category = "Utilities|String")
+    static void MyBpLog(UObject* WorldContextObject, const FString& InString = FString(TEXT("Hello")), bool bPrintToScreen = true, bool bPrintToLog = true, MyLogVerbosity eV = MyLogVerbosity::Display, FLinearColor TextColor = FLinearColor(0.0, 0.66, 1.0), float Duration = 2.f);
     //float GetRealTimeSeconds() const;
 };

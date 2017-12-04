@@ -122,23 +122,7 @@ protected:
     };
 
     UFUNCTION()
-    void OnRep_NewDataArrivedWithFilter()
-    {
-        UWorld *world = GetWorld();
-        if (!IsValid(world)) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
-            return;
-        }
-        float nowRealTime = world->GetRealTimeSeconds();
-
-        if (nowRealTime <= m_fHelperFilterLastRepClientRealtTime) {
-            return;
-        }
-
-        m_fHelperFilterLastRepClientRealtTime = nowRealTime;
-        tryFeedDataToConsumer();
-    };
-
+        void OnRep_NewDataArrivedWithFilter();
 
     UPROPERTY(ReplicatedUsing = OnRep_NewDataArrivedWithFilter)
     AMyMJGameRoomCpp* m_pExtRoomActor;

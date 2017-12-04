@@ -575,13 +575,13 @@ public:
 
         //m_cEventArray.Items.AddZeroed(m_iSizeMax);
 
-        clear();
+        clearInGame();
 
         //m_cEventArray.Items.Reset(0);
         //m_cEventArray.MarkArrayDirty();
     };
 
-    void clear()
+    void clearInGame()
     {
         m_idxHead = MyIntIdDefaultInvalidValue;
         m_iCount = 0;
@@ -949,23 +949,24 @@ protected:
         return false;
     };
 
-    UPROPERTY(ReplicatedUsing = OnRep_Data)
+    //UPROPERTY(ReplicatedUsing = OnRep_Data)
+    UPROPERTY(Replicated)
     FMyMJGameEventArray m_cEventArray;
 
-    UPROPERTY(ReplicatedUsing = OnRep_Data)
+    UPROPERTY(Replicated)
     int32 m_iSizeMax;
 
     //only valid when count > 0
-    UPROPERTY(ReplicatedUsing = OnRep_Data)
+    UPROPERTY(Replicated)
     int32 m_idxHead;
 
-    UPROPERTY(ReplicatedUsing = OnRep_Data)
+    UPROPERTY(Replicated)
     int32 m_iCount;
 
-    UPROPERTY(ReplicatedUsing = OnRep_Data)
+    UPROPERTY(Replicated)
     uint32 m_uiTimeRangeStart_ms;
 
-    UPROPERTY(ReplicatedUsing = OnRep_Data)
+    UPROPERTY(Replicated)
     uint32 m_uiTimeRangeEnd_ms;
 
     //UPROPERTY(ReplicatedUsing = OnRep_Data)
@@ -1004,13 +1005,12 @@ public:
         //Make sure called only once
         MY_VERIFY(m_iFullDataRecordType == MyMJDataSequencePerRoleFullDataRecordTypeInvalid);
 
-        clear();
-        markDirtyForRep();
-
         m_cFullData.setRole(eRoleType);
         m_eRole = eRoleType;
 
         m_cAccessor.setupDataExt(&m_cFullData);
+
+        clearInGame();
     };
 
     inline bool isEmpty() const
@@ -1043,15 +1043,17 @@ public:
         m_bHelperProduceMode = bHelperProduceMode;
     };
 
-    void clear()
+    void clearInGame()
     {
         m_cFullData.reset();
         if (IsValid(m_pDeltaDataEvents)) {
-            m_pDeltaDataEvents->clear();
+            m_pDeltaDataEvents->clearInGame();
         }
         m_uiServerWorldTime_ms = 0;
 
         m_uiHelerIdEventConsumed = 0;
+
+        markDirtyForRep();
     };
 
     void markDirtyForRep()
@@ -1323,10 +1325,7 @@ protected:
 
     //design is simple: timestamp can represent the state's key, that means same key always have same content
     UFUNCTION()
-    void OnRep_ServerWorldTime_ms()
-    {
-        m_cReplicateDelegate.Broadcast();
-    };
+        void OnRep_ServerWorldTime_ms();
 
     //following is the core data, representing
 
@@ -1681,16 +1680,18 @@ public:
 
     };
 
-    void clear()
+    //Can't be called on deconstructor since it access another UObject*
+    void clearInGame()
     {
-        for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++)
+        int32 l = m_aDatas.Num();
+        for (int i = 0; i < l; i++)
         {
             UMyMJDataSequencePerRoleCpp* pSeq = m_aDatas[i];
             if (!IsValid(pSeq)) {
                 continue;
             }
 
-            pSeq->clear();
+            pSeq->clearInGame();
         }
 
         m_mHelerReplicatePCServerTimeMap.Reset();
@@ -1766,42 +1767,7 @@ public:
         return m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper]->isReadyToGiveNextEvent(uiServerWorldTime_ms);
     };
 
-    void addPusherResult(const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms)
-    {
-        int32 l = m_aDatas.Num();
-        MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
-        FMyMJGamePusherResultCpp cPusherNew;
-
-        if (m_bShowDebugLog) {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("adding pusher result: %s"), *cPusherResult.genDebugMsg());
-        }
-
-        for (int32 i = 0; i < l; i++) {
-
-            if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper) {
-                MY_VERIFY(IsValid(m_aDatas[i]));
-                uint32 idEventNew = m_aDatas[i]->addPusherResult(m_cEventCorePusherCfg, cPusherResult, uiServerWorldTime_ms);
-
-                //check event id here, time_ms check should goto actor
-                if (idEventNew >= MyUInt32IdWarnBottomValue && idEventNew < (MyUInt32IdWarnBottomValue + 2)) {
-
-                    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("uint32 id is too large as %d, require reboot!"), idEventNew);
-
-                    //Todo: set flag of reboot
-                }
-            }
-            else {
-                MyMJGameRoleTypeCpp eRole = (MyMJGameRoleTypeCpp)i;
-                if (!IsValid(m_aDatas[i])) {
-                    continue;
-                }
-                MY_VERIFY(m_aDatas[i]->getRole() == eRole);
-
-                cPusherResult.copyWithRoleFromSysKeeperRole(eRole, cPusherNew);
-                m_aDatas[i]->addPusherResult(m_cEventCorePusherCfg, cPusherNew, uiServerWorldTime_ms);
-            }
-        }
-    };
+    void addPusherResult(const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms);
 
     inline
     UMyMJDataSequencePerRoleCpp* getDataByRoleType(MyMJGameRoleTypeCpp eRoleType, bool bVerify = true)

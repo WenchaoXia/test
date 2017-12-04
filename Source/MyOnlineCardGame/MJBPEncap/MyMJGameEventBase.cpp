@@ -520,6 +520,15 @@ void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTim
 
 };
 
+void UMyMJDataSequencePerRoleCpp::OnRep_ServerWorldTime_ms()
+{
+
+    UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiServerWorldTime_ms);
+
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("OnRep_ServerWorldTime_ms, role %d, time %s."), (uint8)m_eRole, *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiServerWorldTime_ms));
+    m_cReplicateDelegate.Broadcast();
+};
+
 /*
 uint32 UMyMJDataSequencePerRoleCpp::getLastEventEndTime() const
 {
@@ -822,4 +831,41 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
     }
 
     return WroteSomething;
+};
+
+void UMyMJDataAllCpp::addPusherResult(const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms)
+{
+    int32 l = m_aDatas.Num();
+    MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
+    FMyMJGamePusherResultCpp cPusherNew;
+
+    if (m_bShowDebugLog) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("adding pusher result: %sms: %s"), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiServerWorldTime_ms), *cPusherResult.genDebugMsg());
+    }
+
+    for (int32 i = 0; i < l; i++) {
+
+        if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper) {
+            MY_VERIFY(IsValid(m_aDatas[i]));
+            uint32 idEventNew = m_aDatas[i]->addPusherResult(m_cEventCorePusherCfg, cPusherResult, uiServerWorldTime_ms);
+
+            //check event id here, time_ms check should goto actor
+            if (idEventNew >= MyUInt32IdWarnBottomValue && idEventNew < (MyUInt32IdWarnBottomValue + 2)) {
+
+                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("uint32 id is too large as %d, require reboot!"), idEventNew);
+
+                //Todo: set flag of reboot
+            }
+        }
+        else {
+            MyMJGameRoleTypeCpp eRole = (MyMJGameRoleTypeCpp)i;
+            if (!IsValid(m_aDatas[i])) {
+                continue;
+            }
+            MY_VERIFY(m_aDatas[i]->getRole() == eRole);
+
+            cPusherResult.copyWithRoleFromSysKeeperRole(eRole, cPusherNew);
+            m_aDatas[i]->addPusherResult(m_cEventCorePusherCfg, cPusherNew, uiServerWorldTime_ms);
+        }
+    }
 };

@@ -37,17 +37,54 @@ FMyMJDataStructCpp::~FMyMJDataStructCpp()
 
 };
 
-void FMyMJDataStructCpp::init()
+void FMyMJDataAccessorCpp::applyBase(const FMyMJDataStructCpp &base, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
 {
-    MY_VERIFY(m_aRoleDataAttenders.Num() == 0);
+    MY_VERIFY(m_pDataExt);
 
-    for (int i = 0; i < RoleDataAttenderNum; i++) {
-        int32 idx = m_aRoleDataAttenders.Emplace();
-        FMyMJRoleDataAttenderCpp *pD = &m_aRoleDataAttenders[idx];
-        pD->resetup(i);
+    *m_pDataExt = base;
+    /*
+    getCoreDataRef() = base.getCoreDataRefConst();
+
+    int32 l = (uint8)MyMJGameRoleTypeCpp::Max;
+    for (int i = 0; i < l; i++) {
+
+    if (i < 4)
+    {
+    getRoleDataAttenderPublicRef(i) = base.getRoleDataAttenderPublicRefConst(i);
+
+
+    FMyMJRoleDataAttenderPrivateCpp *pAttenderPrivSelf = getRoleDataAttenderPrivate(i);
+    const FMyMJRoleDataAttenderPrivateCpp *pAttenderPrivOther = &base.getRoleDataAttenderPrivateRefConst(i);
+    if (pAttenderPrivSelf && pAttenderPrivOther) {
+    *pAttenderPrivSelf = *pAttenderPrivOther;
     }
-};
+    else {
+    //it is OK, but in a fine design this should be avoid
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d 's attender private data is NULL, self %p, dest %p."), i, pAttenderPrivSelf, pAttenderPrivOther);
+    }
 
+    }
+
+    {
+    FMyMJRoleDataPrivateCpp *pPrivSelf = getRoleDataPrivate(i);
+    const FMyMJRoleDataPrivateCpp *pPrivOther = &base.getRoleDataPrivateRefConst(i);
+    if (pPrivSelf && pPrivOther) {
+    *pPrivSelf = *pPrivOther;
+    }
+    else {
+    //it is OK, but in a fine design this should be avoid
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d 's private data is NULL, self %p, dest %p."), i, pPrivSelf, pPrivOther);
+    }
+    }
+    }
+    */
+
+    getCoreDataRef().m_cGameCfg.prepareForUse(); //Todo: this can be done as Lazy work, since it is only needed when you want to run the core logic
+
+    if (pDirtyRecord) {
+        pDirtyRecord->reset(true);
+    }
+}
 
 void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
 {

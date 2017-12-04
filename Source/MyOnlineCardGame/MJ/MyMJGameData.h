@@ -917,8 +917,6 @@ public:
     FMyMJDataStructCpp();
     virtual ~FMyMJDataStructCpp();
 
-    void init();
-
     void reset()
     {
         m_cCoreData.reset();
@@ -983,12 +981,11 @@ public:
         MY_VERIFY(eTargetRole != MyMJGameRoleTypeCpp::SysKeeper);
         MY_VERIFY(getRole() == MyMJGameRoleTypeCpp::SysKeeper);
 
+        cTargetData = *this;
         cTargetData.setRole(eTargetRole);
 
-        cTargetData.m_cCoreData = m_cCoreData;
-        cTargetData.m_aRoleDataAttenders = m_aRoleDataAttenders;
+        //remove unused infos
         cTargetData.m_cRoleDataPrivateSysKeeper.reset();
-        cTargetData.m_cRoleDataPrivateObserver = m_cRoleDataPrivateObserver;
 
         int32 l = cTargetData.m_aRoleDataAttenders.Num();
         for (int32 i = 0; i < l; i++) {
@@ -1276,50 +1273,7 @@ struct FMyMJDataAccessorCpp
     };
 
     //Note all data will be overwritten, include default values, usually used in full mode, but also possible for mirror as one way to implement replay  
-    void applyBase(const FMyMJDataStructCpp &base, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
-    {
-        getCoreDataRef() = base.getCoreDataRefConst();
-
-        int32 l = (uint8)MyMJGameRoleTypeCpp::Max;
-        for (int i = 0; i < l; i++) {
-
-            if (i < 4)
-            {
-                getRoleDataAttenderPublicRef(i) = base.getRoleDataAttenderPublicRefConst(i);
-
-
-                FMyMJRoleDataAttenderPrivateCpp *pAttenderPrivSelf = getRoleDataAttenderPrivate(i);
-                const FMyMJRoleDataAttenderPrivateCpp *pAttenderPrivOther = &base.getRoleDataAttenderPrivateRefConst(i);
-                if (pAttenderPrivSelf && pAttenderPrivOther) {
-                    *pAttenderPrivSelf = *pAttenderPrivOther;
-                }
-                else {
-                    //it is OK, but in a fine design this should be avoid
-                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d 's attender private data is NULL, self %p, dest %p."), i, pAttenderPrivSelf, pAttenderPrivOther);
-                }
-
-            }
-
-            {
-                FMyMJRoleDataPrivateCpp *pPrivSelf = getRoleDataPrivate(i);
-                const FMyMJRoleDataPrivateCpp *pPrivOther = &base.getRoleDataPrivateRefConst(i);
-                if (pPrivSelf && pPrivOther) {
-                    *pPrivSelf = *pPrivOther;
-                }
-                else {
-                    //it is OK, but in a fine design this should be avoid
-                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d 's private data is NULL, self %p, dest %p."), i, pPrivSelf, pPrivOther);
-                }
-            }
-        }
-
-        getCoreDataRef().m_cGameCfg.prepareForUse();
-
-        if (pDirtyRecord) {
-            pDirtyRecord->reset(true);
-        }
-    }
-
+    void applyBase(const FMyMJDataStructCpp &base, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord);
 
     //the delta myst be applied by two step, and after step 0 it can be visualized, can be used by both full and mirror mode
     //after step 0 we have a chance for visualize, before calling next

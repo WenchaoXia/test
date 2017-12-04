@@ -255,5 +255,24 @@ void AMyMJGameRoomViewerPawnCpp::answerSyncForMJCoreFullDataOnClient_Implementat
 }
 
 
+void AMyMJGameRoomViewerPawnCpp::OnRep_NewDataArrivedWithFilter()
+{
+    UWorld *world = GetWorld();
+    if (!IsValid(world)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
+        return;
+    }
+    float nowRealTime = world->GetRealTimeSeconds();
+
+    if (nowRealTime <= m_fHelperFilterLastRepClientRealtTime) {
+        return;
+    }
+
+    m_fHelperFilterLastRepClientRealtTime = nowRealTime;
+
+    ENetMode mode = GetNetMode();
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("OnRep_NewDataArrivedWithFilter, ENetMode %d, NM_Standalone %d"), (uint8)mode, (uint8)ENetMode::NM_Standalone);
+    tryFeedDataToConsumer();
+};
 
 

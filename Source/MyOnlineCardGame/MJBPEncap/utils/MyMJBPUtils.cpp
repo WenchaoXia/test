@@ -4,6 +4,8 @@
 
 #include "Engine.h"
 #include "UnrealNetwork.h"
+#include "HAL/IConsoleManager.h"
+#include "Engine/Console.h"
 
 #include "MJLocalCS/Utils/MyMJUtilsLocalCS.h"
 
@@ -353,4 +355,131 @@ void UMyMJBPUtilsLibrary::rotateOriginWithPivot(const FTransform& originCurrentW
     originResultWorldTransform.SetLocation(originZeroRotateWorldLocation + (originTargetWorldQuat.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation));
     originResultWorldTransform.SetRotation(originTargetWorldQuat);
     originResultWorldTransform.SetScale3D(originCurrentWorldTransform.GetScale3D());
+};
+
+FString UMyMJBPUtilsLibrary::getDebugStringFromEWorldType(EWorldType::Type t)
+{
+    if (t == EWorldType::None)
+    {
+        return TEXT("None");
+    }
+    else if (t == EWorldType::Game)
+    {
+        return TEXT("Game");
+    }
+    else if (t == EWorldType::Editor)
+    {
+        return TEXT("Editor");
+    }
+    else if (t == EWorldType::PIE)
+    {
+        return TEXT("PIE");
+    }
+    else if (t == EWorldType::EditorPreview)
+    {
+        return TEXT("EditorPreview");
+    }
+    else if (t == EWorldType::GamePreview)
+    {
+        return TEXT("GamePreview");
+    }
+    else if (t == EWorldType::Inactive)
+    {
+        return TEXT("Inactive");
+    }
+    else
+    {
+        return TEXT("Invalid");
+    }
+
+};
+
+FString UMyMJBPUtilsLibrary::getDebugStringFromENetMode(ENetMode t)
+{
+    if (t == ENetMode::NM_Standalone)
+    {
+        return TEXT("NM_Standalone");
+    }
+    else if (t == ENetMode::NM_DedicatedServer)
+    {
+        return TEXT("NM_DedicatedServer");
+    }
+    else if (t == ENetMode::NM_ListenServer)
+    {
+        return TEXT("NM_ListenServer");
+    }
+    else if (t == ENetMode::NM_Client)
+    {
+        return TEXT("NM_Client");
+    }
+    else if (t == ENetMode::NM_MAX)
+    {
+        return TEXT("NM_MAX");
+    }
+    else {
+        return TEXT("Invalid");
+    }
 }
+
+void UMyMJBPUtilsLibrary::MyBpLog(UObject* WorldContextObject, const FString& InString, bool bPrintToScreen, bool bPrintToLog, MyLogVerbosity eV, FLinearColor TextColor, float Duration)
+{
+    const FString *pStr = &InString;
+    UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull);
+   
+
+    FString Prefix;
+    if (World)
+    {
+        Prefix = getDebugStringFromEWorldType(World->WorldType) + TEXT(" ") + getDebugStringFromENetMode(World->GetNetMode()) + TEXT(": ");
+        Prefix += InString;
+        pStr = &Prefix;
+    }
+
+    if (bPrintToLog) {
+        //the fuck is that, UE_LOG's log level is a compile time check
+        if (eV == MyLogVerbosity::Display) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%s"), **pStr);
+        }
+        else if (eV == MyLogVerbosity::Warning) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("%s"), **pStr);
+        }
+        else if (eV == MyLogVerbosity::Error) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s"), **pStr);
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Log, TEXT("%s"), **pStr);
+        }
+
+
+        APlayerController* PC = (WorldContextObject ? UGameplayStatics::GetPlayerController(WorldContextObject, 0) : NULL);
+        ULocalPlayer* LocalPlayer = (PC ? Cast<ULocalPlayer>(PC->Player) : NULL);
+        if (LocalPlayer && LocalPlayer->ViewportClient && LocalPlayer->ViewportClient->ViewportConsole)
+        {
+            LocalPlayer->ViewportClient->ViewportConsole->OutputText(*pStr);
+        }
+    }
+
+    if (bPrintToScreen)
+    {
+        if (GAreScreenMessagesEnabled)
+        {
+            if (GConfig && Duration < 0)
+            {
+                GConfig->GetFloat(TEXT("Kismet"), TEXT("PrintStringDuration"), Duration, GEngineIni);
+            }
+
+            bool bPrint = true;
+//#if (UE_BUILD_SHIPPING || UE_BUILD_TEST) // Do not Print in Shipping or Test
+            bPrint = (uint8)eV >= (uint8)MyLogVerbosity::Display;
+//#endif
+            if (bPrint) {
+                GEngine->AddOnScreenDebugMessage((uint64)-1, Duration, TextColor.ToFColor(true), *pStr);
+            }
+        }
+        else
+        {
+            UE_LOG(LogBlueprint, VeryVerbose, TEXT("Screen messages disabled (!GAreScreenMessagesEnabled).  Cannot print to screen."));
+        }
+    }
+
+};

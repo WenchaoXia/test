@@ -160,6 +160,9 @@ public:
 
     virtual ~AMyMJGameCoreDataSourceCpp();
 
+    //can't be called on deconstructor
+    void clearInGame();
+
     //test functions start:
 
     UFUNCTION(BlueprintCallable)
@@ -220,6 +223,8 @@ protected:
     bool getCoreFullPartEnabled() const;
     void setCoreFullPartEnabled(bool bEnabled);
 
+    void notifyDataUpdated();
+
     UFUNCTION()
     void OnRep_MJDataAllPointer()
     {
@@ -240,6 +245,8 @@ protected:
 
     FTimerHandle m_cToCoreFullLoopTimerHandle;
     bool m_bCoreFullPartEnabled;
+
+    ENetMode m_eDebugNetMode;
     //uint32 m_uiLastReplicateClientTimeMs;
 };
 

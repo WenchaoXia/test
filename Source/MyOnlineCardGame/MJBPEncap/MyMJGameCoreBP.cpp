@@ -17,12 +17,13 @@ AMyMJGameCoreDataSourceCpp::AMyMJGameCoreDataSourceCpp(const FObjectInitializer&
     m_iSeed2OverWrite = 0;
     m_pCoreFullWithThread = NULL;
     m_pMJDataAll = NULL;
+    m_bCoreFullPartEnabled = false;
+    m_eDebugNetMode = ENetMode::NM_MAX;
 
     bReplicates = true;
     bAlwaysRelevant = true;
     bNetLoadOnClient = true;
     NetUpdateFrequency = 10;
-    m_bCoreFullPartEnabled = false;
 
     //m_pMJDataAll = NewObject<UMyMJDataAllCpp>(this);
     m_pMJDataAll = CreateDefaultSubobject<UMyMJDataAllCpp>(TEXT("mj data all"));
@@ -30,28 +31,53 @@ AMyMJGameCoreDataSourceCpp::AMyMJGameCoreDataSourceCpp(const FObjectInitializer&
     //m_pMJDataAll->SetIsReplicated(true);
 
     //m_uiLastReplicateClientTimeMs = 0;
+
+    clearInGame();
 };
 
 AMyMJGameCoreDataSourceCpp:: ~AMyMJGameCoreDataSourceCpp()
 {
-    stopGame();
+    //clear();
 };
+
+void AMyMJGameCoreDataSourceCpp::clearInGame()
+{
+    stopGame();
+    if (IsValid(m_pMJDataAll)) {
+        m_pMJDataAll->clearInGame();
+    }
+
+    m_iTest0 = 0;
+    m_bCoreFullPartEnabled = false;
+    m_eDebugNetMode = ENetMode::NM_MAX;
+
+    UWorld *world = GetWorld();
+    if (IsValid(world)) {
+        world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
+    }
+
+}
+
 
 void AMyMJGameCoreDataSourceCpp::BeginPlay()
 {
     Super::BeginPlay();
 
+    clearInGame();
+
     bool bHaveLogic = UMyMJBPUtilsLibrary::haveServerLogicLayer(this);
     setCoreFullPartEnabled(bHaveLogic);
 
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreDataSourceCpp::BeginPlay(), %d."), bHaveLogic);
+    m_eDebugNetMode = GetNetMode();
+
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreDataSourceCpp::BeginPlay(), bHaveLogic %d, m_eDebugNetMode %d,  ENetMode::NM_Standalone %d."), bHaveLogic, (int32)m_eDebugNetMode, (int32)ENetMode::NM_Standalone);
 };
 
 void AMyMJGameCoreDataSourceCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     Super::EndPlay(EndPlayReason);
     
-    stopGame();
+    clearInGame();
 
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreDataSourceCpp::EndPlay()."));
 };
@@ -214,6 +240,8 @@ bool AMyMJGameCoreDataSourceCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType, in
             MY_VERIFY(false);
         }
 
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("mode updated and timer restarted!"));
+
         return true;
     }
 
@@ -297,7 +325,7 @@ void AMyMJGameCoreDataSourceCpp::setCoreFullPartEnabled(bool bEnabled)
 
         if (getCoreFullPartEnabled()) {
 
-            m_pMJDataAll->clear();
+            m_pMJDataAll->clearInGame();
             m_pMJDataAll->setSubobjectBehaviors(MyMJDataSequencePerRoleFullDataRecordTypeInvalid, false);
 
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("CoreFullPartEnabled is changed to false."));
@@ -346,6 +374,8 @@ void AMyMJGameCoreDataSourceCpp::OnRep_MJDataAllContent(MyMJGameRoleTypeCpp eRol
 void AMyMJGameCoreDataSourceCpp::coreDataPullLoop()
 {
     MY_VERIFY(IsValid(m_pMJDataAll));
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("coreDataPullLoop."));
 
     //const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("coreDataPullLoop thread id: %d"), CurrentThreadId);
@@ -398,11 +428,25 @@ void AMyMJGameCoreDataSourceCpp::coreDataPullLoop()
     }
 
     if (bHaveProgress) {
-        m_pMJDataAll->markAllDirtyForRep();
+        notifyDataUpdated();
     }
 
 
     //Todo: pull trival events
+}
+
+void AMyMJGameCoreDataSourceCpp::notifyDataUpdated()
+{
+    ENetMode mode = GetNetMode();
+    if (m_eDebugNetMode != mode) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("netmode changed %d -> %d!"), (int32)m_eDebugNetMode, (int32)mode);
+    }
+
+    bool bIsNetworkServer = mode == ENetMode::NM_DedicatedServer || mode == ENetMode::NM_ListenServer;
+    if (bIsNetworkServer) {
+        m_pMJDataAll->markAllDirtyForRep();
+        ForceNetUpdate();
+    }
 }
 
 /*

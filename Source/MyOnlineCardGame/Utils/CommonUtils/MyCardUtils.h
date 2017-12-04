@@ -362,22 +362,26 @@ protected:
     virtual bool Init() override final
     {
         const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Init() thread id: %d"), CurrentThreadId);
 
+        bool ret;
         if (initBeforRun()) {
             m_bInSubThreadLoop = true;
-            return true;
+            ret = true;
         }
         else {
             m_bInSubThreadLoop = false;
-            return false;
+            ret = false;
         }
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("subthread Init() thread id: %d, ret %d."), CurrentThreadId, ret);
+
+        return ret;
     };
 
     virtual void Exit() override final
     {
         const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Exit() thread id: %d"), CurrentThreadId);
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Exit() thread id: %d"), CurrentThreadId);
 
         exitAfterRun();
 
@@ -387,7 +391,7 @@ protected:
     virtual uint32 Run() override
     {
         const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Run() thread id: %d"), CurrentThreadId);
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Run() thread id: %d"), CurrentThreadId);
 
         //Initial wait before starting
         FPlatformProcess::Sleep(0.03);
@@ -451,7 +455,7 @@ protected:
     };
     //end
 
-
+    //note it only increase never, since UE4 have stat mechnism which require different name, and the name we generate with it, so we keep it always increasing
     static FThreadSafeCounter s_iThreadCount;
     
     //As the name states those members are Thread safe
@@ -499,8 +503,7 @@ public:
     bool create(EThreadPriority ePri = EThreadPriority::TPri_Normal)
     {
         if (!isCreated()) {
-            const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("create(), thread id: %d"), CurrentThreadId);
+            //const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
 
             if (!m_cRunnable.isReadyForSubThread()) {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("not ready for usage, runnable name %s."), *m_cRunnable.genName());
@@ -512,6 +515,8 @@ public:
             m_cRunnable.m_bBeingUsedBySubThread = true;
             m_cRunnable.m_bInSubThreadLoop = true;
             m_pThread = FRunnableThread::Create(&m_cRunnable, *name, 0, ePri);
+
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("thread created, thread id: %d, %s."), m_pThread->GetThreadID(), *m_pThread->GetThreadName());
 
             FMyRunnableBaseCpp::s_iThreadCount.Increment();
 
@@ -525,8 +530,8 @@ public:
     void destroy()
     {
         if (isCreated()) {
-            const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Destroy(), thread id: %d"), CurrentThreadId);
+           // const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("thread destroying, thread id: %d, %s."), m_pThread->GetThreadID(), *m_pThread->GetThreadName());
 
             m_pThread->Kill(true);
             delete m_pThread;
@@ -535,7 +540,7 @@ public:
             m_cRunnable.m_bBeingUsedBySubThread = false;
             m_cRunnable.m_bInSubThreadLoop = false;
 
-            FMyRunnableBaseCpp::s_iThreadCount.Decrement();
+            //FMyRunnableBaseCpp::s_iThreadCount.Decrement();
         }
     };
 
