@@ -1004,6 +1004,7 @@ public:
 
     UMyMJDataSequencePerRoleCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+    void createSubObjects(bool bInConstructor);
 
     //since base can't be rebuild until we start from sequence 1, so, it should only be called once in the beginning
     void init(MyMJGameRoleTypeCpp eRoleType)
@@ -1682,7 +1683,7 @@ public:
     //Can't be called on deconstructor since it access another UObject*
     void clearInGame();
 
-    void createSubObjects(bool bInConstructor, UObject *pOuter);
+    void createSubObjects(bool bInConstructor);
 
     void setSubobjectBehaviors(int32 iFullDataRecordType, bool bHelperProduceMode)
     {
@@ -1762,6 +1763,13 @@ public:
 
     inline uint32 getServerWorldTime_ms() const
     {
+        int32 l = m_aDatas.Num();
+        int32 targetIdx = (uint8)MyMJGameRoleTypeCpp::SysKeeper;
+        if (targetIdx >= l) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_aDatas's length is not correct: %d."), l);
+            return 0;
+        }
+
         UMyMJDataSequencePerRoleCpp* pSeq = m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper];
         if (IsValid(pSeq)) {
             return pSeq->getServerWorldTime_ms();

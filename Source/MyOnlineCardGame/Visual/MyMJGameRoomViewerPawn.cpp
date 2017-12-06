@@ -44,9 +44,9 @@ void AMyMJGameRoomViewerPawnCpp::clearInGame()
 
 void AMyMJGameRoomViewerPawnCpp::BeginPlay()
 {
-    Super::BeginPlay();
-
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameRoomViewerPawnCpp BeginPlay()"));
+
+    Super::BeginPlay();
 
     if (UMyMJBPUtilsLibrary::haveServerLogicLayer(this)) {
         //In most case, this equals netmode == DS, LS, standalone
@@ -131,7 +131,7 @@ bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRo
         return true;
     }
 
-    return false; //test
+    //return false; //test
 
     AMyMJGameCoreDataSourceCpp* pSource = pLSASub->m_pCoreDataSource;
     if (!IsValid(pSource)) {

@@ -94,13 +94,26 @@ void AMyMJGameCoreDataSourceCpp::clearInGame()
 void AMyMJGameCoreDataSourceCpp::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
-    
-    m_pMJDataAll->createSubObjects(false, this);
+
+    bool bHaveLogic = UMyMJBPUtilsLibrary::haveServerLogicLayer(this);
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreDataSourceCpp::PostInitializeComponents(), bHaveLogic %d."), bHaveLogic);
+    if (bHaveLogic) {
+        m_pMJDataAll->createSubObjects(false);
+        //const UMyMJDataSequencePerRoleCpp* pSeq1 = m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::SysKeeper, false);
+        //const UMyMJDataSequencePerRoleCpp* pSeq2 = m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::Observer, false);
+
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreDataSourceCpp::PostInitializeComponents(), p1 %p, p2, %p."), pSeq1, pSeq2);
+    }
 };
 
 void AMyMJGameCoreDataSourceCpp::BeginPlay()
 {
     Super::BeginPlay();
+
+    //const UMyMJDataSequencePerRoleCpp* pSeq1 = m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::SysKeeper, false);
+    //const UMyMJDataSequencePerRoleCpp* pSeq2 = m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::Observer, false);
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreDataSourceCpp::BeginPlay(), p1 %p, p2, %p."), pSeq1, pSeq2);
 
     //since clear inGame will remove timer and delegate bond, we don't do it in begin play to avoid unexpected bond removing of other actor touching this one
     //clearInGame();
@@ -111,14 +124,17 @@ void AMyMJGameCoreDataSourceCpp::BeginPlay()
     m_eDebugNetMode = GetNetMode();
 
     //start timer since game begin, since it represent this actor's state
-    UWorld *world = GetWorld();
-    if (IsValid(world)) {
-        world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
-        world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJGameCoreDataSourceCpp::loop, ((float)MY_MJ_GAME_CORE_FULL_MAIN_THREAD_LOOP_TIME_MS) / (float)1000, true);
-    }
-    else {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
-        MY_VERIFY(false);
+
+    if (bHaveLogic) {
+        UWorld *world = GetWorld();
+        if (IsValid(world)) {
+            world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
+            world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJGameCoreDataSourceCpp::loop, ((float)MY_MJ_GAME_CORE_FULL_MAIN_THREAD_LOOP_TIME_MS) / (float)1000, true);
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
+            MY_VERIFY(false);
+        }
     }
 
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreDataSourceCpp::BeginPlay(), bHaveLogic %d, m_eDebugNetMode %d,  ENetMode::NM_Standalone %d."), bHaveLogic, (int32)m_eDebugNetMode, (int32)ENetMode::NM_Standalone);
@@ -228,7 +244,8 @@ void AMyMJGameCoreDataSourceCpp::startGameCoreTestInSubThread(bool showCoreLog, 
     }
 
     while (!tryChangeMode(MyMJGameRuleTypeCpp::LocalCS, iMask)) {
-        FPlatformProcess::Sleep(0.1);
+        //FPlatformProcess::Sleep(0.1);
+        return;
     }
 
     m_pMJDataAll->setShowDebugLog(showDataLog);
@@ -415,6 +432,7 @@ void AMyMJGameCoreDataSourceCpp::coreDataPullLoopInner()
 {
     MY_VERIFY(IsValid(m_pMJDataAll));
 
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("coreDataPullLoopInner()"));
 
     UWorld *world = GetWorld();
     if (!IsValid(world)) {

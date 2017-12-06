@@ -222,6 +222,8 @@ void AMyMJGameRoomCpp::tryProcessNetworkData()
 
 void AMyMJGameRoomCpp::loop()
 {
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("AMyMJGameRoomCpp::loop"));
+
     UWorld* world = GetWorld();
     if (!IsValid(world)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world of core is not valid!"));

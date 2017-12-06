@@ -165,13 +165,23 @@ UMyMJDataSequencePerRoleCpp::UMyMJDataSequencePerRoleCpp(const FObjectInitialize
 {
     m_iRepKeyOfState = 1;
 
-    m_pDeltaDataEvents = CreateDefaultSubobject<UMyMJGameEventCycleBuffer>(TEXT("Events Applying And Applied"));
-
     m_eRole = MyMJGameRoleTypeCpp::Max;
     m_iFullDataRecordType = MyMJDataSequencePerRoleFullDataRecordTypeInvalid;
     m_bHelperProduceMode = false;
 
     m_uiServerWorldTime_ms = 0;
+
+    m_pDeltaDataEvents = NULL;
+};
+
+void UMyMJDataSequencePerRoleCpp::createSubObjects(bool bInConstructor)
+{
+    if (bInConstructor) {
+        m_pDeltaDataEvents = CreateDefaultSubobject<UMyMJGameEventCycleBuffer>(TEXT("Events Applying And Applied"));
+    }
+    else {
+        m_pDeltaDataEvents = NewObject<UMyMJGameEventCycleBuffer>(this);
+    }
 };
 
 void UMyMJDataSequencePerRoleCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
@@ -531,7 +541,7 @@ void UMyMJDataSequencePerRoleCpp::OnRep_ServerWorldTime_ms()
 
     UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiServerWorldTime_ms);
 
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("OnRep_ServerWorldTime_ms, role %d, time %s."), (uint8)m_eRole, *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiServerWorldTime_ms));
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnRep_ServerWorldTime_ms, role %d, time %s."), (uint8)m_eRole, *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiServerWorldTime_ms));
     m_cReplicateDelegate.Broadcast();
 };
 
@@ -654,8 +664,8 @@ UMyMJDataAllCpp::UMyMJDataAllCpp(const FObjectInitializer& ObjectInitializer) : 
     //m_pTestC = pNew;
     //m_aDatas.Emplace(pNew);
 
-
-    createSubObjects(true, this);
+    //replicated object can't be created in CDO
+    //createSubObjects(true, this);
 
     bReplicates = true;
 
@@ -685,7 +695,7 @@ void UMyMJDataAllCpp::clearInGame()
     m_uiDebugSupposedReplicationUpdateLastIdEvent = 0;
 };
 
-void UMyMJDataAllCpp::createSubObjects(bool bInConstructor, UObject *pOuter)
+void UMyMJDataAllCpp::createSubObjects(bool bInConstructor)
 {
     m_aDatas.Reset();
 
@@ -697,8 +707,9 @@ void UMyMJDataAllCpp::createSubObjects(bool bInConstructor, UObject *pOuter)
             pNew = CreateDefaultSubobject<UMyMJDataSequencePerRoleCpp>(FName(*name));
         }
         else {
-            pNew = NewObject<UMyMJDataSequencePerRoleCpp>(pOuter);
+            pNew = NewObject<UMyMJDataSequencePerRoleCpp>(this);
         }
+        pNew->createSubObjects(false); //Uobject constructor can only be valid for himself, so for subobject it is always not in subobject's constructor
         pNew->init((MyMJGameRoleTypeCpp)i);
 
         m_aDatas.Emplace(pNew);
