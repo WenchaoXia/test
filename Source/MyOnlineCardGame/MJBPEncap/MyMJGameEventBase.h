@@ -224,6 +224,11 @@ public:
         cTargetData.m_uiTime_ms = m_uiTime_ms;
     };
 
+    FString genDebugMsg() const
+    {
+        return FString::Printf(TEXT("full %d, %s: gameid %d, pusherIdLast %d."), m_uiIdEventApplied, *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiTime_ms), getCoreDataRefConst().m_iGameId, getCoreDataRefConst().m_iPusherIdLast);
+    };
+
 protected:
 
     UPROPERTY(meta = (DisplayName = "id of event applied"))
@@ -457,7 +462,8 @@ public:
         else if (m_aTrival.Num() > 0) {
             resultStr = m_aTrival[0].genDebugMsg();
         }
-        return FString::Printf(TEXT("%d.%03d, %d.%03d, %s"), uiStartMs/1000, uiStartMs%1000, uiDurMs/1000, uiDurMs%1000, *resultStr);
+
+        return FString::Printf(TEXT("delta %d, %s(%s): %s"), m_uiIdEvent, *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiStartMs), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiDurMs), *resultStr);
 
     };
 
@@ -1051,7 +1057,7 @@ public:
         }
         m_uiServerWorldTime_ms = 0;
 
-        m_uiHelerIdEventConsumed = 0;
+        m_cReplicateDelegate.Clear();
 
         markDirtyForRep();
     };
@@ -1149,7 +1155,7 @@ public:
 
     //in most cases, we care about only deltas
     
-    //unit is ms
+    //unit is ms, can be called both in client and server, even in client case that subobject replication not completed
     void getFullAndDeltaLastData(uint32 *pOutLastEventId, uint32 *pOutLastEndTime) const;
 
     bool isReadyToGiveNextEvent(uint32 uiServerWorldTime_ms) const;
@@ -1243,11 +1249,6 @@ public:
         }
         markDirtyForRep();
     }
-
-    void setHelerIdEventConsumed(uint32 uiHelerIdEventConsumed)
-    {
-        m_uiHelerIdEventConsumed = uiHelerIdEventConsumed;
-    };
 
     bool tryUpdateFullDataFromExternal(MyMJGameRoleTypeCpp eRole, const FMyMJDataStructWithTimeStampBaseCpp& cNewFullData)
     {
@@ -1343,8 +1344,6 @@ protected:
     uint32 m_uiServerWorldTime_ms;
 
     FMyMJDataAccessorCpp m_cAccessor;
-
-    uint32 m_uiHelerIdEventConsumed;
 
     bool m_bHelperProduceMode;
 
@@ -1681,49 +1680,9 @@ public:
     };
 
     //Can't be called on deconstructor since it access another UObject*
-    void clearInGame()
-    {
-        int32 l = m_aDatas.Num();
-        for (int i = 0; i < l; i++)
-        {
-            UMyMJDataSequencePerRoleCpp* pSeq = m_aDatas[i];
-            if (!IsValid(pSeq)) {
-                continue;
-            }
+    void clearInGame();
 
-            pSeq->clearInGame();
-        }
-
-        m_mHelerReplicatePCServerTimeMap.Reset();
-        markDirtyForRep();
-    };
-
-    /*
-    void createSubObjects(bool bInConstructor)
-    {
-
-        m_aDatas.Reset();
-        for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
-            //if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper || i == 5) {
-
-            UMyMJDataSequencePerRoleCpp *pNew;
-            if (bInConstructor) {
-                FString name = FString::Printf(TEXT("mj_data_%d"), i);
-                pNew = CreateDefaultSubobject<UMyMJDataSequencePerRoleCpp>(FName(*name));
-            }
-            else {
-                pNew = NewObject<UMyMJDataSequencePerRoleCpp>(this);
-            }
-
-            pNew->init((MyMJGameRoleTypeCpp)i);
-            m_aDatas.Emplace(pNew);
-            //}
-            //else {
-                //m_aDatas.Emplace((UMyMJDataSequencePerRoleCpp *)NULL);
-            //}
-        }
-    };
-    */
+    void createSubObjects(bool bInConstructor, UObject *pOuter);
 
     void setSubobjectBehaviors(int32 iFullDataRecordType, bool bHelperProduceMode)
     {
@@ -1767,7 +1726,7 @@ public:
         return m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper]->isReadyToGiveNextEvent(uiServerWorldTime_ms);
     };
 
-    void addPusherResult(const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms);
+    void addPusherResult(const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms, bool *pOutNeedReboot);
 
     inline
     UMyMJDataSequencePerRoleCpp* getDataByRoleType(MyMJGameRoleTypeCpp eRoleType, bool bVerify = true)
@@ -1825,6 +1784,8 @@ public:
         }
     };
 
+    void updateDebugInfo(float fWorldRealTimeNow, uint32 uiIdEventBefore);
+
     UPROPERTY(Replicated)
     int32 m_iTest;
 
@@ -1866,8 +1827,6 @@ protected:
     //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "test Buffer"))
     //UMyMJGameEventCycleBuffer *m_pTestBuffer;
 
-    TMap<uint32, uint32> m_mHelerReplicatePCServerTimeMap;
-
     FMyMJCoreRelatedEventCorePusherCfgCpp m_cEventCorePusherCfg;
 
     //UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "datas"))
@@ -1880,4 +1839,7 @@ protected:
     int32 m_iRepKeyOfState;
 
     bool m_bShowDebugLog;
+
+    float m_fDebugSupposedReplicationUpdateLastRealTime;
+    uint32 m_uiDebugSupposedReplicationUpdateLastIdEvent;
 };

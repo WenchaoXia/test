@@ -20,8 +20,9 @@ class UMyMJGameRoomDataSuite : public UActorComponent
 public:
 
     UMyMJGameRoomDataSuite();
-
     virtual ~UMyMJGameRoomDataSuite();
+    void clearInGame();
+
 
     inline UMyMJGameDeskVisualDataObjCpp* getDeskDataObjVerified()
     {

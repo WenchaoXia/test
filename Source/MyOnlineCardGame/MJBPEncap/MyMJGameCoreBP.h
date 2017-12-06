@@ -22,46 +22,12 @@
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 #include "MyMJGameCoreBP.generated.h"
 
-#define MyMJGameVisualCoreHistoryBufferSize (256)
-#define MyMJGameVisualCoreHistoryBufferSaturatePercentage (80)
-#define MyMJGameVisualCoreHistoryMaxFallBehindTimeMs (5000)
-
-//MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS
-
 //Note once created, subthread would start working
 class FMyMJGameCoreRunnableCpp : public FMyRunnableBaseCpp
 {
 public:
-    FMyMJGameCoreRunnableCpp() : FMyRunnableBaseCpp(MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS)
-    {
-
-        //m_ppCoreInRun = NULL;
-
-        m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
-        m_iSeed.Set(0);
-        m_iTrivalConfigMask = 0;
-
-        m_ppCore = NULL;
-
-        //MY_VERIFY(start());
-
-        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameCoreThreadControlCpp create()."));
-    };
-
-    virtual ~FMyMJGameCoreRunnableCpp()
-    {
-        if (!isReadyForMainThreadClean()) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Runnable data is still used when destroy, check you code!"));
-            MY_VERIFY(false);
-        }
-
-        if (m_ppCore) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_ppCore is valid when destroy, this means subthread failed to reclaim it!"));
-        }
-
-        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("~FMyMJGameCoreThreadControlCpp destroy()."));
-
-    };
+    FMyMJGameCoreRunnableCpp();
+    virtual ~FMyMJGameCoreRunnableCpp();
 
     void initData(MyMJGameRuleTypeCpp eRuleType, int32 iSeed, int32 iTrivalConfigMask)
     {
@@ -147,6 +113,9 @@ protected:
 };
 
 
+#define MyNeedRebootReason_LackIdEvent (1)
+#define MyNeedRebootReason_LackServerWorldTimeMs (2)
+
 //#define MY_EXPECTED_MJ_PAWN_NUM ((uint8)MyMJGameRoleTypeCpp::Max)
 
 //This level focus on logic, the data source, exist both on server and client, but only server will handle data and generate output
@@ -188,8 +157,6 @@ public:
     bool startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst);
     void stopGame();
 
-    void coreDataPullLoop();
-
     //end
    
     inline UMyMJDataAllCpp* getMJDataAll(bool bVerify = true)
@@ -213,7 +180,7 @@ public:
 protected:
 
     //virtual void PostInitProperties() override;
-    //virtual void PostInitializeComponents() override;
+    virtual void PostInitializeComponents() override;
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
@@ -223,7 +190,11 @@ protected:
     bool getCoreFullPartEnabled() const;
     void setCoreFullPartEnabled(bool bEnabled);
 
+    void loop();
+    void coreDataPullLoopInner();
     void notifyDataUpdated();
+
+    void setNeedReboot(bool bNeedReboot, int32 iDebugReason);
 
     UFUNCTION()
     void OnRep_MJDataAllPointer()

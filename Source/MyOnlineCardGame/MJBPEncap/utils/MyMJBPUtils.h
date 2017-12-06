@@ -170,8 +170,11 @@ public:
     UFUNCTION(BlueprintCallable)
     static int32 getEngineNetMode(AActor *actor);
 
+  
     static bool haveServerLogicLayer(AActor *actor);
+    static bool haveServerNetworkLayer(AActor *actor);
     static bool haveClientVisualLayer(AActor *actor);
+    static bool haveClientNetworkLayer(AActor *actor);
 
     UFUNCTION(BlueprintCallable)
     static bool testLoadAsset(UObject* outer, FString fullPathName);

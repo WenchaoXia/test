@@ -13,6 +13,8 @@
 
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
+#define MySupposedReplicateUpdateFreq (10.f)
+
 FMyMJCoreRelatedEventCorePusherCfgCpp::FMyMJCoreRelatedEventCorePusherCfgCpp()
 {
     m_uiGameStarted = 1000;
@@ -229,13 +231,18 @@ void UMyMJDataSequencePerRoleCpp::getFullAndDeltaLastData(uint32 *pOutLastEventI
     uint32 uiIdFull = getFullData().getIdEventApplied();
     uint32 uiTimeFull = getFullData().getTime_ms();
 
-    const UMyMJGameEventCycleBuffer* pDelta = getDeltaDataEvents(true);
     uint32 uiIdDeltas = 0;
-    const FMyMJEventWithTimeStampBaseCpp* pEventLast = pDelta->peekLast();
-    if (pEventLast) {
-        uiIdDeltas = pEventLast->getIdEvent();
+    uint32 uiTimeDeltas = 0;
+
+    const UMyMJGameEventCycleBuffer* pDelta = getDeltaDataEvents(false);
+    if (pDelta) {
+        const FMyMJEventWithTimeStampBaseCpp* pEventLast = pDelta->peekLast();
+        if (pEventLast) {
+            uiIdDeltas = pEventLast->getIdEvent();
+        }
+        uiTimeDeltas = pDelta->getTimeRangeEnd_ms();
     }
-    uint32 uiTimeDeltas = pDelta->getTimeRangeEnd_ms();
+
 
     bool bTimeChaos = false, bIdChaos = false;
     if (m_iFullDataRecordType == MyMJDataSequencePerRoleFullDataRecordTypeNone) {
@@ -506,7 +513,6 @@ void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTim
         //valid time stamp, and endTime not passed, yet, it is not allowed to apply yet
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("forcing to squash events before required time passed, maybe buffer is too small!, base time %d, uiServerWorldTime_ms %d."), uiStartTime, uiServerWorldTime_ms);
     }
-    */
 
     if (m_eRole == MyMJGameRoleTypeCpp::SysKeeper) {
         //do more check for syskeeper seq
@@ -516,7 +522,7 @@ void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTim
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("forcing to squash events but unconsumed event have lost, producing is too fast or consuming is too slow, lastEventId %d, m_uiHelerIdEventConsumed %d."), lastEventId, m_uiHelerIdEventConsumed);
         }
     }
-
+    */
 
 };
 
@@ -628,14 +634,15 @@ void UMyMJDataAllCpp::PostInitProperties()
 UMyMJDataAllCpp::UMyMJDataAllCpp(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
     m_iTest = 0;
+
+    m_aDatas.Reset();
+
     m_iRepObjIdBase = 200;
     m_iRepKeyOfState = 1;
 
     m_bShowDebugLog = false;
-
-    m_aDatas.Reset();
-
-    bReplicates = true;
+    m_fDebugSupposedReplicationUpdateLastRealTime = 0;
+    m_uiDebugSupposedReplicationUpdateLastIdEvent = 0;
 
     //UMyMJDataSequencePerRoleCpp *pNew;
     //pNew = CreateDefaultSubobject<UMyMJDataSequencePerRoleCpp>((TEXT("mj data 0")));
@@ -648,21 +655,55 @@ UMyMJDataAllCpp::UMyMJDataAllCpp(const FObjectInitializer& ObjectInitializer) : 
     //m_aDatas.Emplace(pNew);
 
 
-    for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
+    createSubObjects(true, this);
 
-        UMyMJDataSequencePerRoleCpp *pNew;
-        FString name = FString::Printf(TEXT("mj data seq %d"), i);
-        pNew = CreateDefaultSubobject<UMyMJDataSequencePerRoleCpp>(FName(*name));
-        pNew->init((MyMJGameRoleTypeCpp)i);
-
-        m_aDatas.Emplace(pNew);
-
-    }
+    bReplicates = true;
 
 };
 
 UMyMJDataAllCpp::~UMyMJDataAllCpp()
 {
+
+};
+
+void UMyMJDataAllCpp::clearInGame()
+{
+    int32 l = m_aDatas.Num();
+    for (int i = 0; i < l; i++)
+    {
+        UMyMJDataSequencePerRoleCpp* pSeq = m_aDatas[i];
+        if (!IsValid(pSeq)) {
+            continue;
+        }
+
+        pSeq->clearInGame();
+    }
+
+    markDirtyForRep();
+
+    m_fDebugSupposedReplicationUpdateLastRealTime = 0;
+    m_uiDebugSupposedReplicationUpdateLastIdEvent = 0;
+};
+
+void UMyMJDataAllCpp::createSubObjects(bool bInConstructor, UObject *pOuter)
+{
+    m_aDatas.Reset();
+
+    for (int i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
+
+        UMyMJDataSequencePerRoleCpp *pNew;
+        if (bInConstructor) {
+            FString name = FString::Printf(TEXT("mj data seq %d"), i);
+            pNew = CreateDefaultSubobject<UMyMJDataSequencePerRoleCpp>(FName(*name));
+        }
+        else {
+            pNew = NewObject<UMyMJDataSequencePerRoleCpp>(pOuter);
+        }
+        pNew->init((MyMJGameRoleTypeCpp)i);
+
+        m_aDatas.Emplace(pNew);
+
+    }
 
 };
 
@@ -783,6 +824,7 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
     }
 
     //set helper data to detect producing too fast
+    /*
     if (bReplicated) {
         UMyMJDataSequencePerRoleCpp* pData = m_aDatas[(uint8)MyMJGameRoleTypeCpp::SysKeeper];
         if (IsValid(pData))
@@ -802,7 +844,6 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
         }
     }
 
-    /*
     if (IsValid(m_pDataTest0)) {
         WroteSomething |= Channel->ReplicateSubobject(m_pDataTest0, *Bunch, *RepFlags);
         const UMyMJGameEventCycleBuffer* pB = m_pDataTest0->getEvents(false);
@@ -833,7 +874,7 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
     return WroteSomething;
 };
 
-void UMyMJDataAllCpp::addPusherResult(const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms)
+void UMyMJDataAllCpp::addPusherResult(const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms, bool *pOutNeedReboot)
 {
     int32 l = m_aDatas.Num();
     MY_VERIFY(l == (uint8)MyMJGameRoleTypeCpp::Max);
@@ -854,7 +895,13 @@ void UMyMJDataAllCpp::addPusherResult(const FMyMJGamePusherResultCpp& cPusherRes
 
                 UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("uint32 id is too large as %d, require reboot!"), idEventNew);
 
-                //Todo: set flag of reboot
+                if (pOutNeedReboot) {
+                    *pOutNeedReboot = true;
+                }
+            }
+
+            if (idEventNew >= MyUInt32IdCoreDumpBottomValue) {
+                MY_VERIFY(false);
             }
         }
         else {
@@ -869,3 +916,26 @@ void UMyMJDataAllCpp::addPusherResult(const FMyMJGamePusherResultCpp& cPusherRes
         }
     }
 };
+
+void UMyMJDataAllCpp::updateDebugInfo(float fWorldRealTimeNow, uint32 uiIdEventBefore)
+{
+    UMyMJDataSequencePerRoleCpp* pSeq = getDataByRoleType(MyMJGameRoleTypeCpp::SysKeeper);
+    uint32 uiIdEventNow = 0;
+    pSeq->getFullAndDeltaLastData(&uiIdEventNow, NULL);
+
+    int32 bufferSize = pSeq->getDeltaDataEvents(true)->getSizeMax();
+    int32 eventNumAddedThisTurn = (uiIdEventNow - uiIdEventBefore);
+    if (eventNumAddedThisTurn > bufferSize) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("in one turn,    event adding is too fast! %d/%d added."), eventNumAddedThisTurn, bufferSize);
+    }
+
+    int32 eventNumAddedAfterPrevUpdate = (uiIdEventNow - m_uiDebugSupposedReplicationUpdateLastIdEvent);
+    if (eventNumAddedAfterPrevUpdate > bufferSize) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("in suppoed rep, event adding is too fast! %d/%d added."), eventNumAddedAfterPrevUpdate, bufferSize);
+    }
+
+    if (fWorldRealTimeNow >= (m_fDebugSupposedReplicationUpdateLastRealTime + (1.f / MySupposedReplicateUpdateFreq))) {
+        m_fDebugSupposedReplicationUpdateLastRealTime = fWorldRealTimeNow;
+        m_uiDebugSupposedReplicationUpdateLastIdEvent = uiIdEventNow;
+    }
+}

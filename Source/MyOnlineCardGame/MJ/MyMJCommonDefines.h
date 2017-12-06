@@ -6,10 +6,6 @@
 
 #include "MyMJCommonDefines.generated.h"
 
-#define MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS 33  //resolution is *ms plus parent thread kick
-#define MY_MJ_GAME_CORE_FULL_MAIN_THREAD_LOOP_TIME_MS 50
-
-
 #define MyMJGameDup8BitMaskForSingleAttenderTo32BitMaskForAll(iMaskSingle) ( ((iMaskSingle & 0xff) << 24) | ((iMaskSingle & 0xff) << 16) | ((iMaskSingle & 0xff) << 8) | ((iMaskSingle & 0xff) << 0) )
 
 typedef class FMyMJGameCoreCpp FMyMJGameCoreCpp;

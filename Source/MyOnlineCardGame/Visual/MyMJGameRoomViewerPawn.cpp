@@ -6,11 +6,49 @@
 #include "MyMJGameRoomLevelScriptActorCpp.h"
 #include "MyMJGameDeskVisualData.h"
 
+AMyMJGameRoomViewerPawnCpp::AMyMJGameRoomViewerPawnCpp() : Super()
+{
+    bReplicates = true;
+    bAlwaysRelevant = false;
+    bOnlyRelevantToOwner = true; //subclass can change it
+    bNetLoadOnClient = true;
+    NetUpdateFrequency = 5;
+
+    m_pExtRoomActor = NULL;
+    m_pExtRoomTrivalDataSource = NULL;
+    m_pExtRoomCoreDataSourceSeq = NULL;
+
+    m_fHelperFilterLastRepClientRealtTime = 0;
+
+    m_fLastAnswerSyncForMJCoreFullDataWorldRealTime = 0;
+    m_bNeedAnswerSyncForMJCoreFullData = false;
+    m_fLastAskSyncForMJCoreFullDataWorldRealTime = 0;
+    m_bNeedAskSyncForMJCoreFullData = false;
+
+    m_eDebugNetmodeAtStart = ENetMode::NM_MAX;
+
+};
+
+AMyMJGameRoomViewerPawnCpp::~AMyMJGameRoomViewerPawnCpp()
+{
+
+};
+
+void AMyMJGameRoomViewerPawnCpp::clearInGame()
+{
+    UWorld *world = GetWorld();
+    if (IsValid(world)) {
+        world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
+    }
+};
+
 void AMyMJGameRoomViewerPawnCpp::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (HasAuthority()) {
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameRoomViewerPawnCpp BeginPlay()"));
+
+    if (UMyMJBPUtilsLibrary::haveServerLogicLayer(this)) {
         //In most case, this equals netmode == DS, LS, standalone
         resetupWithRoleWithAuth(m_eRoleType);
     }
@@ -28,6 +66,14 @@ void AMyMJGameRoomViewerPawnCpp::BeginPlay()
 
     m_eDebugNetmodeAtStart = GetNetMode();
 };
+
+void AMyMJGameRoomViewerPawnCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    Super::EndPlay(EndPlayReason);
+
+    clearInGame();
+};
+
 
 void AMyMJGameRoomViewerPawnCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
@@ -85,6 +131,8 @@ bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRo
         return true;
     }
 
+    return false; //test
+
     AMyMJGameCoreDataSourceCpp* pSource = pLSASub->m_pCoreDataSource;
     if (!IsValid(pSource)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("core data source is invalid, not cfged?, %p."), pSource);
@@ -95,6 +143,13 @@ bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRo
     if (!IsValid(m_pExtRoomCoreDataSourceSeq)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pExtRoomCoreDataSourceSeq is invalid, not cfged?, %p, role %d."), m_pExtRoomCoreDataSourceSeq, (uint8)eRoleType);
         MY_VERIFY(false);
+    }
+
+    if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this)) {
+        //we have a local visual layer
+
+        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.Clear();
+        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumerWithFilter);
     }
 
     return true;
@@ -108,11 +163,11 @@ void AMyMJGameRoomViewerPawnCpp::loop()
     }
 
     //network traffic handle
-    if (mode == ENetMode::NM_DedicatedServer || mode == ENetMode::NM_ListenServer) {
+    if (UMyMJBPUtilsLibrary::haveServerNetworkLayer(this)) {
         //we have network traffic to handle as network server
         loopOfSyncForMJCoreFullDataOnNetworkServer();
     }
-    else if (mode == ENetMode::NM_Client)
+    else if (UMyMJBPUtilsLibrary::haveClientNetworkLayer(this))
     {
         loopOfSyncForMJCoreFullDataOnNetworkClient();
     }
@@ -189,25 +244,6 @@ void AMyMJGameRoomViewerPawnCpp::setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleTy
     m_eRoleType = eRoleType;
 };
 
-bool AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumer()
-{
-    if (!IsValid(m_pExtRoomActor)) {
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("m_pExtRoomActor is not valid now. %p."), m_pExtRoomActor);
-        return false;
-    }
-
-    bool bRet = false;
-    if (IsValid(m_pExtRoomCoreDataSourceSeq)) {
-        bRet = m_pExtRoomActor->getRoomDataSuiteVerified()->getDeskDataObjVerified()->tryFeedData(m_pExtRoomCoreDataSourceSeq);
-    }
-
-    if (bRet) {
-        markNeedAskSyncForMJCoreFullData();
-    }
-
-    return bRet;
-};
-
 void AMyMJGameRoomViewerPawnCpp::askSyncForMJCoreFullDataOnServer_Implementation()
 {
     //FPlatformProcess::Sleep(v1);
@@ -255,7 +291,7 @@ void AMyMJGameRoomViewerPawnCpp::answerSyncForMJCoreFullDataOnClient_Implementat
 }
 
 
-void AMyMJGameRoomViewerPawnCpp::OnRep_NewDataArrivedWithFilter()
+void AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumerWithFilter()
 {
     UWorld *world = GetWorld();
     if (!IsValid(world)) {
@@ -270,9 +306,30 @@ void AMyMJGameRoomViewerPawnCpp::OnRep_NewDataArrivedWithFilter()
 
     m_fHelperFilterLastRepClientRealtTime = nowRealTime;
 
-    ENetMode mode = GetNetMode();
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("OnRep_NewDataArrivedWithFilter, ENetMode %d, NM_Standalone %d"), (uint8)mode, (uint8)ENetMode::NM_Standalone);
+    //ENetMode mode = GetNetMode();
+    //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("OnRep_NewDataArrivedWithFilter, ENetMode %d, NM_Standalone %d"), (uint8)mode, (uint8)ENetMode::NM_Standalone);
+    
     tryFeedDataToConsumer();
+};
+
+
+bool AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumer()
+{
+    if (!IsValid(m_pExtRoomActor)) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("m_pExtRoomActor is not valid now. %p."), m_pExtRoomActor);
+        return false;
+    }
+
+    bool bRet = false;
+    if (IsValid(m_pExtRoomCoreDataSourceSeq)) {
+        bRet = m_pExtRoomActor->getRoomDataSuiteVerified()->getDeskDataObjVerified()->tryFeedData(m_pExtRoomCoreDataSourceSeq);
+    }
+
+    if (bRet) {
+        markNeedAskSyncForMJCoreFullData();
+    }
+
+    return bRet;
 };
 
 

@@ -34,66 +34,45 @@ class MYONLINECARDGAME_API AMyMJGameRoomViewerPawnCpp : public AMyMJGameViewerPa
 	GENERATED_BODY()
 
 public:
-    AMyMJGameRoomViewerPawnCpp() : Super()
-    {
-        bReplicates = true;
-        bOnlyRelevantToOwner = true; //subclass can change it
+    AMyMJGameRoomViewerPawnCpp();
+    virtual ~AMyMJGameRoomViewerPawnCpp();
 
-        m_pExtRoomActor = NULL;
-        m_pExtRoomTrivalDataSource = NULL;
-        m_pExtRoomCoreDataSourceSeq = NULL;
-
-        m_fHelperFilterLastRepClientRealtTime = 0;
-
-        m_fLastAnswerSyncForMJCoreFullDataWorldRealTime = 0;
-        m_bNeedAnswerSyncForMJCoreFullData = false;
-        m_fLastAskSyncForMJCoreFullDataWorldRealTime = 0;
-        m_bNeedAskSyncForMJCoreFullData = false;
-
-        m_eDebugNetmodeAtStart = ENetMode::NM_MAX;
-
-    };
-
-    virtual ~AMyMJGameRoomViewerPawnCpp()
-    {
-
-    };
+    void clearInGame();
 
     inline
     void markNeedAnswerSyncForMJCoreFullData()
     {
-        ENetMode mode = GetNetMode();
-        if (mode != ENetMode::NM_DedicatedServer && mode != ENetMode::NM_ListenServer) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("this is supposed to be called on network sever"));
-            return;
-        }
+        MY_VERIFY(UMyMJBPUtilsLibrary::haveServerNetworkLayer(this));
 
-        m_bNeedAnswerSyncForMJCoreFullData = true;
-        loopOfSyncForMJCoreFullDataOnNetworkServer();
+        if (!m_bNeedAnswerSyncForMJCoreFullData) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("marking need answer sync for full data at server side."));
+            m_bNeedAnswerSyncForMJCoreFullData = true;
+            loopOfSyncForMJCoreFullDataOnNetworkServer();
+        }
     };
 
     inline
     void markNeedAskSyncForMJCoreFullData()
     {
-        ENetMode mode = GetNetMode();
-        if (mode != ENetMode::NM_Client ) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("this is supposed to be called on network client"));
-            return;
+        MY_VERIFY(UMyMJBPUtilsLibrary::haveClientNetworkLayer(this));
+
+        if (!m_bNeedAskSyncForMJCoreFullData) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("marking need ask sync for full data at client side."));
+            m_bNeedAskSyncForMJCoreFullData = true;
+            loopOfSyncForMJCoreFullDataOnNetworkClient();
         }
 
-        m_bNeedAskSyncForMJCoreFullData = true;
-        loopOfSyncForMJCoreFullDataOnNetworkClient();
     };
 
     //only with authority it can be changed
     void setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType);
 
-    //return true if need to sync full, note it will already marked sync flag inside if needed
-    bool tryFeedDataToConsumer();
+
 
 protected:
 
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
 
     UFUNCTION(BlueprintCallable, Server, unreliable, WithValidation)
@@ -112,26 +91,52 @@ protected:
 
 
     UFUNCTION()
+    void OnRep_ExtRoomActorPointer()
+    {
+        MY_VERIFY(IsValid(m_pExtRoomActor));
+        tryFeedDataToConsumerWithFilter();
+    };
+
+    UFUNCTION()
     void OnRep_ExtRoomCoreDataSourceSeqPointer()
     {
         MY_VERIFY(IsValid(m_pExtRoomCoreDataSourceSeq));
 
         //trick is that, onRep only happen on client, and in that case only one instance need to be notified
         m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.Clear();
-        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGameRoomViewerPawnCpp::OnRep_NewDataArrivedWithFilter);
+        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumerWithFilter);
     };
 
     UFUNCTION()
-        void OnRep_NewDataArrivedWithFilter();
+    void OnRep_ExtRoomCoreDataSourceSeqContent()
+    {
+        tryFeedDataToConsumerWithFilter();
+    };
 
-    UPROPERTY(ReplicatedUsing = OnRep_NewDataArrivedWithFilter)
+    UFUNCTION()
+    void OnRep_ExtRoomTrivalDataSourceSeqPointer()
+    {
+    };
+
+    UFUNCTION()
+    void OnRep_ExtRoomTrivalDataSourceSeqContent()
+    {
+    };
+
+    void tryFeedDataToConsumerWithFilter();
+
+    //return true if need to sync full, note it will already marked sync flag inside if needed
+    bool tryFeedDataToConsumer();
+
+    UPROPERTY(ReplicatedUsing = OnRep_ExtRoomActorPointer)
     AMyMJGameRoomCpp* m_pExtRoomActor;
-
-    UPROPERTY(ReplicatedUsing = OnRep_NewDataArrivedWithFilter)
-    AMyMJGameTrivalDataSourceCpp *m_pExtRoomTrivalDataSource;
 
     UPROPERTY(ReplicatedUsing = OnRep_ExtRoomCoreDataSourceSeqPointer)
     UMyMJDataSequencePerRoleCpp* m_pExtRoomCoreDataSourceSeq;
+
+    UPROPERTY(ReplicatedUsing = OnRep_ExtRoomTrivalDataSourceSeqPointer)
+    AMyMJGameTrivalDataSourceCpp *m_pExtRoomTrivalDataSource;
+
 
     uint32 m_fHelperFilterLastRepClientRealtTime;
 

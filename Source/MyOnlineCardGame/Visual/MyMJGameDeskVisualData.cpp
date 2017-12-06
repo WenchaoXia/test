@@ -18,7 +18,9 @@
 
 //#include "Runtime/CoreUObject/Public/Templates/SubclassOf.h"
 
-
+#define MY_VISUAL_PROCESS_SUB_THREAD_LOOP_TIME_MS (16)
+#define MY_VISUAL_PROCESS_IN_BUFFER_SIZE (256)
+#define MY_VISUAL_PROCESS_OUT_BUFFER_SIZE (256)
 
 int32 FMyMJGameDeskVisualPointCfgCacheCpp::getCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
 {
@@ -76,6 +78,13 @@ void  FMyMJGameDeskVisualPointCfgCacheCpp::helperSetVisualPointCfgByIdxs(int32 i
 };
 
 
+FMyMJGameDeskVisualCoreDataRunnableCpp::FMyMJGameDeskVisualCoreDataRunnableCpp() : FMyRunnableBaseCpp(MY_VISUAL_PROCESS_SUB_THREAD_LOOP_TIME_MS), m_cInRawCoreData(MY_VISUAL_PROCESS_IN_BUFFER_SIZE), m_cOutCalcuatedVisualData(MY_VISUAL_PROCESS_OUT_BUFFER_SIZE)
+{
+};
+
+FMyMJGameDeskVisualCoreDataRunnableCpp::~FMyMJGameDeskVisualCoreDataRunnableCpp()
+{
+};
 
 bool FMyMJGameDeskVisualCoreDataRunnableCpp::initBeforRun()
 {
@@ -102,14 +111,14 @@ void FMyMJGameDeskVisualCoreDataRunnableCpp::loopInRun()
         else if (pInItem->m_apFull.Num() > 0) {
             FMyMJDataStructWithTimeStampBaseCpp& cFull = pInItem->m_apFull[0];
 
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: got full,  %s, %d."),
-                *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(pInItem->m_uiUpdateServerWorldTime_ms), cFull.getIdEventApplied());
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: %s"),
+                *cFull.genDebugMsg());
         }
         else if (pInItem->m_apDelta.Num() > 0) {
             FMyMJEventWithTimeStampBaseCpp& cDelta = pInItem->m_apDelta[0];
 
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: got delta, %s, %d. %s"),
-                *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(pInItem->m_uiUpdateServerWorldTime_ms), cDelta.getIdEvent(), *cDelta.genDebugMsg());
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: %s"),
+                *cDelta.genDebugMsg());
         }
         else {
 
@@ -149,9 +158,14 @@ int32 FMyMJGameDeskVisualCoreDataRunnableCpp::updateCfgCache(const FMyMJGameDesk
 
 bool FMyMJGameDeskVisualCoreDataRunnableCpp::tryFeedData(UMyMJDataSequencePerRoleCpp *pSeq)
 {
-    uint32 uiServerWorldTime_ms = pSeq->getServerWorldTime_ms();
-    int32 iRet = tryFeedEvents(pSeq, uiServerWorldTime_ms);
+    bool bHaveNewEvent = false;
+    int32 iRet = tryFeedEvents(pSeq, &bHaveNewEvent);
+    if (bHaveNewEvent) {
+        kick();
+    }
 
+
+    uint32 uiServerWorldTime_ms = pSeq->getServerWorldTime_ms();
     //see if we need to update timestamp
     while (iRet == MyTryFeedEventRetAllProcessed && uiServerWorldTime_ms > m_cLabelLastIn.m_uiServerWorldTime_ms) {
 
@@ -177,10 +191,27 @@ bool FMyMJGameDeskVisualCoreDataRunnableCpp::tryFeedData(UMyMJDataSequencePerRol
     return iRet == MyTryFeedEventRetNeedSyncBase;
 };
 
-int32 FMyMJGameDeskVisualCoreDataRunnableCpp::tryFeedEvents(UMyMJDataSequencePerRoleCpp *pSeq, uint32 uiServerWorldTime_ms)
+int32 FMyMJGameDeskVisualCoreDataRunnableCpp::tryFeedEvents(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutHaveFeedEvent)
 {
     MY_VERIFY(IsValid(pSeq));
-    MY_VERIFY(uiServerWorldTime_ms > 0);
+
+    if (pOutHaveFeedEvent) {
+        *pOutHaveFeedEvent = false;
+    }
+
+    uint32 uiServerWorldTime_ms = pSeq->getServerWorldTime_ms();
+
+    if (uiServerWorldTime_ms <= 0) {
+        uint32 idEventLast = 0;
+        pSeq->getFullAndDeltaLastData(&idEventLast, NULL);
+        if (idEventLast > 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got data that serverWorldTime is Zero but idEventLast %d, check your server code!"), idEventLast);
+            MY_VERIFY(false);
+        }
+
+        return MyTryFeedEventRetAllProcessed;
+    }
+
     MyMJGameRoleTypeCpp eRoleTypeData = pSeq->getRole();
     MyMJGameRoleTypeCpp eRoleTypeSelf = m_cLabelLastIn.m_eRoleType;
     MY_VERIFY(eRoleTypeData != MyMJGameRoleTypeCpp::Max);
@@ -269,7 +300,7 @@ int32 FMyMJGameDeskVisualCoreDataRunnableCpp::tryFeedEvents(UMyMJDataSequencePer
 
         FMyMJGameDeskVisualCoreDataProcessorInputCpp* pIn = m_cInRawCoreData.getItemForProduce();
         if (pIn == NULL) {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("not enough of buffer for input of core processor!"));
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("not enough of buffer for input of core processor, when update full."));
             return MyTryFeedEventRetLackBuffer;
         }
 
@@ -281,6 +312,10 @@ int32 FMyMJGameDeskVisualCoreDataRunnableCpp::tryFeedEvents(UMyMJDataSequencePer
         m_cInRawCoreData.putInProducedItem(pIn);
 
         m_cLabelLastIn.updateAfterEventAdded(eRoleTypeData, cFullData.getIdEventApplied(), uiServerWorldTime_ms);
+
+        if (pOutHaveFeedEvent) {
+            *pOutHaveFeedEvent = true;
+        }
     }
 
 
@@ -293,7 +328,7 @@ int32 FMyMJGameDeskVisualCoreDataRunnableCpp::tryFeedEvents(UMyMJDataSequencePer
 
         FMyMJGameDeskVisualCoreDataProcessorInputCpp* pIn = m_cInRawCoreData.getItemForProduce();
         if (pIn == NULL) {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("not enough of buffer for input of core processor!"));
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("not enough of buffer for input of core processor, when update delta."));
             return MyTryFeedEventRetLackBuffer;
         }
 
@@ -308,6 +343,10 @@ int32 FMyMJGameDeskVisualCoreDataRunnableCpp::tryFeedEvents(UMyMJDataSequencePer
         m_cInRawCoreData.putInProducedItem(pIn);
 
         m_cLabelLastIn.updateAfterEventAdded(eRoleTypeData, event.getIdEvent(), uiServerWorldTime_ms);
+
+        if (pOutHaveFeedEvent) {
+            *pOutHaveFeedEvent = true;
+        }
     }
 
     return MyTryFeedEventRetAllProcessed;
@@ -1255,6 +1294,22 @@ void UMyMJGameDeskSuiteCpp::helperResolveTargetCardVisualState(int32 idxCard, FM
 }
 */
 
+UMyMJGameDeskVisualDataObjCpp::UMyMJGameDeskVisualDataObjCpp()
+{
+    m_bInFullDataSyncState = false;
+};
+
+UMyMJGameDeskVisualDataObjCpp::~UMyMJGameDeskVisualDataObjCpp()
+{
+    //deconstructor can't access uobject*, but sharedPtr is OK
+    stop();
+};
+
+void UMyMJGameDeskVisualDataObjCpp::clearInGame()
+{
+    stop();
+};
+
 void UMyMJGameDeskVisualDataObjCpp::start()
 {
     //FMyMJGameDeskVisualCoreDataProcessorCpp *pProcessor = new FMyMJGameDeskVisualCoreDataProcessorCpp();
@@ -1267,7 +1322,7 @@ void UMyMJGameDeskVisualDataObjCpp::start()
 
     m_pDataProcessorWithThread = MakeShareable<FMyThreadControlCpp<FMyMJGameDeskVisualCoreDataRunnableCpp>>(new FMyThreadControlCpp<FMyMJGameDeskVisualCoreDataRunnableCpp>());
 
-    MY_VERIFY(m_pDataProcessorWithThread->create());
+    MY_VERIFY(m_pDataProcessorWithThread->create(EThreadPriority::TPri_Normal));
 };
 
 void UMyMJGameDeskVisualDataObjCpp::stop()
@@ -1305,6 +1360,7 @@ bool UMyMJGameDeskVisualDataObjCpp::tryFeedData(UMyMJDataSequencePerRoleCpp *pSe
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataProcessor invalid."));
         return false;
     }
+
     m_bInFullDataSyncState = m_pDataProcessorWithThread->getRunnableRef().tryFeedData(pSeq);
 
     return m_bInFullDataSyncState;

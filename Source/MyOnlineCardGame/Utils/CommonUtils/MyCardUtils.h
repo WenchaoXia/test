@@ -391,7 +391,7 @@ protected:
     virtual uint32 Run() override
     {
         const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
-        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Run() thread id: %d"), CurrentThreadId);
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("sub thread entered Run(), id: %d, m_uLoopTimeMs %d."), CurrentThreadId, m_uLoopTimeMs);
 
         //Initial wait before starting
         FPlatformProcess::Sleep(0.03);

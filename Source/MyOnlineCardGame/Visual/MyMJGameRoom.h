@@ -195,8 +195,9 @@ class MYONLINECARDGAME_API AMyMJGameRoomCpp : public AActor
 public:
 
     AMyMJGameRoomCpp();
-
     virtual ~AMyMJGameRoomCpp();
+
+    void clearInGame();
 
     void loop();
 

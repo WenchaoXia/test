@@ -149,6 +149,11 @@ AMyMJGameRoomCpp::~AMyMJGameRoomCpp()
 
 };
 
+void AMyMJGameRoomCpp::clearInGame()
+{
+    getRoomDataSuiteVerified()->clearInGame();
+};
+
 void AMyMJGameRoomCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -182,7 +187,7 @@ void AMyMJGameRoomCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     Super::EndPlay(EndPlayReason);
 
-    m_pDataSuit->getDeskDataObjVerified()->stop();
+    clearInGame();
 };
 
 bool AMyMJGameRoomCpp::checkSettings() const

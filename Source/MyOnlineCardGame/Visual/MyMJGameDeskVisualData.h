@@ -345,13 +345,9 @@ public:
 class FMyMJGameDeskVisualCoreDataRunnableCpp : public FMyRunnableBaseCpp
 {
 public:
-    FMyMJGameDeskVisualCoreDataRunnableCpp() : FMyRunnableBaseCpp()
-    {
-    };
 
-    virtual ~FMyMJGameDeskVisualCoreDataRunnableCpp()
-    {
-    };
+    FMyMJGameDeskVisualCoreDataRunnableCpp();
+    virtual ~FMyMJGameDeskVisualCoreDataRunnableCpp();
 
     void reset()
     {
@@ -387,8 +383,7 @@ protected:
 
     virtual void exitAfterRun() override;
 
-    //return 0 if all events need to feed have been handled correctly (when 0 events need to feed, it return 0), otherwise error code
-    int32 tryFeedEvents(UMyMJDataSequencePerRoleCpp *pSeq, uint32 uiServerWorldTime_ms);
+    int32 tryFeedEvents(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutHaveFeedEvent);
 
     FMyQueueWithLimitBuffer<FMyMJGameDeskVisualCoreDataProcessorInputCpp>  m_cInRawCoreData;
     FMyQueueWithLimitBuffer<FMyMJGameDeskVisualCoreDataProcessorOutputCpp> m_cOutCalcuatedVisualData;
@@ -405,15 +400,10 @@ class MYONLINECARDGAME_API UMyMJGameDeskVisualDataObjCpp : public UObject
 
 public:
 
-    UMyMJGameDeskVisualDataObjCpp()
-    {
-        m_bInFullDataSyncState = false;
-    };
+    UMyMJGameDeskVisualDataObjCpp();
+    virtual ~UMyMJGameDeskVisualDataObjCpp();
 
-    virtual ~UMyMJGameDeskVisualDataObjCpp()
-    {
-        stop();
-    };
+    void clearInGame();
 
     inline bool getInFullDataSyncState() const
     {

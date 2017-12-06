@@ -11,6 +11,39 @@
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 #include "MJLocalCS/Utils/MyMJUtilsLocalCS.h"
 
+#define MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS (16)  //resolution is *ms plus parent thread kick
+#define MY_MJ_GAME_CORE_FULL_MAIN_THREAD_LOOP_TIME_MS (17) //it is like tick()
+
+FMyMJGameCoreRunnableCpp::FMyMJGameCoreRunnableCpp() : FMyRunnableBaseCpp(MY_MJ_GAME_CORE_FULL_SUB_THREAD_LOOP_TIME_MS)
+{
+
+    //m_ppCoreInRun = NULL;
+
+    m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
+    m_iSeed.Set(0);
+    m_iTrivalConfigMask = 0;
+
+    m_ppCore = NULL;
+
+    //MY_VERIFY(start());
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("FMyMJGameCoreThreadControlCpp create()."));
+};
+
+FMyMJGameCoreRunnableCpp::~FMyMJGameCoreRunnableCpp()
+{
+    if (!isReadyForMainThreadClean()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Runnable data is still used when destroy, check you code!"));
+        MY_VERIFY(false);
+    }
+
+    if (m_ppCore) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_ppCore is valid when destroy, this means subthread failed to reclaim it!"));
+    }
+};
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("~FMyMJGameCoreThreadControlCpp destroy()."));
+
+
 AMyMJGameCoreDataSourceCpp::AMyMJGameCoreDataSourceCpp(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
     m_iTest0 = 0;
@@ -58,17 +91,35 @@ void AMyMJGameCoreDataSourceCpp::clearInGame()
 
 }
 
+void AMyMJGameCoreDataSourceCpp::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+    
+    m_pMJDataAll->createSubObjects(false, this);
+};
 
 void AMyMJGameCoreDataSourceCpp::BeginPlay()
 {
     Super::BeginPlay();
 
-    clearInGame();
+    //since clear inGame will remove timer and delegate bond, we don't do it in begin play to avoid unexpected bond removing of other actor touching this one
+    //clearInGame();
 
     bool bHaveLogic = UMyMJBPUtilsLibrary::haveServerLogicLayer(this);
     setCoreFullPartEnabled(bHaveLogic);
 
     m_eDebugNetMode = GetNetMode();
+
+    //start timer since game begin, since it represent this actor's state
+    UWorld *world = GetWorld();
+    if (IsValid(world)) {
+        world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
+        world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJGameCoreDataSourceCpp::loop, ((float)MY_MJ_GAME_CORE_FULL_MAIN_THREAD_LOOP_TIME_MS) / (float)1000, true);
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
+        MY_VERIFY(false);
+    }
 
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCoreDataSourceCpp::BeginPlay(), bHaveLogic %d, m_eDebugNetMode %d,  ENetMode::NM_Standalone %d."), bHaveLogic, (int32)m_eDebugNetMode, (int32)ENetMode::NM_Standalone);
 };
@@ -94,6 +145,9 @@ void AMyMJGameCoreDataSourceCpp::PreReplication(IRepChangedPropertyTracker & Cha
 {
     Super::PreReplication(ChangedPropertyTracker);
 
+    return;
+
+    /*
     UWorld* w = GetWorld();
 
     if (!IsValid(w)) {
@@ -106,10 +160,15 @@ void AMyMJGameCoreDataSourceCpp::PreReplication(IRepChangedPropertyTracker & Cha
     uint32 timeNowMs = timeNow * 1000;
 
     if (m_pMJDataAll->getServerWorldTime_ms() == timeNowMs) {
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Same server time ms, %d."), timeNowMs);
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Same server time ms, %d."), timeNowMs);
     }
 
     m_pMJDataAll->setServerWorldTime_ms(timeNowMs);
+
+    if (timeNowMs >= MyUInt32IdWarnBottomValue) {
+        setNeedReboot(true, MyNeedRebootReason_LackServerWorldTimeMs);
+    }
+    */
 };
 
 void AMyMJGameCoreDataSourceCpp::doTestChange()
@@ -226,21 +285,11 @@ bool AMyMJGameCoreDataSourceCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType, in
 
         FMyThreadControlCpp<FMyMJGameCoreRunnableCpp> *pCoreFull = new FMyThreadControlCpp<FMyMJGameCoreRunnableCpp>();
         pCoreFull->getRunnableRef().initData(eRuleType, iSeed, iTrivalConfigMask);
-        MY_VERIFY(pCoreFull->create());
+        MY_VERIFY(pCoreFull->create(EThreadPriority::TPri_Normal));
 
         m_pCoreFullWithThread = MakeShareable<FMyThreadControlCpp<FMyMJGameCoreRunnableCpp>>(pCoreFull);
 
-        UWorld *world = GetWorld();
-        if (IsValid(world)) {
-            world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
-            world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJGameCoreDataSourceCpp::coreDataPullLoop, ((float)MY_MJ_GAME_CORE_FULL_MAIN_THREAD_LOOP_TIME_MS) / (float)1000, true);
-        }
-        else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
-            MY_VERIFY(false);
-        }
-
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("mode updated and timer restarted!"));
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("mode updated and timer restarted!"));
 
         return true;
     }
@@ -290,15 +339,6 @@ bool AMyMJGameCoreDataSourceCpp::startGame(bool bAttenderRandomSelectDo, bool bA
 void AMyMJGameCoreDataSourceCpp::stopGame()
 {
     if (m_pCoreFullWithThread.IsValid()) {
-        
-        UWorld *world = GetWorld();
-        if (IsValid(world)) {
-            world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
-        }
-        else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
-            MY_VERIFY(false);
-        }
 
         m_pCoreFullWithThread.Reset();
     }
@@ -371,14 +411,10 @@ void AMyMJGameCoreDataSourceCpp::OnRep_MJDataAllContent(MyMJGameRoleTypeCpp eRol
 }
 */
 
-void AMyMJGameCoreDataSourceCpp::coreDataPullLoop()
+void AMyMJGameCoreDataSourceCpp::coreDataPullLoopInner()
 {
     MY_VERIFY(IsValid(m_pMJDataAll));
 
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("coreDataPullLoop."));
-
-    //const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
-    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("coreDataPullLoop thread id: %d"), CurrentThreadId);
 
     UWorld *world = GetWorld();
     if (!IsValid(world)) {
@@ -389,9 +425,23 @@ void AMyMJGameCoreDataSourceCpp::coreDataPullLoop()
     float timeNow = world->GetTimeSeconds();
     uint32 timeNowMs = timeNow * 1000;
 
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("timeNowMs is %d, %f"), timeNowMs, timeNow);
+
     if (timeNowMs == 0) {
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("timeNowMs is zero, skip."));
         return; //wait for next loop
+    }
+
+    if (m_pMJDataAll->getServerWorldTime_ms() == timeNowMs) {
+        //this ensure every data updating will always have a different time stamp
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Same server time ms, %d, skip to next loop."), timeNowMs);
+        return;
+    }
+
+    m_pMJDataAll->setServerWorldTime_ms(timeNowMs);
+
+    if (timeNowMs >= MyUInt32IdWarnBottomValue) {
+        setNeedReboot(true, MyNeedRebootReason_LackServerWorldTimeMs);
     }
 
     TQueue<FMyMJGamePusherResultCpp *, EQueueMode::Spsc>* pQ;
@@ -399,14 +449,17 @@ void AMyMJGameCoreDataSourceCpp::coreDataPullLoop()
         pQ = &m_pCoreFullWithThread->getRunnableRef().getIOGourpAll().m_cPusherResultQueue;
     }
     else {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("thread is not setupped, check your code!"));
+        //thread not stated yet
+        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("thread is not setupped, check your code!"));
         return;
     }
 
     //2nd, handle pusher result
+    uint32 uiIdEventBefore = 0;
+    m_pMJDataAll->getDataByRoleType(MyMJGameRoleTypeCpp::SysKeeper)->getFullAndDeltaLastData(&uiIdEventBefore, NULL);
+    bool bNeedRebootForIdEvent = false;
 
     bool bHaveProgress = false;
-
     while (1) {
 
         bool bHaveNextPuhserResult = !pQ->IsEmpty();
@@ -420,15 +473,25 @@ void AMyMJGameCoreDataSourceCpp::coreDataPullLoop()
         pQ->Dequeue(pPusherResult);
         MY_VERIFY(pPusherResult);
 
-        m_pMJDataAll->addPusherResult(*pPusherResult, timeNowMs);
+        bool bNeedReboot = false;
+        m_pMJDataAll->addPusherResult(*pPusherResult, timeNowMs, &bNeedReboot);
+        bNeedRebootForIdEvent |= bNeedReboot;
         delete(pPusherResult);
         bHaveProgress = true;
 
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("bHaveNextPuhserResult1 %d, bIsReadyFOrNextPushserResult %d."), bHaveNextPuhserResult, bIsReadyFOrNextPushserResult);
     }
 
+    if (bNeedRebootForIdEvent) {
+        setNeedReboot(true, MyNeedRebootReason_LackIdEvent);
+    }
+
     if (bHaveProgress) {
         notifyDataUpdated();
+
+        //detect data speed
+        float realTimeNow = world->GetRealTimeSeconds();
+        m_pMJDataAll->updateDebugInfo(realTimeNow, uiIdEventBefore);
     }
 
 
@@ -442,12 +505,29 @@ void AMyMJGameCoreDataSourceCpp::notifyDataUpdated()
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("netmode changed %d -> %d!"), (int32)m_eDebugNetMode, (int32)mode);
     }
 
-    bool bIsNetworkServer = mode == ENetMode::NM_DedicatedServer || mode == ENetMode::NM_ListenServer;
-    if (bIsNetworkServer) {
+    MY_VERIFY(UMyMJBPUtilsLibrary::haveServerLogicLayer(this));
+
+    if (UMyMJBPUtilsLibrary::haveServerNetworkLayer(this)) {
         m_pMJDataAll->markAllDirtyForRep();
         ForceNetUpdate();
     }
+
+    if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this)) {
+        //we have local visual layer, here we suppose only two roles used
+        m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::Observer)->m_cReplicateDelegate.Broadcast();
+        m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::SysKeeper)->m_cReplicateDelegate.Broadcast();
+    }
 }
+
+void AMyMJGameCoreDataSourceCpp::setNeedReboot(bool bNeedReboot, int32 iDebugReason)
+{
+    //TOdo: mark process to reboot if possible
+};
+
+void AMyMJGameCoreDataSourceCpp::loop()
+{
+    coreDataPullLoopInner();
+};
 
 /*
 UMyMJGameCoreWithVisualCpp::UMyMJGameCoreWithVisualCpp() : Super()

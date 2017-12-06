@@ -12,3 +12,8 @@ UMyMJGameRoomDataSuite::~UMyMJGameRoomDataSuite()
 {
 
 };
+
+void UMyMJGameRoomDataSuite::clearInGame()
+{
+    getDeskDataObjVerified()->clearInGame();
+};

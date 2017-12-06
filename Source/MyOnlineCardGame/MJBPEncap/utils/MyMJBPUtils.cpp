@@ -268,7 +268,6 @@ int32 UMyMJBPUtilsLibrary::getEngineNetMode(AActor *actor)
     }
 };
 
-
 bool UMyMJBPUtilsLibrary::haveServerLogicLayer(AActor *actor)
 {
     ENetMode mode = actor->GetNetMode();
@@ -278,6 +277,13 @@ bool UMyMJBPUtilsLibrary::haveServerLogicLayer(AActor *actor)
     //return actor->HasAuthority();
 };
 
+bool UMyMJBPUtilsLibrary::haveServerNetworkLayer(AActor *actor)
+{
+    ENetMode mode = actor->GetNetMode();
+
+    return mode == ENetMode::NM_ListenServer || mode == ENetMode::NM_DedicatedServer;
+}
+
 bool UMyMJBPUtilsLibrary::haveClientVisualLayer(AActor *actor)
 {
     ENetMode mode = actor->GetNetMode();
@@ -285,6 +291,12 @@ bool UMyMJBPUtilsLibrary::haveClientVisualLayer(AActor *actor)
     return mode == ENetMode::NM_Standalone || mode == ENetMode::NM_ListenServer || mode == ENetMode::NM_Client;
 };
 
+bool UMyMJBPUtilsLibrary::haveClientNetworkLayer(AActor *actor)
+{
+    ENetMode mode = actor->GetNetMode();
+
+    return mode == ENetMode::NM_Client;
+};
 
 bool UMyMJBPUtilsLibrary::testLoadAsset(UObject* outer, FString fullPathName)
 {
