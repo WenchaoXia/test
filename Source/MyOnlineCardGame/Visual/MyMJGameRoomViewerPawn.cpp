@@ -26,6 +26,7 @@ AMyMJGameRoomViewerPawnCpp::AMyMJGameRoomViewerPawnCpp() : Super()
     m_bNeedAskSyncForMJCoreFullData = false;
 
     m_eDebugNetmodeAtStart = ENetMode::NM_MAX;
+    m_bDebugHaltFeedData = false;
 
 };
 
@@ -318,6 +319,10 @@ void AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumerWithFilter()
 
 bool AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumer()
 {
+    if (m_bDebugHaltFeedData) {
+        return false;
+    }
+
     if (!IsValid(m_pExtRoomActor)) {
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("m_pExtRoomActor is not valid now. %p."), m_pExtRoomActor);
         return false;

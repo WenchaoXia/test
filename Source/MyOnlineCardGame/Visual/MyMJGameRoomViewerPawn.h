@@ -67,7 +67,20 @@ public:
     //only with authority it can be changed
     void setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType);
 
+    UFUNCTION(BlueprintCallable)
+    void setDebugHaltFeedData(bool bDebugHaltFeedData)
+    {
+        if (m_bDebugHaltFeedData != bDebugHaltFeedData) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("changing DebugHaltFeedData %d->%d."), m_bDebugHaltFeedData, bDebugHaltFeedData);
+            m_bDebugHaltFeedData = bDebugHaltFeedData;
+        }
+    };
 
+    UFUNCTION(BlueprintCallable)
+    bool getDebugHaltFeedData() const
+    {
+        return m_bDebugHaltFeedData;
+    };
 
 protected:
 
@@ -147,5 +160,7 @@ protected:
     bool m_bNeedAnswerSyncForMJCoreFullData;
     float m_fLastAskSyncForMJCoreFullDataWorldRealTime;
     bool m_bNeedAskSyncForMJCoreFullData;
+
+    bool m_bDebugHaltFeedData; //used to force client fall behind the progress
 
 };
