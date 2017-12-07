@@ -226,7 +226,7 @@ public:
 
     FString genDebugMsg() const
     {
-        return FString::Printf(TEXT("full %d, %s: gameid %d, pusherIdLast %d."), m_uiIdEventApplied, *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiTime_ms), getCoreDataRefConst().m_iGameId, getCoreDataRefConst().m_iPusherIdLast);
+        return FString::Printf(TEXT("full %d, %s: gameid %d, pusherIdLast %d."), m_uiIdEventApplied, *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiTime_ms), getCoreDataPublicRefConst().m_iGameId, getCoreDataPublicRefConst().m_iPusherIdLast);
     };
 
 protected:
@@ -1093,13 +1093,13 @@ public:
         else {
 
             if (pOutGameIdLast) {
-                *pOutGameIdLast = m_cBase.getCoreDataRefConst().m_iGameId;
+                *pOutGameIdLast = m_cBase.getCoreDataPublicRefConst().m_iGameId;
                 if (*pOutGameIdLast > 0) {
                     MY_VERIFY(m_cBase.getTime_ms() > 0);
                 }
             }
             if (pOutPusherIdLast) {
-                *pOutPusherIdLast = m_cBase.getCoreDataRefConst().m_iPusherIdLast;
+                *pOutPusherIdLast = m_cBase.getCoreDataPublicRefConst().m_iPusherIdLast;
             }
 
         }
@@ -1143,10 +1143,10 @@ public:
             return pResult->isGameEndDelta();
         }
         else {
-            int32 ret = m_cBase.getCoreDataRefConst().m_iPusherIdLast;
+            int32 ret = m_cBase.getCoreDataPublicRefConst().m_iPusherIdLast;
             if (ret >= 0) {
                 MY_VERIFY(m_cBase.getTime_ms() > 0); //we presume timestamp must e attached in our user case
-                return m_cBase.getCoreDataRefConst().m_eGameState == MyMJGameStateCpp::GameEnd;
+                return m_cBase.getCoreDataPublicRefConst().m_eGameState == MyMJGameStateCpp::GameEnd;
             }
         }
 
@@ -1189,7 +1189,7 @@ public:
 
     FString genDebugMsg()
     {
-        const FMyMJCoreDataPublicCpp& coreData = m_cFullData.getCoreDataRefConst();
+        const FMyMJCoreDataPublicCpp& coreData = m_cFullData.getCoreDataPublicRefConst();
         //int32 l = m_pEventsApplyingAndApplied->getCount(NULL);
         FString ret = FString::Printf(TEXT("role %d, base time %d [%d:%d:%d:%d], m_pEventsApplyingAndApplied valid %d."), (uint8)m_cFullData.getRole(), m_cFullData.getTime_ms(), coreData.m_iGameId, coreData.m_iPusherIdLast, coreData.m_iActionGroupId, (uint8)coreData.m_eGameState, IsValid(m_pDeltaDataEvents));
         if (IsValid(m_pDeltaDataEvents)) {
@@ -1383,7 +1383,7 @@ public:
     int32 getGameIdLast() const
     {
 
-        int32 ret = m_cBase.getCoreDataRefConst().m_iGameId;
+        int32 ret = m_cBase.getCoreDataPublicRefConst().m_iGameId;
         if (ret >= 0) {
             MY_VERIFY(m_cBase.getTime_ms() > 0); //we presume timestamp must e attached in our user case
         }
@@ -1395,7 +1395,7 @@ public:
     int32 getPusherIdLast() const
     {
 
-        int32 ret = m_cBase.getCoreDataRefConst().m_iPusherIdLast;
+        int32 ret = m_cBase.getCoreDataPublicRefConst().m_iPusherIdLast;
         if (ret >= 0) {
             MY_VERIFY(m_cBase.getTime_ms() > 0); //we presume timestamp must e attached in our user case
         }
@@ -1463,7 +1463,7 @@ public:
     bool isGameEndOrNotStarted() const
     {
         bool bNotStated = getGameIdLast() < 0;
-        bool bGameEnd = m_cBase.getCoreDataRefConst().m_eGameState == MyMJGameStateCpp::GameEnd;
+        bool bGameEnd = m_cBase.getCoreDataPublicRefConst().m_eGameState == MyMJGameStateCpp::GameEnd;
         return bNotStated || bGameEnd;
     };
 

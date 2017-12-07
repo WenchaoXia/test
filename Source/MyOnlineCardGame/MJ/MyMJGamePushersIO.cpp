@@ -477,7 +477,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iActionGroupId, int32 iTimePass
 
     //if (pusherGivenCount > 0) {
     MY_VERIFY(m_pCore.IsValid());
-    bool bInGame = m_pCore.Pin()->getCoreDataRefConst().isInGameState();
+    bool bInGame = m_pCore.Pin()->getCoreDataPublicRefConst().isInGameState();
 
     if (bInGame) {
         FMyMJGamePusherCountUpdateCpp *pPusherCountUpdate = new FMyMJGamePusherCountUpdateCpp();

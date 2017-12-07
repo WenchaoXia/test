@@ -171,14 +171,14 @@ public:
     };
 
     inline
-    const FMyMJCoreDataPublicCpp& getCoreDataRefConst() const
+    const FMyMJCoreDataPublicCpp& getCoreDataPublicRefConst() const
     {
-        return getDataAccessorRefConst().getCoreDataRefConst();
+        return getDataAccessorRefConst().getCoreDataPublicRefConst();
     };
 
     inline const FMyMJCardInfoPackCpp& getCardInfoPackRefConst() const
     {
-        return m_cDataAccessor.getCoreDataRefConst().m_cCardInfoPack;
+        return m_cDataAccessor.getCoreDataPublicRefConst().m_cCardInfoPack;
     };
 
     inline const FMyMJCardValuePackCpp& getCardValuePackOfSysKeeperRefConst() const
@@ -337,7 +337,7 @@ public:
     {
         MyMJGameRuleTypeCpp eRuleType = m_cDataLogic.m_eRuleType;
 
-        MyMJGameRuleTypeCpp eRuleType2 = m_cDataAccessor.getCoreDataRefConst().m_cGameCfg.m_eRuleType;
+        MyMJGameRuleTypeCpp eRuleType2 = m_cDataAccessor.getCoreDataPublicRefConst().m_cGameCfg.m_eRuleType;
         if (eRuleType2 != MyMJGameRuleTypeCpp::Invalid) {
             MY_VERIFY(eRuleType2 == eRuleType); //If set, they must equal
         }

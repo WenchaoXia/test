@@ -121,7 +121,7 @@ void FMyMJDataStructWithTimeStampBaseCpp::applyEvent(FMyMJDataAccessorCpp& cAcce
         MY_VERIFY((idLast + 1) == cEvent.getIdEvent());
     }
 
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's squashing Events, base %d : %d."), (uint8)m_eRole, m_cBase.getCoreDataRefConst().m_iGameId, m_cBase.getCoreDataRefConst().m_iPusherIdLast);
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's squashing Events, base %d : %d."), (uint8)m_eRole, m_cBase.getCoreDataPublicRefConst().m_iGameId, m_cBase.getCoreDataPublicRefConst().m_iPusherIdLast);
 
     if (cEvent.getMainType() == MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult) {
         const FMyMJGamePusherResultCpp* pPusherResult = cEvent.getPusherResult(true);
@@ -446,14 +446,14 @@ bool UMyMJDataSequencePerRoleCpp::mergeDataFromOther(const UMyMJDataSequencePerR
         }
     }
 
-    int32 iDebugGameIdBefore = m_cBase.getCoreDataRefConst().m_iGameId;
-    int32 iDebugPusherIdBefore = m_cBase.getCoreDataRefConst().m_iPusherIdLast;
+    int32 iDebugGameIdBefore = m_cBase.getCoreDataPublicRefConst().m_iGameId;
+    int32 iDebugPusherIdBefore = m_cBase.getCoreDataPublicRefConst().m_iPusherIdLast;
     if (bSetBase) {
         m_cBase = other.m_cBase;
         bRet = true;
 
-        int32 iDebugGameIdAfter = m_cBase.getCoreDataRefConst().m_iGameId;
-        int32 iDebugPusherIdAfter = m_cBase.getCoreDataRefConst().m_iPusherIdLast;
+        int32 iDebugGameIdAfter = m_cBase.getCoreDataPublicRefConst().m_iGameId;
+        int32 iDebugPusherIdAfter = m_cBase.getCoreDataPublicRefConst().m_iPusherIdLast;
 
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("setBase: %d:%d -> %d:%d."), iDebugGameIdBefore, iDebugPusherIdBefore, iDebugGameIdAfter, iDebugPusherIdAfter);
     }

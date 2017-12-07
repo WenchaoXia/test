@@ -8,7 +8,7 @@ void FMyMJGameCoreLocalCSCpp::genActionChoices()
 {
     FMyMJGameCoreCpp::genActionChoices();
 
-    const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataPublicRefConst();
     const FMyMJCardValuePackCpp& cardValuePack = getCardValuePackOfSysKeeperRefConst();
 
     MyMJGameStateCpp eGameState = coreDataSelf.m_eGameState;
@@ -171,7 +171,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
 
     MyMJGamePusherTypeCpp ePusherType = pPusherIn->getType();
 
-    const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataPublicRefConst();
     const FMyMJCardInfoPackCpp&  cardInfoPack = getCardInfoPackRefConst();
     const FMyMJCardValuePackCpp& cardValuePack = getCardValuePackOfSysKeeperRefConst();
 
@@ -899,7 +899,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
 
         int32 idxAttender = pusherMadeChoiceNotify.getIdxAttenderConst();
 
-        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataPublicRefConst();
         if (coreDataSelf.m_iActionGroupId != pusherMadeChoiceNotify.m_iActionGroupId) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender %d's pusher makde choice have unequal pusher id, core's: %d, pusher's: %d."),
                      idxAttender, coreDataSelf.m_iActionGroupId, pusherMadeChoiceNotify.m_iActionGroupId);
@@ -947,12 +947,12 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
             if (actionStateUpdate.m_eStateNext == MyMJGameStateCpp::GameStarted) {
                 FMyMJGameActionStateUpdateCpp *pActionUpdate = new FMyMJGameActionStateUpdateCpp();
                 pActionUpdate->m_eStateNext = MyMJGameStateCpp::CardsWaitingForThrowDicesToDistributeCards;
-                pActionUpdate->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(getCoreDataRefConst().m_cGameRunData.m_iIdxAttenderMenFeng);
+                pActionUpdate->m_iAttenderMaskNext = genIdxAttenderStillInGameMaskOne(getCoreDataPublicRefConst().m_cGameRunData.m_iIdxAttenderMenFeng);
 
                 m_pPusherIOFull->GivePusher(pActionUpdate, (void**)&pActionUpdate);
             }
             else if (actionStateUpdate.m_eStateNext == MyMJGameStateCpp::JustStarted) {
-                const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+                const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataPublicRefConst();
                 int32 idxZhuang = coreDataSelf.m_cGameRunData.m_iIdxAttenderMenFeng;
                 for (int32 i = 0; i < 4; i++) {
 
@@ -983,7 +983,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
         const FMyMJGameActionDistCardAtStartCpp& actionDistCardAtStart = StaticCast<const FMyMJGameActionDistCardAtStartCpp &>(pusher);
         int32 idxAttender = actionDistCardAtStart.getIdxAttender();
 
-        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataPublicRefConst();
         //const FMyMJCardInfoPackCpp&  cardInfoPack = getCardInfoPackRefConst();
         //const FMyMJCardValuePackCpp& cardValuePack = getCardValuePackOfSysKeeperRefConst();
 
@@ -1023,7 +1023,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
         const FMyMJGameActionGiveOutCardsCpp& actionGiveOutCards = StaticCast<const FMyMJGameActionGiveOutCardsCpp &>(pusher);
         int32 idxAttender = actionGiveOutCards.getIdxAttender();
 
-        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataPublicRefConst();
 
         int32 selectedCount = actionGiveOutCards.m_aIdValuePairsSelected.Num();
         MY_VERIFY(selectedCount > 0);
@@ -1042,7 +1042,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
         const FMyMJGameActionWeaveCpp& actionWeave = StaticCast<const FMyMJGameActionWeaveCpp&>(pusher);
         int32 idxAttender = actionWeave.getIdxAttender();
 
-        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataRefConst();
+        const FMyMJCoreDataPublicCpp& coreDataSelf = getCoreDataPublicRefConst();
         //const FMyMJCardInfoPackCpp&  cardInfoPack = getCardInfoPackRefConst();
         //const FMyMJCardValuePackCpp& cardValuePack = getCardValuePackOfSysKeeperRefConst();
 
@@ -1154,7 +1154,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
 void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, FMyMJGameCmdBaseCpp &cmd)
 {
     FMyMJGameCmdBaseCpp *pCmd = &cmd;
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataPublicRefConst();
 
     if (pCmd->m_eType == MyMJGameCmdType::RestartGame) {
         if (eRoleTypeOfCmdSrc == MyMJGameRoleTypeCpp::SysKeeper) {
@@ -1199,7 +1199,7 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
     FMyMJDataStructCpp &base = outBase;
 
     //Stateless, never judge condition of previous state, just reset the whole core
-    FMyMJCoreDataPublicCpp *pD = const_cast<FMyMJCoreDataPublicCpp *> (&base.getCoreDataRefConst());
+    FMyMJCoreDataPublicCpp *pD = const_cast<FMyMJCoreDataPublicCpp *> (&base.getCoreDataPublicRefConst());
 
     //pD->reinit(pPusher->m_cGameCfg.m_eRuleType);
 

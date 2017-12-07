@@ -99,6 +99,7 @@ void FMyMJGameDeskVisualCoreDataRunnableCpp::loopInRun()
 {
     while (1)
     {
+        //you got new data, always process it!
         FMyMJGameDeskVisualCoreDataProcessorInputCpp *pInItem = m_cInRawCoreData.getItemForConsume();
         if (pInItem == NULL) {
             break;
@@ -125,6 +126,17 @@ void FMyMJGameDeskVisualCoreDataRunnableCpp::loopInRun()
         }
 
         m_cInRawCoreData.putInConsumedItem(pInItem);
+
+        //try output it
+        FMyMJGameDeskVisualCoreDataProcessorOutputCpp* pOut = m_cOutCalcuatedVisualData.getItemForProduce();
+        if (pOut == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("not enough of buffer for output of core processor!"));
+            continue;
+        }
+
+        pOut->reset();
+        //pOut->verifyValid();
+        m_cOutCalcuatedVisualData.putInProducedItem(pOut);
     }
 }
 
@@ -158,6 +170,12 @@ int32 FMyMJGameDeskVisualCoreDataRunnableCpp::updateCfgCache(const FMyMJGameDesk
 
 bool FMyMJGameDeskVisualCoreDataRunnableCpp::tryFeedData(UMyMJDataSequencePerRoleCpp *pSeq)
 {
+
+    if (m_cLabelLastIn.m_uiStateKey == MyUIntIdDefaultInvalidValue) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("visual cfg not updated, check you visual layer code!"));
+        return false;
+    }
+
     bool bHaveNewEvent = false;
     int32 iRet = tryFeedEvents(pSeq, &bHaveNewEvent);
     if (bHaveNewEvent) {
@@ -670,7 +688,7 @@ void UMyMJGameDeskSuiteCpp::helperTryUpdateCardVisualInfoPack()
 
     FMyMJDataStructWithTimeStampBaseCpp& cBase = cDataNow.getBaseRef();
 
-    const FMyMJCardInfoPackCpp& cCardInfoPack = cBase.getCoreDataRefConst().m_cCardInfoPack;
+    const FMyMJCardInfoPackCpp& cCardInfoPack = cBase.getCoreDataPublicRefConst().m_cCardInfoPack;
     const FMyMJCardValuePackCpp& ccardValuePack = cBase.getRoleDataPrivateRefConst((uint8)cDataNow.getRole()).m_cCardValuePack;
 
     FMyMJCardVisualInfoPackCpp& cCardVisualInfoPack = m_cCardVisualInfoPack;
@@ -692,7 +710,7 @@ void UMyMJGameDeskSuiteCpp::helperTryUpdateCardVisualInfoPack()
         //todo: there can be short cut that some case we don't need update
         if (GetMyHelperAttenderSlotDirtyMasks(aHelperAttenderSlotDirtyMasks, idxAtttender, MyMJCardSlotTypeCpp::Untaken) == true) {
 
-            const TArray<FMyIdCollectionCpp>& aUntakenCardStacks = cBase.getCoreDataRefConst().m_aUntakenCardStacks;
+            const TArray<FMyIdCollectionCpp>& aUntakenCardStacks = cBase.getCoreDataPublicRefConst().m_aUntakenCardStacks;
             const FMyMJGameUntakenSlotSubSegmentInfoCpp& cSubSegmengInfo = attenderPublic.m_cUntakenSlotSubSegmentInfo;
 
             int32 idxUntakenStackEnd = cSubSegmengInfo.m_iIdxStart + cSubSegmengInfo.m_iLength;
@@ -1255,7 +1273,7 @@ void UMyMJGameDeskSuiteCpp::helperResolveTargetCardVisualState(int32 idxCard, FM
 
     const FMyMJDataAtOneMomentCpp& cDataNow = m_pCoreWithVisual->getDataNowRefConst();
     const FMyMJDataStructWithTimeStampBaseCpp& cBase = cDataNow.getBaseRefConst();
-    const FMyMJCardInfoPackCpp& cCardInfoPack = cBase.getCoreDataRefConst().m_cCardInfoPack;
+    const FMyMJCardInfoPackCpp& cCardInfoPack = cBase.getCoreDataPublicRefConst().m_cCardInfoPack;
 
     if (idxCard >= cCardInfoPack.getLength()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("idxCard out of range. %d/%d."), idxCard, cCardInfoPack.getLength());

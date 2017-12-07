@@ -174,8 +174,6 @@ public:
 
     };
 
-    void playGameProgressTo(uint32 uiServerTimeNew_ms_unresolved, bool bCatchUp);
-
     TArray<FMyMJGameDeskVisualCfgCacheCpp> m_apNewCfgCache;
     FMyMJDataStructWithTimeStampBaseCpp m_cCoreData;
     FMyMJGameDeskVisualActorDatasCpp m_cActorData;
@@ -280,16 +278,53 @@ public:
     };
 
     inline
-        void reset()
+    void reset()
     {
-        m_apNext.Reset(1);
-        m_apDirtyRecordSincePrev.Reset(1);
-        m_uiServerWorldTime_ms = 0;
+        m_apNext.Reset();
+        m_apDirtyRecordSincePrev.Reset();
+        m_uiUpdateServerWorldTime_ms = 0;
+    };
+
+    inline
+    void verifyValid() const
+    {
+        if (m_apNext.Num() > 0) {
+            MY_VERIFY(m_apNext.Num() == 1);
+
+            const FMyMJGameDeskVisualDataOneMomentCpp& DataOneMoment = m_apNext[0];
+            //check it's type
+            if (DataOneMoment.m_apNewCfgCache.Num() > 0) {
+                MY_VERIFY(DataOneMoment.m_apNewCfgCache.Num() == 1);
+
+                MY_VERIFY(DataOneMoment.m_cCoreData.getCoreDataPublicRefConst().m_iGameId == MyIntIdDefaultInvalidValue);
+                MY_VERIFY(m_apDirtyRecordSincePrev.Num() == 0);
+                MY_VERIFY(m_uiUpdateServerWorldTime_ms == 0);
+            }
+            else {
+                
+                MY_VERIFY(DataOneMoment.m_cCoreData.getCoreDataPublicRefConst().m_iGameId != MyIntIdDefaultInvalidValue);
+                MY_VERIFY(m_apDirtyRecordSincePrev.Num() == 1);
+                MY_VERIFY(m_uiUpdateServerWorldTime_ms > 0);
+            }
+        }
+        else if (m_apDirtyRecordSincePrev.Num() > 0) {
+            MY_VERIFY(m_apNext.Num() == 1);
+
+            const FMyMJGameDeskVisualDataOneMomentCpp& DataOneMoment = m_apNext[0];
+            MY_VERIFY(DataOneMoment.m_apNewCfgCache.Num() == 0);
+
+            MY_VERIFY(DataOneMoment.m_cCoreData.getCoreDataPublicRefConst().m_iGameId != MyIntIdDefaultInvalidValue);
+            MY_VERIFY(m_apDirtyRecordSincePrev.Num() == 1);
+            MY_VERIFY(m_uiUpdateServerWorldTime_ms > 0);
+        }
+        else {
+            MY_VERIFY(m_uiUpdateServerWorldTime_ms > 0);
+        }
     };
 
     TArray<FMyMJGameDeskVisualDataOneMomentCpp> m_apNext;
     TArray<FMyMJGameDeskVisualDataDirtyRecordCpp> m_apDirtyRecordSincePrev;
-    uint32 m_uiServerWorldTime_ms;
+    uint32 m_uiUpdateServerWorldTime_ms;
 };
 
 

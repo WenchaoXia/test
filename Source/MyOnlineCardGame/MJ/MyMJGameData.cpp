@@ -43,7 +43,7 @@ void FMyMJDataAccessorCpp::applyBase(const FMyMJDataStructCpp &base, FMyDirtyRec
 
     *m_pDataExt = base;
     /*
-    getCoreDataRef() = base.getCoreDataRefConst();
+    getCoreDataRef() = base.getCoreDataPublicRefConst();
 
     int32 l = (uint8)MyMJGameRoleTypeCpp::Max;
     for (int i = 0; i < l; i++) {

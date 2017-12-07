@@ -107,7 +107,7 @@ int32 FMyMJGameCoreBaseCpp::genIdxAttenderStillInGameMaskAll()
 //don't reenter this func, this may result stack overflow
 bool FMyMJGameCoreCpp::actionLoop()
 {
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataPublicRefConst();
 
     bool bRet = false;
     int64 iMsLast = UMyMJUtilsLibrary::nowAsMsFromTick();
@@ -162,7 +162,7 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
     FMyMJDataAccessorCpp& ac = getDataAccessorRef();
     FMyMJGamePusherIOComponentFullCpp &pusherIO = getPusherIOFullRef();
 
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataPublicRefConst();
 
 
     int32 iGameId, iPusherIdLast;
@@ -303,7 +303,7 @@ void FMyMJGameCoreCpp::resetForNewActionLoop()
 {
     if (!m_cActionLoopHelperData.getHaveSetupDataConst()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("full core have not setup loop helper data, m_eState: %s."),
-                            *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)getCoreDataRefConst().m_eGameState));
+                            *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)getCoreDataPublicRefConst().m_eGameState));
         MY_VERIFY(false);
     }
 
@@ -396,7 +396,7 @@ bool FMyMJGameCoreCpp::verifyDataUniformationAfterPusherAndResultApplied()
     MY_VERIFY(m_pActionCollector.IsValid());
     //int32 actionGroupIdCollectorLogic = m_pActionCollector->getActionGroupId();
 
-    int32 actionGroupIdData = getCoreDataRefConst().m_iActionGroupId;
+    int32 actionGroupIdData = getCoreDataPublicRefConst().m_iActionGroupId;
     //if (actionGroupIdCollectorLogic != actionGroupIdData) {
         //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("action group id not uniform, logic %d, data %d."), actionGroupIdCollectorLogic, actionGroupIdData);
         //return false;
@@ -466,7 +466,7 @@ bool FMyMJGameCoreCpp::verifyDataUniformationAfterPusherAndResultApplied()
 
 void FMyMJGameCoreCpp::tryProgressInFullMode()
 {
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataPublicRefConst();
 
     //the sequence ensure pusher is drained out clean before cmd applies
     findAndApplyPushers();
@@ -486,7 +486,7 @@ void FMyMJGameCoreCpp::tryProgressInFullMode()
 
 int32 FMyMJGameCoreCpp::getIdxOfUntakenSlotHavingCard(int32 idxBase, uint32 delta, bool bReverse)
 {
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataPublicRefConst();
 
     int32 l = pD->m_aUntakenCardStacks.Num();
     MY_VERIFY(idxBase >= 0 && idxBase < l);
@@ -526,7 +526,7 @@ int32 FMyMJGameCoreCpp::getIdxOfUntakenSlotHavingCard(int32 idxBase, uint32 delt
 
 void FMyMJGameCoreCpp::collectCardsFromUntakenSlot(int32 idxBase, uint32 len, bool bReverse, TArray<int32> &outIds)
 {
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataPublicRefConst();
 
     int32 l = pD->m_aUntakenCardStacks.Num();
     MY_VERIFY(idxBase >= 0 && idxBase < l);
@@ -562,7 +562,7 @@ void FMyMJGameCoreCpp::collectCardsFromUntakenSlot(int32 idxBase, uint32 len, bo
 
 void FMyMJGameCoreCpp::tryCollectCardsFromUntakenSlot(int32 idxBase, uint32 len, bool bReverse, TArray<int32> &outIds)
 {
-    const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &getCoreDataPublicRefConst();
 
     int32 cardsleftAll = pD->m_cUntakenSlotInfo.getCardNumCanBeTakenAll();
     int32 l = (int32)len < cardsleftAll ? (int32)len : cardsleftAll;
@@ -571,7 +571,7 @@ void FMyMJGameCoreCpp::tryCollectCardsFromUntakenSlot(int32 idxBase, uint32 len,
 
 void FMyMJGameCoreCpp::moveCardFromOldPosi(int32 id)
 {
-    //const FMyMJCoreDataPublicCpp *pD = &getCoreDataRefConst();
+    //const FMyMJCoreDataPublicCpp *pD = &getCoreDataPublicRefConst();
 
     const FMyMJCardInfoPackCpp  *pCardInfoPack =  &getCardInfoPackRefConst();
     //const FMyMJCardValuePackCpp *pCardValuePack = &getCardValuePackOfSysKeeperRefConst();

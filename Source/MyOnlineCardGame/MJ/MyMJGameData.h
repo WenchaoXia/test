@@ -919,7 +919,7 @@ public:
 
     void reset()
     {
-        m_cCoreData.reset();
+        m_cCoreDataPublic.reset();
         int32 l = m_aRoleDataAttenders.Num();
         for (int i = 0; i < l; i++) {
             m_aRoleDataAttenders[i].reset();
@@ -928,9 +928,9 @@ public:
         m_cRoleDataPrivateObserver.reset();
     };
 
-    inline const FMyMJCoreDataPublicCpp& getCoreDataRefConst() const
+    inline const FMyMJCoreDataPublicCpp& getCoreDataPublicRefConst() const
     {
-        return m_cCoreData;
+        return m_cCoreDataPublic;
     };
 
     //@idxAttender equal to idxRole
@@ -1015,7 +1015,7 @@ protected:
 
 
     UPROPERTY()
-    FMyMJCoreDataPublicCpp m_cCoreData;
+    FMyMJCoreDataPublicCpp m_cCoreDataPublic;
     
     UPROPERTY()
     TArray<FMyMJRoleDataAttenderCpp> m_aRoleDataAttenders;
@@ -1124,8 +1124,8 @@ public:
         int32 iGameId, iPusherId;
 
         if (m_aResultBase.Num() > 0) {
-            iGameId = m_aResultBase[0].getCoreDataRefConst().m_iGameId;
-            iPusherId = m_aResultBase[0].getCoreDataRefConst().m_iPusherIdLast;
+            iGameId = m_aResultBase[0].getCoreDataPublicRefConst().m_iGameId;
+            iPusherId = m_aResultBase[0].getCoreDataPublicRefConst().m_iPusherIdLast;
         }
         else if (m_aResultDelta.Num() > 0) {
             iGameId = m_aResultDelta[0].m_iGameId;
@@ -1155,7 +1155,7 @@ public:
             return true;
         }
 
-        if (m_aResultBase.Num() > 0 && m_aResultBase[0].getCoreDataRefConst().m_eGameState == MyMJGameStateCpp::GameEnd) {
+        if (m_aResultBase.Num() > 0 && m_aResultBase[0].getCoreDataPublicRefConst().m_eGameState == MyMJGameStateCpp::GameEnd) {
             MY_VERIFY(false);
         }
 
@@ -1243,10 +1243,10 @@ struct FMyMJDataAccessorCpp
     };
 
     //don't store the return, it can be invalid anytime
-    const FMyMJCoreDataPublicCpp& getCoreDataRefConst() const
+    const FMyMJCoreDataPublicCpp& getCoreDataPublicRefConst() const
     {
         MY_VERIFY(m_pDataExt);
-        return m_pDataExt->getCoreDataRefConst();
+        return m_pDataExt->getCoreDataPublicRefConst();
     };
 
     //@idxAttender equal to idxRole
@@ -1301,7 +1301,7 @@ protected:
 
     inline FMyMJCoreDataPublicCpp& getCoreDataRef()
     {
-        return const_cast<FMyMJCoreDataPublicCpp &>(getCoreDataRefConst());
+        return const_cast<FMyMJCoreDataPublicCpp &>(getCoreDataPublicRefConst());
     };
 
     inline FMyMJRoleDataAttenderPublicCpp& getRoleDataAttenderPublicRef(int32 idxAttender)

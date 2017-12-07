@@ -13,7 +13,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
     const FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPackRefConst();
     const FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSysKeeperRefConst();
 
-    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataPublicRefConst();
 
     const FMyMJRoleDataAttenderPublicCpp *pDPubD = &getRoleDataAttenderPublicRefConst();
     const FMyMJRoleDataAttenderPrivateCpp *pDPriD = &getRoleDataAttenderPrivateRefConst();
@@ -316,7 +316,7 @@ bool FMyMJGameAttenderLocalCSCpp::tryGenAndEnqueueUpdateTingPusher()
 {
     FMyMJGameCoreCpp* pCore = &getCoreRef();
 
-    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataPublicRefConst();
 
     const FMyMJRoleDataAttenderPublicCpp *pDPubD = &getRoleDataAttenderPublicRefConst();
     const FMyMJRoleDataAttenderPrivateCpp *pDPriD = &getRoleDataAttenderPrivateRefConst();
@@ -449,7 +449,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionAfterGivenOutCards(FMyMJGamePusherFil
 {
     FMyMJGameCoreCpp* pCore = &getCoreRef();
 
-    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataPublicRefConst();
     const FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPackRefConst();
     const FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSysKeeperRefConst();
 
@@ -538,7 +538,7 @@ FMyMJGameActionGiveOutCardsCpp* FMyMJGameAttenderLocalCSCpp::genActionChoiceGive
 {
     FMyMJGameCoreCpp* pCore = &getCoreRef();
 
-    //const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataRefConst();
+    //const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataPublicRefConst();
     //const FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPackRefConst();
     //const FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSysKeeperRefConst();
 
@@ -562,7 +562,7 @@ void FMyMJGameAttenderLocalCSCpp::assembleHuActionAttr(int32 iIdxAttenderLoseOnl
 {
     FMyMJGameCoreCpp* pCore = &getCoreRef();
 
-    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataPublicRefConst();
     const FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPackRefConst();
     const FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSysKeeperRefConst();
 
@@ -637,7 +637,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
 {
     FMyMJGameCoreCpp* pCore = &getCoreRef();
 
-    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataPublicRefConst();
     const FMyMJCardInfoPackCpp  *pCardInfoPack = &pCore->getCardInfoPackRefConst();
     const FMyMJCardValuePackCpp *pCardValuePack = &pCore->getCardValuePackOfSysKeeperRefConst();
 
@@ -821,7 +821,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkPeng(const FMyMJCardCpp &triggerCard, TAr
 {
     FMyMJGameCoreCpp* pCore = &getCoreRef();
 
-    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataPublicRefConst();
 
     const FMyMJRoleDataAttenderPublicCpp *pDPubD = &getRoleDataAttenderPublicRefConst();
     const FMyMJRoleDataAttenderPrivateCpp *pDPriD = &getRoleDataAttenderPrivateRefConst();
@@ -876,7 +876,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkChi(const FMyMJCardCpp &triggerCard, TArr
 {
     FMyMJGameCoreCpp* pCore = &getCoreRef();
 
-    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataRefConst();
+    const FMyMJCoreDataPublicCpp *pD = &pCore->getCoreDataPublicRefConst();
 
     const FMyMJRoleDataAttenderPublicCpp *pDPubD = &getRoleDataAttenderPublicRefConst();
     const FMyMJRoleDataAttenderPrivateCpp *pDPriD = &getRoleDataAttenderPrivateRefConst();
