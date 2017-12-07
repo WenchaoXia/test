@@ -56,7 +56,7 @@ AMyMJGameCoreDataSourceCpp::AMyMJGameCoreDataSourceCpp(const FObjectInitializer&
     bReplicates = true;
     bAlwaysRelevant = true;
     bNetLoadOnClient = true;
-    NetUpdateFrequency = 10;
+    NetUpdateFrequency = 1;
 
     //m_pMJDataAll = NewObject<UMyMJDataAllCpp>(this);
     m_pMJDataAll = CreateDefaultSubobject<UMyMJDataAllCpp>(TEXT("mj data all"));

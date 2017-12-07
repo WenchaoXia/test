@@ -273,6 +273,8 @@ bool AMyMJGameRoomViewerPawnCpp::askSyncForMJCoreFullDataOnServer_Validate()
 
 void AMyMJGameRoomViewerPawnCpp::answerSyncForMJCoreFullDataOnClient_Implementation(MyMJGameRoleTypeCpp eRole, const FMyMJDataStructWithTimeStampBaseCpp& cFullData)
 {
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("answerSyncForMJCoreFullDataOnClient_Implementation()!"));
+
     //FPlatformProcess::Sleep(v1);
     if (HasAuthority()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("authority wrong!"));
@@ -285,6 +287,7 @@ void AMyMJGameRoomViewerPawnCpp::answerSyncForMJCoreFullDataOnClient_Implementat
     }
 
     m_pExtRoomCoreDataSourceSeq->tryUpdateFullDataFromExternal(eRole, cFullData);
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("full data updated!"));
     if (tryFeedDataToConsumer()) {
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("full data updated but still need sync, need to note."));
     }
