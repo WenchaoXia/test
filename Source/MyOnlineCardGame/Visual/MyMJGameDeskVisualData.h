@@ -137,7 +137,8 @@ public:
 
     FMyMJGameDeskVisualDataDirtyRecordCpp()
     {
-
+        m_uiPrevServerTime_ms_unresolved = MyUIntIdDefaultInvalidValue;
+        m_uiPrevIdEvent = MyUIntIdDefaultInvalidValue;
     };
 
     virtual ~FMyMJGameDeskVisualDataDirtyRecordCpp()
@@ -145,10 +146,16 @@ public:
 
     };
 
+    void resetExceptPrevInfo()
+    {
+        m_cCoreDataDirtyRecord.reset(false);
+        m_cVisualActorDataDirtyRecord.reset(false);
+        m_aImportantEventsApplied.Reset();
+    };
+
     //time segment data
     uint32 m_uiPrevServerTime_ms_unresolved; //Todo: make timestamp unique to act as unique state label
-    int32 m_iPrevGameId; //this is the unique state lable, to meausre progress precisely and guarentte no key events missed.
-    int32 m_iPrevPushId;
+    uint32 m_uiPrevIdEvent;
 
     FMyDirtyRecordWithKeyAnd4IdxsMapCpp m_cCoreDataDirtyRecord;
     FMyDirtyRecordWithKeyAnd4IdxsMapCpp m_cVisualActorDataDirtyRecord;
@@ -174,7 +181,6 @@ public:
 
     };
 
-    TArray<FMyMJGameDeskVisualCfgCacheCpp> m_apNewCfgCache;
     FMyMJDataStructWithTimeStampBaseCpp m_cCoreData;
     FMyMJGameDeskVisualActorDatasCpp m_cActorData;
 };
@@ -197,24 +203,43 @@ public:
     };
 
     FMyMJGameDeskVisualCfgCacheCpp m_cCfgCache;
-    FMyMJGameDeskVisualDataOneMomentCpp m_cDataNow;
-    FMyMJGameDeskVisualActorDatasCpp m_cExpectedActorData;
+    FMyMJGameDeskVisualDataOneMomentCpp m_cDataOneMoment;
+};
+
+USTRUCT()
+struct FMyMJGameDeskVisualDataOneMomentDeltaCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGameDeskVisualDataOneMomentDeltaCpp()
+    {
+
+    };
+
+    virtual ~FMyMJGameDeskVisualDataOneMomentDeltaCpp()
+    {
+
+    };
+
+    FMyMJGameDeskVisualDataOneMomentCpp m_cNewFull;
+    FMyMJGameDeskVisualDataDirtyRecordCpp m_cDirtyRecord;
 };
 
 //#define FMyMJGameDeskSuiteCoreDataProcessorSubThreadLoopTimeMs (10)
 
 USTRUCT()
-struct FMyMJGameDeskVisualCoreDataProcessorInputCpp
+struct FMyMJGameDeskProcessorDataInputCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGameDeskVisualCoreDataProcessorInputCpp()
+    FMyMJGameDeskProcessorDataInputCpp()
     {
         reset();
     };
 
-    virtual ~FMyMJGameDeskVisualCoreDataProcessorInputCpp()
+    virtual ~FMyMJGameDeskProcessorDataInputCpp()
     {
         //reset();
     };
@@ -222,57 +247,46 @@ public:
     inline
     void reset()
     {
-        m_apNewCfgCache.Reset();
-        m_apFull.Reset();
-        m_apDelta.Reset(1);
-        m_uiUpdateServerWorldTime_ms = 0;
+        m_apNewFullData.Reset();
+        m_apNewDeltaEvent.Reset();
+        m_uiNewServerWorldTime_ms = 0;
     };
 
     inline
     void verifyValid() const
     {
-        if (m_apNewCfgCache.Num() > 0) {
-            MY_VERIFY(m_apNewCfgCache.Num() == 1);
-            MY_VERIFY(m_apFull.Num() == 0);
-            MY_VERIFY(m_apDelta.Num() == 0);
+        if (m_apNewFullData.Num() > 0) {
+            MY_VERIFY(m_apNewFullData.Num() == 1);
+            MY_VERIFY(m_apNewDeltaEvent.Num() == 0);
         }
-        else if (m_apFull.Num() > 0) {
-            MY_VERIFY(m_apNewCfgCache.Num() == 0);
-            MY_VERIFY(m_apFull.Num() == 1);
-            MY_VERIFY(m_apDelta.Num() == 0);
-
-            MY_VERIFY(m_uiUpdateServerWorldTime_ms > 0);
-        }
-        else if (m_apDelta.Num() > 0) {
-            MY_VERIFY(m_apNewCfgCache.Num() == 0);
-            MY_VERIFY(m_apFull.Num() == 0);
-            MY_VERIFY(m_apDelta.Num() == 1);
-
-            MY_VERIFY(m_uiUpdateServerWorldTime_ms > 0);
+        else if (m_apNewDeltaEvent.Num() > 0) {
+            MY_VERIFY(m_apNewFullData.Num() == 0);
+            MY_VERIFY(m_apNewDeltaEvent.Num() == 1);
         }
         else {
-            MY_VERIFY(m_uiUpdateServerWorldTime_ms > 0);
         }
+
+        MY_VERIFY(m_uiNewServerWorldTime_ms > 0);
     };
 
-    TArray<FMyMJGameDeskVisualCfgCacheCpp> m_apNewCfgCache;
-    TArray<FMyMJDataStructWithTimeStampBaseCpp> m_apFull;
-    TArray<FMyMJEventWithTimeStampBaseCpp> m_apDelta;
-    uint32 m_uiUpdateServerWorldTime_ms; // > 0 means valid, == 0 means not touching the progress, maybe a config change
+    //core data, need timestamp
+    TArray<FMyMJDataStructWithTimeStampBaseCpp> m_apNewFullData;
+    TArray<FMyMJEventWithTimeStampBaseCpp> m_apNewDeltaEvent;
+    uint32 m_uiNewServerWorldTime_ms;
 };
 
 USTRUCT()
-struct FMyMJGameDeskVisualCoreDataProcessorOutputCpp
+struct FMyMJGameDeskProcessorDataOutputCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGameDeskVisualCoreDataProcessorOutputCpp()
+    FMyMJGameDeskProcessorDataOutputCpp()
     {
         reset();
     };
 
-    virtual ~FMyMJGameDeskVisualCoreDataProcessorOutputCpp()
+    virtual ~FMyMJGameDeskProcessorDataOutputCpp()
     {
 
     };
@@ -280,64 +294,100 @@ public:
     inline
     void reset()
     {
-        m_apNext.Reset();
-        m_apDirtyRecordSincePrev.Reset();
-        m_uiUpdateServerWorldTime_ms = 0;
+        m_apNewDelta.Reset();
+        m_uiNewServerWorldTime_ms = 0;
     };
 
     inline
     void verifyValid() const
     {
-        if (m_apNext.Num() > 0) {
-            MY_VERIFY(m_apNext.Num() == 1);
-
-            const FMyMJGameDeskVisualDataOneMomentCpp& DataOneMoment = m_apNext[0];
-            //check it's type
-            if (DataOneMoment.m_apNewCfgCache.Num() > 0) {
-                MY_VERIFY(DataOneMoment.m_apNewCfgCache.Num() == 1);
-
-                MY_VERIFY(DataOneMoment.m_cCoreData.getCoreDataPublicRefConst().m_iGameId == MyIntIdDefaultInvalidValue);
-                MY_VERIFY(m_apDirtyRecordSincePrev.Num() == 0);
-                MY_VERIFY(m_uiUpdateServerWorldTime_ms == 0);
-            }
-            else {
-                
-                MY_VERIFY(DataOneMoment.m_cCoreData.getCoreDataPublicRefConst().m_iGameId != MyIntIdDefaultInvalidValue);
-                MY_VERIFY(m_apDirtyRecordSincePrev.Num() == 1);
-                MY_VERIFY(m_uiUpdateServerWorldTime_ms > 0);
-            }
-        }
-        else if (m_apDirtyRecordSincePrev.Num() > 0) {
-            MY_VERIFY(m_apNext.Num() == 1);
-
-            const FMyMJGameDeskVisualDataOneMomentCpp& DataOneMoment = m_apNext[0];
-            MY_VERIFY(DataOneMoment.m_apNewCfgCache.Num() == 0);
-
-            MY_VERIFY(DataOneMoment.m_cCoreData.getCoreDataPublicRefConst().m_iGameId != MyIntIdDefaultInvalidValue);
-            MY_VERIFY(m_apDirtyRecordSincePrev.Num() == 1);
-            MY_VERIFY(m_uiUpdateServerWorldTime_ms > 0);
+       if (m_apNewDelta.Num() > 0) {
+            MY_VERIFY(m_apNewDelta.Num() == 1);
         }
         else {
-            MY_VERIFY(m_uiUpdateServerWorldTime_ms > 0);
         }
+
+        MY_VERIFY(m_uiNewServerWorldTime_ms > 0);
+
     };
 
-    TArray<FMyMJGameDeskVisualDataOneMomentCpp> m_apNext;
-    TArray<FMyMJGameDeskVisualDataDirtyRecordCpp> m_apDirtyRecordSincePrev;
-    uint32 m_uiUpdateServerWorldTime_ms;
+    //core and visual data, need timestamp
+    TArray<FMyMJGameDeskVisualDataOneMomentDeltaCpp> m_apNewDelta;
+    uint32 m_uiNewServerWorldTime_ms;
+
 };
 
-
-struct FMyMJGameDeskDataUniqueLabelCpp
+USTRUCT()
+struct FMyMJGameDeskProcessorCmdInputCpp
 {
-public:
+    GENERATED_USTRUCT_BODY()
 
-    FMyMJGameDeskDataUniqueLabelCpp()
+public:
+    FMyMJGameDeskProcessorCmdInputCpp()
     {
         reset();
     };
 
-    ~FMyMJGameDeskDataUniqueLabelCpp()
+    virtual ~FMyMJGameDeskProcessorCmdInputCpp()
+    {
+        //reset();
+    };
+
+    void reset()
+    {
+        m_apNewCfgCache.Reset();
+    };
+
+    inline
+    void verifyValid() const
+    {
+        MY_VERIFY(m_apNewCfgCache.Num() == 1);
+    };
+
+    TArray<FMyMJGameDeskVisualCfgCacheCpp> m_apNewCfgCache;
+};
+
+USTRUCT()
+struct FMyMJGameDeskProcessorCmdOutputCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGameDeskProcessorCmdOutputCpp()
+    {
+        reset();
+    };
+
+    virtual ~FMyMJGameDeskProcessorCmdOutputCpp()
+    {
+        //reset();
+    };
+
+    void reset()
+    {
+        m_apNewCfgCache.Reset();
+    };
+
+    inline
+        void verifyValid() const
+    {
+        MY_VERIFY(m_apNewCfgCache.Num() == 1);
+    };
+
+    TArray<FMyMJGameDeskVisualCfgCacheCpp> m_apNewCfgCache;
+};
+
+
+struct FMyMJGameDeskProcessorSentLabelCpp
+{
+public:
+
+    FMyMJGameDeskProcessorSentLabelCpp()
+    {
+        reset();
+    };
+
+    ~FMyMJGameDeskProcessorSentLabelCpp()
     {
 
     };
@@ -345,7 +395,7 @@ public:
     inline
     void reset()
     {
-        m_uiStateKey = MyUIntIdDefaultInvalidValue;
+        m_uiCfgStateKey = MyUIntIdDefaultInvalidValue;
         m_eRoleType = MyMJGameRoleTypeCpp::Max;
         m_uiIdEvent = MyUIntIdDefaultInvalidValue;
         m_uiServerWorldTime_ms = 0;
@@ -363,12 +413,34 @@ public:
         m_uiServerWorldTime_ms = uiServerWorldTime_ms;
     };
 
-    uint32 m_uiStateKey;
-
+    uint32 m_uiCfgStateKey;
     MyMJGameRoleTypeCpp m_eRoleType;
     uint32 m_uiIdEvent;
     uint32 m_uiServerWorldTime_ms;
 
+};
+
+struct FMyMJGameDeskProcessorReceivedLabelCpp
+{
+public:
+
+    FMyMJGameDeskProcessorReceivedLabelCpp()
+    {
+        reset();
+    };
+
+    ~FMyMJGameDeskProcessorReceivedLabelCpp()
+    {
+
+    };
+
+    inline
+    void reset()
+    {
+        m_uiCfgStateKey = MyUIntIdDefaultInvalidValue;
+    };
+
+    uint32 m_uiCfgStateKey;
 };
 
 #define MyTryFeedEventRetAllProcessed (0)
@@ -376,55 +448,71 @@ public:
 #define MyTryFeedEventRetNeedSyncBase (-2)
 #define MyTryFeedEventRetLackBuffer (-3)
 
-
-class FMyMJGameDeskVisualCoreDataRunnableCpp : public FMyRunnableBaseCpp
+//can only used inside thread controller
+class FMyMJGameDeskProcessorRunnableCpp : public FMyRunnableBaseCpp
 {
 public:
 
-    FMyMJGameDeskVisualCoreDataRunnableCpp();
-    virtual ~FMyMJGameDeskVisualCoreDataRunnableCpp();
+    FMyMJGameDeskProcessorRunnableCpp();
+    virtual ~FMyMJGameDeskProcessorRunnableCpp();
 
-    void reset()
-    {
-
-    };
-
-    virtual FString genName() const override
+    virtual FString anyThreadGenName() const override
     {
         return TEXT("FMyMJGameDeskVisualCoreDataRunnableCpp");
     };
 
-    virtual bool isReadyForSubThread() const override
+    virtual bool subThreadIsReady() const override
     {
         return true;
     };
 
-    inline const FMyMJGameDeskDataUniqueLabelCpp& getLabelLastInRefConst() const
-    {
-        return m_cLabelLastIn;
-    };
+    //return the new key, not take effect now, may need some loop to check subthread report
+    uint32 mainThreadCmdUpdateCfgCache(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
+
+    void mainThreadCmdLoop();
+    void mainThreadDataLoop();
 
     //return true if need to sync base
-    bool tryFeedData(UMyMJDataSequencePerRoleCpp *pSeq);
+    bool mainThreadDataTryFeed(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutRetryLater);
 
-    //return error code
-    int32 updateCfgCache(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
+
 
 protected:
 
-    virtual bool initBeforRun() override;
+    int32 mainThreadTryFeedEvents(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutHaveFeedEvent);
 
-    virtual void loopInRun() override;
 
-    virtual void exitAfterRun() override;
+    virtual bool subThreadInitBeforRun() override;
 
-    int32 tryFeedEvents(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutHaveFeedEvent);
+    virtual void subThreadLoopInRun() override;
 
-    FMyQueueWithLimitBuffer<FMyMJGameDeskVisualCoreDataProcessorInputCpp>  m_cInRawCoreData;
-    FMyQueueWithLimitBuffer<FMyMJGameDeskVisualCoreDataProcessorOutputCpp> m_cOutCalcuatedVisualData;
+    virtual void subThreadExitAfterRun() override;
 
-    //input record
-    FMyMJGameDeskDataUniqueLabelCpp m_cLabelLastIn;
+    void subThreadCmdLoop();
+    void subThreadDataLoop();
+
+
+    void subThreadApplyEvent();
+
+    FMyMJGameDeskVisualCfgCacheCpp m_cMainThreadWaitingToSendCfgCache;
+
+    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorCmdInputCpp>  m_cCmdIn;
+    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorCmdOutputCpp> m_cCmdOut;
+
+    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorDataInputCpp>  m_cDataIn;
+    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorDataOutputCpp> m_cDataOut;
+
+    //record
+    FMyMJGameDeskProcessorSentLabelCpp     m_cMainThreadSentLabel;
+    FMyMJGameDeskProcessorReceivedLabelCpp m_cMainThreadReceivedLabel;
+
+    //used only inside processor
+    FMyMJGameDeskVisualDataCpp *m_pSubThreadData;
+    FMyMJGameDeskVisualDataDirtyRecordCpp *m_pSubThreadDirtyRecord;
+    FMyMJDataAccessorCpp* m_pSubThreadAccessor;
+
+    FMyMJGameDeskProcessorSentLabelCpp* m_pSubThreadSentLabel;
+
 };
 
 
@@ -448,19 +536,15 @@ public:
     void start();
     void stop();
 
-    int32 updateCfgCache(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
-    uint32 getLastInCfgCacheStateKey() const;
-
+    uint32 updateCfgCache(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
 
     //return true if need to sync base
-    bool tryFeedData(UMyMJDataSequencePerRoleCpp *pSeq);
-
-
+    bool tryFeedData(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutRetryLater);
 
 protected:
 
     //TSharedPtr<FMyMJGameDeskVisualCoreDataProcessorCpp> m_pDataProcessor;
-    TSharedPtr<FMyThreadControlCpp<FMyMJGameDeskVisualCoreDataRunnableCpp>> m_pDataProcessorWithThread;
+    TSharedPtr<FMyThreadControlCpp<FMyMJGameDeskProcessorRunnableCpp>> m_pProcessor;
 
 
     bool m_bInFullDataSyncState;

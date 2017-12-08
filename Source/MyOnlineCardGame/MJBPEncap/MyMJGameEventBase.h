@@ -215,7 +215,7 @@ public:
         return m_uiTime_ms;
     };
 
-    void applyEvent(FMyMJDataAccessorCpp& cAccessor, const struct FMyMJEventWithTimeStampBaseCpp& cEvent);
+    void applyEvent(FMyMJDataAccessorCpp& cAccessor, const struct FMyMJEventWithTimeStampBaseCpp& cEvent, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord);
 
     void copyWithRoleFromSysKeeperRole2(MyMJGameRoleTypeCpp eTargetRole, FMyMJDataStructWithTimeStampBaseCpp& cTargetData) const
     {
@@ -463,7 +463,7 @@ public:
             resultStr = m_aTrival[0].genDebugMsg();
         }
 
-        return FString::Printf(TEXT("delta %d, %s(%s): %s"), m_uiIdEvent, *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiStartMs), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiDurMs), *resultStr);
+        return FString::Printf(TEXT("event %d, %s(%s): %s"), m_uiIdEvent, *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiStartMs), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiDurMs), *resultStr);
 
     };
 
@@ -994,7 +994,8 @@ protected:
 //DECLARE_MULTICAST_DELEGATE_TwoParams(FMyMJDataSeqReplicatedDelegate, UMyMJDataSequencePerRoleCpp*, int32);
 DECLARE_MULTICAST_DELEGATE(FMyMJDataSeqReplicatedDelegate);
 
-//mainly keeps a history, this is the logic core need to replicate, and should only be write at producer side(the server)
+//mainly keeps a history, the design is full state + delta events
+//note that delta events have one type that contains sub-full info, which can be used to assemble true full state
 UCLASS()
 class MYONLINECARDGAME_API UMyMJDataSequencePerRoleCpp : public UObject
 {
@@ -1292,7 +1293,7 @@ protected:
             for (int32 i = 0; i < count; i++) {
 
                 const FMyMJEventWithTimeStampBaseCpp& cEvent = m_pDeltaDataEvents->peekRefAt(i);
-                m_cFullData.applyEvent(m_cAccessor, cEvent);
+                m_cFullData.applyEvent(m_cAccessor, cEvent, NULL);
 
             }
         }

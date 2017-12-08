@@ -308,7 +308,7 @@ class FMyRunnableBaseCpp : public FRunnable
 public:
     FMyRunnableBaseCpp(uint32 uLoopTimeMs = 1000) : FRunnable()
     {
-        setLoopTimeMs(uLoopTimeMs);
+        anyThreadSetLoopTimeMs(uLoopTimeMs);
 
         m_bKill = false;
         m_bPause = false;
@@ -339,10 +339,10 @@ public:
         }
     };
 
-    virtual FString genName() const = NULL;
-    virtual bool isReadyForSubThread() const = NULL;
+    virtual FString anyThreadGenName() const = NULL;
+    virtual bool subThreadIsReady() const = NULL;
 
-    inline void setLoopTimeMs(uint32 uLoopTimeMs)
+    inline void anyThreadSetLoopTimeMs(uint32 uLoopTimeMs)
     {
         //this function is actually thread safe
         MY_VERIFY(uLoopTimeMs > 0);
@@ -355,16 +355,16 @@ protected:
 
     //called in subthread, start
 
-    virtual void loopInRun() = NULL;
-    virtual bool initBeforRun() { return true; };
-    virtual void exitAfterRun() {};
+    virtual void subThreadLoopInRun() = NULL;
+    virtual bool subThreadInitBeforRun() { return true; };
+    virtual void subThreadExitAfterRun() {};
 
     virtual bool Init() override final
     {
         const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
 
         bool ret;
-        if (initBeforRun()) {
+        if (subThreadInitBeforRun()) {
             m_bInSubThreadLoop = true;
             ret = true;
         }
@@ -383,7 +383,7 @@ protected:
         const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Exit() thread id: %d"), CurrentThreadId);
 
-        exitAfterRun();
+        subThreadExitAfterRun();
 
         m_bInSubThreadLoop = false;
     };
@@ -405,7 +405,7 @@ protected:
             }
             else
             {
-                loopInRun();
+                subThreadLoopInRun();
                 m_pSemaphore->Wait(m_uLoopTimeMs, false);
                 //FPlatformProcess::Sleep(1);
             }
@@ -505,12 +505,12 @@ public:
         if (!isCreated()) {
             //const uint32 CurrentThreadId = FPlatformTLS::GetCurrentThreadId();
 
-            if (!m_cRunnable.isReadyForSubThread()) {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("not ready for usage, runnable name %s."), *m_cRunnable.genName());
+            if (!m_cRunnable.subThreadIsReady()) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("not ready for usage, runnable name %s."), *m_cRunnable.anyThreadGenName());
                 return false;
             }
 
-            FString name = FString::Printf(TEXT("MyControlledThread_%d_%s"), FMyRunnableBaseCpp::s_iThreadCount.GetValue(), *m_cRunnable.genName());
+            FString name = FString::Printf(TEXT("MyControlledThread_%d_%s"), FMyRunnableBaseCpp::s_iThreadCount.GetValue(), *m_cRunnable.anyThreadGenName());
 
             m_cRunnable.m_bBeingUsedBySubThread = true;
             m_cRunnable.m_bInSubThreadLoop = true;

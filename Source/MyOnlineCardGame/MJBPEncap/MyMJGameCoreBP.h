@@ -51,26 +51,26 @@ public:
     };
 
 
-    virtual FString genName() const override
+    virtual FString anyThreadGenName() const override
     {
         return TEXT("FMyMJGameCoreRunnableCpp");
     };
 
-    virtual bool isReadyForSubThread() const override
+    virtual bool subThreadIsReady() const override
     {
         return m_eRuleType != MyMJGameRuleTypeCpp::Invalid;
     };
 
 protected:
 
-    virtual bool initBeforRun() override
+    virtual bool subThreadInitBeforRun() override
     {
-        if (!FMyRunnableBaseCpp::initBeforRun()) {
+        if (!FMyRunnableBaseCpp::subThreadInitBeforRun()) {
             return false;
         }
 
         int32 testV = 1 + 3 > 2;
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("thread started, initBeforRun(), testV %d"), testV);
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("thread started, subThreadInitBeforRun(), testV %d"), testV);
 
         FMyMJGameCoreCpp *pCore = UMyMJBPUtilsLibrary::helperCreateCoreByRuleType(m_eRuleType, m_iSeed.GetValue(), m_iTrivalConfigMask);
 
@@ -86,14 +86,14 @@ protected:
         return true;
     };
 
-    virtual void loopInRun() override
+    virtual void subThreadLoopInRun() override
     {
         (*m_ppCore)->tryProgressInFullMode();
     };
 
-    virtual void exitAfterRun() override
+    virtual void subThreadExitAfterRun() override
     {
-        FMyRunnableBaseCpp::exitAfterRun();
+        FMyRunnableBaseCpp::subThreadExitAfterRun();
 
         if (m_ppCore) {
             delete(m_ppCore);

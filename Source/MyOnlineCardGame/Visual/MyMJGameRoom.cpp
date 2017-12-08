@@ -169,13 +169,6 @@ void AMyMJGameRoomCpp::BeginPlay()
 
             UMyMJGameDeskVisualDataObjCpp* pO = m_pDataSuit->getDeskDataObjVerified();
 
-            uint32 newStateKey = pO->getLastInCfgCacheStateKey() + 1;
-            if (newStateKey == MyUIntIdDefaultInvalidValue) {
-                //just used in local thread which never lose data, so spin over is OK
-                newStateKey++;
-            }
-            cCfgCache.m_uiStateKey = newStateKey;
-
             pO->stop();
             pO->start();
             pO->updateCfgCache(cCfgCache);

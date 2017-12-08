@@ -24,6 +24,7 @@ AMyMJGameRoomViewerPawnCpp::AMyMJGameRoomViewerPawnCpp() : Super()
     m_bNeedAnswerSyncForMJCoreFullData = false;
     m_fLastAskSyncForMJCoreFullDataWorldRealTime = 0;
     m_bNeedAskSyncForMJCoreFullData = false;
+    m_bNeedFeedCoreData = false;
 
     m_eDebugNetmodeAtStart = ENetMode::NM_MAX;
     m_bDebugHaltFeedData = false;
@@ -223,6 +224,10 @@ void AMyMJGameRoomViewerPawnCpp::loopOfSyncForMJCoreFullDataOnNetworkClient()
         m_bNeedAskSyncForMJCoreFullData = false;
         m_fLastAskSyncForMJCoreFullDataWorldRealTime = nowRealTime;
     }
+
+    if (m_bNeedFeedCoreData) {
+        tryFeedDataToConsumer();
+    }
 }
 
 void AMyMJGameRoomViewerPawnCpp::setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType)
@@ -330,7 +335,7 @@ bool AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumer()
 
     bool bRet = false;
     if (IsValid(m_pExtRoomCoreDataSourceSeq)) {
-        bRet = m_pExtRoomActor->getRoomDataSuiteVerified()->getDeskDataObjVerified()->tryFeedData(m_pExtRoomCoreDataSourceSeq);
+        bRet = m_pExtRoomActor->getRoomDataSuiteVerified()->getDeskDataObjVerified()->tryFeedData(m_pExtRoomCoreDataSourceSeq, &m_bNeedFeedCoreData);
     }
 
     if (bRet) {

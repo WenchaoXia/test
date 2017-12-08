@@ -109,7 +109,7 @@ uint32 FMyMJCoreRelatedEventCorePusherCfgCpp::helperGetDeltaDur(const FMyMJDataD
     return (ret);
 }
 
-void FMyMJDataStructWithTimeStampBaseCpp::applyEvent(FMyMJDataAccessorCpp& cAccessor, const struct FMyMJEventWithTimeStampBaseCpp& cEvent)
+void FMyMJDataStructWithTimeStampBaseCpp::applyEvent(FMyMJDataAccessorCpp& cAccessor, const struct FMyMJEventWithTimeStampBaseCpp& cEvent, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
 {
     MY_VERIFY(cAccessor.isSetupped());
 
@@ -125,7 +125,7 @@ void FMyMJDataStructWithTimeStampBaseCpp::applyEvent(FMyMJDataAccessorCpp& cAcce
 
     if (cEvent.getMainType() == MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult) {
         const FMyMJGamePusherResultCpp* pPusherResult = cEvent.getPusherResult(true);
-        cAccessor.applyPusherResult(*pPusherResult, NULL);
+        cAccessor.applyPusherResult(*pPusherResult, pDirtyRecord);
     }
     else if (cEvent.getMainType() == MyMJGameCoreRelatedEventMainTypeCpp::Trival) {
         //Todo: add code to handle trival event
@@ -370,7 +370,7 @@ uint32 UMyMJDataSequencePerRoleCpp::addPusherResult(const FMyMJCoreRelatedEventC
     cInserted.setPusherResult(cPusherResult);
 
     if (m_iFullDataRecordType == MyMJDataSequencePerRoleFullDataRecordTypeTop) {
-        m_cFullData.applyEvent(m_cAccessor, cInserted);
+        m_cFullData.applyEvent(m_cAccessor, cInserted, NULL);
     }
 
     //OK, let's check if we need to update base
