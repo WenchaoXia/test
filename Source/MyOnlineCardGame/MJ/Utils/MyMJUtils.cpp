@@ -1429,7 +1429,6 @@ FMyMJValueIdMapCpp::getCountOfGroupSameCardValue(int32 minCount, bool bAlwaysCou
     return ret;
 }
 
-
 void UMyMJUtilsLibrary::array2MapForHuScoreAttr(const TArray<FMyMJHuScoreAttrCpp>& aHuBornScoreAttrs, TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& mHuBornScoreAttrs)
 {
     mHuBornScoreAttrs.Reset();

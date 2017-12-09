@@ -498,13 +498,15 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadExitAfterRun()
 
 void FMyMJGameDeskProcessorRunnableCpp::subThreadApplyEvent()
 {
-    FMyMJGameDeskVisualDataDirtyRecordCpp cDirtyMap;
     FMyMJEventWithTimeStampBaseCpp cDeltaEvent;
-    FMyMJGameDeskVisualDataCpp cDeskVisualData;
 
-    FMyMJDataAccessorCpp cAccessor;
+    m_pSubThreadData->m_cDataOneMoment.m_cCoreData.applyEvent(*m_pSubThreadAccessor, cDeltaEvent, &m_pSubThreadDirtyRecord->m_cCoreDataDirtyRecord);
 
-    //cDeskVisualData.m_cCoreData.applyEvent(cAccessor, cDeltaEvent, &cDirtyMap.m_cCoreDataDirtyRecord);
+    bool bNeedGenOutput = false;
+    if (cDeltaEvent.getDuration_ms() > 0) {
+        bNeedGenOutput = true;
+    }
+
 };
 
 

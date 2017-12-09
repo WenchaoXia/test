@@ -82,7 +82,7 @@ void FMyMJDataAccessorCpp::applyBase(const FMyMJDataStructCpp &base, FMyDirtyRec
     getCoreDataRef().m_cGameCfg.prepareForUse(); //Todo: this can be done as Lazy work, since it is only needed when you want to run the core logic
 
     if (pDirtyRecord) {
-        pDirtyRecord->reset(true);
+        FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordAllDirty(*pDirtyRecord);
     }
 }
 
@@ -230,6 +230,10 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
 
             UMyMJUtilsLibrary::setIntValueToBitMask(coreDataSelf.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen, diceNumerValue0);
             UMyMJUtilsLibrary::setIntValueToBitMask(coreDataSelf.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen, diceNumerValue1);
+
+            if (pDirtyRecord) {
+                pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Dice, 0, 0, true);
+            }
         }
 
 
@@ -585,3 +589,18 @@ void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCa
         pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Card, idxAttender, (int32)eSlotDst, true);
     }
 };
+
+
+void FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordAllDirty(FMyDirtyRecordWithKeyAnd4IdxsMapCpp &cDirtyRecord)
+{
+    cDirtyRecord.reset();
+
+    for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
+        for (int32 eSlot = ((int32)MyMJCardSlotTypeCpp::InvalidIterateMin + 1); eSlot < ((int32)MyMJCardSlotTypeCpp::InvalidIterateMax); eSlot++) {
+            cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Card, idxAttender, (int32)eSlot, true);
+        }
+    }
+
+    cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Dice, 0, 0, true);
+
+}

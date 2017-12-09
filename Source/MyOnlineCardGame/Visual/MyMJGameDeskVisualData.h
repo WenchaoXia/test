@@ -148,8 +148,8 @@ public:
 
     void resetExceptPrevInfo()
     {
-        m_cCoreDataDirtyRecord.reset(false);
-        m_cVisualActorDataDirtyRecord.reset(false);
+        m_cCoreDataDirtyRecord.reset();
+        m_cVisualActorDataDirtyRecord.reset();
         m_aImportantEventsApplied.Reset();
     };
 

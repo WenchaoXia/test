@@ -2167,7 +2167,7 @@ struct FMyDirtyRecordWithKeyAnd4IdxsMapCpp
 public:
     FMyDirtyRecordWithKeyAnd4IdxsMapCpp()
     {
-        m_uiDebugIdxUsed = 0;
+        reset();
     };
 
     virtual ~FMyDirtyRecordWithKeyAnd4IdxsMapCpp()
@@ -2176,73 +2176,85 @@ public:
     };
 
     inline
-    bool getIsEnabled() const
+    void reset()
     {
-        return m_sRecordDefaultAllDirty.Num() > 0;
+        m_sRecord.Reset();
+        m_uiDebugIdxUsed = 0;
     };
 
     inline
-    void clearDefaultDirtyData()
-    {
-        m_sRecordDefaultAllDirty.Reset();
-    };
-
-    inline
-    void reset(bool bAllDirty)
-    {
-        if (bAllDirty) {
-            MY_VERIFY(getIsEnabled());
-            m_sRecord = m_sRecordDefaultAllDirty;
-        }
-        else {
-            m_sRecord.Reset();
-        }
-    };
-
-    inline
-    bool getDirtyWith2Idxs(int32 idx0, int32 idx1, bool bSettingDefaultAllDirty = false) const
+    bool getDirtyWith2Idxs(int32 idx0, int32 idx1) const
     {
         if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 2) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 2!"), m_uiDebugIdxUsed);
+            MY_VERIFY(false);
         };
 
-        return getDirty(0, 0, idx0, idx1, bSettingDefaultAllDirty);
+        return getDirty(0, 0, idx0, idx1);
     };
 
     inline
-    void setDirtyWith2Idxs(int32 idx0, int32 idx1, bool bDirty, bool bSettingDefaultAllDirty = false)
+    void setDirtyWith2Idxs(int32 idx0, int32 idx1, bool bDirty)
     {
         if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 2) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 2!"), m_uiDebugIdxUsed);
+            MY_VERIFY(false);
         };
 
         if (m_uiDebugIdxUsed == 0) {
             m_uiDebugIdxUsed = 2;
         }
-        setDirty(0, 0, idx0, idx1, bDirty, bSettingDefaultAllDirty);
+        setDirty(0, 0, idx0, idx1, bDirty);
     };
 
     inline
-        bool getDirtyWith3Idxs(int32 idx0, int32 idx1, int32 idx2, bool bSettingDefaultAllDirty = false) const
+        bool getDirtyWith3Idxs(int32 idx0, int32 idx1, int32 idx2) const
     {
         if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 3) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 3!"), m_uiDebugIdxUsed);
+            MY_VERIFY(false);
         };
 
-        return getDirty(0, idx0, idx1, idx2, bSettingDefaultAllDirty);
+        return getDirty(0, idx0, idx1, idx2);
     };
 
     inline
-        void setDirtyWith3Idxs(int32 idx0, int32 idx1, int32 idx2, bool bDirty, bool bSettingDefaultAllDirty = false)
+        void setDirtyWith3Idxs(int32 idx0, int32 idx1, int32 idx2, bool bDirty)
     {
         if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 3) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 3!"), m_uiDebugIdxUsed);
+            MY_VERIFY(false);
         };
 
         if (m_uiDebugIdxUsed == 0) {
             m_uiDebugIdxUsed = 3;
         }
-        setDirty(0, idx0, idx1, idx2, bDirty, bSettingDefaultAllDirty);
+        setDirty(0, idx0, idx1, idx2, bDirty);
+    };
+
+    inline
+    void recordValueToIdxValuesWith2Idxs(int32 recordValue, int32 &outIdx0, int32 &outIdx1)
+    {
+        if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 2) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 2!"), m_uiDebugIdxUsed);
+            MY_VERIFY(false);
+        };
+
+        outIdx0 = GetIdx2_KeyAnd4IdxsMap(recordValue);
+        outIdx1 = GetIdx3_KeyAnd4IdxsMap(recordValue);
+    };
+
+    inline
+    void recordValueToIdxValuesWith3Idxs(int32 recordValue, int32 &outIdx0, int32 &outIdx1, int32 &outIdx2)
+    {
+        if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 3) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 3!"), m_uiDebugIdxUsed);
+            MY_VERIFY(false);
+        };
+
+        outIdx0 = GetIdx1_KeyAnd4IdxsMap(recordValue);
+        outIdx1 = GetIdx2_KeyAnd4IdxsMap(recordValue);
+        outIdx2 = GetIdx3_KeyAnd4IdxsMap(recordValue);
     };
 
     inline
@@ -2251,28 +2263,13 @@ public:
         return m_sRecord;
     };
 
-    static void helperSetupAllDefaultDirtyForAttenderAndCardSlot(FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cTarget)
-    {
-        cTarget.clearDefaultDirtyData();
-        for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
-            for (int32 eSlot = ((int32)MyMJCardSlotTypeCpp::InvalidIterateMin + 1); eSlot < ((int32)MyMJCardSlotTypeCpp::InvalidIterateMax); eSlot++) {
-                cTarget.setDirtyWith2Idxs(idxAttender, eSlot, true, true);
-            }
-        }
-    };
-
 protected:
 
     inline
-        bool getDirty(int32 idx0, int32 idx1, int32 idx2, int32 idx3, bool bSettingDefaultAllDirty = false) const
+        bool getDirty(int32 idx0, int32 idx1, int32 idx2, int32 idx3) const
     {
         const TSet<int32> *pTarget;
-        if (bSettingDefaultAllDirty) {
-            pTarget = &m_sRecordDefaultAllDirty;
-        }
-        else {
-            pTarget = &m_sRecord;
-        }
+        pTarget = &m_sRecord;
 
         int32 key;
         CalcKey_Macro_KeyAnd4IdxsMap(key, idx0, idx1, idx2, idx3);
@@ -2281,16 +2278,11 @@ protected:
     };
 
     inline
-        void setDirty(int32 idx0, int32 idx1, int32 idx2, int32 idx3, bool bDirty, bool bSettingDefaultAllDirty = false)
+        void setDirty(int32 idx0, int32 idx1, int32 idx2, int32 idx3, bool bDirty)
     {
         TSet<int32> *pTarget;
-        if (bSettingDefaultAllDirty) {
-            pTarget = &m_sRecordDefaultAllDirty;
-        }
-        else {
-            pTarget = &m_sRecord;
-        }
-
+        pTarget = &m_sRecord;
+ 
         int32 key;
         CalcKey_Macro_KeyAnd4IdxsMap(key, idx0, idx1, idx2, idx3);
 
@@ -2303,7 +2295,6 @@ protected:
     };
 
     TSet<int32> m_sRecord;
-    TSet<int32> m_sRecordDefaultAllDirty;
     uint8 m_uiDebugIdxUsed;
 };
 
