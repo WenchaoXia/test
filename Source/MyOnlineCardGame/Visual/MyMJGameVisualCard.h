@@ -51,6 +51,19 @@ public:
         m_iCardValue = 0;
     };
 
+    inline
+    bool equal(const FMyMJGameCardVisualInfoCpp& other) const
+    {
+        if (&other == this) {
+            return true;
+        }
+
+        return m_eFlipState == other.m_eFlipState && m_iIdxAttender == other.m_iIdxAttender && m_eSlot == other.m_eSlot &&
+            m_iIdxRow == other.m_iIdxRow && m_iIdxColInRow == other.m_iIdxColInRow && m_iIdxStackInCol == other.m_iIdxStackInCol &&
+            m_iRotateX90D == other.m_iRotateX90D && m_iRotateX90DBeforeCount == other.m_iRotateX90DBeforeCount && m_iColInRowExtraMarginCount == other.m_iColInRowExtraMarginCount &&
+            m_iCardValue == other.m_iCardValue;
+    };
+
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "flip state"))
         MyMJCardFlipStateCpp m_eFlipState;
 
@@ -91,7 +104,7 @@ public:
 
 //seperate the data from actor, to allow subthread handling in the future
 USTRUCT(BlueprintType)
-struct FMyMJGameCardVisualInfoAndStateCpp
+struct FMyMJGameCardVisualInfoAndResultCpp
 
 {
     GENERATED_USTRUCT_BODY()
@@ -99,7 +112,24 @@ struct FMyMJGameCardVisualInfoAndStateCpp
 public:
 
     FMyMJGameCardVisualInfoCpp  m_cVisualInfo;
-    FMyMJGameActorVisualStateBaseCpp m_cVisualState;
+    FMyMJGameActorVisualResultBaseCpp m_cVisualResult;
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJGameDiceVisualInfoAndResultCpp
+
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameDiceVisualInfoAndResultCpp()
+    {
+        m_iVisualInfoValue = 0;
+    };
+
+    int32  m_iVisualInfoValue;
+    FMyMJGameActorVisualResultBaseCpp m_cVisualResult;
 };
 
 UCLASS(Blueprintable)
@@ -221,9 +251,9 @@ public:
         }
     };
 
-    inline FMyMJGameCardVisualInfoAndStateCpp* getByIdx(int32 idx, bool bVerifyValid) {
+    inline FMyMJGameCardVisualInfoAndResultCpp* getByIdx(int32 idx, bool bVerifyValid) {
         MY_VERIFY(idx >= 0);
-        FMyMJGameCardVisualInfoAndStateCpp* ret = NULL;
+        FMyMJGameCardVisualInfoAndResultCpp* ret = NULL;
         if (idx < m_aCards.Num()) {
             ret = &m_aCards[idx];
         }
@@ -242,6 +272,6 @@ public:
 protected:
 
     UPROPERTY(meta = (DisplayName = "cards"))
-    TArray<FMyMJGameCardVisualInfoAndStateCpp> m_aCards;
+    TArray<FMyMJGameCardVisualInfoAndResultCpp> m_aCards;
 
 };

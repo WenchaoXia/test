@@ -194,3 +194,319 @@ void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTim
 
     MY_VERIFY(m_cBase.getTime() > 0);
 };
+
+
+void FMyMJGameDeskProcessorRunnableCpp::helperUpdateCardVisualInfo()
+{
+   for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
+        
+        if (aHelperAttenderSlotDirtyMasks[idxAttender] == 0) {
+            continue;
+        }
+
+        const FMyMJRoleDataAttenderPublicCpp& attenderPublic = cBase.getRoleDataAttenderPublicRefConst(idxAttender);
+
+        //todo: there can be short cut that some case we don't need update
+        if (GetMyHelperAttenderSlotDirtyMasks(aHelperAttenderSlotDirtyMasks, idxAttender, MyMJCardSlotTypeCpp::Untaken) == true) {
+
+            const TArray<FMyIdCollectionCpp>& aUntakenCardStacks = cBase.getCoreDataPublicRefConst().m_aUntakenCardStacks;
+            const FMyMJGameUntakenSlotSubSegmentInfoCpp& cSubSegmengInfo = attenderPublic.m_cUntakenSlotSubSegmentInfo;
+
+            int32 idxUntakenStackEnd = cSubSegmengInfo.m_iIdxStart + cSubSegmengInfo.m_iLength;
+
+            MY_VERIFY(cSubSegmengInfo.m_iIdxStart >= 0 && cSubSegmengInfo.m_iIdxStart < aUntakenCardStacks.Num());
+            MY_VERIFY(idxUntakenStackEnd >= 0 && idxUntakenStackEnd <= aUntakenCardStacks.Num());
+            for (int32 idxUntakenStack = cSubSegmengInfo.m_iIdxStart; idxUntakenStack < idxUntakenStackEnd; idxUntakenStack++) {
+                const FMyIdCollectionCpp& stack = aUntakenCardStacks[idxUntakenStack];
+                for (int32 i = 0; i < stack.m_aIds.Num(); i++) {
+                    int32 cardId = stack.m_aIds[i];
+                    const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
+                    int32 cardValue = ccardValuePack.getByIdx(cardId);
+
+                    FMyMJGameCardVisualInfoCpp* pCardVisualInfo = cCardVisualInfoPack.getByIdx(cardId, true);
+                    pCardVisualInfo->reset();
+                    pCardVisualInfo->m_bVisible = true;
+                    pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                    pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
+                    pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
+                    if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
+                        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card [%d: %d] have inconsistent posi: idxAttender %d, .m_cPosi.m_iIdxAttender."), cardId, cardValue, idxAttender, cCardInfo.m_cPosi.m_iIdxAttender);
+                    }
+                    MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::Untaken);
+
+                    pCardVisualInfo->m_iIdxRow = 0;
+                    pCardVisualInfo->m_iIdxColInRow = cCardInfo.m_cPosi.m_iIdxInSlot0;
+                    pCardVisualInfo->m_iIdxStackInCol = cCardInfo.m_cPosi.m_iIdxInSlot1;
+
+                    pCardVisualInfo->m_iCardValue = cardValue;
+                }
+            }
+
+        }
+
+        if (GetMyHelperAttenderSlotDirtyMasks(aHelperAttenderSlotDirtyMasks, idxAttender, MyMJCardSlotTypeCpp::JustTaken) == true) {
+
+            const TArray<int32>& aIdHandCards = attenderPublic.m_aIdHandCards;
+            const TArray<int32>& aIdJustTakenCards = attenderPublic.m_aIdJustTakenCards;
+            int32 l0 = aIdHandCards.Num();
+            int32 l1 = aIdJustTakenCards.Num();
+
+            for (int32 i = 0; i < l1; i++) {
+                int32 cardId = aIdJustTakenCards[i];
+                const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
+                int32 cardValue = ccardValuePack.getByIdx(cardId);
+
+                FMyMJGameCardVisualInfoCpp* pCardVisualInfo = cCardVisualInfoPack.getByIdx(cardId, true);
+                pCardVisualInfo->reset();
+                pCardVisualInfo->m_bVisible = true;
+                pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
+                pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
+                if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card [%d: %d] have inconsistent posi: idxAttender %d, .m_cPosi.m_iIdxAttender."), cardId, cardValue, idxAttender, cCardInfo.m_cPosi.m_iIdxAttender);
+                }
+                MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::JustTaken);
+
+                pCardVisualInfo->m_iIdxRow = 0;
+                pCardVisualInfo->m_iIdxColInRow = l0 + i;
+                pCardVisualInfo->m_iIdxStackInCol = 0;
+
+                pCardVisualInfo->m_iColInRowExtraMarginCount = 1;
+
+                pCardVisualInfo->m_iCardValue = cardValue;
+            }
+        }
+
+        if (GetMyHelperAttenderSlotDirtyMasks(aHelperAttenderSlotDirtyMasks, idxAttender, MyMJCardSlotTypeCpp::InHand) == true) {
+
+            const TArray<int32>& aIdHandCards = attenderPublic.m_aIdHandCards;
+            int32 l0 = aIdHandCards.Num();
+
+            FMyMJValueIdMapCpp m_cSortCards;
+            m_cSortCards.changeKeepOrder(true, false);
+            for (int32 i = 0; i < l0; i++) {
+                int32 cardId = aIdHandCards[i];
+                int32 cardValue = ccardValuePack.getByIdx(cardId);
+                m_cSortCards.insert(cardId, cardValue);
+            }
+            TArray<FMyIdValuePair> aPairs;
+            m_cSortCards.collectAllWithValue(aPairs);
+            MY_VERIFY(aPairs.Num() == l0);
+
+            for (int32 i = 0; i < l0; i++) {
+                int32 cardId = aPairs[i].m_iId;
+                const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
+                int32 cardValue = aPairs[i].m_iValue;
+
+                FMyMJGameCardVisualInfoCpp* pCardVisualInfo = cCardVisualInfoPack.getByIdx(cardId, true);
+                pCardVisualInfo->reset();
+                pCardVisualInfo->m_bVisible = true;
+                pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
+                pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
+                if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card [%d: %d] have inconsistent posi: idxAttender %d, .m_cPosi.m_iIdxAttender."), cardId, cardValue, idxAttender, cCardInfo.m_cPosi.m_iIdxAttender);
+                }
+                MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::InHand);
+
+                pCardVisualInfo->m_iIdxRow = 0;
+                pCardVisualInfo->m_iIdxColInRow = i;
+                pCardVisualInfo->m_iIdxStackInCol = 0;
+
+                pCardVisualInfo->m_iCardValue = cardValue;
+            }
+        }
+
+        if (GetMyHelperAttenderSlotDirtyMasks(aHelperAttenderSlotDirtyMasks, idxAttender, MyMJCardSlotTypeCpp::GivenOut) == true) {
+
+            int32 iColPerRow;
+            if (0 != helperGetColCountPerRowForDefaultAligment(idxAttender, MyMJCardSlotTypeCpp::GivenOut, iColPerRow)) {
+                continue;
+            }
+
+            const TArray<int32>& aIdGivenOutCards = attenderPublic.m_aIdGivenOutCards;
+            int32 l = aIdGivenOutCards.Num();
+
+            for (int32 i = 0; i < l; i++) {
+                int32 cardId = aIdGivenOutCards[i];
+                const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
+                int32 cardValue = ccardValuePack.getByIdx(cardId);
+
+                FMyMJGameCardVisualInfoCpp* pCardVisualInfo = cCardVisualInfoPack.getByIdx(cardId, true);
+                pCardVisualInfo->reset();
+                pCardVisualInfo->m_bVisible = true;
+                pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
+                pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
+                if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card [%d: %d] have inconsistent posi: idxAttender %d, .m_cPosi.m_iIdxAttender."), cardId, cardValue, idxAttender, cCardInfo.m_cPosi.m_iIdxAttender);
+                }
+                MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::GivenOut);
+
+                pCardVisualInfo->m_iIdxRow = i / iColPerRow;
+                pCardVisualInfo->m_iIdxColInRow = i % iColPerRow;
+                pCardVisualInfo->m_iIdxStackInCol = 0;
+
+                pCardVisualInfo->m_iCardValue = cardValue;
+            }
+        }
+
+        if (GetMyHelperAttenderSlotDirtyMasks(aHelperAttenderSlotDirtyMasks, idxAttender, MyMJCardSlotTypeCpp::Weaved) == true) {
+
+            FMyMJGameDeskVisualPointCfgCpp cVisualPointCfg;
+            if (0 != m_pDeskAreaActor->getVisualPointCfgByIdxAttenderAndSlot(idxAttender, MyMJCardSlotTypeCpp::Weaved, cVisualPointCfg)) {
+                continue;
+            };
+
+            const TArray<FMyMJWeaveCpp>& aWeaves = attenderPublic.m_aShowedOutWeaves;
+            int32 l = aWeaves.Num();
+
+            int32 cardArrangedCount = 0;
+            int32 cardRotatedX90DCount = 0;
+            int32 weaveArrangedCount = 0;
+            for (int32 idxWeave = 0; idxWeave < l; idxWeave++) {
+                const FMyMJWeaveCpp& cWeave = aWeaves[idxWeave];
+                const TArray<int32>& aIds = cWeave.getIdsRefConst();
+                int32 l0 = aIds.Num();
+
+                int32 triggerCardX90D = 0;
+                if (cWeave.getIdxAttenderTriggerCardSrc() >= 0) {
+                    if (cWeave.getIdxAttenderTriggerCardSrc() == ((idxAttender + 1) % 4)) {
+                        //aIds.
+                        triggerCardX90D = 1;
+                    }
+                    else if (cWeave.getIdxAttenderTriggerCardSrc() == ((idxAttender + 2) % 4)) {
+                        triggerCardX90D = 1;
+                    }
+                    else if (cWeave.getIdxAttenderTriggerCardSrc() == ((idxAttender + 3) % 4)) {
+                        triggerCardX90D = -1;
+                    }
+                    else {
+                    }
+                }
+
+                int32 workingIdx = 0;
+                if (cVisualPointCfg.m_eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Left) {
+                }
+                else if (cVisualPointCfg.m_eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Right) {
+                    workingIdx = l0 - 1;
+                }
+                else {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected visualPointCfg: idxAttender %d, slot weave, m_eColInRowAlignment %d."), idxAttender, (uint8)cVisualPointCfg.m_eColInRowAlignment);
+                    continue;
+                }
+
+                while (1)
+                {
+                    int32 cardId = aIds[workingIdx];
+                    const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
+                    int32 cardValue = ccardValuePack.getByIdx(cardId);
+
+                    FMyMJGameCardVisualInfoCpp* pCardVisualInfo = cCardVisualInfoPack.getByIdx(cardId, true);
+                    pCardVisualInfo->reset();
+                    pCardVisualInfo->m_bVisible = true;
+                    pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                    pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
+                    pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
+                    if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
+                        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card [%d: %d] have inconsistent posi: idxAttender %d, .m_cPosi.m_iIdxAttender."), cardId, cardValue, idxAttender, cCardInfo.m_cPosi.m_iIdxAttender);
+                    }
+                    MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::Weaved);
+
+                    pCardVisualInfo->m_iIdxRow = 0;
+                    pCardVisualInfo->m_iIdxColInRow = cardArrangedCount;
+                    pCardVisualInfo->m_iIdxStackInCol = 0;
+
+                    pCardVisualInfo->m_iRotateX90DBeforeCount = cardRotatedX90DCount;
+                    pCardVisualInfo->m_iColInRowExtraMarginCount = weaveArrangedCount;
+                    if (triggerCardX90D != 0 && cardId == cWeave.getIdTriggerCard()) {
+                        pCardVisualInfo->m_iRotateX90D = triggerCardX90D;
+                        cardRotatedX90DCount++;
+                    }
+
+                    pCardVisualInfo->m_iCardValue = cardValue;
+                    cardArrangedCount++;
+
+                    if (cVisualPointCfg.m_eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Right) {
+                        workingIdx--;
+                        if (workingIdx < 0) {
+                            break;
+                        }
+                    }
+                    else {
+                        workingIdx++;
+                        if (workingIdx >= l0) {
+                            break;
+                        }
+                    }
+                }
+                weaveArrangedCount++;
+
+            }
+
+        }
+
+        if (GetMyHelperAttenderSlotDirtyMasks(aHelperAttenderSlotDirtyMasks, idxAttender, MyMJCardSlotTypeCpp::WinSymbol) == true) {
+
+            int32 iColPerRow;
+            if (0 != helperGetColCountPerRowForDefaultAligment(idxAttender, MyMJCardSlotTypeCpp::WinSymbol, iColPerRow)) {
+                continue;
+            }
+
+            const TArray<int32>& aIdWinSymbolCards = attenderPublic.m_aIdWinSymbolCards;
+            int32 l = aIdWinSymbolCards.Num();
+
+            for (int32 i = 0; i < l; i++) {
+                int32 cardId = aIdWinSymbolCards[i];
+                const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
+                int32 cardValue = ccardValuePack.getByIdx(cardId);
+
+                FMyMJGameCardVisualInfoCpp* pCardVisualInfo = cCardVisualInfoPack.getByIdx(cardId, true);
+                pCardVisualInfo->reset();
+                pCardVisualInfo->m_bVisible = true;
+                pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
+                pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
+                if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card [%d: %d] have inconsistent posi: idxAttender %d, .m_cPosi.m_iIdxAttender."), cardId, cardValue, idxAttender, cCardInfo.m_cPosi.m_iIdxAttender);
+                }
+                MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::WinSymbol);
+
+                pCardVisualInfo->m_iIdxRow = i / iColPerRow;
+                pCardVisualInfo->m_iIdxColInRow = i % iColPerRow;
+                pCardVisualInfo->m_iIdxStackInCol = 0;
+
+                pCardVisualInfo->m_iCardValue = cardValue;
+            }
+        }
+
+        if (GetMyHelperAttenderSlotDirtyMasks(aHelperAttenderSlotDirtyMasks, idxAttender, MyMJCardSlotTypeCpp::ShownOnDesktop) == true) {
+
+            const TArray<int32>& aIdShownOnDesktopCards = attenderPublic.m_aIdShownOnDesktopCards;
+            int32 l = aIdShownOnDesktopCards.Num();
+
+            for (int32 i = 0; i < l; i++) {
+                int32 cardId = aIdShownOnDesktopCards[i];
+                const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
+                int32 cardValue = ccardValuePack.getByIdx(cardId);
+
+                FMyMJGameCardVisualInfoCpp* pCardVisualInfo = cCardVisualInfoPack.getByIdx(cardId, true);
+                pCardVisualInfo->reset();
+                pCardVisualInfo->m_bVisible = true;
+                pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
+                pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
+                if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card [%d: %d] have inconsistent posi: idxAttender %d, .m_cPosi.m_iIdxAttender."), cardId, cardValue, idxAttender, cCardInfo.m_cPosi.m_iIdxAttender);
+                }
+                MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::ShownOnDesktop);
+
+                pCardVisualInfo->m_iIdxRow = 0;
+                pCardVisualInfo->m_iIdxColInRow = i;
+                pCardVisualInfo->m_iIdxStackInCol = 0;
+
+                pCardVisualInfo->m_iCardValue = cardValue;
+            }
+        }
+    }
+}

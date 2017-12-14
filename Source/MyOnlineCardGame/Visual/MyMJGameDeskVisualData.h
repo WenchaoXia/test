@@ -103,6 +103,35 @@ public:
         m_cModelInfo.clear();
     };
 
+    //return errorCode, 0 means OK
+    int32 helperGetColCountPerRow(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, int32& outCount) const
+    {
+        outCount = 1;
+        FMyMJGameDeskVisualPointCfgCpp cVisualPointCfg;
+
+        int32 retCode =m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(idxAttender, eSlot, cVisualPointCfg);
+        if (retCode != 0) {
+            return retCode;
+        }
+
+        const FMyMJGameActorModelInfoBoxCpp &cCardModelInfo = m_cModelInfo.m_cCardModelInfo;
+
+        if (cCardModelInfo.m_cBoxExtend.Y < 1) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cCardModelInfo.m_cBoxExtend.Y too small: %f."), cCardModelInfo.m_cBoxExtend.Y);
+            return -2;
+        }
+
+        int32 retCount = FMath::CeilToInt(cVisualPointCfg.m_cAreaBoxExtendFinal.Y / cCardModelInfo.m_cBoxExtend.Y);
+        if (retCount <= 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("fixing retCount it is %d before."), retCount);
+            retCount = 1;
+        }
+
+        outCount = retCount;
+
+        return 0;
+    };
+
     uint32 m_uiStateKey; //Represent the state, used to compare if it is changed.
     FMyMJGameDeskVisualPointCfgCacheCpp m_cPointCfg;
     FMyMJGameDeskVisualActorModelInfoCacheCpp m_cModelInfo;
@@ -124,65 +153,15 @@ public:
 
     };
 
-    TArray<FMyMJGameCardVisualInfoAndStateCpp> m_aCards;
-    TArray<FMyMJGameActorVisualStateBaseCpp> m_aDices;
-};
-
-USTRUCT()
-struct FMyMJGameDeskVisualDataDirtyRecordCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-
-    FMyMJGameDeskVisualDataDirtyRecordCpp()
+    inline
+    void reset()
     {
-        m_uiPrevServerTime_ms_unresolved = MyUIntIdDefaultInvalidValue;
-        m_uiPrevIdEvent = MyUIntIdDefaultInvalidValue;
+        m_aCards.Reset();
+        m_aDices.Reset();
     };
 
-    virtual ~FMyMJGameDeskVisualDataDirtyRecordCpp()
-    {
-
-    };
-
-    void resetExceptPrevInfo()
-    {
-        m_cCoreDataDirtyRecord.reset();
-        m_cVisualActorDataDirtyRecord.reset();
-        m_aImportantEventsApplied.Reset();
-    };
-
-    //time segment data
-    uint32 m_uiPrevServerTime_ms_unresolved; //Todo: make timestamp unique to act as unique state label
-    uint32 m_uiPrevIdEvent;
-
-    FMyDirtyRecordWithKeyAnd4IdxsMapCpp m_cCoreDataDirtyRecord;
-    FMyDirtyRecordWithKeyAnd4IdxsMapCpp m_cVisualActorDataDirtyRecord;
-    TArray<FMyMJEventWithTimeStampBaseCpp> m_aImportantEventsApplied;
-};
-
-//Contains all data for core logic visualization, and it can be processed in sub thread
-//if in subtread mode, the data may be 1 or 2 frame late, which  means 16-32ms later
-USTRUCT()
-struct FMyMJGameDeskVisualDataOneMomentCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-
-    FMyMJGameDeskVisualDataOneMomentCpp()
-    {
-
-    };
-
-    virtual ~FMyMJGameDeskVisualDataOneMomentCpp()
-    {
-
-    };
-
-    FMyMJDataStructWithTimeStampBaseCpp m_cCoreData;
-    FMyMJGameDeskVisualActorDatasCpp m_cActorData;
+    TArray<FMyMJGameCardVisualInfoAndResultCpp> m_aCards;
+    TArray<FMyMJGameDiceVisualInfoAndResultCpp> m_aDices;
 };
 
 //this class's data is history critical, not delta should be missed
@@ -202,28 +181,70 @@ public:
 
     };
 
+        inline
+    void reset()
+    {
+        m_cCfgCache.clear();
+        m_cCoreData.reset();
+        m_cActorData.reset();
+
+        m_uiServerWorldTime_ms = 0;
+    };
+
     FMyMJGameDeskVisualCfgCacheCpp m_cCfgCache;
-    FMyMJGameDeskVisualDataOneMomentCpp m_cDataOneMoment;
+    FMyMJDataStructWithTimeStampBaseCpp m_cCoreData;
+    FMyMJGameDeskVisualActorDatasCpp m_cActorData;
+
+    uint32 m_uiServerWorldTime_ms; //different with coreData time, it is not the state's supposed time, but the playing time
 };
 
 USTRUCT()
-struct FMyMJGameDeskVisualDataOneMomentDeltaCpp
+struct FMyMJGameDeskVisualDataDeltaCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyMJGameDeskVisualDataOneMomentDeltaCpp()
+    FMyMJGameDeskVisualDataDeltaCpp()
     {
+    };
+
+    inline void reset()
+    {
+        m_apNewCoreData.Reset();
+        m_apNewCoreDataDirtyRecord.Reset();
+        m_mNewActorDataIdCards.Reset();
+        m_mNewActorDataIdDices.Reset();
+        m_apEventJustApplied.Reset();
 
     };
 
-    virtual ~FMyMJGameDeskVisualDataOneMomentDeltaCpp()
+    /*
+    inline
+        FMyMJDataStructWithTimeStampBaseCpp& getNewCoreDataCreateIfNotExist()
     {
-
+        if (m_apNewCoreData.Num() == 0) {
+            m_apNewCoreData.Emplace();
+        }
+        return m_apNewCoreData[0];
     };
 
-    FMyMJGameDeskVisualDataOneMomentCpp m_cNewFull;
-    FMyMJGameDeskVisualDataDirtyRecordCpp m_cDirtyRecord;
+    inline
+    FMyDirtyRecordWithKeyAnd4IdxsMapCpp& getNewCoreDataDirtyRecordCreateIfNotExist()
+    {
+        if (m_apNewCoreDataDirtyRecord.Num() == 0) {
+            m_apNewCoreDataDirtyRecord.Emplace();
+        }
+        return m_apNewCoreDataDirtyRecord[0];
+    };
+    */
+
+    TArray<FMyMJDataStructWithTimeStampBaseCpp> m_apNewCoreData;
+    TArray<FMyDirtyRecordWithKeyAnd4IdxsMapCpp> m_apNewCoreDataDirtyRecord;
+
+    TMap<int32, FMyMJGameCardVisualInfoAndResultCpp> m_mNewActorDataIdCards;
+    TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp> m_mNewActorDataIdDices;
+
+    TArray<FMyMJEventWithTimeStampBaseCpp> m_apEventJustApplied;
 };
 
 //#define FMyMJGameDeskSuiteCoreDataProcessorSubThreadLoopTimeMs (10)
@@ -294,15 +315,15 @@ public:
     inline
     void reset()
     {
-        m_apNewDelta.Reset();
+        m_apNewVisualDataDelta.Reset();
         m_uiNewServerWorldTime_ms = 0;
     };
 
     inline
     void verifyValid() const
     {
-       if (m_apNewDelta.Num() > 0) {
-            MY_VERIFY(m_apNewDelta.Num() == 1);
+       if (m_apNewVisualDataDelta.Num() > 0) {
+            MY_VERIFY(m_apNewVisualDataDelta.Num() == 1);
         }
         else {
         }
@@ -312,7 +333,8 @@ public:
     };
 
     //core and visual data, need timestamp
-    TArray<FMyMJGameDeskVisualDataOneMomentDeltaCpp> m_apNewDelta;
+    TArray<FMyMJGameDeskVisualDataDeltaCpp> m_apNewVisualDataDelta;
+
     uint32 m_uiNewServerWorldTime_ms;
 
 };
@@ -378,16 +400,16 @@ public:
 };
 
 
-struct FMyMJGameDeskProcessorSentLabelCpp
+struct FMyMJGameDeskProcessorMainThreadSentLabelCpp
 {
 public:
 
-    FMyMJGameDeskProcessorSentLabelCpp()
+    FMyMJGameDeskProcessorMainThreadSentLabelCpp()
     {
         reset();
     };
 
-    ~FMyMJGameDeskProcessorSentLabelCpp()
+    ~FMyMJGameDeskProcessorMainThreadSentLabelCpp()
     {
 
     };
@@ -420,16 +442,16 @@ public:
 
 };
 
-struct FMyMJGameDeskProcessorReceivedLabelCpp
+struct FMyMJGameDeskProcessorMainThreadReceivedLabelCpp
 {
 public:
 
-    FMyMJGameDeskProcessorReceivedLabelCpp()
+    FMyMJGameDeskProcessorMainThreadReceivedLabelCpp()
     {
         reset();
     };
 
-    ~FMyMJGameDeskProcessorReceivedLabelCpp()
+    ~FMyMJGameDeskProcessorMainThreadReceivedLabelCpp()
     {
 
     };
@@ -442,6 +464,40 @@ public:
 
     uint32 m_uiCfgStateKey;
 };
+
+
+struct FMyMJGameDeskProcessorSubThreadSentLabelCpp
+{
+public:
+
+    FMyMJGameDeskProcessorSubThreadSentLabelCpp()
+    {
+        reset();
+    };
+
+    ~FMyMJGameDeskProcessorSubThreadSentLabelCpp()
+    {
+
+    };
+
+    inline
+        void reset()
+    {
+        m_uiCfgStateKey = MyUIntIdDefaultInvalidValue;
+        m_cVisualData.reset();
+        m_uiServerWorldTime_ms = 0;
+    };
+
+
+    uint32 m_uiCfgStateKey;
+    
+    FMyMJGameDeskVisualDataCpp m_cVisualData;
+    //FMyMJGameDeskVisualDataDeltaCpp m_cVisualDataDelta;
+
+    uint32 m_uiServerWorldTime_ms; //note that it is different with m_cVisualData's core data timestamp, which represent that state's supposed time stamp, but here it means real time
+
+};
+
 
 #define MyTryFeedEventRetAllProcessed (0)
 #define MyTryFeedEventRetDataReplicationIncomplete (-1)
@@ -476,6 +532,12 @@ public:
     bool mainThreadDataTryFeed(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutRetryLater);
 
 
+    //make it public for test purpose
+    static void helperResolveCardTransform(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
+                                            const FMyMJGameActorModelInfoBoxCpp& cCardModelInfo,
+                                            const FMyMJGameCardVisualInfoCpp& cCardVisualInfo,
+                                            FTransform& outTransform);
+
 
 protected:
 
@@ -491,8 +553,29 @@ protected:
     void subThreadCmdLoop();
     void subThreadDataLoop();
 
+    void subThreadTryGenOutput(FMyMJEventWithTimeStampBaseCpp* pEventJustApplied);
 
-    void subThreadApplyEvent();
+    //Keywork accumulated means it does NOT reset inside, and the param can contain prev worked data before calling
+    static void helperResolveVisualInfoChanges(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
+                                               const FMyMJDataStructWithTimeStampBaseCpp& cNextCoreData,
+                                               const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cNextCoreDataDirtyRecordSincePrev,
+                                               const FMyMJGameDeskVisualActorDatasCpp& cPrevActorData,
+                                               TMap<int32, FMyMJGameCardVisualInfoCpp>& mOutIdCardVisualInfoAccumulatedChanges,
+                                               TMap<int32, int32>& mOutIdDiceValueAccumulatedChanges);
+
+    //@mIdCardVisualInfoAccumulatedChanges, @mIdDiceValueAccumulatedChanges may be sorted inside, the out will be cleaned inside and only contain data correspond to input 
+    static void helperResolveVisualResultChanges(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
+                                                 TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoAccumulatedChanges,
+                                                 TMap<int32, int32>& mIdDiceValueAccumulatedChanges,
+                                                 TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultChanges,
+                                                 TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mOutIdDiceVisualInfoAndResultChanges);
+
+    //do the final work with resolved same point cfg and card model in prev step
+    static void helperResolveCardVisualResultChanges(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
+                                                     const FMyMJGameActorModelInfoBoxCpp& cCardModelInfo,
+                                                     const TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoKnownChanges,
+                                                     TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultAccumulatedChanges);
+
 
     FMyMJGameDeskVisualCfgCacheCpp m_cMainThreadWaitingToSendCfgCache;
 
@@ -503,15 +586,18 @@ protected:
     FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorDataOutputCpp> m_cDataOut;
 
     //record
-    FMyMJGameDeskProcessorSentLabelCpp     m_cMainThreadSentLabel;
-    FMyMJGameDeskProcessorReceivedLabelCpp m_cMainThreadReceivedLabel;
+    FMyMJGameDeskProcessorMainThreadSentLabelCpp     m_cMainThreadSentLabel;
+    FMyMJGameDeskProcessorMainThreadReceivedLabelCpp m_cMainThreadReceivedLabel;
 
     //used only inside processor
-    FMyMJGameDeskVisualDataCpp *m_pSubThreadData;
-    FMyMJGameDeskVisualDataDirtyRecordCpp *m_pSubThreadDirtyRecord;
+    FMyMJGameDeskVisualDataCpp          *m_pSubThreadData;
+    FMyDirtyRecordWithKeyAnd4IdxsMapCpp *m_pSubThreadDataCoreDataDirtyRecordSincePrevSent;
+    //FMyMJGameDeskVisualCfgCacheCpp *m_pSubThreadCfgCache;
+    //FMyMJGameDeskVisualDataDeltaCpp     *m_pSubThreadDataDeltaSincePrevSent;
+
     FMyMJDataAccessorCpp* m_pSubThreadAccessor;
 
-    FMyMJGameDeskProcessorSentLabelCpp* m_pSubThreadSentLabel;
+    FMyMJGameDeskProcessorSubThreadSentLabelCpp* m_pSubThreadSentLabel;
 
 };
 
@@ -535,11 +621,23 @@ public:
 
     void start();
     void stop();
+    void loop();
+
 
     uint32 updateCfgCache(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
 
     //return true if need to sync base
     bool tryFeedData(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutRetryLater);
+
+    
+    UFUNCTION(BlueprintCallable)
+    static void testHelperResolveCardTransform(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
+                                            const FMyMJGameActorModelInfoBoxCpp& cCardModelInfo,
+                                            const FMyMJGameCardVisualInfoCpp& cCardVisualInfo,
+                                            FTransform& outTransform)
+    {
+        FMyMJGameDeskProcessorRunnableCpp::helperResolveCardTransform(cVisualPointCfg, cCardModelInfo, cCardVisualInfo, outTransform);
+    };
 
 protected:
 

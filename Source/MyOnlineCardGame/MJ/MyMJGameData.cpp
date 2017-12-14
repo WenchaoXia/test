@@ -101,6 +101,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta, FMyDi
         MyMJGameRoleTypeCpp eRoleType = roleDataPriDelta.m_eRoleType;
         if (getAccessRoleType() != eRoleType) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("tring to apply role private delta but access role is different, %d, %d."), (uint8)getAccessRoleType(), (uint8)eRoleType);
+            MY_VERIFY(false);
             break;
         }
 

@@ -46,7 +46,7 @@ void AMyMJGameRoomViewerPawnCpp::clearInGame()
 
 void AMyMJGameRoomViewerPawnCpp::BeginPlay()
 {
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameRoomViewerPawnCpp BeginPlay()"));
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameRoomViewerPawnCpp BeginPlay()"));
 
     Super::BeginPlay();
 
@@ -90,6 +90,9 @@ bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRo
 {
     MY_VERIFY(HasAuthority());
 
+    AMyMJGameRoomRootActorCpp *pRS = AMyMJGameRoomRootActorCpp::helperGetRoomRootActor(this);
+
+    /*
     UWorld *world = GetWorld();
     if (!IsValid(world)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
@@ -110,18 +113,19 @@ bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRo
     }
 
     AMyMJGameRoomLevelScriptActorCpp *pLSASub = Cast<AMyMJGameRoomLevelScriptActorCpp>(pLSA);
-    if (!IsValid(pLSASub)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to cast %p, original class name is %s."), pLSASub, *pLSA->GetClass()->GetName());
+    */
+
+    if (!IsValid(pRS)) {
         return false;
     }
 
-    m_pExtRoomActor = pLSASub->m_pRoomActor;
+    m_pExtRoomActor = pRS->m_pRoomActor;
     if (!IsValid(m_pExtRoomActor)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("room is invalid, not cfged?, %p."), m_pExtRoomActor);
         return false;
     }
 
-    m_pExtRoomTrivalDataSource = pLSASub->m_pTrivalDataSource;
+    m_pExtRoomTrivalDataSource = pRS->m_pTrivalDataSource;
     if (!IsValid(m_pExtRoomTrivalDataSource)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pExtRoomTrivalDataSource is invalid, not cfged?, %p."), m_pExtRoomTrivalDataSource);
         return false;
@@ -135,7 +139,7 @@ bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRo
 
     //return false; //test
 
-    AMyMJGameCoreDataSourceCpp* pSource = pLSASub->m_pCoreDataSource;
+    AMyMJGameCoreDataSourceCpp* pSource = pRS->m_pCoreDataSource;
     if (!IsValid(pSource)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("core data source is invalid, not cfged?, %p."), pSource);
         return false;

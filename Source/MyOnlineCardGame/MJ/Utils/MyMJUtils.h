@@ -2233,7 +2233,7 @@ public:
     };
 
     inline
-    void recordValueToIdxValuesWith2Idxs(int32 recordValue, int32 &outIdx0, int32 &outIdx1)
+    void recordValueToIdxValuesWith2Idxs(int32 recordValue, int32 &outIdx0, int32 &outIdx1) const
     {
         if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 2) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 2!"), m_uiDebugIdxUsed);
@@ -2245,7 +2245,7 @@ public:
     };
 
     inline
-    void recordValueToIdxValuesWith3Idxs(int32 recordValue, int32 &outIdx0, int32 &outIdx1, int32 &outIdx2)
+    void recordValueToIdxValuesWith3Idxs(int32 recordValue, int32 &outIdx0, int32 &outIdx1, int32 &outIdx2) const
     {
         if (m_uiDebugIdxUsed > 0 && m_uiDebugIdxUsed != 3) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dirty record working with %d idxs, not 3!"), m_uiDebugIdxUsed);

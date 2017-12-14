@@ -4,6 +4,8 @@
 
 #include "GameFramework/GameState.h"
 
+#include "Visual/MyMJGameRoomLevelScriptActorCpp.h"
+
 #include "MyMJGamePlayerController.generated.h"
 
 /**

@@ -73,7 +73,7 @@ public:
 protected:
 
     //return errcode, 0 means no error
-    UFUNCTION(BlueprintNativeEvent)
+    UFUNCTION(BlueprintNativeEvent, BlueprintPure)
     int32 retrieveCardVisualPointCfg(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
 
     int32 retrieveCardVisualPointCfg_Implementation(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
@@ -187,7 +187,7 @@ public:
 };
 
 //this is used for visual layer, no replication code goes in
-UCLASS(Blueprintable)
+UCLASS(Blueprintable, HideCategories = (Collision, Rendering, "Utilities|Transformation"))
 class MYONLINECARDGAME_API AMyMJGameRoomCpp : public AActor
 {
     GENERATED_BODY()
@@ -197,7 +197,9 @@ public:
     AMyMJGameRoomCpp();
     virtual ~AMyMJGameRoomCpp();
 
-    void clearInGame();
+    void startVisual();
+    void stopVisual();
+    void loopVisual();
 
     void loop();
 
@@ -206,8 +208,7 @@ public:
 
     bool checkSettings() const;
 
-    inline
-    UMyMJGameRoomDataSuite* getRoomDataSuiteVerified()
+    inline UMyMJGameRoomDataSuite* getRoomDataSuiteVerified() const
     {
         MY_VERIFY(IsValid(m_pDataSuit));
         return m_pDataSuit;
@@ -221,8 +222,6 @@ protected:
 
     //return error code
     int32 retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
-
-    void tryProcessNetworkData();
 
     void changeVisualState(AMyMJGameRoomVisualStateCpp eNewState, uint32 uiClientTimeNow_ms)
     {
@@ -238,16 +237,18 @@ protected:
 
     //cfg start
 
-    UPROPERTY(BlueprintReadWrite, Replicated, VisibleAnywhere, meta = (DisplayName = "data suite"))
+    UPROPERTY(BlueprintReadOnly, Replicated, VisibleAnywhere, meta = (DisplayName = "data suite"))
     UMyMJGameRoomDataSuite* m_pDataSuit;
 
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, meta = (DisplayName = "desk res manager"))
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, meta = (DisplayName = "desk res manager"))
     UMyMJGameDeskResManagerCpp *m_pResManager;
 
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Cfg", meta = (DisplayName = "area actor"))
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "area actor"))
     AMyMJGameDeskAreaCpp* m_pDeskAreaActor;
 
     //end
+
+    FTimerHandle m_cLoopTimerHandle;
 
     FMyGameProgressDataCpp m_cGameProgressData;
     AMyMJGameRoomVisualStateCpp m_eVisualState;

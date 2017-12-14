@@ -9,6 +9,43 @@
 
 #include "MyMJGameRoomLevelScriptActorCpp.generated.h"
 
+UCLASS(BlueprintType)
+class AMyMJGameRoomRootActorCpp : public AActor
+{
+    GENERATED_BODY()
+
+public:
+    AMyMJGameRoomRootActorCpp()
+    {
+        m_pRoomActor = NULL;
+        m_pCoreDataSource = NULL;
+        m_pTrivalDataSource = NULL;
+    };
+
+    virtual ~AMyMJGameRoomRootActorCpp()
+    {
+
+    };
+
+    bool checkSettings() const;
+
+    UFUNCTION(BlueprintPure, Category = "My Room", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
+    static AMyMJGameRoomRootActorCpp* helperGetRoomRootActor(const UObject* WorldContextObject);
+
+protected:
+
+    friend class AMyMJGameRoomViewerPawnCpp;
+
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "room actor"))
+        AMyMJGameRoomCpp* m_pRoomActor;
+
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "core data source"))
+        AMyMJGameCoreDataSourceCpp *m_pCoreDataSource;
+
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "trival data source"))
+        AMyMJGameTrivalDataSourceCpp *m_pTrivalDataSource;
+};
+
 /**
  * 
  */
@@ -21,9 +58,7 @@ class MYONLINECARDGAME_API AMyMJGameRoomLevelScriptActorCpp : public ALevelScrip
 public:
     AMyMJGameRoomLevelScriptActorCpp()
     {
-        m_pRoomActor = NULL;
-        m_pCoreDataSource = NULL;
-        m_pTrivalDataSource = NULL;
+        //m_pRoomSettingsObj = CreateDefaultSubobject<UMyMJGameRoomSettingsObjCpp>(TEXT("room settings obj"));
     };
 
     virtual ~AMyMJGameRoomLevelScriptActorCpp()
@@ -35,20 +70,15 @@ public:
 
 protected:
 
-    friend class AMyMJGameRoomViewerPawnCpp;
+    friend class AMyMJGameRoomRootActorCpp;
 
     virtual void BeginPlay() override
     {
         Super::BeginPlay();
+
         checkSettings();
     };
 
-    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "room actor"))
-    AMyMJGameRoomCpp* m_pRoomActor;
-
-    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "core data source"))
-    AMyMJGameCoreDataSourceCpp *m_pCoreDataSource;
-
-    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "trival data source"))
-    AMyMJGameTrivalDataSourceCpp *m_pTrivalDataSource;
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "room root actor"))
+        AMyMJGameRoomRootActorCpp* m_pRoomRootActor;
 };

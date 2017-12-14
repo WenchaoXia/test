@@ -16,6 +16,8 @@
 #include "Kismet/KismetStringLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
+#define MY_MJ_GAME_ROOM_VISUAL_LOOP_TIME_MS (17)
+
 int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp& cPointCfgCache) const
 {
     cPointCfgCache.clear();
@@ -77,6 +79,11 @@ int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModel
     }
 
     pCDO->getModelInfo(cModelInfoCache.m_cCardModelInfo);
+
+    if (cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.X < 1 || cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.Y < 1 || cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.Z < 1) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("mode size is too small: %s."), *cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.ToString());
+        return -1;
+    }
 
     return 0;
 };
@@ -149,9 +156,55 @@ AMyMJGameRoomCpp::~AMyMJGameRoomCpp()
 
 };
 
-void AMyMJGameRoomCpp::clearInGame()
+void AMyMJGameRoomCpp::startVisual()
 {
-    getRoomDataSuiteVerified()->clearInGame();
+    bool bStarted = false;
+    if (checkSettings()) {
+        FMyMJGameDeskVisualCfgCacheCpp cCfgCache;
+        if (0 == retrieveCfg(cCfgCache)) {
+
+            UMyMJGameDeskVisualDataObjCpp* pO = m_pDataSuit->getDeskDataObjVerified();
+
+            pO->stop();
+            pO->start();
+            pO->updateCfgCache(cCfgCache);
+            bStarted = true;
+        }
+    }
+
+    if (!bStarted) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to start visual."));
+        return;
+    }
+
+    UWorld *world = GetWorld();
+    if (IsValid(world)) {
+        world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
+        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &AMyMJGameRoomCpp::loopVisual, ((float)MY_MJ_GAME_ROOM_VISUAL_LOOP_TIME_MS) / (float)1000, true);
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("startVisual() OK, and visual loop timer started."));
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
+        MY_VERIFY(false);
+    }
+};
+
+void AMyMJGameRoomCpp::stopVisual()
+{
+    UMyMJGameDeskVisualDataObjCpp* pO = m_pDataSuit->getDeskDataObjVerified();
+    pO->stop();
+
+    UWorld *world = GetWorld();
+    if (IsValid(world)) {
+        world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
+    }
+};
+
+void AMyMJGameRoomCpp::loopVisual()
+{
+    UMyMJGameDeskVisualDataObjCpp* pO = m_pDataSuit->getDeskDataObjVerified();
+
+    pO->loop();
 };
 
 void AMyMJGameRoomCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
@@ -163,16 +216,8 @@ void AMyMJGameRoomCpp::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this) && checkSettings()) {
-        FMyMJGameDeskVisualCfgCacheCpp cCfgCache;
-        if (0 == retrieveCfg(cCfgCache)) {
-
-            UMyMJGameDeskVisualDataObjCpp* pO = m_pDataSuit->getDeskDataObjVerified();
-
-            pO->stop();
-            pO->start();
-            pO->updateCfgCache(cCfgCache);
-        }
+    if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this)) {
+        startVisual();
     }
 };
 
@@ -180,7 +225,9 @@ void AMyMJGameRoomCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     Super::EndPlay(EndPlayReason);
 
-    clearInGame();
+    if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this)) {
+        stopVisual();
+    }
 };
 
 bool AMyMJGameRoomCpp::checkSettings() const
@@ -195,22 +242,6 @@ bool AMyMJGameRoomCpp::checkSettings() const
     }
 
     return true;
-};
-
-void AMyMJGameRoomCpp::tryProcessNetworkData()
-{
-    APlayerController *pC = UGameplayStatics::GetPlayerController(this, 0);
-
-    if (!IsValid(pC)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get player controller!"));
-        return;
-    }
-
-    //AMyMJGamePlayerControllerBaseCpp* pCMy = Cast<AMyMJGamePlayerControllerBaseCpp>(pC);
-    //if (!IsValid(pCMy)) {
-    //    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to cast to My PC!"));
-    //    return;
-    //}
 };
 
 void AMyMJGameRoomCpp::loop()
@@ -290,7 +321,7 @@ void AMyMJGameRoomCpp::loop()
             //check if data arrives or 
 
             if ((uiClientTimeNow_ms - m_uiVisualStateStartClientTime_ms) > 2000) {
-                bool bFullDataSync = getRoomDataSuiteVerified()->getDeskDataObjVerified()->getInFullDataSyncState();
+                bool bFullDataSync = m_pDataSuit->getDeskDataObjVerified()->getInFullDataSyncState();
                 UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("waiting for desk data %d."), bFullDataSync);
                 //toogleWaitingForDataTipPanel();
             }

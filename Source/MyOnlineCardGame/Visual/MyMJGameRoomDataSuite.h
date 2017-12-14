@@ -33,10 +33,10 @@ public:
 protected:
 
     //contains all data need accurate history
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, meta = (DisplayName = "desk data obj"))
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "desk data obj"))
         UMyMJGameDeskVisualDataObjCpp* m_pDeskDataObj;
 
     //contains not important data, which means it's history may miss some event
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, meta = (DisplayName = "trival data obj"))
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "trival data obj"))
         UMyMJGameTrivalVisualDataObjCpp *m_pTrivalDataObj;
 };

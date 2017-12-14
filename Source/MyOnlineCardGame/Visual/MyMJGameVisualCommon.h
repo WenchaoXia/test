@@ -88,14 +88,14 @@ public:
 
 
 USTRUCT(BlueprintType)
-struct FMyMJGameActorVisualStateBaseCpp
+struct FMyMJGameActorVisualResultBaseCpp
 
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyMJGameActorVisualStateBaseCpp()
+    FMyMJGameActorVisualResultBaseCpp()
     {
         reset();
     };
@@ -107,10 +107,10 @@ public:
     };
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "visible"))
-        bool m_bVisible;
+    bool m_bVisible;
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "transform"))
-        FTransform m_cTransform;
+    FTransform m_cTransform;
 
 };
 

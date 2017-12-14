@@ -570,9 +570,11 @@ protected:
 template<typename ItemType, EQueueMode Mode = EQueueMode::Spsc>
 struct FMyQueueWithLimitBuffer
 {
-    FMyQueueWithLimitBuffer(uint32 uiBufferCount = 32)
+    FMyQueueWithLimitBuffer(FString sDebugName, uint32 uiBufferCount = 32)
     {
         m_uiBufferCount = 0;
+        m_sDebugName = sDebugName;
+        m_bDebugLackBufferForProduce = false;
         addBuffer(uiBufferCount);
     };
 
@@ -619,6 +621,12 @@ struct FMyQueueWithLimitBuffer
     {
         ItemType *pItem = NULL;
         m_cQueueConsumed.Dequeue(pItem);
+
+        if (m_bDebugLackBufferForProduce != (pItem == NULL)) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("buffer (%s) for produce lacking state change %d->%d!"), *m_sDebugName, m_bDebugLackBufferForProduce, (pItem == NULL));
+        }
+        m_bDebugLackBufferForProduce = (pItem == NULL);
+
         return pItem;
     };
 
@@ -651,6 +659,9 @@ protected:
     TQueue<ItemType*, Mode> m_cQueueConsumed;
 
     uint32 m_uiBufferCount;
+
+    bool m_bDebugLackBufferForProduce;
+    FString m_sDebugName;
 };
 
 /*
