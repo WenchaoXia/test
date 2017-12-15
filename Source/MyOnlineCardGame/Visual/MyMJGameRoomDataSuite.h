@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MyMJGameVisualCard.h"
+#include "MyMJGameVisualElems.h"
 
 #include "MyMJGameDeskVisualData.h"
 #include "MyMJGameTrivalVisualData.h"

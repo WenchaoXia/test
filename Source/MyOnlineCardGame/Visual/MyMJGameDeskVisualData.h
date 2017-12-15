@@ -6,7 +6,7 @@
 #include "MJ/Utils/MyMJUtils.h"
 
 #include "MJBPEncap/MyMJGameCoreBP.h"
-#include "MyMJGameVisualCard.h"
+#include "MyMJGameVisualElems.h"
 #include "Utils/CommonUtils/MyCardUtils.h"
 
 
@@ -602,7 +602,7 @@ protected:
 };
 
 
-UCLASS(Blueprintable, NotBlueprintType)
+UCLASS(Blueprintable)
 class MYONLINECARDGAME_API UMyMJGameDeskVisualDataObjCpp : public UObject
 {
     GENERATED_BODY()

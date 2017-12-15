@@ -6,7 +6,7 @@
 #include "MJ/Utils/MyMJUtils.h"
 
 #include "MJBPEncap/MyMJGameCoreBP.h"
-#include "MyMJGameVisualCard.h"
+#include "MyMJGameVisualElems.h"
 
 #include "MyMJGameRoomDataSuite.h"
 
@@ -107,6 +107,7 @@ public:
 
     bool checkSettings() const;
 
+    UFUNCTION(BlueprintPure)
     inline int32 getCardModelInfoUnscaled(FMyMJGameActorModelInfoBoxCpp& modelInfo) const
     {
         const AMyMJGameCardBaseCpp* pCDO = getCardCDO();
@@ -137,6 +138,7 @@ public:
         int32 prepareCardActor(int32 count2reach);
 
     //return error code
+    UFUNCTION(BlueprintPure)
     int32 retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const;
 
 protected:

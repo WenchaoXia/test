@@ -6,7 +6,7 @@
 #include "MJ/Utils/MyMJUtils.h"
 #include "MyMJGameVisualCommon.h"
 
-#include "MyMJGameVisualCard.generated.h"
+#include "MyMJGameVisualElems.generated.h"
 
 #define MyCardStaticMeshMIDParamInBaseColor (TEXT("InBaseColor"))
 

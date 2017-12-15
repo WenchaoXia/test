@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "MyMJGameVisualCard.h"
+#include "MyMJGameVisualElems.h"
 
 #include "MJ/Utils/MyMJUtils.h"
 #include "MJBPEncap/utils/MyMJBPUtils.h"
