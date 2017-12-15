@@ -598,7 +598,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
     //MY_VERIFY((uint8)cInBase.getRole() < (uint8)MyMJGameRoleTypeCpp::Max);
 
     const FMyMJCardInfoPackCpp& cCardInfoPack = cInBase.getCoreDataPublicRefConst().m_cCardInfoPack;
-    const FMyMJCardValuePackCpp& ccardValuePack = cInBase.getRoleDataPrivateRefConst((uint8)cInBase.getRole()).m_cCardValuePack;
+    const FMyMJCardValuePackCpp& ccardValuePack = cInBase.getRoleDataPrivateRefConst().m_cCardValuePack;
 
     if (cCardInfoPack.getLength() != ccardValuePack.getLength()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pack length not equal: info pack %d, value pack %d, accces role type %d."), cCardInfoPack.getLength(), ccardValuePack.getLength(), (uint8)cInBase.getRole());

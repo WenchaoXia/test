@@ -105,11 +105,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep0(const FMyMJDataDeltaCpp &delta, FMyDi
             break;
         }
 
-        FMyMJRoleDataPrivateCpp *pRDPriSelf = getRoleDataPrivate((uint8)eRoleType);
-        if (!pRDPriSelf) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("tring to apply role %d's private delta but target is NULL."), (uint8)eRoleType);
-            break;
-        }
+        FMyMJRoleDataPrivateCpp *pRDPriSelf = &getRoleDataPrivateRef();
 
         if (roleDataPriDelta.m_aIdValuePairs2Reveal.Num() > 0 && getAccessRoleType() != MyMJGameRoleTypeCpp::SysKeeper) {
             //syskeeper doesn't need to update any in progress, since when reset he knows all

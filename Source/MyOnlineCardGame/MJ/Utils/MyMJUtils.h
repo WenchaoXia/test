@@ -265,6 +265,11 @@ public:
         m_aCardValues.AddZeroed(iCardNum);
     };
 
+    inline void zeroValues()
+    {
+        reset(getLength());
+    };
+
     //this will reveal all card values
     void resetAndRevealAll(const TArray<int32> &aShuffledValues)
     {

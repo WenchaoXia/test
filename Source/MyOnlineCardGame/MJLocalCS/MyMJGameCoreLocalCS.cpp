@@ -1252,21 +1252,9 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
     int32 iCardNum = pusherReset.m_aShuffledValues.Num();
     pCardInfoPack->reset(iCardNum);
 
-    //assert we are full mode
-    //if (getWorkMode() == MyMJGameElemWorkModeCpp::Full) {
-    {
-
-        for (int32 i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++) {
-            FMyMJCardValuePackCpp *pCardValuePack = const_cast<FMyMJCardValuePackCpp *> (&base.getRoleDataPrivateRefConst(i).m_cCardValuePack);
-            if (i == (uint8)MyMJGameRoleTypeCpp::SysKeeper) {
-                pCardValuePack->resetAndRevealAll(pusherReset.m_aShuffledValues);
-                pCardValuePack->helperVerifyValues();
-            }
-            else {
-                pCardValuePack->reset(iCardNum);
-            }
-        }
-    }
+    FMyMJCardValuePackCpp *pCardValuePack = const_cast<FMyMJCardValuePackCpp *> (&base.getRoleDataPrivateRefConst().m_cCardValuePack);
+    pCardValuePack->resetAndRevealAll(pusherReset.m_aShuffledValues);
+    pCardValuePack->helperVerifyValues();
 
 
     //move into untaken slots

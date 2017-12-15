@@ -794,7 +794,6 @@ public:
     {
         m_cDataAttenderPublic.reset();
         m_cDataAttenderPrivate.reset();
-        m_cDataPrivate.reset();
     };
 
 protected:
@@ -805,8 +804,6 @@ protected:
     UPROPERTY()
     FMyMJRoleDataAttenderPrivateCpp m_cDataAttenderPrivate;
     
-    UPROPERTY()
-    FMyMJRoleDataPrivateCpp         m_cDataPrivate;
 };
 
 
@@ -924,8 +921,7 @@ public:
         for (int i = 0; i < l; i++) {
             m_aRoleDataAttenders[i].reset();
         }
-        m_cRoleDataPrivateSysKeeper.reset();
-        m_cRoleDataPrivateObserver.reset();
+        m_cRoleDataPrivate.reset();
     };
 
     inline const FMyMJCoreDataPublicCpp& getCoreDataPublicRefConst() const
@@ -952,27 +948,9 @@ public:
     };
 
     //@idxAttender equal to idxRole
-    inline const FMyMJRoleDataPrivateCpp& getRoleDataPrivateRefConst(int32 idxRole) const
+    inline const FMyMJRoleDataPrivateCpp& getRoleDataPrivateRefConst() const
     {
-        MY_VERIFY(idxRole >= 0 && idxRole < (uint8)MyMJGameRoleTypeCpp::Max);
-
-        MY_VERIFY(m_aRoleDataAttenders.Num() == RoleDataAttenderNum);
-
-        if (idxRole < RoleDataAttenderNum)
-        {
-            return m_aRoleDataAttenders[idxRole].m_cDataPrivate;
-        }
-        else if (idxRole == (uint8)MyMJGameRoleTypeCpp::SysKeeper) {
-            return m_cRoleDataPrivateSysKeeper;
-        }
-        else if (idxRole == (uint8)MyMJGameRoleTypeCpp::Observer) {
-            return m_cRoleDataPrivateObserver;
-        }
-        else {
-            MY_VERIFY(false);
-            return m_aRoleDataAttenders[idxRole].m_cDataPrivate;
-        }
-
+        return m_cRoleDataPrivate;
     };
 
     //self must be syskeeper's role
@@ -985,19 +963,21 @@ public:
         cTargetData.setRole(eTargetRole);
 
         //remove unused infos
-        cTargetData.m_cRoleDataPrivateSysKeeper.reset();
+        //warn: it's not possible copy the private to another role in the core process, and it is always reseted
+        if (getCoreDataPublicRefConst().m_iPusherIdLast > 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("tring to copy core data in half, pusher id %d."), getCoreDataPublicRefConst().m_iPusherIdLast);
+            MY_VERIFY(false);
+        }
+
+        cTargetData.m_cRoleDataPrivate.m_cCardValuePack.zeroValues();
 
         int32 l = cTargetData.m_aRoleDataAttenders.Num();
         for (int32 i = 0; i < l; i++) {
             if ((uint8)eTargetRole != i) {
                 cTargetData.m_aRoleDataAttenders[i].m_cDataAttenderPrivate.reset();
-                cTargetData.m_aRoleDataAttenders[i].m_cDataPrivate.reset();
             }
         }
 
-        if (eTargetRole != MyMJGameRoleTypeCpp::Observer) {
-            cTargetData.m_cRoleDataPrivateObserver.reset();
-        }
     };
 
     inline MyMJGameRoleTypeCpp getRole() const
@@ -1020,12 +1000,9 @@ protected:
     UPROPERTY()
     TArray<FMyMJRoleDataAttenderCpp> m_aRoleDataAttenders;
 
-    //To reduce size, syskeeper and observer have no attender data and we list them here seperately
+    //role's private data, maybe different with different role
     UPROPERTY()
-    FMyMJRoleDataPrivateCpp m_cRoleDataPrivateSysKeeper;
-    
-    UPROPERTY()
-    FMyMJRoleDataPrivateCpp m_cRoleDataPrivateObserver;
+    FMyMJRoleDataPrivateCpp m_cRoleDataPrivate;
 
     UPROPERTY()
     MyMJGameRoleTypeCpp m_eRole;
@@ -1266,10 +1243,10 @@ struct FMyMJDataAccessorCpp
     };
 
     //@idxAttender equal to idxRole
-    inline const FMyMJRoleDataPrivateCpp* getRoleDataPrivateConst(int32 idxRole) const
+    inline const FMyMJRoleDataPrivateCpp& getRoleDataPrivateRefConst() const
     {
         MY_VERIFY(m_pDataExt);
-        return &m_pDataExt->getRoleDataPrivateRefConst(idxRole);
+        return m_pDataExt->getRoleDataPrivateRefConst();
     };
 
     //Note all data will be overwritten, include default values, usually used in full mode, but also possible for mirror as one way to implement replay  
@@ -1317,20 +1294,14 @@ protected:
         return const_cast<FMyMJRoleDataAttenderPrivateCpp *>(getRoleDataAttenderPrivateConst(idxAttender));
     };
 
-    inline FMyMJRoleDataPrivateCpp* getRoleDataPrivate(int32 idxRole)
+    inline FMyMJRoleDataPrivateCpp& getRoleDataPrivateRef()
     {
-        return const_cast<FMyMJRoleDataPrivateCpp *>(getRoleDataPrivateConst(idxRole));
+        return const_cast<FMyMJRoleDataPrivateCpp &>(getRoleDataPrivateRefConst());
     };
 
-    FMyMJCardValuePackCpp& getCardValuePackRef()
+    inline FMyMJCardValuePackCpp& getCardValuePackRef()
     {
-        int32 iAccessRoleType = (uint8)getAccessRoleType();
-
-        FMyMJRoleDataPrivateCpp* pDRolePriv = getRoleDataPrivate(iAccessRoleType);
-
-        MY_VERIFY(pDRolePriv);
-
-        return pDRolePriv->m_cCardValuePack;
+        return getRoleDataPrivateRef().m_cCardValuePack;
     };
 
     FString genDebugStateString() const

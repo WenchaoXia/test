@@ -183,9 +183,7 @@ public:
 
     inline const FMyMJCardValuePackCpp& getCardValuePackOfSysKeeperRefConst() const
     {
-        const FMyMJRoleDataPrivateCpp* pD = m_cDataAccessor.getRoleDataPrivateConst((uint8)MyMJGameRoleTypeCpp::SysKeeper);
-        MY_VERIFY(pD);
-        return pD->m_cCardValuePack;
+        return  m_cDataAccessor.getRoleDataPrivateRefConst().m_cCardValuePack;
     };
 
 
