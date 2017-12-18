@@ -181,6 +181,7 @@ public:
 };
 
 //this is used for visual layer, no replication code goes in
+//note that we handle two type data here: one is time synced data like frame sync, one is not
 UCLASS(Blueprintable, HideCategories = (Collision, Rendering, "Utilities|Transformation"))
 class MYONLINECARDGAME_API AMyMJGameRoomCpp : public AActor
 {
@@ -231,10 +232,10 @@ protected:
 
     //cfg start
 
-    UPROPERTY(BlueprintReadOnly, Replicated, VisibleAnywhere, meta = (DisplayName = "data suite"))
+    UPROPERTY(BlueprintReadOnly, Instanced, Replicated, VisibleAnywhere, meta = (DisplayName = "data suite"))
     UMyMJGameRoomDataSuite* m_pDataSuit;
 
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, meta = (DisplayName = "desk res manager"))
+    UPROPERTY(BlueprintReadOnly, Instanced, VisibleAnywhere, meta = (DisplayName = "desk res manager"))
     UMyMJGameDeskResManagerCpp *m_pResManager;
 
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "area actor"))

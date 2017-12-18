@@ -15,7 +15,7 @@ class AMyMJGameRoomRootActorCpp : public AActor
     GENERATED_BODY()
 
 public:
-    AMyMJGameRoomRootActorCpp()
+    AMyMJGameRoomRootActorCpp() : Super()
     {
         m_pRoomActor = NULL;
         m_pCoreDataSource = NULL;
@@ -56,7 +56,7 @@ class MYONLINECARDGAME_API AMyMJGameRoomLevelScriptActorCpp : public ALevelScrip
 	
 	
 public:
-    AMyMJGameRoomLevelScriptActorCpp()
+    AMyMJGameRoomLevelScriptActorCpp() : Super()
     {
         //m_pRoomSettingsObj = CreateDefaultSubobject<UMyMJGameRoomSettingsObjCpp>(TEXT("room settings obj"));
     };

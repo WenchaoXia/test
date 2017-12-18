@@ -107,17 +107,18 @@ uint32 FMyMJGameDeskProcessorRunnableCpp::mainThreadCmdUpdateCfgCache(const FMyM
         m_cMainThreadWaitingToSendCfgCache.m_uiStateKey++;
     }
 
-    mainThreadCmdLoop();
-    kick();
-
     return m_cMainThreadWaitingToSendCfgCache.m_uiStateKey;
 };
 
 
-bool FMyMJGameDeskProcessorRunnableCpp::mainThreadDataTryFeed(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutRetryLater)
+bool FMyMJGameDeskProcessorRunnableCpp::mainThreadTryFeedData(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutRetryLater, bool *pOutHaveFeedData)
 {
     if (pOutRetryLater) {
         *pOutRetryLater = false;
+    }
+
+    if (pOutHaveFeedData) {
+        *pOutHaveFeedData = false;
     }
 
     if (m_cMainThreadSentLabel.m_uiCfgStateKey == MyUIntIdDefaultInvalidValue) {
@@ -126,27 +127,16 @@ bool FMyMJGameDeskProcessorRunnableCpp::mainThreadDataTryFeed(UMyMJDataSequenceP
     }
 
     if (m_cMainThreadReceivedLabel.m_uiCfgStateKey != m_cMainThreadSentLabel.m_uiCfgStateKey) {
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("visual cfg update not completed, retrying."));
-        kick(); //notify subthread first to increase chance of success
-        mainThreadCmdLoop();
-        if (m_cMainThreadReceivedLabel.m_uiCfgStateKey != m_cMainThreadSentLabel.m_uiCfgStateKey) {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("visual cfg update not completed, need wait."));
-            if (pOutRetryLater) {
-                *pOutRetryLater = true;
-            }
-            return false;
+
+        if (pOutRetryLater) {
+            *pOutRetryLater = true;
         }
-        else {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("retried and return OK."));
-        }
+        return false;
+
     }
 
-    bool bHaveNewEvent = false;
-    int32 iRet = mainThreadTryFeedEvents(pSeq, &bHaveNewEvent);
-    if (bHaveNewEvent) {
-        kick();
-    }
-
+    bool bHaveFeedData = false;
+    int32 iRet = mainThreadTryFeedEvents(pSeq, &bHaveFeedData);
 
     uint32 uiServerWorldTime_ms = pSeq->getServerWorldTime_ms();
     //see if we need to update timestamp
@@ -166,7 +156,13 @@ bool FMyMJGameDeskProcessorRunnableCpp::mainThreadDataTryFeed(UMyMJDataSequenceP
 
         m_cMainThreadSentLabel.m_uiServerWorldTime_ms = uiServerWorldTime_ms;
 
+        bHaveFeedData = true;
+
         break;
+    }
+
+    if (pOutHaveFeedData) {
+        *pOutHaveFeedData = bHaveFeedData;
     }
 
 
@@ -335,47 +331,6 @@ int32 FMyMJGameDeskProcessorRunnableCpp::mainThreadTryFeedEvents(UMyMJDataSequen
 };
 
 
-void FMyMJGameDeskProcessorRunnableCpp::mainThreadCmdLoop()
-{
-    //receive
-    while (1)
-    {
-        FMyMJGameDeskProcessorCmdOutputCpp *pOut = m_cCmdOut.getItemForConsume();
-        if (pOut == NULL) {
-            break;
-        }
-        
-        if (pOut->m_apNewCfgCache.Num() > 0) {
-            m_cMainThreadReceivedLabel.m_uiCfgStateKey = pOut->m_apNewCfgCache[0].m_uiStateKey;
-        }
-
-        m_cCmdOut.putInConsumedItem(pOut);
-    }
-
-    //send
-    while (1)
-    {
-        if (m_cMainThreadSentLabel.m_uiCfgStateKey != m_cMainThreadWaitingToSendCfgCache.m_uiStateKey) {
-
-            FMyMJGameDeskProcessorCmdInputCpp *pIn = m_cCmdIn.getItemForProduce();
-            if (pIn == NULL) {
-                break;
-            }
-
-            pIn->reset();
-            pIn->m_apNewCfgCache.Emplace();
-            pIn->m_apNewCfgCache[0] = m_cMainThreadWaitingToSendCfgCache;
-
-            pIn->verifyValid();
-            m_cCmdIn.putInProducedItem(pIn);
-
-            m_cMainThreadSentLabel.m_uiCfgStateKey = m_cMainThreadWaitingToSendCfgCache.m_uiStateKey;
-        }
-
-        break;
-    }
-};
-
 void FMyMJGameDeskProcessorRunnableCpp::subThreadCmdLoop()
 {
     //recieve
@@ -416,21 +371,6 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadCmdLoop()
     }
 };
 
-void FMyMJGameDeskProcessorRunnableCpp::mainThreadDataLoop()
-{
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: mainThreadDataLoop"));
-
-    //receive
-    while (1)
-    {
-        FMyMJGameDeskProcessorDataOutputCpp *pOut = m_cDataOut.getItemForConsume();
-        if (pOut == NULL) {
-            break;
-        }
-
-        m_cDataOut.putInConsumedItem(pOut);
-    }
-};
 
 #define iNeedOutPutNone (0)
 #define iNeedOutPutPending (1)
@@ -1587,7 +1527,7 @@ int32 UMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMy
 
 */
 
-UMyMJGameDeskVisualDataObjCpp::UMyMJGameDeskVisualDataObjCpp()
+UMyMJGameDeskVisualDataObjCpp::UMyMJGameDeskVisualDataObjCpp() : Super()
 {
     m_bInFullDataSyncState = false;
 };
@@ -1633,8 +1573,8 @@ void UMyMJGameDeskVisualDataObjCpp::loop()
         return;
     }
 
-    m_pProcessor->getRunnableRef().mainThreadCmdLoop();
-    m_pProcessor->getRunnableRef().mainThreadDataLoop();
+    cmdLoop();
+    dataLoop();
 };
 
 
@@ -1645,18 +1585,118 @@ uint32 UMyMJGameDeskVisualDataObjCpp::updateCfgCache(const FMyMJGameDeskVisualCf
         return -10;
     }
 
-    return m_pProcessor->getRunnableRef().mainThreadCmdUpdateCfgCache(cCfgCache);
+    uint32 ret = m_pProcessor->getRunnableRef().mainThreadCmdUpdateCfgCache(cCfgCache);
+
+    cmdLoop();
+    m_pProcessor->kick();
+
+    return ret;
+
 
 };
 
 bool UMyMJGameDeskVisualDataObjCpp::tryFeedData(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutRetryLater)
 {
+    if (pOutRetryLater) {
+        *pOutRetryLater = false;
+    }
+
     if (!m_pProcessor.IsValid()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pDataProcessor invalid."));
         return false;
     }
 
-    m_bInFullDataSyncState = m_pProcessor->getRunnableRef().mainThreadDataTryFeed(pSeq, pOutRetryLater);
+    bool bRetryLater = false;
+    bool bHaveFeedData = false;
 
+    m_bInFullDataSyncState = m_pProcessor->getRunnableRef().mainThreadTryFeedData(pSeq, &bRetryLater, &bHaveFeedData);
+    
+    if (bRetryLater) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("visual cfg update not completed, retrying."));
+        m_pProcessor->kick();
+        cmdLoop();
+        m_bInFullDataSyncState = m_pProcessor->getRunnableRef().mainThreadTryFeedData(pSeq, &bRetryLater, &bHaveFeedData);
+        if (bRetryLater) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("visual cfg update not completed, need wait."));
+
+            if (pOutRetryLater) {
+                *pOutRetryLater = bRetryLater;
+            }
+            return false;
+        }
+    }
+
+    if (bHaveFeedData) {
+        m_pProcessor->kick();
+    }
+
+    if (pOutRetryLater) {
+        *pOutRetryLater = bRetryLater;
+    }
     return m_bInFullDataSyncState;
+};
+
+
+
+
+void UMyMJGameDeskVisualDataObjCpp::cmdLoop()
+{
+    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorCmdInputCpp>&  cCmdIn  = m_pProcessor->getRunnableRef().m_cCmdIn;
+    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorCmdOutputCpp>& cCmdOut = m_pProcessor->getRunnableRef().m_cCmdOut;
+
+    //receive
+    while (1)
+    {
+        FMyMJGameDeskProcessorCmdOutputCpp *pOut = cCmdOut.getItemForConsume();
+        if (pOut == NULL) {
+            break;
+        }
+
+        if (pOut->m_apNewCfgCache.Num() > 0) {
+            m_cDataNow.m_cCfgCache = pOut->m_apNewCfgCache[0];
+            m_pProcessor->getRunnableRef().m_cMainThreadReceivedLabel.m_uiCfgStateKey = pOut->m_apNewCfgCache[0].m_uiStateKey;
+        }
+
+        cCmdOut.putInConsumedItem(pOut);
+    }
+
+    //send
+    while (1)
+    {
+        if (m_pProcessor->getRunnableRef().m_cMainThreadSentLabel.m_uiCfgStateKey != m_pProcessor->getRunnableRef().m_cMainThreadWaitingToSendCfgCache.m_uiStateKey) {
+
+            FMyMJGameDeskProcessorCmdInputCpp *pIn = cCmdIn.getItemForProduce();
+            if (pIn == NULL) {
+                break;
+            }
+
+            pIn->reset();
+            pIn->m_apNewCfgCache.Emplace();
+            pIn->m_apNewCfgCache[0] = m_pProcessor->getRunnableRef().m_cMainThreadWaitingToSendCfgCache;
+
+            pIn->verifyValid();
+            cCmdIn.putInProducedItem(pIn);
+
+            m_pProcessor->getRunnableRef().m_cMainThreadSentLabel.m_uiCfgStateKey = m_pProcessor->getRunnableRef().m_cMainThreadWaitingToSendCfgCache.m_uiStateKey;
+        }
+
+        break;
+    }
+};
+
+void UMyMJGameDeskVisualDataObjCpp::dataLoop()
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: mainThreadDataLoop"));
+    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorDataOutputCpp>& cDataOut = m_pProcessor->getRunnableRef().m_cDataOut;
+
+    //receive
+    while (1)
+    {
+        FMyMJGameDeskProcessorDataOutputCpp *pOut = cDataOut.getItemForConsume();
+        if (pOut == NULL) {
+            break;
+        }
+
+        cDataOut.putInConsumedItem(pOut);
+    }
 };

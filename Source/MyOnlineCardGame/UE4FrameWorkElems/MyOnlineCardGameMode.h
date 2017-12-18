@@ -16,7 +16,7 @@ class MYONLINECARDGAME_API AMyOnlineCardGameModeCpp : public AGameMode
     GENERATED_BODY()
 
 public:
-    AMyOnlineCardGameModeCpp()
+    AMyOnlineCardGameModeCpp() : Super()
     {
         m_bReplayMode = false;
     };

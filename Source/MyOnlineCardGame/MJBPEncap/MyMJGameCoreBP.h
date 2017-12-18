@@ -211,7 +211,7 @@ protected:
     TSharedPtr<FMyThreadControlCpp<FMyMJGameCoreRunnableCpp>> m_pCoreFullWithThread;
 
     //UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "data of storage"))
-    UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MJDataAllPointer, meta = (DisplayName = "data of all roles"))
+    UPROPERTY(BlueprintReadOnly, Instanced, ReplicatedUsing = OnRep_MJDataAllPointer, meta = (DisplayName = "data of all roles"))
     UMyMJDataAllCpp* m_pMJDataAll;
 
     FTimerHandle m_cToCoreFullLoopTimerHandle;

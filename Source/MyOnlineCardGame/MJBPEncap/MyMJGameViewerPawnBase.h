@@ -20,7 +20,7 @@ class MYONLINECARDGAME_API AMyMJGameViewerPawnBaseCpp : public APawn
 	
 public:
 
-    AMyMJGameViewerPawnBaseCpp()
+    AMyMJGameViewerPawnBaseCpp() : Super()
     {
         m_eRoleType = MyMJGameRoleTypeCpp::Observer;
     };

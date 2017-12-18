@@ -525,11 +525,8 @@ public:
     //return the new key, not take effect now, may need some loop to check subthread report
     uint32 mainThreadCmdUpdateCfgCache(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
 
-    void mainThreadCmdLoop();
-    void mainThreadDataLoop();
-
     //return true if need to sync base
-    bool mainThreadDataTryFeed(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutRetryLater);
+    bool mainThreadTryFeedData(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutRetryLater, bool *pOutHaveFeedData);
 
 
     //make it public for test purpose
@@ -540,6 +537,8 @@ public:
 
 
 protected:
+
+    friend class UMyMJGameDeskVisualDataObjCpp;
 
     int32 mainThreadTryFeedEvents(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutHaveFeedEvent);
 
@@ -640,6 +639,11 @@ public:
     };
 
 protected:
+
+    void cmdLoop();
+    void dataLoop();
+
+    FMyMJGameDeskVisualDataCpp m_cDataNow;
 
     //TSharedPtr<FMyMJGameDeskVisualCoreDataProcessorCpp> m_pDataProcessor;
     TSharedPtr<FMyThreadControlCpp<FMyMJGameDeskProcessorRunnableCpp>> m_pProcessor;

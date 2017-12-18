@@ -1336,7 +1336,7 @@ protected:
     FMyMJDataStructWithTimeStampBaseCpp m_cFullData;
 
     //focused deltas, base is only used when merge or pull
-    UPROPERTY(Replicated)
+    UPROPERTY(Instanced, Replicated)
     UMyMJGameEventCycleBuffer* m_pDeltaDataEvents;
 
     UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "role"))
@@ -1827,7 +1827,7 @@ protected:
     //this is the logic data
 
     //UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Datas, meta = (DisplayName = "datas"))
-    UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Datas, meta = (DisplayName = "datas"))
+    UPROPERTY(BlueprintReadOnly, Instanced, ReplicatedUsing = OnRep_Datas, meta = (DisplayName = "datas"))
     TArray<UMyMJDataSequencePerRoleCpp *> m_aDatas;
 
     //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "test Seq"))

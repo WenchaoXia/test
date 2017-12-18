@@ -19,24 +19,29 @@ class UMyMJGameRoomDataSuite : public UActorComponent
 
 public:
 
-    UMyMJGameRoomDataSuite();
+    //UMyMJGameRoomDataSuite();
+    UMyMJGameRoomDataSuite(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
     virtual ~UMyMJGameRoomDataSuite();
     void clearInGame();
 
 
     inline UMyMJGameDeskVisualDataObjCpp* getDeskDataObjVerified()
     {
-        MY_VERIFY(IsValid(m_pDeskDataObj));
+        if (!IsValid(m_pDeskDataObj)) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("m_pDeskDataObj invalid %p."), m_pDeskDataObj);
+            MY_VERIFY(false);
+        }
         return m_pDeskDataObj;
     };
 
 protected:
 
     //contains all data need accurate history
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "desk data obj"))
+    UPROPERTY(BlueprintReadOnly, Instanced, meta = (DisplayName = "desk data obj"))
         UMyMJGameDeskVisualDataObjCpp* m_pDeskDataObj;
 
     //contains not important data, which means it's history may miss some event
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "trival data obj"))
+    UPROPERTY(BlueprintReadOnly, Instanced, meta = (DisplayName = "trival data obj"))
         UMyMJGameTrivalVisualDataObjCpp *m_pTrivalDataObj;
 };

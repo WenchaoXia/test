@@ -192,13 +192,13 @@ protected:
 
     //components
     //root scene
-    UPROPERTY(VisibleAnywhere, meta = (DisplayName = "root scene"))
+    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "root scene"))
     class USceneComponent *m_pRootScene;
 
-    UPROPERTY(VisibleAnywhere, meta = (DisplayName = "card box"))
+    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "card box"))
     class UBoxComponent *m_pCardBox;
 
-    UPROPERTY(VisibleAnywhere, meta = (DisplayName = "card static mesh"))
+    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "card static mesh"))
     class UStaticMeshComponent *m_pCardStaticMesh;
 
 

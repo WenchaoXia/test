@@ -160,7 +160,7 @@ protected:
     bool m_bNeedAnswerSyncForMJCoreFullData;
     float m_fLastAskSyncForMJCoreFullDataWorldRealTime;
     bool m_bNeedAskSyncForMJCoreFullData;
-    bool m_bNeedFeedCoreData;
+    bool m_bNeedRetryFeedDataForCore;
 
     bool m_bDebugHaltFeedData; //used to force client fall behind the progress
 
