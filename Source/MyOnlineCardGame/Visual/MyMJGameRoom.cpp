@@ -17,6 +17,7 @@
 #include "Kismet/GameplayStatics.h"
 
 #define MY_MJ_GAME_ROOM_VISUAL_LOOP_TIME_MS (17)
+#define MY_CARD_ACTOR_MAX (1000)
 
 int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp& cPointCfgCache) const
 {
@@ -88,12 +89,31 @@ int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModel
     return 0;
 };
 
+
+AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx)
+{
+    MY_VERIFY(idx >= 0);
+    MY_VERIFY(idx < MY_CARD_ACTOR_MAX); //we don't allow too much
+    if (idx >= m_aCards.Num()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("requiring a card not prepared ahead, existing %d, required idx %d."), m_aCards.Num(), idx);
+        prepareCardActor(idx + 1);
+    }
+
+    MY_VERIFY(idx < m_aCards.Num());
+
+    return m_aCards[idx];
+}
+
 int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
 {
     MY_VERIFY(count2reach >= 0);
+    MY_VERIFY(count2reach < MY_CARD_ACTOR_MAX); //we don't allow too much
+
+    double s0 = FPlatformTime::Seconds();
 
     const AMyMJGameCardBaseCpp* pCDO = getCardCDO();
     if (!IsValid(pCDO)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCDO is not valid %p, possible no card class specified."), pCDO);
         return -1;
     }
 
@@ -112,12 +132,18 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
     MY_VERIFY(IsValid(w));
 
     l = m_aCards.Num();
+    int32 iDebugCOunt = 0;
     for (int32 i = l; i < count2reach; i++) {
         AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(pCDO->StaticClass(), SpawnParams);
         MY_VERIFY(IsValid(pNewCardActor));
         pNewCardActor->SetActorHiddenInGame(true);
         MY_VERIFY(m_aCards.Emplace(pNewCardActor) == i);
+        iDebugCOunt++;
     }
+
+    double s1 = FPlatformTime::Seconds();
+
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("prepareCardActor to %d, %d created, time used %f."), count2reach, iDebugCOunt, s1 - s0);
 
     return 0;
     //GetWorld()->SpawnActor<AProjectile>(Location, Rotation, SpawnInfo);
@@ -187,6 +213,8 @@ void AMyMJGameRoomCpp::startVisual()
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
         MY_VERIFY(false);
     }
+
+    m_pResManager->prepareCardActor((27 + 3 + 2) * 4);
 };
 
 void AMyMJGameRoomCpp::stopVisual()

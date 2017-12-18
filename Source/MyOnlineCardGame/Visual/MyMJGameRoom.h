@@ -122,20 +122,12 @@ public:
         }
     };
 
-    //return null if it is not spawned yet, user should call prepareCardActor() to create it.
+    //always success, core dump if fail
     UFUNCTION(BlueprintCallable)
-        AMyMJGameCardBaseCpp* getCardActorByIdx(int32 idx)
-    {
-        MY_VERIFY(idx >= 0);
-        if (idx < m_aCards.Num()) {
-            return m_aCards[idx];
-        }
+    AMyMJGameCardBaseCpp* getCardActorByIdx(int32 idx);
 
-        return NULL;
-    }
-
-    UFUNCTION(BlueprintCallable)
-        int32 prepareCardActor(int32 count2reach);
+    //UFUNCTION(BlueprintCallable)
+    int32 prepareCardActor(int32 count2reach);
 
     //return error code
     UFUNCTION(BlueprintPure)
