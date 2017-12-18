@@ -25,6 +25,7 @@ AMyMJGameRoomViewerPawnCpp::AMyMJGameRoomViewerPawnCpp() : Super()
     m_fLastAskSyncForMJCoreFullDataWorldRealTime = 0;
     m_bNeedAskSyncForMJCoreFullData = false;
     m_bNeedRetryFeedDataForCore = false;
+    m_bUseAsLocalClientDataBridge = false;
 
     m_eDebugNetmodeAtStart = ENetMode::NM_MAX;
     m_bDebugHaltFeedData = false;
@@ -46,14 +47,9 @@ void AMyMJGameRoomViewerPawnCpp::clearInGame()
 
 void AMyMJGameRoomViewerPawnCpp::BeginPlay()
 {
-    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameRoomViewerPawnCpp BeginPlay()"));
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameRoomViewerPawnCpp BeginPlay()"));
 
     Super::BeginPlay();
-
-    if (UMyMJBPUtilsLibrary::haveServerLogicLayer(this)) {
-        //In most case, this equals netmode == DS, LS, standalone
-        resetupWithRoleWithAuth(m_eRoleType);
-    }
 
 
     UWorld *world = GetWorld();
@@ -86,7 +82,25 @@ void AMyMJGameRoomViewerPawnCpp::GetLifetimeReplicatedProps(TArray< FLifetimePro
     DOREPLIFETIME(AMyMJGameRoomViewerPawnCpp, m_pExtRoomCoreDataSourceSeq);
 };
 
-bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRoleType)
+void AMyMJGameRoomViewerPawnCpp::PossessedBy(AController* NewController)
+{
+    Super::PossessedBy(NewController);
+
+    if (UMyMJBPUtilsLibrary::haveServerLogicLayer(this)) {
+        //In most case, this equals netmode == DS, LS, standalone
+
+        //warn: we forbid the using local multiple player mode!
+        m_bUseAsLocalClientDataBridge = NewController->IsLocalPlayerController();
+
+
+        resetupWithRoleWithAuth(m_eRoleType, m_bUseAsLocalClientDataBridge);
+    }
+    else {
+        m_bUseAsLocalClientDataBridge = false;
+    }
+};
+
+bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRoleType, bool bUseAsLocalClientDataBridge)
 {
     MY_VERIFY(HasAuthority());
 
@@ -151,9 +165,7 @@ bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRo
         MY_VERIFY(false);
     }
 
-    if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this)) {
-        //we have a local visual layer
-
+    if (bUseAsLocalClientDataBridge) {
         m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.Clear();
         m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumerWithFilter);
     }
@@ -248,7 +260,7 @@ void AMyMJGameRoomViewerPawnCpp::setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleTy
 
     if (m_pExtRoomCoreDataSourceSeq == NULL || m_eRoleType != eRoleType) {
         //update the pointer
-        resetupWithRoleWithAuth(eRoleType);
+        resetupWithRoleWithAuth(eRoleType, m_bUseAsLocalClientDataBridge);
     }
 
     m_eRoleType = eRoleType;
@@ -339,6 +351,7 @@ bool AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumer()
 
     bool bRet = false;
     if (IsValid(m_pExtRoomCoreDataSourceSeq)) {
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("feeding data %d."), m_bDebugHaltFeedData);
         bRet = m_pExtRoomActor->getRoomDataSuiteVerified()->getDeskDataObjVerified()->tryFeedData(m_pExtRoomCoreDataSourceSeq, &m_bNeedRetryFeedDataForCore);
     }
 

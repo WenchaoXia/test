@@ -87,6 +87,7 @@ protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+    virtual void PossessedBy(AController* NewController) override;
 
     UFUNCTION(BlueprintCallable, Server, unreliable, WithValidation)
         void askSyncForMJCoreFullDataOnServer();
@@ -95,7 +96,7 @@ protected:
         void answerSyncForMJCoreFullDataOnClient(MyMJGameRoleTypeCpp eRole, const FMyMJDataStructWithTimeStampBaseCpp& cFullData);
 
     //will assert it have auth
-    bool resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRoleType);
+    bool resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRoleType, bool bUseAsLocalClientDataBridge);
 
     void loop();
 
@@ -154,14 +155,15 @@ protected:
     uint32 m_fHelperFilterLastRepClientRealtTime;
 
     FTimerHandle m_cLoopTimerHandle;
-    ENetMode m_eDebugNetmodeAtStart;
 
     float m_fLastAnswerSyncForMJCoreFullDataWorldRealTime;
     bool m_bNeedAnswerSyncForMJCoreFullData;
     float m_fLastAskSyncForMJCoreFullDataWorldRealTime;
     bool m_bNeedAskSyncForMJCoreFullData;
     bool m_bNeedRetryFeedDataForCore;
+    bool m_bUseAsLocalClientDataBridge;
 
+    ENetMode m_eDebugNetmodeAtStart;
     bool m_bDebugHaltFeedData; //used to force client fall behind the progress
 
 };
