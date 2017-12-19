@@ -331,6 +331,84 @@ int32 FMyMJGameDeskProcessorRunnableCpp::mainThreadTryFeedEvents(UMyMJDataSequen
 };
 
 
+void FMyMJGameDeskProcessorRunnableCpp::mainThreadCmdLoop()
+{
+    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorCmdInputCpp>&  cCmdIn = m_cCmdIn;
+    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorCmdOutputCpp>& cCmdOut = m_cCmdOut;
+
+    //receive
+    while (1)
+    {
+        FMyMJGameDeskProcessorCmdOutputCpp *pOut = cCmdOut.getItemForConsume();
+        if (pOut == NULL) {
+            break;
+        }
+
+        if (pOut->m_apNewCfgCache.Num() > 0) {
+            m_cMainThreadReceivedLabel.m_uiCfgStateKey = pOut->m_apNewCfgCache[0].m_uiStateKey;
+        }
+
+        //cCmdOut.putInConsumedItem(pOut);
+        m_cCmdOutBufferForExt.Enqueue(pOut);
+    }
+
+    //send
+    while (1)
+    {
+        if (m_cMainThreadSentLabel.m_uiCfgStateKey != m_cMainThreadWaitingToSendCfgCache.m_uiStateKey) {
+
+            FMyMJGameDeskProcessorCmdInputCpp *pIn = cCmdIn.getItemForProduce();
+            if (pIn == NULL) {
+                break;
+            }
+
+            pIn->reset();
+            pIn->m_apNewCfgCache.Emplace();
+            pIn->m_apNewCfgCache[0] = m_cMainThreadWaitingToSendCfgCache;
+
+            pIn->verifyValid();
+            cCmdIn.putInProducedItem(pIn);
+
+            m_cMainThreadSentLabel.m_uiCfgStateKey = m_cMainThreadWaitingToSendCfgCache.m_uiStateKey;
+        }
+
+        break;
+    }
+};
+
+void FMyMJGameDeskProcessorRunnableCpp::mainThreadDataLoop()
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: mainThreadDataLoop"));
+    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorDataOutputCpp>& cDataOut = m_cDataOut;
+
+    //receive
+    while (1)
+    {
+        FMyMJGameDeskProcessorDataOutputCpp *pOut = cDataOut.getItemForConsume();
+        if (pOut == NULL) {
+            break;
+        }
+
+        bool bUpdatedLabel = false;
+        if (pOut->m_apNewVisualDataDelta.Num() > 0) {
+            FMyMJGameDeskVisualDataDeltaCpp& delta = pOut->m_apNewVisualDataDelta[0];
+            if (delta.m_apNewCoreData.Num() > 0) {
+                FMyMJDataStructWithTimeStampBaseCpp& cFull = delta.m_apNewCoreData[0];
+                m_cMainThreadReceivedLabel.updateAfterEventAdded(cFull.getRole(), cFull.getIdEventApplied(), pOut->m_uiNewServerWorldTime_ms);
+                bUpdatedLabel = true;
+            }
+        }
+
+        if (!bUpdatedLabel) {
+            m_cMainThreadReceivedLabel.updateServerWorldTime(pOut->m_uiNewServerWorldTime_ms);
+        }
+
+        //cDataOut.putInConsumedItem(pOut);
+        m_cDataOutBufferForExt.Enqueue(pOut);
+    }
+};
+
+
 void FMyMJGameDeskProcessorRunnableCpp::subThreadCmdLoop()
 {
     //recieve
@@ -426,8 +504,12 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadDataLoop()
 
         }
 
+        if (pInData->m_uiNewServerWorldTime_ms < m_pSubThreadData->m_uiServerWorldTime_ms) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time screw, pInData->m_uiNewServerWorldTime_ms %u, m_pSubThreadData->m_uiServerWorldTime_ms %u."), pInData->m_uiNewServerWorldTime_ms, m_pSubThreadData->m_uiServerWorldTime_ms);
+            MY_VERIFY(false);
+        }
+
         m_pSubThreadData->m_uiServerWorldTime_ms = pInData->m_uiNewServerWorldTime_ms;
-        MY_VERIFY(m_pSubThreadData->m_uiServerWorldTime_ms > 0);
 
         if (bNeedOutPut) {
             subThreadTryGenOutput(pImportantEventJustApplied);
@@ -1641,62 +1723,36 @@ bool UMyMJGameDeskVisualDataObjCpp::tryFeedData(UMyMJDataSequencePerRoleCpp *pSe
 
 void UMyMJGameDeskVisualDataObjCpp::cmdLoop()
 {
-    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorCmdInputCpp>&  cCmdIn  = m_pProcessor->getRunnableRef().m_cCmdIn;
-    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorCmdOutputCpp>& cCmdOut = m_pProcessor->getRunnableRef().m_cCmdOut;
+    m_pProcessor->getRunnableRef().mainThreadCmdLoop();
 
-    //receive
     while (1)
     {
-        FMyMJGameDeskProcessorCmdOutputCpp *pOut = cCmdOut.getItemForConsume();
+        FMyMJGameDeskProcessorCmdOutputCpp *pOut = m_pProcessor->getRunnableRef().mainThreadGetCmdOutputForConsume();
         if (pOut == NULL) {
             break;
         }
 
         if (pOut->m_apNewCfgCache.Num() > 0) {
             m_cDataNow.m_cCfgCache = pOut->m_apNewCfgCache[0];
-            m_pProcessor->getRunnableRef().m_cMainThreadReceivedLabel.m_uiCfgStateKey = pOut->m_apNewCfgCache[0].m_uiStateKey;
         }
 
-        cCmdOut.putInConsumedItem(pOut);
+        m_pProcessor->getRunnableRef().mainThreadPutCmdOutputAfterConsume(pOut);
     }
 
-    //send
-    while (1)
-    {
-        if (m_pProcessor->getRunnableRef().m_cMainThreadSentLabel.m_uiCfgStateKey != m_pProcessor->getRunnableRef().m_cMainThreadWaitingToSendCfgCache.m_uiStateKey) {
-
-            FMyMJGameDeskProcessorCmdInputCpp *pIn = cCmdIn.getItemForProduce();
-            if (pIn == NULL) {
-                break;
-            }
-
-            pIn->reset();
-            pIn->m_apNewCfgCache.Emplace();
-            pIn->m_apNewCfgCache[0] = m_pProcessor->getRunnableRef().m_cMainThreadWaitingToSendCfgCache;
-
-            pIn->verifyValid();
-            cCmdIn.putInProducedItem(pIn);
-
-            m_pProcessor->getRunnableRef().m_cMainThreadSentLabel.m_uiCfgStateKey = m_pProcessor->getRunnableRef().m_cMainThreadWaitingToSendCfgCache.m_uiStateKey;
-        }
-
-        break;
-    }
 };
 
 void UMyMJGameDeskVisualDataObjCpp::dataLoop()
 {
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: mainThreadDataLoop"));
-    FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorDataOutputCpp>& cDataOut = m_pProcessor->getRunnableRef().m_cDataOut;
+    m_pProcessor->getRunnableRef().mainThreadDataLoop();
 
     //receive
     while (1)
     {
-        FMyMJGameDeskProcessorDataOutputCpp *pOut = cDataOut.getItemForConsume();
+        FMyMJGameDeskProcessorDataOutputCpp *pOut = m_pProcessor->getRunnableRef().mainThreadGetDataOutputForConsume();
         if (pOut == NULL) {
             break;
         }
 
-        cDataOut.putInConsumedItem(pOut);
+        m_pProcessor->getRunnableRef().mainThreadPutDataOutputAfterConsume(pOut);
     }
 };

@@ -173,7 +173,7 @@ struct FMyMJGameDeskVisualDataCpp
 public:
     FMyMJGameDeskVisualDataCpp()
     {
-
+        reset();
     };
 
         virtual ~FMyMJGameDeskVisualDataCpp()
@@ -399,23 +399,22 @@ public:
     TArray<FMyMJGameDeskVisualCfgCacheCpp> m_apNewCfgCache;
 };
 
-
-struct FMyMJGameDeskProcessorMainThreadSentLabelCpp
+struct FMyMJGameDeskProcessorLabelCpp
 {
 public:
 
-    FMyMJGameDeskProcessorMainThreadSentLabelCpp()
+    FMyMJGameDeskProcessorLabelCpp()
     {
         reset();
     };
 
-    ~FMyMJGameDeskProcessorMainThreadSentLabelCpp()
+    ~FMyMJGameDeskProcessorLabelCpp()
     {
 
     };
 
     inline
-    void reset()
+        void reset()
     {
         m_uiCfgStateKey = MyUIntIdDefaultInvalidValue;
         m_eRoleType = MyMJGameRoleTypeCpp::Max;
@@ -424,14 +423,24 @@ public:
     };
 
     inline
-    void updateAfterEventAdded(MyMJGameRoleTypeCpp eRole, uint32 idEvent, uint32 uiServerWorldTime_ms)
+        void updateAfterEventAdded(MyMJGameRoleTypeCpp eRole, uint32 idEvent, uint32 uiServerWorldTime_ms)
     {
         MY_VERIFY(eRole != MyMJGameRoleTypeCpp::Max);
         MY_VERIFY(idEvent > m_uiIdEvent);
-        MY_VERIFY(uiServerWorldTime_ms >= m_uiServerWorldTime_ms);
 
         m_eRoleType = eRole;
         m_uiIdEvent = idEvent;
+
+        updateServerWorldTime(uiServerWorldTime_ms);
+    };
+
+    inline
+    void updateServerWorldTime(uint32 uiServerWorldTime_ms)
+    {
+        if (uiServerWorldTime_ms < m_uiServerWorldTime_ms) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time screw, uiServerWorldTime_ms %u, m_uiServerWorldTime_ms %u."), uiServerWorldTime_ms, m_uiServerWorldTime_ms);
+            MY_VERIFY(false);
+        }
         m_uiServerWorldTime_ms = uiServerWorldTime_ms;
     };
 
@@ -439,30 +448,18 @@ public:
     MyMJGameRoleTypeCpp m_eRoleType;
     uint32 m_uiIdEvent;
     uint32 m_uiServerWorldTime_ms;
-
 };
 
-struct FMyMJGameDeskProcessorMainThreadReceivedLabelCpp
+struct FMyMJGameDeskProcessorMainThreadSentLabelCpp : public FMyMJGameDeskProcessorLabelCpp
 {
 public:
 
-    FMyMJGameDeskProcessorMainThreadReceivedLabelCpp()
-    {
-        reset();
-    };
+};
 
-    ~FMyMJGameDeskProcessorMainThreadReceivedLabelCpp()
-    {
+struct FMyMJGameDeskProcessorMainThreadReceivedLabelCpp : public FMyMJGameDeskProcessorLabelCpp
+{
+public:
 
-    };
-
-    inline
-    void reset()
-    {
-        m_uiCfgStateKey = MyUIntIdDefaultInvalidValue;
-    };
-
-    uint32 m_uiCfgStateKey;
 };
 
 
@@ -528,6 +525,36 @@ public:
     //return true if need to sync base
     bool mainThreadTryFeedData(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutRetryLater, bool *pOutHaveFeedData);
 
+    void mainThreadCmdLoop();
+    void mainThreadDataLoop();
+
+    inline
+    FMyMJGameDeskProcessorCmdOutputCpp*  mainThreadGetCmdOutputForConsume()
+    {
+        FMyMJGameDeskProcessorCmdOutputCpp* pRet = NULL;
+        m_cCmdOutBufferForExt.Dequeue(pRet);
+        return pRet;
+    };
+
+    inline
+    void mainThreadPutCmdOutputAfterConsume(FMyMJGameDeskProcessorCmdOutputCpp*  item)
+    {
+        m_cCmdOut.putInConsumedItem(item);
+    };
+
+    inline
+    FMyMJGameDeskProcessorDataOutputCpp* mainThreadGetDataOutputForConsume()
+    {
+        FMyMJGameDeskProcessorDataOutputCpp* pRet = NULL;
+        m_cDataOutBufferForExt.Dequeue(pRet);
+        return pRet;
+    };
+
+    inline
+    void mainThreadPutDataOutputAfterConsume(FMyMJGameDeskProcessorDataOutputCpp* item)
+    {
+        m_cDataOut.putInConsumedItem(item);
+    };
 
     //make it public for test purpose
     static void helperResolveCardTransform(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
@@ -535,10 +562,13 @@ public:
                                             const FMyMJGameCardVisualInfoCpp& cCardVisualInfo,
                                             FTransform& outTransform);
 
+    inline
+    const FMyMJGameDeskProcessorMainThreadReceivedLabelCpp& getMainThreadReceivedLabel() const
+    {
+        return m_cMainThreadReceivedLabel;
+    };
 
 protected:
-
-    friend class UMyMJGameDeskVisualDataObjCpp;
 
     int32 mainThreadTryFeedEvents(UMyMJDataSequencePerRoleCpp *pSeq, bool *pOutHaveFeedEvent);
 
@@ -580,9 +610,13 @@ protected:
 
     FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorCmdInputCpp>  m_cCmdIn;
     FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorCmdOutputCpp> m_cCmdOut;
+    TQueue<FMyMJGameDeskProcessorCmdOutputCpp*>  m_cCmdOutBufferForExt; //another layer of buffer, to allow we scan info inside before external usage
+    //Todo: use cycle array buffer instead of queue, to save memory allocation step for each item
 
     FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorDataInputCpp>  m_cDataIn;
     FMyQueueWithLimitBuffer<FMyMJGameDeskProcessorDataOutputCpp> m_cDataOut;
+    TQueue<FMyMJGameDeskProcessorDataOutputCpp*> m_cDataOutBufferForExt; //another layer of buffer, to allow we scan info inside before external usage
+
 
     //record
     FMyMJGameDeskProcessorMainThreadSentLabelCpp     m_cMainThreadSentLabel;
