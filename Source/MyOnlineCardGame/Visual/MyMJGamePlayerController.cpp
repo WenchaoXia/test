@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "MyMJGameRoomViewerPawn.h"
+#include "MyMJGamePlayerController.h"
 #include "UnrealNetwork.h"
 #include "Engine/World.h"
 #include "MyMJGameRoomLevelScriptActorCpp.h"
 #include "MyMJGameDeskVisualData.h"
 
-AMyMJGameRoomViewerPawnCpp::AMyMJGameRoomViewerPawnCpp() : Super()
+AMyMJGamePlayerControllerCpp::AMyMJGamePlayerControllerCpp() : Super()
 {
     bReplicates = true;
     bAlwaysRelevant = false;
@@ -32,12 +32,12 @@ AMyMJGameRoomViewerPawnCpp::AMyMJGameRoomViewerPawnCpp() : Super()
 
 };
 
-AMyMJGameRoomViewerPawnCpp::~AMyMJGameRoomViewerPawnCpp()
+AMyMJGamePlayerControllerCpp::~AMyMJGamePlayerControllerCpp()
 {
 
 };
 
-void AMyMJGameRoomViewerPawnCpp::clearInGame()
+void AMyMJGamePlayerControllerCpp::clearInGame()
 {
     UWorld *world = GetWorld();
     if (IsValid(world)) {
@@ -45,17 +45,28 @@ void AMyMJGameRoomViewerPawnCpp::clearInGame()
     }
 };
 
-void AMyMJGameRoomViewerPawnCpp::BeginPlay()
+void AMyMJGamePlayerControllerCpp::BeginPlay()
 {
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameRoomViewerPawnCpp BeginPlay()"));
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGamePlayerControllerCpp BeginPlay()"));
 
     Super::BeginPlay();
 
+    if (UMyMJBPUtilsLibrary::haveServerLogicLayer(this)) {
+        //In most case, this equals netmode == DS, LS, standalone
+
+        //warn: we forbid the using local multiple player mode!
+        m_bUseAsLocalClientDataBridge = IsLocalPlayerController();
+
+        resetupWithRoleWithAuth(m_eRoleType, m_bUseAsLocalClientDataBridge);
+    }
+    else {
+        m_bUseAsLocalClientDataBridge = false;
+    }
 
     UWorld *world = GetWorld();
     if (IsValid(world)) {
         world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
-        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &AMyMJGameRoomViewerPawnCpp::loop, (float)MyMJGameRoomViewerPawnLoopTimeMs / 1000);
+        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &AMyMJGamePlayerControllerCpp::loop, (float)MyMJGamePlayerControllerLoopTimeMs / 1000);
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
@@ -65,7 +76,7 @@ void AMyMJGameRoomViewerPawnCpp::BeginPlay()
     m_eDebugNetmodeAtStart = GetNetMode();
 };
 
-void AMyMJGameRoomViewerPawnCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void AMyMJGamePlayerControllerCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     Super::EndPlay(EndPlayReason);
 
@@ -73,34 +84,16 @@ void AMyMJGameRoomViewerPawnCpp::EndPlay(const EEndPlayReason::Type EndPlayReaso
 };
 
 
-void AMyMJGameRoomViewerPawnCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+void AMyMJGamePlayerControllerCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(AMyMJGameRoomViewerPawnCpp, m_pExtRoomActor);
-    DOREPLIFETIME(AMyMJGameRoomViewerPawnCpp, m_pExtRoomTrivalDataSource);
-    DOREPLIFETIME(AMyMJGameRoomViewerPawnCpp, m_pExtRoomCoreDataSourceSeq);
+    DOREPLIFETIME(AMyMJGamePlayerControllerCpp, m_pExtRoomActor);
+    DOREPLIFETIME(AMyMJGamePlayerControllerCpp, m_pExtRoomTrivalDataSource);
+    DOREPLIFETIME(AMyMJGamePlayerControllerCpp, m_pExtRoomCoreDataSourceSeq);
 };
 
-void AMyMJGameRoomViewerPawnCpp::PossessedBy(AController* NewController)
-{
-    Super::PossessedBy(NewController);
-
-    if (UMyMJBPUtilsLibrary::haveServerLogicLayer(this)) {
-        //In most case, this equals netmode == DS, LS, standalone
-
-        //warn: we forbid the using local multiple player mode!
-        m_bUseAsLocalClientDataBridge = NewController->IsLocalPlayerController();
-
-
-        resetupWithRoleWithAuth(m_eRoleType, m_bUseAsLocalClientDataBridge);
-    }
-    else {
-        m_bUseAsLocalClientDataBridge = false;
-    }
-};
-
-bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRoleType, bool bUseAsLocalClientDataBridge)
+bool AMyMJGamePlayerControllerCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRoleType, bool bUseAsLocalClientDataBridge)
 {
     MY_VERIFY(HasAuthority());
 
@@ -167,13 +160,13 @@ bool AMyMJGameRoomViewerPawnCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRo
 
     if (bUseAsLocalClientDataBridge) {
         m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.Clear();
-        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumerWithFilter);
+        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGamePlayerControllerCpp::tryFeedDataToConsumerWithFilter);
     }
 
     return true;
 };
 
-void AMyMJGameRoomViewerPawnCpp::loop()
+void AMyMJGamePlayerControllerCpp::loop()
 {
     ENetMode mode = GetNetMode();
     if (mode != m_eDebugNetmodeAtStart) {
@@ -191,7 +184,7 @@ void AMyMJGameRoomViewerPawnCpp::loop()
     }
 };
 
-void AMyMJGameRoomViewerPawnCpp::loopOfSyncForMJCoreFullDataOnNetworkServer()
+void AMyMJGamePlayerControllerCpp::loopOfSyncForMJCoreFullDataOnNetworkServer()
 {
     UWorld *world = GetWorld();
     if (!IsValid(world)) {
@@ -207,7 +200,7 @@ void AMyMJGameRoomViewerPawnCpp::loopOfSyncForMJCoreFullDataOnNetworkServer()
         return;
     }
 
-    if (m_bNeedAnswerSyncForMJCoreFullData && (nowRealTime - m_fLastAnswerSyncForMJCoreFullDataWorldRealTime) >= ((float)MyMJGameRoomViewerAnswerSyncGapTimeMs / 1000)) {
+    if (m_bNeedAnswerSyncForMJCoreFullData && (nowRealTime - m_fLastAnswerSyncForMJCoreFullDataWorldRealTime) >= ((float)MyMJGamePlayerControllerAnswerSyncGapTimeMs / 1000)) {
         if (!IsValid(m_pExtRoomCoreDataSourceSeq)) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("core data sequence is invalid, not cfged?, %p."), m_pExtRoomCoreDataSourceSeq);
             return;
@@ -220,7 +213,7 @@ void AMyMJGameRoomViewerPawnCpp::loopOfSyncForMJCoreFullDataOnNetworkServer()
     }
 };
 
-void AMyMJGameRoomViewerPawnCpp::loopOfSyncForMJCoreFullDataOnNetworkClient()
+void AMyMJGamePlayerControllerCpp::loopOfSyncForMJCoreFullDataOnNetworkClient()
 {
     UWorld *world = GetWorld();
     if (!IsValid(world)) {
@@ -229,7 +222,7 @@ void AMyMJGameRoomViewerPawnCpp::loopOfSyncForMJCoreFullDataOnNetworkClient()
     }
     float nowRealTime = world->GetRealTimeSeconds();
 
-    if (m_bNeedAskSyncForMJCoreFullData && (nowRealTime - m_fLastAskSyncForMJCoreFullDataWorldRealTime) >= ((float)MyMJGameRoomViewerAskSyncGapTimeMs / 1000)) {
+    if (m_bNeedAskSyncForMJCoreFullData && (nowRealTime - m_fLastAskSyncForMJCoreFullDataWorldRealTime) >= ((float)MyMJGamePlayerControllerAskSyncGapTimeMs / 1000)) {
         if (!IsValid(m_pExtRoomCoreDataSourceSeq)) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("core data sequence is invalid, not cfged?, %p."), m_pExtRoomCoreDataSourceSeq);
             return;
@@ -246,7 +239,7 @@ void AMyMJGameRoomViewerPawnCpp::loopOfSyncForMJCoreFullDataOnNetworkClient()
     }
 }
 
-void AMyMJGameRoomViewerPawnCpp::setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType)
+void AMyMJGamePlayerControllerCpp::setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType)
 {
     if (!HasAuthority()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("can't set Role Type without auth."));
@@ -266,7 +259,7 @@ void AMyMJGameRoomViewerPawnCpp::setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleTy
     m_eRoleType = eRoleType;
 };
 
-void AMyMJGameRoomViewerPawnCpp::askSyncForMJCoreFullDataOnServer_Implementation()
+void AMyMJGamePlayerControllerCpp::askSyncForMJCoreFullDataOnServer_Implementation()
 {
     //FPlatformProcess::Sleep(v1);
     if (!HasAuthority()) {
@@ -277,7 +270,7 @@ void AMyMJGameRoomViewerPawnCpp::askSyncForMJCoreFullDataOnServer_Implementation
     markNeedAnswerSyncForMJCoreFullData();
 }
 
-bool AMyMJGameRoomViewerPawnCpp::askSyncForMJCoreFullDataOnServer_Validate()
+bool AMyMJGamePlayerControllerCpp::askSyncForMJCoreFullDataOnServer_Validate()
 {
     if (!HasAuthority()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("authority wrong!"));
@@ -293,7 +286,7 @@ bool AMyMJGameRoomViewerPawnCpp::askSyncForMJCoreFullDataOnServer_Validate()
 
 }
 
-void AMyMJGameRoomViewerPawnCpp::answerSyncForMJCoreFullDataOnClient_Implementation(MyMJGameRoleTypeCpp eRole, const FMyMJDataStructWithTimeStampBaseCpp& cFullData)
+void AMyMJGamePlayerControllerCpp::answerSyncForMJCoreFullDataOnClient_Implementation(MyMJGameRoleTypeCpp eRole, const FMyMJDataStructWithTimeStampBaseCpp& cFullData)
 {
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("answerSyncForMJCoreFullDataOnClient_Implementation()!"));
 
@@ -316,7 +309,7 @@ void AMyMJGameRoomViewerPawnCpp::answerSyncForMJCoreFullDataOnClient_Implementat
 }
 
 
-void AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumerWithFilter()
+void AMyMJGamePlayerControllerCpp::tryFeedDataToConsumerWithFilter()
 {
     UWorld *world = GetWorld();
     if (!IsValid(world)) {
@@ -338,7 +331,7 @@ void AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumerWithFilter()
 };
 
 
-bool AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumer()
+bool AMyMJGamePlayerControllerCpp::tryFeedDataToConsumer()
 {
     if (m_bDebugHaltFeedData) {
         return false;

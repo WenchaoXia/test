@@ -9,7 +9,7 @@
 #include "Engine/NetConnection.h"
 #include "GameFramework/PlayerController.h"
 
-#include "MyMJGameViewerPawnBase.h"
+#include "MyMJGamePlayerControllerBase.h"
 
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
@@ -759,20 +759,15 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ReplicateSubobjects, controller's is not valid, %p."), pC);
             return WroteSomething;
         }
-        APawn* pPawn = pC->GetPawn();
-        if (!IsValid(pPawn)) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ReplicateSubobjects, controller's pawn is not valid, %p."), pPawn);
-            return WroteSomething;
-        }
 
-        FString strClass = pPawn->GetClass()->GetFullName();
-        AMyMJGameViewerPawnBaseCpp* pMyPawn = Cast<AMyMJGameViewerPawnBaseCpp>(pPawn);
-        if (!IsValid(pPawn)) {
+        FString strClass = pC->GetClass()->GetFullName();
+        AMyMJGamePlayerControllerBaseCpp* pCBase = Cast<AMyMJGamePlayerControllerBaseCpp>(pC);
+        if (!IsValid(pCBase)) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ReplicateSubobjects, cast failed, it's class is %s."), *strClass);
             return WroteSomething;
         }
 
-        eClientRole = pMyPawn->getRoleType();
+        eClientRole = pCBase->getRoleType();
     }
 
     if (eClientRole >= MyMJGameRoleTypeCpp::Max) {

@@ -11,16 +11,16 @@
 #include "MJBPEncap/MyMJGameCoreBP.h"
 #include "MyMJGameEventBase.h"
 
-#include "MyMJGameViewerPawnBase.generated.h"
+#include "MyMJGamePlayerControllerBase.generated.h"
 
 UCLASS(Abstract)
-class MYONLINECARDGAME_API AMyMJGameViewerPawnBaseCpp : public APawn
+class MYONLINECARDGAME_API AMyMJGamePlayerControllerBaseCpp : public APlayerController
 {
 	GENERATED_BODY()
 	
 public:
 
-    AMyMJGameViewerPawnBaseCpp() : Super()
+    AMyMJGamePlayerControllerBaseCpp() : Super()
     {
         m_eRoleType = MyMJGameRoleTypeCpp::Observer;
     };

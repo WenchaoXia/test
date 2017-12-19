@@ -3,19 +3,19 @@
 #pragma once
 
 #include "GameFramework/GameState.h"
-#include "MJBPEncap/MyMJGameViewerPawnBase.h"
+#include "MJBPEncap/MyMJGamePlayerControllerBase.h"
 
 #include "MyMJGameRoom.h"
 
 #include "MJBPEncap/Utils/MyMJBPUtils.h"
 
-#include "MyMJGameRoomViewerPawn.generated.h"
+#include "MyMJGamePlayerController.generated.h"
 
 //TOdo: we can make it slower on Dedicated server
-#define MyMJGameRoomViewerPawnLoopTimeMs (500)
+#define MyMJGamePlayerControllerLoopTimeMs (500)
 
-#define MyMJGameRoomViewerAskSyncGapTimeMs (500)
-#define MyMJGameRoomViewerAnswerSyncGapTimeMs (500)
+#define MyMJGamePlayerControllerAskSyncGapTimeMs (500)
+#define MyMJGamePlayerControllerAnswerSyncGapTimeMs (500)
 
 /**
 * Our goal is a network system allow actors to have "Full" and "Delta" datas, which can track the actor's state and accurate history, and it only transfor delta at normal case and transfer full for clients
@@ -28,14 +28,15 @@
 * UE4's default actor replication mechnism per actor. Another benifit of this, by using struct instead of uobject for "Full" and "Delta", we can do calculation in subthread.
 */
 
+//Our player controller will help do replication work, and only replication help code goes here
 UCLASS()
-class MYONLINECARDGAME_API AMyMJGameRoomViewerPawnCpp : public AMyMJGameViewerPawnBaseCpp
+class MYONLINECARDGAME_API AMyMJGamePlayerControllerCpp : public AMyMJGamePlayerControllerBaseCpp
 {
 	GENERATED_BODY()
 
 public:
-    AMyMJGameRoomViewerPawnCpp();
-    virtual ~AMyMJGameRoomViewerPawnCpp();
+    AMyMJGamePlayerControllerCpp();
+    virtual ~AMyMJGamePlayerControllerCpp();
 
     void clearInGame();
 
@@ -87,7 +88,6 @@ protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
-    virtual void PossessedBy(AController* NewController) override;
 
     UFUNCTION(BlueprintCallable, Server, unreliable, WithValidation)
         void askSyncForMJCoreFullDataOnServer();
@@ -118,7 +118,7 @@ protected:
 
         //trick is that, onRep only happen on client, and in that case only one instance need to be notified
         m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.Clear();
-        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGameRoomViewerPawnCpp::tryFeedDataToConsumerWithFilter);
+        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGamePlayerControllerCpp::tryFeedDataToConsumerWithFilter);
     };
 
     UFUNCTION()
