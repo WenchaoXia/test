@@ -24,6 +24,9 @@
 #define MY_MJ_GAME_WORLD_TIME_MS_IS_RESOLVED(worldTime_ms) (MY_MJ_GAME_WORLD_TIME_MS_RESOLVE_WITH_DATA_TIME_RESOLUTION(worldTime_ms) == (worldTime_ms))
 */
 
+#define MyReplicateUpdateFreq (1.f)
+#define MyReplicateUpdateFreqMax (10.f)
+
 //every actor can have it's own state about time, we define a common struct to calculate it, the time can be either game world time, or platform real time
 USTRUCT()
 struct FMyMJServerClientTimeBondCpp

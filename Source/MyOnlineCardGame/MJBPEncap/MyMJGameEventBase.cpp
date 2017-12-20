@@ -13,8 +13,6 @@
 
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
-#define MySupposedReplicateUpdateFreq (10.f)
-
 FMyMJCoreRelatedEventCorePusherCfgCpp::FMyMJCoreRelatedEventCorePusherCfgCpp()
 {
     m_uiGameStarted = 1000;
@@ -940,7 +938,7 @@ void UMyMJDataAllCpp::updateDebugInfo(float fWorldRealTimeNow, uint32 uiIdEventB
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("in suppoed rep, event adding is too fast! %d/%d added."), eventNumAddedAfterPrevUpdate, bufferSize);
     }
 
-    if (fWorldRealTimeNow >= (m_fDebugSupposedReplicationUpdateLastRealTime + (1.f / MySupposedReplicateUpdateFreq))) {
+    if (fWorldRealTimeNow >= (m_fDebugSupposedReplicationUpdateLastRealTime + (1.f / MyReplicateUpdateFreqMax))) {
         m_fDebugSupposedReplicationUpdateLastRealTime = fWorldRealTimeNow;
         m_uiDebugSupposedReplicationUpdateLastIdEvent = uiIdEventNow;
     }

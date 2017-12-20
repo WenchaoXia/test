@@ -15,6 +15,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetStringLibrary.h"
 
+#include "MyMJGameRoom.h"
 
 //#include "Runtime/CoreUObject/Public/Templates/SubclassOf.h"
 
@@ -23,6 +24,12 @@
 #define MY_VISUAL_PROCESSOR_CMD_OUT_BUFFER_SIZE (8)
 #define MY_VISUAL_PROCESSOR_DATA_IN_BUFFER_SIZE (128)
 #define MY_VISUAL_PROCESSOR_DATA_OUT_BUFFER_SIZE (128)
+
+#define MyMJGameProgressStayBehindMaxTimeMs (5000)
+#define MyMJGameProgressJumpAheadDataMaxTimeMs (2000)
+#define MyMJGameProgressPredictMaxTimeMs (3000)
+
+#define MyMJGameVisualStateCatchUpMinTimeToStayMs (500)
 
 int32 FMyMJGameDeskVisualPointCfgCacheCpp::getCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
 {
@@ -80,6 +87,52 @@ void  FMyMJGameDeskVisualPointCfgCacheCpp::helperSetVisualPointCfgByIdxs(int32 i
 };
 
 
+void FMyMJGameDeskVisualDataCpp::applyDelta(struct FMyMJGameDeskVisualDataDeltaCpp& cDelta, uint32 uiNewServerWorldTime_ms)
+{
+    if (cDelta.m_apNewCoreData.Num() > 0) {
+        m_cCoreData = cDelta.m_apNewCoreData[0];
+    }
+    if (cDelta.m_apNewCoreDataDirtyRecord.Num() > 0) {
+        MY_VERIFY(cDelta.m_apNewCoreData.Num() > 0)
+    }
+    if (cDelta.m_apEventJustApplied.Num() > 0) {
+        MY_VERIFY(cDelta.m_apNewCoreData.Num() > 0)
+    }
+
+    for (auto& Elem : cDelta.m_mNewActorDataIdCards)
+    {
+        int32 idCard = Elem.Key;
+        FMyMJGameCardVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
+
+        if (idCard >= m_cActorData.m_aCards.Num())
+        {
+            m_cActorData.m_aCards.AddDefaulted((idCard - m_cActorData.m_aCards.Num()) + 1);
+            MY_VERIFY(idCard == (m_cActorData.m_aCards.Num() - 1));
+        }
+
+        m_cActorData.m_aCards[idCard] = cInfoAndResult;
+
+    }
+
+    for (auto& Elem : cDelta.m_mNewActorDataIdDices)
+    {
+        int32 idDice = Elem.Key;
+        FMyMJGameDiceVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
+
+        if (idDice >= m_cActorData.m_aDices.Num())
+        {
+            m_cActorData.m_aDices.AddDefaulted((idDice - m_cActorData.m_aDices.Num()) + 1);
+            MY_VERIFY(idDice == (m_cActorData.m_aDices.Num() - 1));
+        }
+
+        m_cActorData.m_aDices[idDice] = cInfoAndResult;
+
+    }
+
+    setTime(uiNewServerWorldTime_ms);
+}
+
+
 FMyMJGameDeskProcessorRunnableCpp::FMyMJGameDeskProcessorRunnableCpp() : FMyRunnableBaseCpp(MY_VISUAL_PROCESSOR_SUB_THREAD_LOOP_TIME_MS),
     m_cCmdIn(TEXT("Processor Cmd In"), MY_VISUAL_PROCESSOR_CMD_IN_BUFFER_SIZE), m_cCmdOut(TEXT("Processor Cmd Out"), MY_VISUAL_PROCESSOR_CMD_OUT_BUFFER_SIZE),
     m_cDataIn(TEXT("Processor Data In"), MY_VISUAL_PROCESSOR_DATA_IN_BUFFER_SIZE), m_cDataOut(TEXT("Processor Data Out"), MY_VISUAL_PROCESSOR_DATA_OUT_BUFFER_SIZE)
@@ -89,6 +142,7 @@ FMyMJGameDeskProcessorRunnableCpp::FMyMJGameDeskProcessorRunnableCpp() : FMyRunn
     m_pSubThreadAccessor = NULL;
 
     m_pSubThreadSentLabel = NULL;
+    m_bSubThreadHelperSkippedEventBefore = false;
 
 };
 
@@ -420,7 +474,7 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadCmdLoop()
         }
 
         if (pIn->m_apNewCfgCache.Num() > 0) {
-            m_pSubThreadData->m_cCfgCache = pIn->m_apNewCfgCache[0];
+            m_pSubThreadData->setCfg(pIn->m_apNewCfgCache[0]);
         }
 
         m_cCmdIn.putInConsumedItem(pIn);
@@ -429,7 +483,7 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadCmdLoop()
     //send
     while (1)
     {
-        if (m_pSubThreadSentLabel->m_uiCfgStateKey != m_pSubThreadData->m_cCfgCache.m_uiStateKey) {
+        if (m_pSubThreadSentLabel->m_cVisualData.getCfgRefConst().m_uiStateKey != m_pSubThreadData->getCfgRefConst().m_uiStateKey) {
             FMyMJGameDeskProcessorCmdOutputCpp *pOut = m_cCmdOut.getItemForProduce();
             if (pOut == NULL) {
                 break;
@@ -437,12 +491,12 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadCmdLoop()
 
             pOut->reset();
             pOut->m_apNewCfgCache.Emplace();
-            pOut->m_apNewCfgCache[0] = m_pSubThreadData->m_cCfgCache;
+            pOut->m_apNewCfgCache[0] = m_pSubThreadData->getCfgRefConst();
 
             pOut->verifyValid();
             m_cCmdOut.putInProducedItem(pOut);
 
-            m_pSubThreadSentLabel->m_uiCfgStateKey = m_pSubThreadData->m_cCfgCache.m_uiStateKey;
+            m_pSubThreadSentLabel->m_cVisualData.setCfg(m_pSubThreadData->getCfgRefConst());
         }
 
         break;
@@ -474,7 +528,7 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadDataLoop()
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: %s"),
                 *cFullState.genDebugMsg());
 
-            m_pSubThreadData->m_cCoreData = cFullState;
+            m_pSubThreadData->getCoreDataRef() = cFullState;
             m_pSubThreadAccessor->helperSetCoreDataDirtyRecordAllDirty(*m_pSubThreadDataCoreDataDirtyRecordSincePrevSent);
 
             bNeedOutPut = true;
@@ -485,7 +539,7 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadDataLoop()
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: %s"),
                 *cDeltaEvent.genDebugMsg());
 
-            m_pSubThreadData->m_cCoreData.applyEvent(*m_pSubThreadAccessor, cDeltaEvent, m_pSubThreadDataCoreDataDirtyRecordSincePrevSent);
+            m_pSubThreadData->getCoreDataRef().applyEvent(*m_pSubThreadAccessor, cDeltaEvent, m_pSubThreadDataCoreDataDirtyRecordSincePrevSent);
 
             if (cDeltaEvent.getMainType() == MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult) {
             }
@@ -504,15 +558,18 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadDataLoop()
 
         }
 
-        if (pInData->m_uiNewServerWorldTime_ms < m_pSubThreadData->m_uiServerWorldTime_ms) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time screw, pInData->m_uiNewServerWorldTime_ms %u, m_pSubThreadData->m_uiServerWorldTime_ms %u."), pInData->m_uiNewServerWorldTime_ms, m_pSubThreadData->m_uiServerWorldTime_ms);
+        if (pInData->m_uiNewServerWorldTime_ms < m_pSubThreadData->getTime()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time screw, pInData->m_uiNewServerWorldTime_ms %u, m_pSubThreadData->m_uiServerWorldTime_ms %u."), pInData->m_uiNewServerWorldTime_ms, m_pSubThreadData->getTime());
             MY_VERIFY(false);
         }
-
-        m_pSubThreadData->m_uiServerWorldTime_ms = pInData->m_uiNewServerWorldTime_ms;
+        m_pSubThreadData->setTime(pInData->m_uiNewServerWorldTime_ms);
 
         if (bNeedOutPut) {
-            subThreadTryGenOutput(pImportantEventJustApplied);
+            bool bGened = subThreadTryGenOutput(m_bSubThreadHelperSkippedEventBefore? NULL : pImportantEventJustApplied);
+            if (!bGened) {
+                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("failed to gen out for important thing, mark it now."));
+                m_bSubThreadHelperSkippedEventBefore = true;
+            }
         }
 
         m_cDataIn.putInConsumedItem(pInData);
@@ -523,43 +580,70 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadDataLoop()
     subThreadTryGenOutput(NULL);
 };
 
-void FMyMJGameDeskProcessorRunnableCpp::subThreadTryGenOutput(FMyMJEventWithTimeStampBaseCpp* pEventJustApplied)
+bool FMyMJGameDeskProcessorRunnableCpp::subThreadTryGenOutput(FMyMJEventWithTimeStampBaseCpp* pEventJustApplied)
 {
-    if (m_pSubThreadSentLabel->m_uiServerWorldTime_ms == m_pSubThreadData->m_uiServerWorldTime_ms) {
-        //updated before
-        return;
+    if (m_pSubThreadSentLabel->m_cVisualData.getTime() >= m_pSubThreadData->getTime() && m_pSubThreadDataCoreDataDirtyRecordSincePrevSent->isEmpty()) {
+        //Time not moved forward and important data is not dirty
+        return false;
     }
 
     FMyMJGameDeskProcessorDataOutputCpp *pOut = m_cDataOut.getItemForProduce();
     if (pOut == NULL) {
-        return;
+        return false;
     }
 
-    MY_VERIFY(m_pSubThreadSentLabel->m_uiCfgStateKey == m_pSubThreadData->m_cCfgCache.m_uiStateKey);
-    MY_VERIFY(m_pSubThreadData->m_cCoreData.getIdEventApplied() >= m_pSubThreadSentLabel->m_cVisualData.m_cCoreData.getIdEventApplied());
+    MY_VERIFY(m_pSubThreadSentLabel->m_cVisualData.getCfgRefConst().m_uiStateKey == m_pSubThreadData->getCfgRefConst().m_uiStateKey);
+    MY_VERIFY(m_pSubThreadData->getCoreDataRefConst().getIdEventApplied() >= m_pSubThreadSentLabel->m_cVisualData.getCoreDataRefConst().getIdEventApplied());
 
     pOut->reset();
 
-    if (m_pSubThreadData->m_cCoreData.getIdEventApplied() > m_pSubThreadSentLabel->m_cVisualData.m_cCoreData.getIdEventApplied()) {
+    if (m_pSubThreadData->getCoreDataRefConst().getIdEventApplied() > m_pSubThreadSentLabel->m_cVisualData.getCoreDataRefConst().getIdEventApplied()) {
 
         //core data changed
         pOut->m_apNewVisualDataDelta.Emplace();
+        MY_VERIFY(pOut->m_apNewVisualDataDelta.Num() == 1);
         FMyMJGameDeskVisualDataDeltaCpp* pOutDataDelta = &pOut->m_apNewVisualDataDelta[0];
 
+        pOutDataDelta->m_apNewCoreData.Emplace();
+        MY_VERIFY(pOutDataDelta->m_apNewCoreData.Num() == 1);
+        pOutDataDelta->m_apNewCoreData[0] = m_pSubThreadData->getCoreDataRefConst();
+
+        pOutDataDelta->m_apNewCoreDataDirtyRecord.Emplace();
+        MY_VERIFY(pOutDataDelta->m_apNewCoreDataDirtyRecord.Num() == 1);
+        pOutDataDelta->m_apNewCoreDataDirtyRecord[0] = *m_pSubThreadDataCoreDataDirtyRecordSincePrevSent;
+
+        
         TMap<int32, FMyMJGameCardVisualInfoCpp> mIdCardVisualInfoAccumulatedChanges;
         TMap<int32, int32> mIdDiceValueAccumulatedChanges;
 
-        helperResolveVisualInfoChanges(m_pSubThreadData->m_cCfgCache, m_pSubThreadData->m_cCoreData, *m_pSubThreadDataCoreDataDirtyRecordSincePrevSent, m_pSubThreadSentLabel->m_cVisualData.m_cActorData,
+        helperResolveVisualInfoChanges(m_pSubThreadData->getCfgRefConst(), m_pSubThreadData->getCoreDataRefConst(), *m_pSubThreadDataCoreDataDirtyRecordSincePrevSent, m_pSubThreadSentLabel->m_cVisualData.getActorDataRefConst(),
                                        mIdCardVisualInfoAccumulatedChanges, mIdDiceValueAccumulatedChanges);
+
+        helperResolveVisualResultChanges(m_pSubThreadData->getCfgRefConst(), mIdCardVisualInfoAccumulatedChanges, mIdDiceValueAccumulatedChanges, pOutDataDelta->m_mNewActorDataIdCards, pOutDataDelta->m_mNewActorDataIdDices);
+
+        if (pEventJustApplied) {
+            MY_VERIFY(!m_bSubThreadHelperSkippedEventBefore);
+            pOutDataDelta->m_apEventJustApplied.Emplace();
+            MY_VERIFY(pOutDataDelta->m_apEventJustApplied.Num() == 1);
+            pOutDataDelta->m_apEventJustApplied[0] = *pEventJustApplied;
+        }
+        pOutDataDelta->m_bHelperSkippedEventBefore = m_bSubThreadHelperSkippedEventBefore;
+
+        //clear up subthread records
+        m_pSubThreadDataCoreDataDirtyRecordSincePrevSent->reset();
+        m_bSubThreadHelperSkippedEventBefore = false;
 
     }
 
-    pOut->m_uiNewServerWorldTime_ms = m_pSubThreadData->m_uiServerWorldTime_ms;
+    pOut->m_uiNewServerWorldTime_ms = m_pSubThreadData->getTime();
 
-    m_pSubThreadSentLabel->m_uiServerWorldTime_ms = pOut->m_uiNewServerWorldTime_ms;
+    //update sent label
+    FMyMJGameDeskProcessorDataOutputCpp::helperApplyToDeskVisualData(m_pSubThreadSentLabel->m_cVisualData, *pOut);
 
     pOut->verifyValid();
     m_cDataOut.putInProducedItem(pOut);
+
+    return true;
 
 };
 
@@ -573,10 +657,11 @@ bool FMyMJGameDeskProcessorRunnableCpp::subThreadInitBeforRun()
     m_pSubThreadDataCoreDataDirtyRecordSincePrevSent = new FMyDirtyRecordWithKeyAnd4IdxsMapCpp();
     m_pSubThreadAccessor = new FMyMJDataAccessorCpp();
 
-    m_pSubThreadAccessor->setupDataExt(&m_pSubThreadData->m_cCoreData);
+    m_pSubThreadAccessor->setupDataExt(&m_pSubThreadData->getCoreDataRef());
 
     m_pSubThreadSentLabel = new FMyMJGameDeskProcessorSubThreadSentLabelCpp();
 
+    m_bSubThreadHelperSkippedEventBefore = false;
     return true;
 };
 
@@ -1612,6 +1697,9 @@ int32 UMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMy
 UMyMJGameDeskVisualDataObjCpp::UMyMJGameDeskVisualDataObjCpp() : Super()
 {
     m_bInFullDataSyncState = false;
+
+    m_eVisualState = EMyMJGameRoomVisualStateCpp::Invalid;
+    m_uiVisualStateStartClientTime_ms = 0;
 };
 
 UMyMJGameDeskVisualDataObjCpp::~UMyMJGameDeskVisualDataObjCpp()
@@ -1649,14 +1737,14 @@ void UMyMJGameDeskVisualDataObjCpp::stop()
     m_pProcessor.Reset();
 };
 
-void UMyMJGameDeskVisualDataObjCpp::loop()
+void UMyMJGameDeskVisualDataObjCpp::loop(uint32 uiClientWorldTimeNow_ms)
 {
     if (!m_pProcessor.IsValid()) {
         return;
     }
 
     cmdLoop();
-    dataLoop();
+    dataLoop(uiClientWorldTimeNow_ms);
 };
 
 
@@ -1718,7 +1806,23 @@ bool UMyMJGameDeskVisualDataObjCpp::tryFeedData(UMyMJDataSequencePerRoleCpp *pSe
     return m_bInFullDataSyncState;
 };
 
+void UMyMJGameDeskVisualDataObjCpp::getDataTimeRange(uint32 &uiFirstDataGotServerTime_ms, uint32 &uiLastDataGotServerTime_ms) const
+{
+    MY_VERIFY(m_pProcessor.IsValid());
 
+    uiFirstDataGotServerTime_ms = 0;
+    FMyMJGameDeskProcessorDataOutputCpp *pOut = m_pProcessor->getRunnableRef().mainThreadPeekDataOutputForConsume();
+    if (pOut) {
+        uiFirstDataGotServerTime_ms = pOut->m_uiNewServerWorldTime_ms;
+    }
+
+    uiLastDataGotServerTime_ms = m_pProcessor->getRunnableRef().getMainThreadReceivedLabel().m_uiServerWorldTime_ms;
+    if (!pOut) {
+        uiLastDataGotServerTime_ms = 0;
+    }
+
+    MY_VERIFY(uiFirstDataGotServerTime_ms <= uiLastDataGotServerTime_ms);
+}
 
 
 void UMyMJGameDeskVisualDataObjCpp::cmdLoop()
@@ -1733,7 +1837,7 @@ void UMyMJGameDeskVisualDataObjCpp::cmdLoop()
         }
 
         if (pOut->m_apNewCfgCache.Num() > 0) {
-            m_cDataNow.m_cCfgCache = pOut->m_apNewCfgCache[0];
+            m_cDeskVisualDataNow.setCfg(pOut->m_apNewCfgCache[0]);
         }
 
         m_pProcessor->getRunnableRef().mainThreadPutCmdOutputAfterConsume(pOut);
@@ -1741,18 +1845,150 @@ void UMyMJGameDeskVisualDataObjCpp::cmdLoop()
 
 };
 
-void UMyMJGameDeskVisualDataObjCpp::dataLoop()
+void UMyMJGameDeskVisualDataObjCpp::dataLoop(uint32 uiClientWorldTimeNow_ms)
 {
+    //1st, do thread work to prepare the data
     m_pProcessor->getRunnableRef().mainThreadDataLoop();
+
+    //2nd, consume the data if condition met
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("AMyMJGameRoomCpp::loop"));
+    uint32 uiClientTimeNow_ms = uiClientWorldTimeNow_ms;
+    uint32 uiClientTimeLast_ms = m_cGameProgressData.m_cLastBond.getClientTime_ms_RefConst();
+    uint32 uiServerTimeLast_ms = m_cGameProgressData.m_cLastBond.getServerTime_ms_RefConst();
+
+    if (uiClientTimeNow_ms < uiClientTimeLast_ms) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time screw: uiClientTimeNow_ms %u, uiClientTimeLast_ms %u  .."), uiClientTimeNow_ms, uiClientTimeLast_ms);
+        m_cGameProgressData.m_cLastBond.rebondTime(uiServerTimeLast_ms, uiClientTimeNow_ms);
+        return;
+    }
+
+    uint32 uiFirstDataGotServerTime_ms = 0, uiLastDataGotServerTime_ms = 0;
+    getDataTimeRange(uiFirstDataGotServerTime_ms, uiLastDataGotServerTime_ms);
+    bool bHaveData = !(uiFirstDataGotServerTime_ms == 0 && uiLastDataGotServerTime_ms == 0);
+
+    //by default, we keep serverTime as old
+    uint32 uiServerTimeToBond_ms = 0;
+
+    while (1) {
+        if (m_eVisualState == EMyMJGameRoomVisualStateCpp::NormalPlay) {
+
+            //try step forward
+            uint32 uiServerTimeTryToGo_ms = m_cGameProgressData.m_cLastBond.getCalculatedServerTime_ms(uiClientTimeNow_ms);
+
+            if (bHaveData) {
+
+                //we are going to play it or wait for time allowed
+                bool bTimeChanged = false;
+                if (uiServerTimeTryToGo_ms > uiFirstDataGotServerTime_ms && (uiServerTimeTryToGo_ms - uiFirstDataGotServerTime_ms) >= MyMJGameProgressJumpAheadDataMaxTimeMs) {
+                    //too ahead, revert back
+                    uiServerTimeTryToGo_ms = uiFirstDataGotServerTime_ms;
+                    bTimeChanged = true;
+                }
+
+                if (uiServerTimeTryToGo_ms <= uiLastDataGotServerTime_ms && (uiLastDataGotServerTime_ms - uiServerTimeTryToGo_ms) >= MyMJGameProgressStayBehindMaxTimeMs) {
+                    //falling behind too match, catch up
+                    changeVisualState(EMyMJGameRoomVisualStateCpp::CatchUp, uiClientTimeNow_ms, 2);
+                    break;
+                }
+
+                playGameProgressTo(uiServerTimeTryToGo_ms, false);
+                if (bTimeChanged) {
+                    uiServerTimeToBond_ms = uiServerTimeTryToGo_ms;
+                }
+            }
+            else {
+
+                //we have no data, prediction
+                if (uiServerTimeTryToGo_ms > m_cGameProgressData.m_uiServerTimeConfirmed_ms && (uiServerTimeTryToGo_ms - m_cGameProgressData.m_uiServerTimeConfirmed_ms) > MyMJGameProgressPredictMaxTimeMs) {
+                    changeVisualState(EMyMJGameRoomVisualStateCpp::WaitingForDataInGame, uiClientTimeNow_ms, 2);
+                }
+
+                playGameProgressTo(uiServerTimeTryToGo_ms, false);
+            }
+        }
+        else if (m_eVisualState == EMyMJGameRoomVisualStateCpp::CatchUp) {
+            if (uiLastDataGotServerTime_ms > uiServerTimeLast_ms) {
+                playGameProgressTo(uiLastDataGotServerTime_ms, true);
+                uiServerTimeToBond_ms = uiLastDataGotServerTime_ms;
+            }
+
+            if ((uiClientTimeNow_ms - m_uiVisualStateStartClientTime_ms) >= MyMJGameVisualStateCatchUpMinTimeToStayMs) {
+                changeVisualState(EMyMJGameRoomVisualStateCpp::NormalPlay, uiClientTimeNow_ms, 0);
+            }
+        }
+        else if (m_eVisualState == EMyMJGameRoomVisualStateCpp::WaitingForDataInGame) {
+
+            if (bHaveData) {
+                //change mode and play imediently
+                playGameProgressTo(uiFirstDataGotServerTime_ms, false);
+                uiServerTimeToBond_ms = uiFirstDataGotServerTime_ms;
+
+                changeVisualState(EMyMJGameRoomVisualStateCpp::NormalPlay, uiClientTimeNow_ms, 0);
+                break;;
+            }
+        }
+        else if (m_eVisualState == EMyMJGameRoomVisualStateCpp::WaitingForDataInitSync) {
+            //find first avaiable data
+
+            if (bHaveData) {
+                //we have data, play to it
+                uiServerTimeToBond_ms = uiFirstDataGotServerTime_ms + AMyMJGameRoomVisualLoopTimeMs * 1; //try forward a bit
+                if (uiServerTimeToBond_ms > uiLastDataGotServerTime_ms) {
+                    uiServerTimeToBond_ms = uiLastDataGotServerTime_ms;
+                }
+                playGameProgressTo(uiServerTimeToBond_ms, false);
+                changeVisualState(EMyMJGameRoomVisualStateCpp::NormalPlay, uiClientTimeNow_ms, 0);
+            }
+        }
+        else if (m_eVisualState == EMyMJGameRoomVisualStateCpp::Invalid) {
+            changeVisualState(EMyMJGameRoomVisualStateCpp::WaitingForDataInitSync, uiClientTimeNow_ms, 0);
+        }
+
+        break;
+    }
+
+    //rebond the game time
+    if (uiServerTimeToBond_ms) {
+        m_cGameProgressData.m_cLastBond.rebondTime(uiServerTimeToBond_ms, uiClientTimeNow_ms);
+    }
+};
+
+//play all events <= uiServerTime_ms
+void UMyMJGameDeskVisualDataObjCpp::playGameProgressTo(uint32 uiServerTime_ms, bool bCatchUp)
+{
+    MY_VERIFY(m_pProcessor.IsValid());
+
+    uint32 uiDataConsumedTime_ms = 0;
 
     //receive
     while (1)
     {
-        FMyMJGameDeskProcessorDataOutputCpp *pOut = m_pProcessor->getRunnableRef().mainThreadGetDataOutputForConsume();
+        FMyMJGameDeskProcessorDataOutputCpp *pOut = m_pProcessor->getRunnableRef().mainThreadPeekDataOutputForConsume();
         if (pOut == NULL) {
             break;
         }
 
+        if (uiServerTime_ms < pOut->m_uiNewServerWorldTime_ms) {
+            //time not reached
+            break;
+        }
+
+        MY_VERIFY(pOut == m_pProcessor->getRunnableRef().mainThreadGetDataOutputForConsume());
+
+        FMyMJGameDeskProcessorDataOutputCpp::helperApplyToDeskVisualData(m_cDeskVisualDataNow, *pOut);
+
+        uiDataConsumedTime_ms = pOut->m_uiNewServerWorldTime_ms;
+
         m_pProcessor->getRunnableRef().mainThreadPutDataOutputAfterConsume(pOut);
     }
-};
+
+    if (uiDataConsumedTime_ms > 0) {
+        MY_VERIFY(uiDataConsumedTime_ms >= m_cGameProgressData.m_uiServerTimeConfirmed_ms);
+
+        if (uiDataConsumedTime_ms > m_cGameProgressData.m_uiServerTimeConfirmed_ms) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("confirmed progress: %s -> %s."), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_cGameProgressData.m_uiServerTimeConfirmed_ms), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiDataConsumedTime_ms));
+            m_cGameProgressData.m_uiServerTimeConfirmed_ms = uiDataConsumedTime_ms;
+        }
+    }
+}

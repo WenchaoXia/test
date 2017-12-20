@@ -12,11 +12,8 @@
 
 #include "MyMJGameRoom.generated.h"
 
-#define MyMJGameProgressLatenceAboveNetworkMax (5000)
+
 #define AMyMJGameRoomVisualLoopTimeMs (50)
-
-#define MyMJGameVisualStateCatchUpMinTimeToStayMs (1000)
-
 
 UCLASS(Blueprintable, Abstract)
 class MYONLINECARDGAME_API AMyMJGameDeskAreaCpp : public AActor
@@ -149,37 +146,6 @@ protected:
 
 };
 
-UENUM()
-enum class AMyMJGameRoomVisualStateCpp : uint8
-{
-    Invalid = 0     UMETA(DisplayName = "Invalid"),
-    WaitingForDataInitSync = 1     UMETA(DisplayName = "WaitingForDataInitSync"),
-    WaitingForDataInGame = 2     UMETA(DisplayName = "WaitingForDataInGame"),
-    NormalPlay = 3    UMETA(DisplayName = "NormalPlay"),
-    CatchUp = 4    UMETA(DisplayName = "CatchUp")
-};
-
-USTRUCT()
-struct FMyGameProgressDataCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-
-    FMyGameProgressDataCpp()
-    {
-        reset();
-    };
-
-    inline void reset() {
-        m_uiServerTimePlayed_ms;
-        m_cLastBond.clearBond();
-    };
-
-    uint32 m_uiServerTimePlayed_ms;
-    FMyMJServerClientTimeBondCpp m_cLastBond;
-};
-
 //this is used for visual layer, no replication code goes in
 //note that we handle two type data here: one is time synced data like frame sync, one is not
 UCLASS(Blueprintable, HideCategories = (Collision, Rendering, "Utilities|Transformation"))
@@ -195,11 +161,6 @@ public:
     void startVisual();
     void stopVisual();
     void loopVisual();
-
-    void loop();
-
-    //play all events <= uiServerTime_ms
-    void playGameProgressTo(uint32 uiServerTime_m, bool bCatchUp);
 
     bool checkSettings() const;
 
@@ -217,15 +178,6 @@ protected:
 
     //return error code
     int32 retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
-
-    void changeVisualState(AMyMJGameRoomVisualStateCpp eNewState, uint32 uiClientTimeNow_ms)
-    {
-        if (m_eVisualState != eNewState) {
-            m_eVisualState = eNewState;
-            m_uiVisualStateStartClientTime_ms = uiClientTimeNow_ms;
-        }
-
-    };
 
     //contains all range >= min and <= max
     void getDataTimeRange(uint32 &out_uiDataGotServerTimeMin_ms, uint32& out_uiDataGotServerTimeMax_ms);
@@ -245,7 +197,5 @@ protected:
 
     FTimerHandle m_cLoopTimerHandle;
 
-    FMyGameProgressDataCpp m_cGameProgressData;
-    AMyMJGameRoomVisualStateCpp m_eVisualState;
-    uint32 m_uiVisualStateStartClientTime_ms;
+
 };

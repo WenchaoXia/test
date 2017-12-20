@@ -51,12 +51,13 @@ AMyMJGameCoreDataSourceCpp::AMyMJGameCoreDataSourceCpp(const FObjectInitializer&
     m_pCoreFullWithThread = NULL;
     m_pMJDataAll = NULL;
     m_bCoreFullPartEnabled = false;
+    m_fFakeReplicationForLocalVisualLayerLastRealTime = 0.f;
     m_eDebugNetMode = ENetMode::NM_MAX;
 
     bReplicates = true;
     bAlwaysRelevant = true;
     bNetLoadOnClient = true;
-    NetUpdateFrequency = 1;
+    NetUpdateFrequency = MyReplicateUpdateFreq;
 
     //m_pMJDataAll = NewObject<UMyMJDataAllCpp>(this);
     m_pMJDataAll = CreateDefaultSubobject<UMyMJDataAllCpp>(TEXT("mj data all"));
@@ -450,9 +451,9 @@ void AMyMJGameCoreDataSourceCpp::coreDataPullLoopInner()
         return; //wait for next loop
     }
 
-    if (m_pMJDataAll->getServerWorldTime_ms() == timeNowMs) {
+    if (m_pMJDataAll->getServerWorldTime_ms() >= timeNowMs) {
         //this ensure every data updating will always have a different time stamp
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Same server time ms, %d, skip to next loop."), timeNowMs);
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("server world time have not moved forward:, %u, %u, skip to next loop."), timeNowMs, m_pMJDataAll->getServerWorldTime_ms());
         return;
     }
 
@@ -504,19 +505,19 @@ void AMyMJGameCoreDataSourceCpp::coreDataPullLoopInner()
         setNeedReboot(true, MyNeedRebootReason_LackIdEvent);
     }
 
+    float realTimeNow = world->GetRealTimeSeconds();
     if (bHaveProgress) {
-        notifyDataUpdated();
+        notifyGameHaveNewProgress(realTimeNow);
 
         //detect data speed
-        float realTimeNow = world->GetRealTimeSeconds();
         m_pMJDataAll->updateDebugInfo(realTimeNow, uiIdEventBefore);
     }
 
-
+    fakeReplicationForLocalVisualLayer(realTimeNow, false);
     //Todo: pull trival events
 }
 
-void AMyMJGameCoreDataSourceCpp::notifyDataUpdated()
+void AMyMJGameCoreDataSourceCpp::notifyGameHaveNewProgress(float fWorldRealTime)
 {
     ENetMode mode = GetNetMode();
     if (m_eDebugNetMode != mode) {
@@ -530,12 +531,22 @@ void AMyMJGameCoreDataSourceCpp::notifyDataUpdated()
         ForceNetUpdate();
     }
 
-    if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this)) {
-        //we have local visual layer, here we suppose only two roles used
-        m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::Observer)->m_cReplicateDelegate.Broadcast();
-        m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::SysKeeper)->m_cReplicateDelegate.Broadcast();
-    }
+    fakeReplicationForLocalVisualLayer(fWorldRealTime, true);
 }
+
+void AMyMJGameCoreDataSourceCpp::fakeReplicationForLocalVisualLayer(float fWorldRealTime, bool bForced)
+{
+    if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this)) {
+
+        if (bForced || (fWorldRealTime - m_fFakeReplicationForLocalVisualLayerLastRealTime) >= (1.f / (float)MyReplicateUpdateFreq)) {
+            //we have local visual layer, here we suppose only two roles used
+            m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::Observer)->m_cReplicateDelegate.Broadcast();
+            m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::SysKeeper)->m_cReplicateDelegate.Broadcast();
+
+            m_fFakeReplicationForLocalVisualLayerLastRealTime = fWorldRealTime;
+        }
+    }
+};
 
 void AMyMJGameCoreDataSourceCpp::setNeedReboot(bool bNeedReboot, int32 iDebugReason)
 {

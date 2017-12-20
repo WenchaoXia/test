@@ -709,6 +709,6 @@ public:
     inline
     static FString genTimeStrFromTimeMs(uint32 uiTime_ms)
     {
-        return FString::Printf(TEXT("%d.%03d"), uiTime_ms / 1000, uiTime_ms % 1000);
+        return FString::Printf(TEXT("%u.%03u"), uiTime_ms / 1000, uiTime_ms % 1000);
     };
 };

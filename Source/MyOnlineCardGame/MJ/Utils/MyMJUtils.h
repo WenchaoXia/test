@@ -2180,6 +2180,11 @@ public:
 
     };
 
+    inline bool isEmpty() const
+    {
+        return m_sRecord.Num() == 0;
+    };
+
     inline
     void reset()
     {

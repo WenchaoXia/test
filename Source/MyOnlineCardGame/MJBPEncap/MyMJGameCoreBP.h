@@ -192,7 +192,8 @@ protected:
 
     void loop();
     void coreDataPullLoopInner();
-    void notifyDataUpdated();
+    void notifyGameHaveNewProgress(float fWorldRealTime);
+    void fakeReplicationForLocalVisualLayer(float fWorldRealTime, bool bForced);
 
     void setNeedReboot(bool bNeedReboot, int32 iDebugReason);
 
@@ -216,6 +217,8 @@ protected:
 
     FTimerHandle m_cToCoreFullLoopTimerHandle;
     bool m_bCoreFullPartEnabled;
+
+    float m_fFakeReplicationForLocalVisualLayerLastRealTime;
 
     ENetMode m_eDebugNetMode;
     //uint32 m_uiLastReplicateClientTimeMs;
