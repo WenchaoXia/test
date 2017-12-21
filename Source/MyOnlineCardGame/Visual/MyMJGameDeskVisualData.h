@@ -104,12 +104,11 @@ public:
     };
 
     //return errorCode, 0 means OK
-    int32 helperGetColCountPerRow(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, int32& outCount) const
+    int32 helperGetColCountPerRow(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp& outVisualPointCfg, int32& outCount) const
     {
         outCount = 1;
-        FMyMJGameDeskVisualPointCfgCpp cVisualPointCfg;
 
-        int32 retCode =m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(idxAttender, eSlot, cVisualPointCfg);
+        int32 retCode =m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(idxAttender, eSlot, outVisualPointCfg);
         if (retCode != 0) {
             return retCode;
         }
@@ -121,7 +120,7 @@ public:
             return -2;
         }
 
-        int32 retCount = FMath::CeilToInt(cVisualPointCfg.m_cAreaBoxExtendFinal.Y / cCardModelInfo.m_cBoxExtend.Y);
+        int32 retCount = FMath::CeilToInt(outVisualPointCfg.m_cAreaBoxExtendFinal.Y / cCardModelInfo.m_cBoxExtend.Y);
         if (retCount <= 0) {
             UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("fixing retCount it is %d before."), retCount);
             retCount = 1;

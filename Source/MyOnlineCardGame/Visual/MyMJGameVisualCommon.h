@@ -152,12 +152,14 @@ public:
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "area box extend final"))
         FVector m_cAreaBoxExtendFinal;
 
+
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row alignment"))
         MyMJGameVerticalAlignmentCpp m_eRowAlignment;
 
     //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row max num"))
     //int32 m_iRowMaxNum;
 
+    //actually it contains two aspect: card sequence and actor alignment, left = card seq left + actor align left, for simple we use one property here. Warn: mid = card seq left + actor align mid, and only valid for hand and just taken slot now!
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "column in row alignment"))
         MyMJGameHorizontalAlignmentCpp m_eColInRowAlignment;
 

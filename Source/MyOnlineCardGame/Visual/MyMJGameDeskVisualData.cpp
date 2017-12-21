@@ -745,8 +745,9 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
             //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("process dirty card slot %d, %d"), idxAttender, (uint8)eSlot);
 
             const FMyMJRoleDataAttenderPublicCpp& attenderPublic = cInBase.getRoleDataAttenderPublicRefConst(idxAttender);
+            FMyMJGameDeskVisualPointCfgCpp cVisualPointCfg;
             int32 iColPerRow;
-            MY_VERIFY(cInVisualCfgCache.helperGetColCountPerRow(idxAttender, eSlot, iColPerRow) == 0);
+            MY_VERIFY(cInVisualCfgCache.helperGetColCountPerRow(idxAttender, eSlot, cVisualPointCfg, iColPerRow) == 0);
 
             if (eSlot == MyMJCardSlotTypeCpp::Untaken) {
 
@@ -782,6 +783,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                         pCardVisualInfo->m_iIdxStackInCol = cCardInfo.m_cPosi.m_iIdxInSlot1;
 
                         pCardVisualInfo->m_iCardValue = cardValue;
+
                     }
                 }
             }
@@ -792,6 +794,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 int32 l0 = aIdHandCards.Num();
                 int32 l1 = aIdJustTakenCards.Num();
 
+                int32 emptyColHalf = (iColPerRow - l0 - l1) / 2;
                 for (int32 i = 0; i < l1; i++) {
                     int32 cardId = aIdJustTakenCards[i];
                     const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
@@ -814,12 +817,20 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     pCardVisualInfo->m_iColInRowExtraMarginCount = 1;
 
                     pCardVisualInfo->m_iCardValue = cardValue;
+
+                    //trick for mid alignment
+                    if (cVisualPointCfg.m_eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Mid && (pCardVisualInfo->m_iIdxColInRow + emptyColHalf) >= 0) {
+                        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("fixing idx col for Mid alignment %d->%d"), pCardVisualInfo->m_iIdxColInRow, pCardVisualInfo->m_iIdxColInRow + emptyColHalf);
+                        pCardVisualInfo->m_iIdxColInRow += emptyColHalf;
+                    }
                 }
             }
             else if (eSlot == MyMJCardSlotTypeCpp::InHand) {
 
                 const TArray<int32>& aIdHandCards = attenderPublic.m_aIdHandCards;
+                const TArray<int32>& aIdJustTakenCards = attenderPublic.m_aIdJustTakenCards;
                 int32 l0 = aIdHandCards.Num();
+                int32 l1 = aIdJustTakenCards.Num();
 
                 FMyMJValueIdMapCpp m_cSortCards;
                 m_cSortCards.changeKeepOrder(true, false);
@@ -833,6 +844,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 m_cSortCards.collectAllWithValue(aPairs);
                 MY_VERIFY(aPairs.Num() == l0);
 
+                int32 emptyColHalf = (iColPerRow - l0 - l1) / 2;
                 for (int32 i = 0; i < l0; i++) {
                     int32 cardId = aPairs[i].m_iId;
                     const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
@@ -853,6 +865,12 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     pCardVisualInfo->m_iIdxStackInCol = 0;
 
                     pCardVisualInfo->m_iCardValue = cardValue;
+
+                    //trick for mid alignment
+                    if (cVisualPointCfg.m_eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Mid && (pCardVisualInfo->m_iIdxColInRow + emptyColHalf) >= 0) {
+                        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("fixing idx col for Mid alignment %d->%d"), pCardVisualInfo->m_iIdxColInRow, pCardVisualInfo->m_iIdxColInRow + emptyColHalf);
+                        pCardVisualInfo->m_iIdxColInRow += emptyColHalf;
+                    }
                 }
             }
             else if (eSlot == MyMJCardSlotTypeCpp::GivenOut) {
@@ -883,9 +901,6 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 }
             }
             else if (eSlot == MyMJCardSlotTypeCpp::Weaved) {
-
-                FMyMJGameDeskVisualPointCfgCpp cVisualPointCfg;
-                MY_VERIFY(cInVisualCfgCache.m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(idxAttender, eSlot, cVisualPointCfg) == 0);
 
                 const TArray<FMyMJWeaveCpp>& aWeaves = attenderPublic.m_aShowedOutWeaves;
                 int32 l = aWeaves.Num();
@@ -1186,6 +1201,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveCardVisualResultChanges(con
                                                                             const TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoKnownChanges,
                                                                             TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultAccumulatedChanges)
 {
+
     for (auto& Elem : mIdCardVisualInfoKnownChanges)
     {
         int32 idCard = Elem.Key;
@@ -1233,7 +1249,13 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveCardTransform(const FMyMJGa
     //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid iRowMaxNum %d, forceing to default!."), iRowMaxNum);
     //iRowMaxNum = 1;
     //}
-    if (eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Invalid || eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Mid) { //we don't support mid allignment now
+
+    if (eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Mid) {
+        //trick for middle alignment since col idx have been adjusted before
+        eColInRowAlignment = MyMJGameHorizontalAlignmentCpp::Left;
+    }
+
+    if (eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Invalid) { //we don't support mid allignment now
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid eColInRowAlignment alignment %d, forceing to default!."), (uint8)eColInRowAlignment);
         eColInRowAlignment = MyMJGameHorizontalAlignmentCpp::Left;
     }
