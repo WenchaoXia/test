@@ -559,7 +559,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
                 FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
 
                 cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::InHand;
-                cardInfoTarget.m_eFlipState = MyMJCardFlipStateCpp::Up;
+                cardInfoTarget.m_eFlipState = MyMJCardFlipStateCpp::Stand;
             }
         }
 

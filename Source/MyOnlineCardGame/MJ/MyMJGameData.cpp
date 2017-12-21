@@ -600,4 +600,6 @@ void FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordAllDirty(FMyDirtyRecordWi
 
     cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Dice, 0, 0, true);
 
+    //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("helperSetCoreDataDirtyRecordAllDirty, result %d."), cDirtyRecord.getRecordSet().Num());
+
 }

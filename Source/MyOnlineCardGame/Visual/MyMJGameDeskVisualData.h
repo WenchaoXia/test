@@ -646,8 +646,8 @@ protected:
     void subThreadCmdLoop();
     void subThreadDataLoop();
 
-    //return true if generated
-    bool subThreadTryGenOutput(FMyMJEventWithTimeStampBaseCpp* pEventJustApplied);
+    //return 0 if generated, otherwise error code
+    int32 subThreadTryGenOutput(FMyMJEventWithTimeStampBaseCpp* pEventJustApplied);
 
     //Keywork accumulated means it does NOT reset inside, and the param can contain prev worked data before calling
     static void helperResolveVisualInfoChanges(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
@@ -789,6 +789,8 @@ protected:
 
     //play all events <= uiServerTime_ms
     void playGameProgressTo(uint32 uiServerTime_ms, bool bCatchUp);
+
+    class AMyMJGameRoomCpp* getRoomVerified() const;
 
 
     //TSharedPtr<FMyMJGameDeskVisualCoreDataProcessorCpp> m_pDataProcessor;

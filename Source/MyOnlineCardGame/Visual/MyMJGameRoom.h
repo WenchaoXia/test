@@ -107,7 +107,7 @@ public:
     UFUNCTION(BlueprintPure)
     inline int32 getCardModelInfoUnscaled(FMyMJGameActorModelInfoBoxCpp& modelInfo) const
     {
-        const AMyMJGameCardBaseCpp* pCDO = getCardCDO();
+        const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDO();
         if (IsValid(pCDO)) {
             pCDO->getModelInfo(modelInfo);
             return 0;
@@ -132,7 +132,8 @@ public:
 
 protected:
 
-    const AMyMJGameCardBaseCpp* getCardCDO() const;
+    //Warning: it is not the actually specified one, but casted to base type
+    const AMyMJGameCardBaseCpp* getCardBaseCDO() const;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "cards"))
         TArray<AMyMJGameCardBaseCpp*> m_aCards;
@@ -169,6 +170,19 @@ public:
         MY_VERIFY(IsValid(m_pDataSuit));
         return m_pDataSuit;
     };
+
+    
+    void onDeskUpdatedWithImportantChange(FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
+                                              FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
+                                              TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
+                                              TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices);
+
+    void onDeskEventApplied(FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
+                                           FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
+                                           TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
+                                           TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices,
+                                           FMyMJEventWithTimeStampBaseCpp& cEvent);
+
 
 protected:
 

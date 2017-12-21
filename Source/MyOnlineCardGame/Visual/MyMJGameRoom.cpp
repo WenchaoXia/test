@@ -60,7 +60,7 @@ UMyMJGameDeskResManagerCpp::~UMyMJGameDeskResManagerCpp()
 
 bool UMyMJGameDeskResManagerCpp::checkSettings() const
 {
-    const AMyMJGameCardBaseCpp* pCDO = getCardCDO();
+    const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDO();
     if (IsValid(pCDO)) {
         return true;
     }
@@ -74,7 +74,7 @@ int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModel
 {
     cModelInfoCache.clear();
 
-    const AMyMJGameCardBaseCpp* pCDO = getCardCDO();
+    const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDO();
     if (!IsValid(pCDO)) {
         return -1;
     }
@@ -100,8 +100,10 @@ AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx)
     }
 
     MY_VERIFY(idx < m_aCards.Num());
+    AMyMJGameCardBaseCpp* pRet = m_aCards[idx];
 
-    return m_aCards[idx];
+    MY_VERIFY(IsValid(pRet));
+    return pRet;
 }
 
 int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
@@ -111,9 +113,14 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
 
     double s0 = FPlatformTime::Seconds();
 
-    const AMyMJGameCardBaseCpp* pCDO = getCardCDO();
-    if (!IsValid(pCDO)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCDO is not valid %p, possible no card class specified."), pCDO);
+    //const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDO();
+    //if (!IsValid(pCDO)) {
+        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCDO is not valid %p, possible no card class specified."), pCDO);
+        //return -1;
+    //}
+
+    if (!IsValid(m_cCfgCardClass)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cCardClass is invalid: %p"), m_cCfgCardClass.Get());
         return -1;
     }
 
@@ -134,7 +141,9 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
     l = m_aCards.Num();
     int32 iDebugCOunt = 0;
     for (int32 i = l; i < count2reach; i++) {
-        AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(pCDO->StaticClass(), SpawnParams);
+        //AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(pCDO->StaticClass(), SpawnParams);
+        AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(m_cCfgCardClass, FVector(0, 0, 50), FRotator(0, 0, 0), SpawnParams);
+
         MY_VERIFY(IsValid(pNewCardActor));
         pNewCardActor->SetActorHiddenInGame(true);
         MY_VERIFY(m_aCards.Emplace(pNewCardActor) == i);
@@ -143,13 +152,13 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
 
     double s1 = FPlatformTime::Seconds();
 
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("prepareCardActor to %d, %d created, time used %f."), count2reach, iDebugCOunt, s1 - s0);
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("prepareCardActor %s, to %d, %d created, time used %f."), *m_cCfgCardClass->GetName(), count2reach, iDebugCOunt, s1 - s0);
 
     return 0;
     //GetWorld()->SpawnActor<AProjectile>(Location, Rotation, SpawnInfo);
 }
 
-const AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardCDO() const
+const AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardBaseCDO() const
 {
     if (!IsValid(m_cCfgCardClass)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cCardClass is invalid: %p"), m_cCfgCardClass.Get());
@@ -303,4 +312,58 @@ int32 AMyMJGameRoomCpp::retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache)
     }
 
     return 0;
+};
+
+
+void AMyMJGameRoomCpp::onDeskUpdatedWithImportantChange(FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
+                                                        FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
+                                                        TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
+                                                        TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices)
+{
+    TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mIdCardMap = mNewActorDataIdCards;
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onDeskUpdatedWithImportantChange, mIdCardMap.Num() %d."), mIdCardMap.Num());
+
+    for (auto& Elem : mIdCardMap)
+    {
+        int32 idCard = Elem.Key;
+        FMyMJGameCardVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
+
+        AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(idCard);
+
+        pCardActor->setValueShowing(cInfoAndResult.m_cVisualInfo.m_iCardValue);
+        pCardActor->SetActorHiddenInGame(false);
+        //pCardActor->setVisible(false);
+        pCardActor->SetActorTransform(cInfoAndResult.m_cVisualResult.m_cTransform);
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor %03d updated: %s."), idCard, *cInfoAndResult.genDebugString());
+    }
+};
+
+void AMyMJGameRoomCpp::onDeskEventApplied(FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
+                                            FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
+                                            TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
+                                            TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices,
+                                            FMyMJEventWithTimeStampBaseCpp& cEvent)
+{
+    TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mIdCardMap = mNewActorDataIdCards;
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onDeskEventApplied, mIdCardMap.Num() %d."), mIdCardMap.Num());
+
+    if (cEvent.getPusherResult(false) && cEvent.getPusherResult(false)->m_aResultDelta.Num() > 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("desk updating for event : %s"), *cEvent.getPusherResult(false)->m_aResultDelta[0].genDebugString());
+    }
+
+    for (auto& Elem : mIdCardMap)
+    {
+        int32 idCard = Elem.Key;
+        FMyMJGameCardVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
+
+        AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(idCard);
+
+        pCardActor->setValueShowing(cInfoAndResult.m_cVisualInfo.m_iCardValue);
+        pCardActor->SetActorHiddenInGame(false);
+        pCardActor->SetActorTransform(cInfoAndResult.m_cVisualResult.m_cTransform);
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor %03d updated: %s."), idCard, *cInfoAndResult.genDebugString());
+    }
+
+
 };

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 
+#include "Kismet/KismetStringLibrary.h"
+
 #include "MyMJGameVisualCommon.generated.h"
 
 UENUM(BlueprintType)
@@ -105,6 +107,14 @@ public:
         m_bVisible = false;
         m_cTransform = FTransform();
     };
+
+    inline
+    FString genDebugString() const
+    {
+        return FString::Printf(TEXT("[visible %d, trans %s]"), m_bVisible, *UKismetStringLibrary::Conv_TransformToString(m_cTransform));
+    };
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor transform updated, id %d, trans %s."), idCard, *UKismetStringLibrary::Conv_TransformToString(pCardActor->GetActorTransform()));
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "visible"))
     bool m_bVisible;

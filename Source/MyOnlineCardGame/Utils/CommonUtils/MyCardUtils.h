@@ -227,7 +227,7 @@ struct FMyValueIdMapCpp
     void collectAll(TArray<int32>& outIds) const;
     const TArray<int32>& getIdsAllCached();
 
-    void collectAllWithValue(TArray<FMyIdValuePair> outPairs) const;
+    void collectAllWithValue(TArray<FMyIdValuePair> &outPairs) const;
 
     int32 getCountByValue(int32 value) const;
 

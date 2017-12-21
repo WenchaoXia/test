@@ -31,8 +31,9 @@ FMyValueIdMapCpp::insert(int32 id, int32 value)
     if (!bExist) {
         pMapElem->m_aIds.Add(id);
         m_iCount++;
-        invalidCaches();
     }
+    invalidCaches();
+
     return !bExist;
 }
 
@@ -104,15 +105,15 @@ void FMyValueIdMapCpp::removeAllByValue(int32 value, TArray<FMyIdValuePair>& out
         return;
     }
 
-    int32 l = pMapElem->m_aIds.Num();
-    for (int32 i = 0; i < l; i++) {
+    int32 lRemove = pMapElem->m_aIds.Num();
+    for (int32 i = 0; i < lRemove; i++) {
         int32 idx = outPairs.Emplace();
         outPairs[idx].m_iId = pMapElem->m_aIds[i];
         outPairs[idx].m_iValue = value;
     }
 
     MY_VERIFY(m_mValueMap.Remove(value) == 1);
-    m_iCount -= l;
+    m_iCount -= lRemove;
     invalidCaches();
 
     if (m_iKeepOrder > 0) {
@@ -198,7 +199,7 @@ const TArray<int32>& FMyValueIdMapCpp::getIdsAllCached()
     return m_aIdsAllCached;
 }
 
-void FMyValueIdMapCpp::collectAllWithValue(TArray<FMyIdValuePair> outPairs) const
+void FMyValueIdMapCpp::collectAllWithValue(TArray<FMyIdValuePair> &outPairs) const
 {
     outPairs.Reset();
 
@@ -213,7 +214,11 @@ void FMyValueIdMapCpp::collectAllWithValue(TArray<FMyIdValuePair> outPairs) cons
             outPairs[idx].m_iId = cardId;
             outPairs[idx].m_iValue = cardValue;
         }
+    }
 
+    if (getCount() != outPairs.Num()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("all collected but count not equal: %d, %d."), getCount(), outPairs.Num());
+        MY_VERIFY(false);
     }
 }
 

@@ -64,6 +64,14 @@ public:
             m_iCardValue == other.m_iCardValue;
     };
 
+
+    inline
+    FString genDebugString() const
+    {
+        return FString::Printf(TEXT("[value %d, flip %s, posi %d:%s, vidxs %d:%d:%d]"), m_iCardValue, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eFlipState), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardSlotTypeCpp"), (uint8)m_eSlot),
+                                m_iIdxRow, m_iIdxColInRow, m_iIdxStackInCol);
+    };
+
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "flip state"))
         MyMJCardFlipStateCpp m_eFlipState;
 
@@ -110,6 +118,12 @@ struct FMyMJGameCardVisualInfoAndResultCpp
     GENERATED_USTRUCT_BODY()
 
 public:
+
+    inline
+    FString genDebugString() const
+    {
+        return m_cVisualInfo.genDebugString() + m_cVisualResult.genDebugString();
+    };
 
     FMyMJGameCardVisualInfoCpp  m_cVisualInfo;
     FMyMJGameActorVisualResultBaseCpp m_cVisualResult;

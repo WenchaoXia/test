@@ -525,8 +525,7 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadDataLoop()
         if (pInData->m_apNewFullData.Num() > 0) {
             FMyMJDataStructWithTimeStampBaseCpp& cFullState = pInData->m_apNewFullData[0];
 
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: %s"),
-                *cFullState.genDebugMsg());
+            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: %s"), *cFullState.genDebugMsg());
 
             m_pSubThreadData->getCoreDataRef() = cFullState;
             m_pSubThreadAccessor->helperSetCoreDataDirtyRecordAllDirty(*m_pSubThreadDataCoreDataDirtyRecordSincePrevSent);
@@ -536,8 +535,7 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadDataLoop()
         else if (pInData->m_apNewDeltaEvent.Num() > 0) {
             FMyMJEventWithTimeStampBaseCpp& cDeltaEvent = pInData->m_apNewDeltaEvent[0];
 
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: %s"),
-                *cDeltaEvent.genDebugMsg());
+            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("processor: %s"), *cDeltaEvent.genDebugMsg());
 
             m_pSubThreadData->getCoreDataRef().applyEvent(*m_pSubThreadAccessor, cDeltaEvent, m_pSubThreadDataCoreDataDirtyRecordSincePrevSent);
 
@@ -549,9 +547,13 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadDataLoop()
                 MY_VERIFY(false);  
             }
 
+            //two type of delta need gen out, one is have dur, other is core base set
             if (cDeltaEvent.getDuration_ms() > 0) {
                 bNeedOutPut = true;
                 pImportantEventJustApplied = &cDeltaEvent;
+            }
+            else if (cDeltaEvent.getPusherResult(false) != NULL && cDeltaEvent.getPusherResult(false)->m_aResultBase.Num() > 0) {
+                bNeedOutPut = true;
             }
         }
         else {
@@ -565,9 +567,9 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadDataLoop()
         m_pSubThreadData->setTime(pInData->m_uiNewServerWorldTime_ms);
 
         if (bNeedOutPut) {
-            bool bGened = subThreadTryGenOutput(m_bSubThreadHelperSkippedEventBefore? NULL : pImportantEventJustApplied);
-            if (!bGened) {
-                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("failed to gen out for important thing, mark it now."));
+            int32 iErrorCode = subThreadTryGenOutput(m_bSubThreadHelperSkippedEventBefore? NULL : pImportantEventJustApplied);
+            if (iErrorCode != 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("failed to gen out for important thing, mark it now, iErrorCode %d."), iErrorCode);
                 m_bSubThreadHelperSkippedEventBefore = true;
             }
         }
@@ -580,16 +582,17 @@ void FMyMJGameDeskProcessorRunnableCpp::subThreadDataLoop()
     subThreadTryGenOutput(NULL);
 };
 
-bool FMyMJGameDeskProcessorRunnableCpp::subThreadTryGenOutput(FMyMJEventWithTimeStampBaseCpp* pEventJustApplied)
+int32 FMyMJGameDeskProcessorRunnableCpp::subThreadTryGenOutput(FMyMJEventWithTimeStampBaseCpp* pEventJustApplied)
 {
-    if (m_pSubThreadSentLabel->m_cVisualData.getTime() >= m_pSubThreadData->getTime() && m_pSubThreadDataCoreDataDirtyRecordSincePrevSent->isEmpty()) {
+    if (m_pSubThreadSentLabel->m_cVisualData.getTime() >= m_pSubThreadData->getTime() && m_pSubThreadDataCoreDataDirtyRecordSincePrevSent->isEmpty() &&
+        m_pSubThreadData->getCoreDataRefConst().getIdEventApplied() <= m_pSubThreadSentLabel->m_cVisualData.getCoreDataRefConst().getIdEventApplied()) {
         //Time not moved forward and important data is not dirty
-        return false;
+        return -1;
     }
 
     FMyMJGameDeskProcessorDataOutputCpp *pOut = m_cDataOut.getItemForProduce();
     if (pOut == NULL) {
-        return false;
+        return -2;
     }
 
     MY_VERIFY(m_pSubThreadSentLabel->m_cVisualData.getCfgRefConst().m_uiStateKey == m_pSubThreadData->getCfgRefConst().m_uiStateKey);
@@ -619,6 +622,9 @@ bool FMyMJGameDeskProcessorRunnableCpp::subThreadTryGenOutput(FMyMJEventWithTime
         helperResolveVisualInfoChanges(m_pSubThreadData->getCfgRefConst(), m_pSubThreadData->getCoreDataRefConst(), *m_pSubThreadDataCoreDataDirtyRecordSincePrevSent, m_pSubThreadSentLabel->m_cVisualData.getActorDataRefConst(),
                                        mIdCardVisualInfoAccumulatedChanges, mIdDiceValueAccumulatedChanges);
 
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("delta gen in progress, dirty %d, idCard map num %d, %d, idDice map num %d, %d."), !pOutDataDelta->m_apNewCoreDataDirtyRecord[0].isEmpty(),
+                 //mIdCardVisualInfoAccumulatedChanges.Num(), pOutDataDelta->m_mNewActorDataIdCards.Num(), mIdDiceValueAccumulatedChanges.Num(), pOutDataDelta->m_mNewActorDataIdDices.Num());
+
         helperResolveVisualResultChanges(m_pSubThreadData->getCfgRefConst(), mIdCardVisualInfoAccumulatedChanges, mIdDiceValueAccumulatedChanges, pOutDataDelta->m_mNewActorDataIdCards, pOutDataDelta->m_mNewActorDataIdDices);
 
         if (pEventJustApplied) {
@@ -628,6 +634,9 @@ bool FMyMJGameDeskProcessorRunnableCpp::subThreadTryGenOutput(FMyMJEventWithTime
             pOutDataDelta->m_apEventJustApplied[0] = *pEventJustApplied;
         }
         pOutDataDelta->m_bHelperSkippedEventBefore = m_bSubThreadHelperSkippedEventBefore;
+
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("delta output gened, dirty %d, idCard map num %d, %d, idDice map num %d, %d."), !pOutDataDelta->m_apNewCoreDataDirtyRecord[0].isEmpty(),
+            //mIdCardVisualInfoAccumulatedChanges.Num(), pOutDataDelta->m_mNewActorDataIdCards.Num(), mIdDiceValueAccumulatedChanges.Num(), pOutDataDelta->m_mNewActorDataIdDices.Num());
 
         //clear up subthread records
         m_pSubThreadDataCoreDataDirtyRecordSincePrevSent->reset();
@@ -643,7 +652,7 @@ bool FMyMJGameDeskProcessorRunnableCpp::subThreadTryGenOutput(FMyMJEventWithTime
     pOut->verifyValid();
     m_cDataOut.putInProducedItem(pOut);
 
-    return true;
+    return 0;
 
 };
 
@@ -716,6 +725,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
     TMap<int32, int32> mIdDiceValueTemp;
 
     const TSet<int32>& sD = cInBaseDirtyRecord.getRecordSet();
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("sd Num %d, in empty %d."), sD.Num(), cNextCoreDataDirtyRecordSincePrev.isEmpty());
 
     for (auto& Elem : sD)
     {
@@ -726,9 +736,13 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
         cInBaseDirtyRecord.recordValueToIdxValuesWith3Idxs(v, subIdx0, subIdx1, subIdx2);
         eMainType = MyMJGameCoreDataDirtyMainTypeCpp(subIdx0);
 
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("process dirty map %d %d %d."), subIdx0, subIdx1, subIdx2);
+
         if (eMainType == MyMJGameCoreDataDirtyMainTypeCpp::Card) {
             int32 idxAttender = subIdx1;
             MyMJCardSlotTypeCpp eSlot = (MyMJCardSlotTypeCpp)subIdx2;
+
+            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("process dirty card slot %d, %d"), idxAttender, (uint8)eSlot);
 
             const FMyMJRoleDataAttenderPublicCpp& attenderPublic = cInBase.getRoleDataAttenderPublicRefConst(idxAttender);
             int32 iColPerRow;
@@ -764,7 +778,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                         MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::Untaken);
 
                         pCardVisualInfo->m_iIdxRow = 0;
-                        pCardVisualInfo->m_iIdxColInRow = cCardInfo.m_cPosi.m_iIdxInSlot0;
+                        pCardVisualInfo->m_iIdxColInRow = cCardInfo.m_cPosi.m_iIdxInSlot0 - attenderPublic.m_cUntakenSlotSubSegmentInfo.m_iIdxStart;
                         pCardVisualInfo->m_iIdxStackInCol = cCardInfo.m_cPosi.m_iIdxInSlot1;
 
                         pCardVisualInfo->m_iCardValue = cardValue;
@@ -812,8 +826,9 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 for (int32 i = 0; i < l0; i++) {
                     int32 cardId = aIdHandCards[i];
                     int32 cardValue = ccardValuePack.getByIdx(cardId);
-                    m_cSortCards.insert(cardId, cardValue);
+                    MY_VERIFY(m_cSortCards.insert(cardId, cardValue));
                 }
+                MY_VERIFY(m_cSortCards.getCount() == l0);
                 TArray<FMyIdValuePair> aPairs;
                 m_cSortCards.collectAllWithValue(aPairs);
                 MY_VERIFY(aPairs.Num() == l0);
@@ -1098,8 +1113,8 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
 };
 
 #define GetKey_CardVisualInfo(info) (((info.m_iIdxAttender & 0xff) << 8) | (((uint8)info.m_eSlot & 0xff) << 0))
-#define GetIdxAttender_CardVisualInfoKey(key) ((key >> 8) && 0xff)
-#define GetESlot_CardVisualInfoKey(key)       ((MyMJCardSlotTypeCpp)((key >> 0) && 0xff))
+#define GetIdxAttender_CardVisualInfoKey(key) ((key >> 8) & 0xff)
+#define GetESlot_CardVisualInfoKey(key)       ((MyMJCardSlotTypeCpp)((key >> 0) & 0xff))
 
 void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
                                                                             TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoAccumulatedChanges,
@@ -1119,6 +1134,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const F
     TMap<int32, FMyMJGameCardVisualInfoCpp> mWorkingIdCardVisualInfo;
     int32 iWorkingIdCardVisualInfoKey = -1;
 
+    FMyMJGameCardVisualInfoCpp cDebugLast;
     for (auto& Elem : mIdCardVisualInfoAccumulatedChanges)
     {
         int32 idCard = Elem.Key;
@@ -1129,12 +1145,19 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const F
         if (mWorkingIdCardVisualInfo.Num() == 0) {
             mWorkingIdCardVisualInfo.Emplace(idCard) = cInfo;
             iWorkingIdCardVisualInfoKey = key;
+            cDebugLast = cInfo;
         }
         else {
-            if (iWorkingIdCardVisualInfoKey != key) {
+            if (iWorkingIdCardVisualInfoKey != key && iWorkingIdCardVisualInfoKey >= 0) {
                 //handle it
                 FMyMJGameDeskVisualPointCfgCpp cVisualPoint;
-                MY_VERIFY(cCfgCache.m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(GetIdxAttender_CardVisualInfoKey(iWorkingIdCardVisualInfoKey), GetESlot_CardVisualInfoKey(iWorkingIdCardVisualInfoKey), cVisualPoint) == 0);
+                if (cCfgCache.m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(GetIdxAttender_CardVisualInfoKey(iWorkingIdCardVisualInfoKey), GetESlot_CardVisualInfoKey(iWorkingIdCardVisualInfoKey), cVisualPoint) != 0)
+                {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("error, iWorkingIdCardVisualInfoKey 0x%x, info %d, %d."), iWorkingIdCardVisualInfoKey, cDebugLast.m_iIdxAttender, (uint8)cDebugLast.m_eSlot);
+                    MY_VERIFY(false);
+                }
+                
+                
                 helperResolveCardVisualResultChanges(cVisualPoint, cCfgCache.m_cModelInfo.m_cCardModelInfo, mWorkingIdCardVisualInfo, mOutIdCardVisualInfoAndResultChanges);
 
                 mWorkingIdCardVisualInfo.Reset();
@@ -1146,8 +1169,9 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const F
         }
     }
 
-    if (mWorkingIdCardVisualInfo.Num() > 0) {
+    if (iWorkingIdCardVisualInfoKey >= 0) {
         //handle it
+        MY_VERIFY(mWorkingIdCardVisualInfo.Num() > 0);
         FMyMJGameDeskVisualPointCfgCpp cVisualPoint;
         MY_VERIFY(cCfgCache.m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(GetIdxAttender_CardVisualInfoKey(iWorkingIdCardVisualInfoKey), GetESlot_CardVisualInfoKey(iWorkingIdCardVisualInfoKey), cVisualPoint) == 0);
         helperResolveCardVisualResultChanges(cVisualPoint, cCfgCache.m_cModelInfo.m_cCardModelInfo, mWorkingIdCardVisualInfo, mOutIdCardVisualInfoAndResultChanges);
@@ -1414,10 +1438,10 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveCardTransform(const FMyMJGa
 
     outTransform = relative2VisualPointTransform * cTransFormCenter;
 
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("relative2VisualPointTransform %s, cTransFormCenter %s, outTransform %s."),
-        *UKismetStringLibrary::Conv_TransformToString(relative2VisualPointTransform),
-        *UKismetStringLibrary::Conv_TransformToString(cTransFormCenter),
-        *UKismetStringLibrary::Conv_TransformToString(outTransform));
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("relative2VisualPointTransform %s, cTransFormCenter %s, outTransform %s."),
+        //*UKismetStringLibrary::Conv_TransformToString(relative2VisualPointTransform),
+        //*UKismetStringLibrary::Conv_TransformToString(cTransFormCenter),
+        //*UKismetStringLibrary::Conv_TransformToString(outTransform));
 
     //outLocationWorld = outTransform.GetLocation();
     //outRotatorWorld = outTransform.GetRotation().Rotator();
@@ -1978,8 +2002,24 @@ void UMyMJGameDeskVisualDataObjCpp::playGameProgressTo(uint32 uiServerTime_ms, b
 
         FMyMJGameDeskProcessorDataOutputCpp::helperApplyToDeskVisualData(m_cDeskVisualDataNow, *pOut);
 
-        uiDataConsumedTime_ms = pOut->m_uiNewServerWorldTime_ms;
+        if (pOut->m_apNewVisualDataDelta.Num() > 0) {
+            FMyMJGameDeskVisualDataDeltaCpp &cDelta = pOut->m_apNewVisualDataDelta[0];
+            
+            MY_VERIFY(cDelta.m_apNewCoreData.Num() > 0);
+            MY_VERIFY(cDelta.m_apNewCoreDataDirtyRecord.Num() > 0);
 
+            if (cDelta.m_apEventJustApplied.Num() > 0) {
+                getRoomVerified()->onDeskEventApplied(cDelta.m_apNewCoreData[0], cDelta.m_apNewCoreDataDirtyRecord[0], cDelta.m_mNewActorDataIdCards, cDelta.m_mNewActorDataIdDices, cDelta.m_apEventJustApplied[0]);
+            }
+            else {
+                //updating base
+                if (cDelta.m_apNewCoreDataDirtyRecord[0].isEmpty() || cDelta.m_mNewActorDataIdCards.Num() > 0 || cDelta.m_mNewActorDataIdDices.Num() > 0) {
+                    getRoomVerified()->onDeskUpdatedWithImportantChange(cDelta.m_apNewCoreData[0], cDelta.m_apNewCoreDataDirtyRecord[0], cDelta.m_mNewActorDataIdCards, cDelta.m_mNewActorDataIdDices);
+                }
+            }
+        }
+
+        uiDataConsumedTime_ms = pOut->m_uiNewServerWorldTime_ms;
         m_pProcessor->getRunnableRef().mainThreadPutDataOutputAfterConsume(pOut);
     }
 
@@ -1987,8 +2027,25 @@ void UMyMJGameDeskVisualDataObjCpp::playGameProgressTo(uint32 uiServerTime_ms, b
         MY_VERIFY(uiDataConsumedTime_ms >= m_cGameProgressData.m_uiServerTimeConfirmed_ms);
 
         if (uiDataConsumedTime_ms > m_cGameProgressData.m_uiServerTimeConfirmed_ms) {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("confirmed progress: %s -> %s."), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_cGameProgressData.m_uiServerTimeConfirmed_ms), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiDataConsumedTime_ms));
+            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("confirmed progress: %s -> %s."), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_cGameProgressData.m_uiServerTimeConfirmed_ms), *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(uiDataConsumedTime_ms));
             m_cGameProgressData.m_uiServerTimeConfirmed_ms = uiDataConsumedTime_ms;
         }
     }
+}
+
+AMyMJGameRoomCpp* UMyMJGameDeskVisualDataObjCpp::getRoomVerified() const
+{
+    //UObject* pOuter = GetOuter()->GetOuter();
+    AMyMJGameRoomCpp* pRet = GetTypedOuter<AMyMJGameRoomCpp>();
+    //AMyMJGameRoomCpp* pRet = Cast<AMyMJGameRoomCpp>(pOuter);
+
+    /*
+    if (!IsValid(pRet)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ret not valid, pOuter %p, class name %s."), pOuter, pOuter ? *pOuter->GetClass()->GetName() : TEXT("NULL"));
+        MY_VERIFY(false);
+    }
+    */
+
+    MY_VERIFY(IsValid(pRet));
+    return pRet;
 }
