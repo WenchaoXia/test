@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Utils/CommonUtils/MyCardUtils.h"
 #include "MJ/Utils/MyMJUtils.h"
 #include "MJ/MyMJGameAttender.h"
 
@@ -526,16 +527,20 @@ public:
 
     };
 
-    //UPROPERTY()
-    //TArray<FMyMJEventWithTimeStampBaseCpp> m_aEvents;
-
-    UPROPERTY()
-    TArray<FMyMJEventWithTimeStampBaseCpp>	Items;
+    inline TArray<FMyMJEventWithTimeStampBaseCpp>& getItemsRef()
+    {
+        return m_aItems;
+    };
 
     bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
     {
-        return FFastArraySerializer::FastArrayDeltaSerialize<FMyMJEventWithTimeStampBaseCpp, FMyMJGameEventArray>(Items, DeltaParms, *this);
+        return FFastArraySerializer::FastArrayDeltaSerialize<FMyMJEventWithTimeStampBaseCpp, FMyMJGameEventArray>(m_aItems, DeltaParms, *this);
     };
+
+protected:
+
+    UPROPERTY()
+    TArray<FMyMJEventWithTimeStampBaseCpp> m_aItems;
 
 };
 
@@ -566,9 +571,11 @@ public:
     UMyMJGameEventCycleBuffer(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
     {
         m_iTest = 0;
-        resize(64);
 
-        m_cEventArray.MarkArrayDirty();
+        //Although this can be put in member construct declaration, but it have a sequence problem that m_cEventArrayMeta's constructur may be executed after m_cCycleBuffer's.
+        //It is said member declaration sequence can solved it, but we are acrossing platform, and I don't want some compiler fuck with it, so init it here!
+        m_cCycleBuffer.reinit(TEXT("EventCycleBuffer"), &m_cEventArrayData.getItemsRef(), &m_cEventArrayMeta, 64);
+        m_cEventArrayData.MarkArrayDirty();
     };
 
     virtual ~UMyMJGameEventCycleBuffer()
@@ -577,48 +584,29 @@ public:
     };
 
     //will trigger a clear()
-    void resize(int32 iNewSizeMax)
+    inline void resize(int32 iNewSizeMax)
     {
-        m_iSizeMax = iNewSizeMax;
-        MY_VERIFY(m_iSizeMax > 0);
-
-        //m_cEventArray.Items.AddZeroed(m_iSizeMax);
-
+        m_cCycleBuffer.resize(iNewSizeMax);
         clearInGame();
-
-        //m_cEventArray.Items.Reset(0);
-        //m_cEventArray.MarkArrayDirty();
     };
 
-    void clearInGame()
+    inline void clearInGame()
     {
-        m_idxHead = MyIntIdDefaultInvalidValue;
-        m_iCount = 0;
+        m_cCycleBuffer.clearInGame();
         m_uiTimeRangeStart_ms = 0;
         m_uiTimeRangeEnd_ms = 0;
 
-        //m_iHelperIdxLastCorePusherEvent = MyIntIdDefaultInvalidValue;
-        //m_iHelperIdxLastTrivalEvent = MyIntIdDefaultInvalidValue;
+        m_cEventArrayData.MarkArrayDirty();
     };
 
     //This will assert if not enough of items were removed
     void removeFromHead(int32 countToRemove)
     {
-        MY_VERIFY(countToRemove > 0);
+        int32 iRemoved = m_cCycleBuffer.removeFromHead(countToRemove);
+        MY_VERIFY(iRemoved == countToRemove);
 
-        if (m_iCount >= countToRemove) {
-            m_idxHead = (m_idxHead + countToRemove) % m_iSizeMax;
-            m_iCount -= countToRemove;
-        }
-        else {
-            MY_VERIFY(false);
-        }
-
-        //m_iHelperIdxLastCorePusherEvent = m_iHelperIdxLastCorePusherEvent < countToRemove ? -1 : m_iHelperIdxLastCorePusherEvent - countToRemove;
-        //m_iHelperIdxLastTrivalEvent = m_iHelperIdxLastTrivalEvent < countToRemove ? -1 : m_iHelperIdxLastTrivalEvent - countToRemove;
-
-        if (m_iCount > 0) {
-            const FMyMJEventWithTimeStampBaseCpp& event = peekRefAt(0);
+        if (getCount() > 0) {
+            const FMyMJEventWithTimeStampBaseCpp& event = peekRefAt(0, NULL, true);
             uint32 uiStartTime = event.getStartTime_ms();
             uint32 uiEndTime = event.getStartTime_ms() + event.getDuration_ms();
 
@@ -644,84 +632,48 @@ public:
     };
     
     inline
-    int32 getCount(bool *pOutIsFull) const
+    int32 getCount() const
     {
-        if (pOutIsFull) {
-            *pOutIsFull = m_iCount >= m_iSizeMax;
-        }
-
-        return m_iCount;
+        return m_cCycleBuffer.getCount();
     };
 
     inline
-    int32 getSizeMax() const
+    int32 getCountMax() const
     {
-        return m_iSizeMax;
+        return m_cCycleBuffer.getCountMax();
     };
+
+    inline
+    bool isFull() const
+    {
+        return m_cCycleBuffer.isFull();
+    }
 
     inline const FMyMJEventWithTimeStampBaseCpp* peekLast() const
     {
-        if (m_iCount > 0) {
-            return &peekRefAt(m_iCount - 1);
-        }
-
-        return NULL;
+        return m_cCycleBuffer.peekLast();
     };
 
     //This will assert if out of range
     const FMyMJEventWithTimeStampBaseCpp& peekRefAt(int32 idxFromHead, int32 *pOutIdxInArrayDebug = NULL, bool bVerify = true) const
     {
-        MY_VERIFY(idxFromHead < m_iCount && idxFromHead >= 0);
-        int32 idxFound = (m_idxHead + idxFromHead) % m_iSizeMax;
-        if (pOutIdxInArrayDebug) {
-            *pOutIdxInArrayDebug = idxFound;
-        }
-
-        int32 l = m_cEventArray.Items.Num();
-        if (idxFound >= l) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("idx out of range %d, %d / %d."), idxFromHead, idxFound, l);
-            MY_VERIFY(false);
-        }
-        const FMyMJEventWithTimeStampBaseCpp& ret = m_cEventArray.Items[idxFound];
-
-        //extra check
-        //uint32 time_ms = ret.getEndTime_ms();
-        //if (time_ms <= 0) {
-            //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("elem at %d have timestamp %d, not valid! internal state: m_idxHead %d, m_iCount %d."), idxFromHead, time_ms, m_idxHead, m_iCount);
-            //MY_VERIFY(false);
-        //}
+        int32 idxInArrayDebug = 0;
+        const FMyMJEventWithTimeStampBaseCpp* pRet = m_cCycleBuffer.peekRefAt(idxFromHead, &idxInArrayDebug);
+        MY_VERIFY(pRet);
 
         if (bVerify) {
-            if (ret.m_iIdxDebug != idxFound) {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("elem idx not equal, idxFromHead %d, idxFound %d, m_iIdxDebug %d."), idxFromHead, idxFound, ret.m_iIdxDebug);
+            if (idxInArrayDebug != pRet->m_iIdxDebug) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("elem idx not equal, idxFromHead %d, idxInArrayDebug %d, pRet->m_iIdxDebug %d."), idxFromHead, idxInArrayDebug, pRet->m_iIdxDebug);
                 MY_VERIFY(false);
             }
         }
-
-        return ret;
-    };
-
-    /*
-    inline
-    const FMyMJEventWithTimeStampBaseCpp* getLastCorePusherEvent() const
-    {
-        if (m_iHelperIdxLastCorePusherEvent >= 0) {
-            return &peekRefAt(m_iHelperIdxLastCorePusherEvent);
+ 
+        if (pOutIdxInArrayDebug) {
+            *pOutIdxInArrayDebug = idxInArrayDebug;
         }
 
-        return NULL;
+        return *pRet;
     };
-
-    inline
-    const FMyMJEventWithTimeStampBaseCpp* getLastTrivalEvent() const
-    {
-        if (m_iHelperIdxLastTrivalEvent >= 0) {
-            return &peekRefAt(m_iHelperIdxLastTrivalEvent);
-        }
-
-        return NULL;
-    };
-    */
 
     //will assert if buffer is full
     FMyMJEventWithTimeStampBaseCpp& addToTailWhenNotFull(uint32 uiTimeStamp_ms, uint32 uiDur_ms, MyMJGameCoreRelatedEventMainTypeCpp eMainType)
@@ -797,8 +749,10 @@ public:
     //return errorCode
     int32 verifyData(bool bShowLog) const
     {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("verifyData() exectuing."));
+
         uint32 timestamp_end = 0;
-        int32 l = getCount(NULL);
+        int32 l = getCount();
         int32 iError = 0;
         int32 idEventLast = -1;
         for (int32 i = 0; i < l; i++) {
@@ -864,23 +818,9 @@ public:
         return iError;
     };
 
-    void addItemFromOther(const FMyMJEventWithTimeStampBaseCpp& itemOther)
-    {
-        uint32 startTime = itemOther.getStartTime_ms();
-        uint32 dur = itemOther.getDuration_ms();
-        FMyMJEventWithTimeStampBaseCpp& newAdded = addToTailWhenNotFull(startTime, dur, itemOther.getMainType());
-        int32 oldIdxDebug = newAdded.m_iIdxDebug;
-        newAdded = itemOther;
+    //FMyMJGameEventCycleBufferReplicatedDelegate m_cUpdateNotifier;
 
-        if (newAdded.m_iIdxDebug != oldIdxDebug) {
-            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("newAdded idx changing %d -> %d. "), newAdded.m_iIdxDebug, oldIdxDebug);
-            newAdded.m_iIdxDebug = oldIdxDebug;
-        }
-    };
-
-    FMyMJGameEventCycleBufferReplicatedDelegate m_cUpdateNotifier;
-
-    UPROPERTY(ReplicatedUsing = OnRep_Data)
+    UPROPERTY(Replicated)
     int32 m_iTest;
 
 protected:
@@ -892,85 +832,40 @@ protected:
 
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
 
-    UFUNCTION()
-    void OnRep_Data()
-    {
-        m_cUpdateNotifier.Broadcast(0);
-    };
-
     //return whether buffer overflow and old data is overwriten
     bool addToTail(const FMyMJEventWithTimeStampBaseCpp* itemToSetAs, FMyMJEventWithTimeStampBaseCpp** ppOutNewAddedItem)
     {
-        int32 idxNew = -1;
-        /*
-        if (m_iCount > 0) {
-            MY_VERIFY(m_idxHead >= 0);
-            idxNew = (m_idxHead + m_iCount) % m_iSizeMax;
+        bool bOverFlow = false;
+        if (isFull()) {
+            bOverFlow = true;
+            removeFromHead(1);
         }
-        else if (m_iCount == 0) {
-            idxNew = 0;
-            m_idxHead = 0;
-        }
-        else {
-            MY_VERIFY(false);
-        }
-        */
+        
+        FMyMJEventWithTimeStampBaseCpp* pNewAdded = NULL;
+        int32 iInternalIdx = m_cCycleBuffer.addToTail(NULL, &pNewAdded);
+        MY_VERIFY(iInternalIdx >= 0);
+        MY_VERIFY(pNewAdded);
 
-        if (m_idxHead >= 0) {
-            MY_VERIFY(m_idxHead >= 0);
-            idxNew = (m_idxHead + m_iCount) % m_iSizeMax;
-        }
-        else {
-            MY_VERIFY(m_iCount == 0);
-            idxNew = 0;
-            m_idxHead = 0;
-        }
-
-        int32 l = m_cEventArray.Items.Num();
-        if (idxNew >= l) {
-            MY_VERIFY(idxNew == l);
-            int32 idx = m_cEventArray.Items.Emplace();
-            MY_VERIFY(idx == idxNew);
-        }
-
-        FMyMJEventWithTimeStampBaseCpp& newItem = m_cEventArray.Items[idxNew];
-        newItem.reset();
-        newItem.m_iIdxDebug = idxNew;
-
-        m_cEventArray.MarkItemDirty(newItem);
-        //m_cEventArray.MarkArrayDirty();
-
+        pNewAdded->reset();
         if (itemToSetAs) {
-            newItem = *itemToSetAs;
+            *pNewAdded = *itemToSetAs;
         }
-  
         if (ppOutNewAddedItem) {
-            *ppOutNewAddedItem = &newItem;
+            *ppOutNewAddedItem = pNewAdded;
         }
 
-        m_iCount++;
-        if (m_iCount > m_iSizeMax) {
-            m_iCount = m_iSizeMax;
-            m_idxHead = (idxNew + 1) % m_iSizeMax;
-            return true;
-        }
+        pNewAdded->m_iIdxDebug = iInternalIdx;
 
-        return false;
+        m_cEventArrayData.MarkItemDirty(*pNewAdded);
+
+        return bOverFlow;
     };
 
-    //UPROPERTY(ReplicatedUsing = OnRep_Data)
     UPROPERTY(Replicated)
-    FMyMJGameEventArray m_cEventArray;
+    FMyMJGameEventArray m_cEventArrayData;
 
     UPROPERTY(Replicated)
-    int32 m_iSizeMax;
-
-    //only valid when count > 0
-    UPROPERTY(Replicated)
-    int32 m_idxHead;
-
-    UPROPERTY(Replicated)
-    int32 m_iCount;
+    FMyCycleBufferMetaDataCpp m_cEventArrayMeta;
 
     UPROPERTY(Replicated)
     uint32 m_uiTimeRangeStart_ms;
@@ -978,14 +873,7 @@ protected:
     UPROPERTY(Replicated)
     uint32 m_uiTimeRangeEnd_ms;
 
-    //UPROPERTY(ReplicatedUsing = OnRep_Data)
-    //int32 m_iHelperIdxLastCorePusherEvent;
-
-    //UPROPERTY(ReplicatedUsing = OnRep_Data)
-    //int32 m_iHelperIdxLastTrivalEvent;
-
-    //UPROPERTY(ReplicatedUsing = OnRep_Data)
-    //int32 m_iHelperEventsBasePusherCount; //how many base puhser we have inside
+    FMyCycleBuffer<FMyMJEventWithTimeStampBaseCpp> m_cCycleBuffer;
 };
 
 //typedef class UMyMJDataSequencePerRoleCpp UMyMJDataSequencePerRoleCpp;
@@ -1197,7 +1085,7 @@ public:
         //int32 l = m_pEventsApplyingAndApplied->getCount(NULL);
         FString ret = FString::Printf(TEXT("role %d, base time %d [%d:%d:%d:%d], m_pEventsApplyingAndApplied valid %d."), (uint8)m_cFullData.getRole(), m_cFullData.getTime_ms(), coreData.m_iGameId, coreData.m_iPusherIdLast, coreData.m_iActionGroupId, (uint8)coreData.m_eGameState, IsValid(m_pDeltaDataEvents));
         if (IsValid(m_pDeltaDataEvents)) {
-            int32 l = m_pDeltaDataEvents->getCount(NULL);
+            int32 l = m_pDeltaDataEvents->getCount();
             ret += FString::Printf(TEXT("event count %d, event's m_iTest %d."), l, m_pDeltaDataEvents->m_iTest);
         }
         //for (int32 i = 0; i < l; i++) {
@@ -1249,7 +1137,7 @@ public:
         m_cFullData.reset();
 
         if (IsValid(m_pDeltaDataEvents)) {
-            MY_VERIFY(m_pDeltaDataEvents->getCount(NULL) == 0);
+            MY_VERIFY(m_pDeltaDataEvents->getCount() == 0);
             m_pDeltaDataEvents->resize(newSize);
         }
         markDirtyForRep();
@@ -1290,12 +1178,12 @@ protected:
             return;
         }
 
-        MY_VERIFY(count <= m_pDeltaDataEvents->getCount(NULL));
+        MY_VERIFY(count <= m_pDeltaDataEvents->getCount());
 
         if (m_iFullDataRecordType == MyMJDataSequencePerRoleFullDataRecordTypeBottom) {
             for (int32 i = 0; i < count; i++) {
 
-                const FMyMJEventWithTimeStampBaseCpp& cEvent = m_pDeltaDataEvents->peekRefAt(i);
+                const FMyMJEventWithTimeStampBaseCpp& cEvent = m_pDeltaDataEvents->peekRefAt(i, NULL, true);
                 m_cFullData.applyEvent(m_cAccessor, cEvent, NULL);
 
             }
@@ -1664,7 +1552,7 @@ public:
             }
         }
 
-        markDirtyForRep();
+        //markDirtyForRep();
     };
 
     FString genDebugMsg()
@@ -1703,6 +1591,7 @@ public:
         }
     };
 
+    /*
     void markDirtyForRep()
     {
         m_iRepKeyOfState++;
@@ -1722,6 +1611,7 @@ public:
         }
         markDirtyForRep();
     };
+    */
 
     inline
     bool isReadyToGiveNextEvent(uint32 uiServerWorldTime_ms) const

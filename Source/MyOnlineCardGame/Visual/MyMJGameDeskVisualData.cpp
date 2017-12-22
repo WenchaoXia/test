@@ -260,12 +260,12 @@ int32 FMyMJGameDeskProcessorRunnableCpp::mainThreadTryFeedEvents(UMyMJDataSequen
         return MyTryFeedEventRetDataReplicationIncomplete;
     }
 
-    if (pEvents->getCount(NULL) <= 0) {
+    if (pEvents->getCount() <= 0) {
 
         return MyTryFeedEventRetAllProcessed;
     }
 
-    int32 deltaCount = pEvents->getCount(NULL);
+    int32 deltaCount = pEvents->getCount();
 
     uint32 idEventDeltaFirst = pEvents->peekRefAt(0).getIdEvent();
     uint32 idEventDeltaLast = pEvents->peekRefAt(deltaCount - 1).getIdEvent();

@@ -144,11 +144,8 @@ void UMyMJGameEventCycleBuffer::GetLifetimeReplicatedProps(TArray< FLifetimeProp
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_iTest);
-
-    DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_cEventArray);
-    DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_iSizeMax);
-    DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_idxHead);
-    DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_iCount);
+    DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_cEventArrayData);
+    DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_cEventArrayMeta);
     DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_uiTimeRangeStart_ms);
     DOREPLIFETIME(UMyMJGameEventCycleBuffer, m_uiTimeRangeEnd_ms);
 
@@ -488,8 +485,8 @@ void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTim
 {
     MY_VERIFY(IsValid(m_pDeltaDataEvents));
 
-    bool bIsFull = false;
-    int32 l = m_pDeltaDataEvents->getCount(&bIsFull);
+    bool bIsFull = m_pDeltaDataEvents->isFull();
+    int32 l = m_pDeltaDataEvents->getCount();
     if (l <= 0) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cEventsApplyingAndApplied have zero lenth: %d, not supposed to happen."), l);
         MY_VERIFY(false);
@@ -687,7 +684,7 @@ void UMyMJDataAllCpp::clearInGame()
         pSeq->clearInGame();
     }
 
-    markDirtyForRep();
+    //markDirtyForRep();
 
     m_fDebugSupposedReplicationUpdateLastRealTime = 0;
     m_uiDebugSupposedReplicationUpdateLastIdEvent = 0;
@@ -927,7 +924,7 @@ void UMyMJDataAllCpp::updateDebugInfo(float fWorldRealTimeNow, uint32 uiIdEventB
     uint32 uiIdEventNow = 0;
     pSeq->getFullAndDeltaLastData(&uiIdEventNow, NULL);
 
-    int32 bufferSize = pSeq->getDeltaDataEvents(true)->getSizeMax();
+    int32 bufferSize = pSeq->getDeltaDataEvents(true)->getCountMax();
     int32 eventNumAddedThisTurn = (uiIdEventNow - uiIdEventBefore);
     if (eventNumAddedThisTurn > bufferSize) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("in one turn,    event adding is too fast! %d/%d added."), eventNumAddedThisTurn, bufferSize);
@@ -935,7 +932,7 @@ void UMyMJDataAllCpp::updateDebugInfo(float fWorldRealTimeNow, uint32 uiIdEventB
 
     int32 eventNumAddedAfterPrevUpdate = (uiIdEventNow - m_uiDebugSupposedReplicationUpdateLastIdEvent);
     if (eventNumAddedAfterPrevUpdate > bufferSize) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("in suppoed rep, event adding is too fast! %d/%d added."), eventNumAddedAfterPrevUpdate, bufferSize);
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("in supposed rep, event adding is too fast! %d/%d added."), eventNumAddedAfterPrevUpdate, bufferSize);
     }
 
     if (fWorldRealTimeNow >= (m_fDebugSupposedReplicationUpdateLastRealTime + (1.f / MyReplicateUpdateFreqMax))) {

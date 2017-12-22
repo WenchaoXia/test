@@ -566,11 +566,12 @@ protected:
     FRunnableThread* m_pThread;
 };
 
-//Warning:: don't use Uobject * here!
+//A containor with limited buffer size, which save memory allocation step, to diliver messages, mainly used in multiple thread case
+//Warning:: don't use Uobject * here since we haven't handle GC here
 template<typename ItemType, EQueueMode Mode = EQueueMode::Spsc>
 struct FMyQueueWithLimitBuffer
 {
-    FMyQueueWithLimitBuffer(FString sDebugName, uint32 uiBufferCount = 32)
+    FMyQueueWithLimitBuffer(FString sDebugName = TEXT("NoName"), uint32 uiBufferCount = 32)
     {
         m_uiBufferCount = 0;
         m_sDebugName = sDebugName;
@@ -662,6 +663,290 @@ protected:
 
     bool m_bDebugLackBufferForProduce;
     FString m_sDebugName;
+};
+
+USTRUCT()
+struct FMyCycleBufferMetaDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+   FMyCycleBufferMetaDataCpp()
+   {
+       reset();
+   }
+
+   inline
+   void reset()
+   {
+       m_sDebugName.Reset();
+       m_iBufferCountMax = 1;
+       m_idxHead = MyIntIdDefaultInvalidValue;
+       m_iCount = 0;
+   };
+
+protected:
+
+    template <typename T> friend struct FMyCycleBuffer;
+
+    UPROPERTY()
+    FString m_sDebugName;
+
+    UPROPERTY()
+    int32 m_iBufferCountMax;
+
+    UPROPERTY()
+    int32 m_idxHead;
+
+    UPROPERTY()
+    int32 m_iCount;
+
+};
+
+//A fast constainor which can only remove at head and insert at tail without memory copy, but still can peek every elems like array.
+//Safe to use uobject if Using EXTERNAL Storage and NOT across thread, and it can use external TArray to couple with other UE4's function such as FastArrayReplication.
+//The item array's data should be kepted unchanged unless overritten, to reduce the CPU consume and allow external code like fast replication mark it dirty
+template<typename ItemType>
+struct FMyCycleBuffer
+{
+public:
+    
+    FMyCycleBuffer()
+    {
+        reinit(TEXT("NoName"), NULL, NULL, 64);
+    };
+
+    FMyCycleBuffer(FString sDebugName, TArray<ItemType>* paItemsExternal, FMyCycleBufferMetaDataCpp* pMetaExternal, int32 iBufferCountMax)
+    {
+        reinit(sDebugName, paItemsExternal, pMetaExternal, iBufferCountMax);
+    };
+
+    //supposed to use ONLY in constructor, either self's or parent's
+    inline void reinit(FString sDebugName, TArray<ItemType>* paItemsExternal, FMyCycleBufferMetaDataCpp* pMetaExternal, int32 iBufferCountMax)
+    {
+        MY_VERIFY((paItemsExternal == NULL) == (pMetaExternal == NULL));
+
+        if (paItemsExternal) {
+            m_paItems = paItemsExternal;
+        }
+        else {
+            m_paItems = &m_aItemsInternal;
+        }
+        if (pMetaExternal) {
+            m_pMeta = pMetaExternal;
+        }
+        else {
+            m_pMeta = &m_cMetaInternal;
+        }
+
+        m_paItems->Reset();
+        m_pMeta->reset();
+
+        setDebugName(sDebugName);
+        resize(iBufferCountMax);
+    };
+
+    inline
+    bool isUsingInternalBuffer() const
+    {
+        return m_paItems == &m_aItemsInternal;
+    };
+
+    inline void setDebugName(FString sDebugName)
+    {
+        m_pMeta->m_sDebugName = sDebugName;
+    };
+
+    //will trigger a clear()
+    inline
+    void resize(int32 iBufferCountMax)
+    {
+        clearInGame();
+
+        m_pMeta->m_iBufferCountMax = iBufferCountMax;
+        MY_VERIFY(m_pMeta->m_iBufferCountMax > 0);
+
+        m_paItems->Reserve(m_pMeta->m_iBufferCountMax);
+        //m_aDebugs.Reserve(m_iBufferCountMax);
+    };
+
+    inline
+    void clearInGame()
+    {
+        m_pMeta->m_idxHead = MyIntIdDefaultInvalidValue;
+        m_pMeta->m_iCount = 0;
+
+        //m_paItems->Reset();
+        //m_aDebugs.Reset();
+    };
+
+    inline
+    int32 getCount() const
+    {
+        return m_pMeta->m_iCount;
+    };
+
+    inline
+    int32 getCountMax() const
+    {
+        return m_pMeta->m_iBufferCountMax;
+    };
+
+    inline
+    bool isFull() const
+    {
+        return getCount() >= getCountMax();
+    }
+
+    //return NULL if out of range
+    const ItemType* peekRefAt(int32 idxFromHead, int32 *pOutIdxInArrayDebug = NULL) const
+    {
+        return peekRefAtInternal(idxFromHead, pOutIdxInArrayDebug);
+    };
+
+    inline const ItemType* peekLast(int32 *pOutIdxInArrayDebug = NULL) const
+    {
+        if (getCount() > 0) {
+            return peekRefAt(getCount() - 1, pOutIdxInArrayDebug);
+        }
+
+        return NULL;
+    };
+
+    //return the internal idx new added, < 0 if fail
+    inline int32 addToTail(const ItemType* pItemToSetAs, ItemType** ppOutNewAddedItem)
+    {
+        return addToTailInternal(pItemToSetAs, ppOutNewAddedItem);
+    }
+
+    //return the number removed
+    inline int32 removeFromHead(int32 iCount)
+    {
+        return removeFromHeadInternal(iCount);
+    };
+
+protected:
+
+    //struct FMyCycleBufferDebugItem
+    //{
+     //   public:
+     //   FMyCycleBufferDebugItem()
+     //   {
+     //       m_iIdxInArray = 0;
+     //   }
+    //
+    //    int32 m_iIdxInArray;
+    //};
+
+    //return NULL if out of range
+    const ItemType* peekRefAtInternal(int32 idxFromHead, int32 *pOutIdxInArrayDebug) const
+    {
+        MY_VERIFY(idxFromHead >= 0);
+        if (idxFromHead >= m_pMeta->m_iCount) {
+            //if m_iCount == 0, this condition is certainly met
+            return NULL;
+        }
+
+        int32 idxFound = (m_pMeta->m_idxHead + idxFromHead) % m_pMeta->m_iBufferCountMax;
+
+        if (pOutIdxInArrayDebug) {
+            *pOutIdxInArrayDebug = idxFound;
+
+        }
+
+        int32 l = m_paItems->Num();
+        if (idxFound >= l) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("idx out of range %d, %d / %d."), idxFromHead, idxFound, l);
+            MY_VERIFY(false);
+        }
+
+        //MY_VERIFY(m_aDebugs[idxFound].m_iIdxInArray == idxFound);
+
+        //if (m_aDebugs[idxFound].m_iIdxInArray != idxFound) {
+        //    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("elem idx not equal, idxFromHead %d, idxFound %d, m_iIdxInArray %d."), idxFromHead, idxFound, m_aDebugs[idxFound].m_iIdxInArray);
+        //    MY_VERIFY(false);
+        //}
+
+        return &(*m_paItems)[idxFound];
+    };
+
+    //return the internal idx new added, < 0 if fail
+    int32 addToTailInternal(const ItemType* pItemToSetAs, ItemType** ppOutNewAddedItem)
+    {
+        int32 idxNew = -1;
+
+        if (getCount() >= getCountMax()) {
+            return -1;
+        }
+
+        if (m_pMeta->m_idxHead >= 0) {
+            if (m_pMeta->m_iCount <= 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("data inconsistent: m_pMeta->m_idxHead %d, m_pMeta->m_iCount %d."), m_pMeta->m_idxHead, m_pMeta->m_iCount);
+                MY_VERIFY(false);
+            }
+            idxNew = (m_pMeta->m_idxHead + m_pMeta->m_iCount) % m_pMeta->m_iBufferCountMax;
+        }
+        else {
+            MY_VERIFY(m_pMeta->m_iCount == 0);
+            idxNew = 0;
+            m_pMeta->m_idxHead = 0;
+        }
+
+        int32 l = m_paItems->Num();
+        if (idxNew >= l) {
+            MY_VERIFY(idxNew == l);
+            int32 idx = m_paItems->Emplace();
+            MY_VERIFY(idx == idxNew);
+
+            //idx = m_aDebugs.Emplace();
+            //MY_VERIFY(idx == idxNew);
+        }
+
+        ItemType& newItem = (*m_paItems)[idxNew];
+        //m_aDebugs[idxNew].m_iIdxInArray = idxNew;
+
+        if (pItemToSetAs) {
+            newItem = *pItemToSetAs;
+        }
+
+        if (ppOutNewAddedItem) {
+            *ppOutNewAddedItem = &newItem;
+        }
+
+        m_pMeta->m_iCount++;
+
+        return idxNew;
+    };
+
+    //return the number removed
+    int32 removeFromHeadInternal(int32 iCount)
+    {
+        MY_VERIFY(iCount > 0);
+        int32 iCountToRemove = m_pMeta->m_iCount < iCount ? m_pMeta->m_iCount : iCount;
+
+        if (iCountToRemove <= 0) {
+            MY_VERIFY(iCountToRemove == 0);
+            return iCountToRemove;
+        }
+
+        m_pMeta->m_idxHead = (m_pMeta->m_idxHead + iCountToRemove) % m_pMeta->m_iBufferCountMax;
+        m_pMeta->m_iCount -= iCountToRemove;
+        MY_VERIFY(m_pMeta->m_iCount >= 0);
+        
+        if (m_pMeta->m_iCount == 0) {
+            m_pMeta->m_idxHead = MyIntIdDefaultInvalidValue;
+        }
+
+        return iCountToRemove;
+    };
+
+    //Use two 'shadow' array instead of a coupled struct, to save the trouble of handling UOBject* in struct
+    TArray<ItemType> m_aItemsInternal;
+    FMyCycleBufferMetaDataCpp m_cMetaInternal;
+
+    FMyCycleBufferMetaDataCpp* m_pMeta;
+    TArray<ItemType>* m_paItems; //If it pointer to internal array, it is in internal mode, otherwise external mode
+    //TArray<FMyCycleBufferDebugItem> m_aDebugs; 
 };
 
 /*

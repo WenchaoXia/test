@@ -527,7 +527,7 @@ void AMyMJGameCoreDataSourceCpp::notifyGameHaveNewProgress(float fWorldRealTime)
     MY_VERIFY(UMyMJBPUtilsLibrary::haveServerLogicLayer(this));
 
     if (UMyMJBPUtilsLibrary::haveServerNetworkLayer(this)) {
-        m_pMJDataAll->markAllDirtyForRep();
+        //m_pMJDataAll->markAllDirtyForRep();
         ForceNetUpdate();
     }
 
