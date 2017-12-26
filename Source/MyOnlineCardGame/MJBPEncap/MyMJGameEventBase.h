@@ -658,7 +658,7 @@ public:
     const FMyMJEventWithTimeStampBaseCpp& peekRefAt(int32 idxFromHead, int32 *pOutIdxInArrayDebug = NULL, bool bVerify = true) const
     {
         int32 idxInArrayDebug = 0;
-        const FMyMJEventWithTimeStampBaseCpp* pRet = m_cCycleBuffer.peekRefAt(idxFromHead, &idxInArrayDebug);
+        const FMyMJEventWithTimeStampBaseCpp* pRet = m_cCycleBuffer.peekAt(idxFromHead, &idxInArrayDebug);
         MY_VERIFY(pRet);
 
         if (bVerify) {

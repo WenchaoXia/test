@@ -13,7 +13,377 @@
 #include "engine/Texture.h"
 #include "Materials/MaterialInstance.h"
 #include "Materials/MaterialInstanceDynamic.h"
+
+#include "Curves/CurveVector.h"
+
 #include "Kismet/KismetMathLibrary.h"
+
+#define MY_TRANSFORM_UPDATE_CYCLE_BUFFER_COUNT (64)
+
+#define FTransformUpdateSequencDataCpp_Delta_Min (0.1f)
+
+void FTransformUpdateSequencDataCpp::helperSetDataBySrcAndDst(const FTransform& cStart, const FTransform& cEnd, float fTime, int32 iLocalRollExtra, int32 iLocalPitchExtra, int32 iLocalYawExtra)
+{
+    m_cStart = cStart;
+    m_cDebugEnd = cEnd;
+    m_fTime = fTime;
+
+    m_cLocationDelta = cEnd.GetLocation() - cStart.GetLocation();
+
+    FQuat B = cEnd.GetRotation();
+    FQuat A = cStart.GetRotation();
+    FQuat X = B * (A.Inverse());
+
+    X.EnforceShortestArcWith(A);
+
+    //X = FRotator(0, 0, 0).Quaternion() * X;
+    //UKismetMathLibrary::ComposeRotators();
+
+    FRotator relativeRota;
+    //FRotator winding;
+     //X.Rotator().GetWindingAndRemainder(winding, relativeRota);
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("X is %s."), *X.ToString());
+    X.EnforceShortestArcWith(A);
+    relativeRota = X.Rotator();
+
+    relativeRota.Roll += iLocalRollExtra * 360;
+    relativeRota.Pitch += iLocalPitchExtra * 360;
+    relativeRota.Yaw += iLocalYawExtra * 360;
+    m_cRotatorRelativeToStartDelta = relativeRota;
+
+    m_cScaleDelta = cEnd.GetScale3D() - cStart.GetScale3D();
+
+    if (m_cLocationDelta.IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
+        m_bLocationEnabledCache = false;
+    }
+    else {
+        m_bLocationEnabledCache = true;
+    }
+
+    //since we allow roll at origin 360d, we can't use default isNealyZero() which treat that case zero
+    FVector r = m_cRotatorRelativeToStartDelta.Euler();
+    //if (m_cRotatorRelativeToStartDelta.IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
+    if (r.IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
+        m_bRotatorEnabledCache = false;
+    }
+    else {
+        m_bRotatorEnabledCache = true;
+    }
+
+    if (m_cScaleDelta.IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
+        m_bScaleEnabledCache = false;
+    }
+    else {
+        m_bScaleEnabledCache = true;
+    }
+};
+
+UMyTransformUpdateSequenceMovementComponent::UMyTransformUpdateSequenceMovementComponent(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
+{
+    bUpdateOnlyIfRendered = false;
+
+    bWantsInitializeComponent = true;
+    bAutoActivate = false;
+    SetTickableWhenPaused(false);
+
+    m_cDataCycleBuffer.reinit(TEXT("transform update data Cycle buffer"), &m_aDataItems, &m_cDataMeta, MY_TRANSFORM_UPDATE_CYCLE_BUFFER_COUNT);
+    m_cCurveCycleBuffer.reinit(TEXT("transform update curve Cycle buffer"), &m_aCurveItems, &m_cCurveMeta, MY_TRANSFORM_UPDATE_CYCLE_BUFFER_COUNT);
+
+    m_cTimeLineVectorDelegate.BindUObject(this, &UMyTransformUpdateSequenceMovementComponent::onTimeLineUpdated);
+    m_cTimeLineFinishEventDelegate.BindUObject(this, &UMyTransformUpdateSequenceMovementComponent::onTimeLineFinished);
+
+    m_cTimeLine.Stop();
+
+    m_dDebugTimeLineStartRealTime = 0.f;
+
+}
+
+
+int32 UMyTransformUpdateSequenceMovementComponent::addSeqToTail(const FTransformUpdateSequencDataCpp& data, UCurveVector* curve)
+{
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("addSeqToTail, rot %d, %s."), data.m_bRotatorEnabledCache, *data.m_cRotatorRelativeToStartDelta.ToString());
+
+    int32 ret0, ret1;
+    ret0 = m_cDataCycleBuffer.addToTail(&data, NULL);
+    ret1 = m_cCurveCycleBuffer.addToTail(&curve, NULL);
+
+    MY_VERIFY(ret0 == ret1);
+
+    if (ret0 >= 0) {
+        tryStartNextSeq();
+    }
+
+    return ret0;
+}
+
+int32 UMyTransformUpdateSequenceMovementComponent::removeSeqFromHead(int32 iCount)
+{
+    int32 ret0, ret1;
+    ret0 = m_cDataCycleBuffer.removeFromHead(iCount);
+    ret1 = m_cCurveCycleBuffer.removeFromHead(iCount);
+
+    MY_VERIFY(ret0 == ret1);
+
+    if (getSeqCount() <= 0) {
+        m_cTimeLine.Stop();
+    }
+    return ret0;
+}
+
+int32 UMyTransformUpdateSequenceMovementComponent::peekSeqAt(int32 idxFromHead, FTransformUpdateSequencDataCpp& outData, UCurveVector*& outCurve) const
+{
+    const FTransformUpdateSequencDataCpp* pData = NULL;
+    UCurveVector* pCurve = NULL;
+    int32 ret = peekSeqAtCpp(idxFromHead, pData, pCurve);
+
+    if (ret >= 0) {
+        MY_VERIFY(pData);
+        outData = *pData;
+
+        MY_VERIFY(pCurve);
+        outCurve = pCurve;
+    }
+
+    return ret;
+}
+
+int32 UMyTransformUpdateSequenceMovementComponent::peekSeqAtCpp(int32 idxFromHead, const FTransformUpdateSequencDataCpp*& poutData, UCurveVector*& outCurve) const
+{
+    int32 ret0 = 0, ret1 = 0;
+    poutData = m_cDataCycleBuffer.peekAt(idxFromHead, &ret0);
+    UCurveVector* const * ppC = m_cCurveCycleBuffer.peekAt(idxFromHead, &ret1);
+    if (ppC) {
+        outCurve = *ppC;
+    }
+    else {
+        outCurve = NULL;
+    }
+
+    MY_VERIFY(ret0 == ret1);
+    return ret0;
+}
+
+int32 UMyTransformUpdateSequenceMovementComponent::peekSeqLast(FTransformUpdateSequencDataCpp& outData, UCurveVector*& outCurve) const
+{
+    int32 l = getSeqCount();
+    if (l > 0) {
+        return peekSeqAt(l - 1, outData, outCurve);
+    }
+    else {
+        return -1;
+    }
+};
+
+int32 UMyTransformUpdateSequenceMovementComponent::getSeqCount() const
+{
+    int32 ret0, ret1;
+    ret0 = m_cDataCycleBuffer.getCount();
+    ret1 = m_cCurveCycleBuffer.getCount();
+
+    MY_VERIFY(ret0 == ret1);
+    return ret0;
+}
+
+void UMyTransformUpdateSequenceMovementComponent::clearSeq()
+{
+    m_cDataCycleBuffer.clearInGame();
+    m_cCurveCycleBuffer.clearInGame();
+
+    MY_VERIFY(getSeqCount() == 0);
+    m_cTimeLine.Stop();
+}
+
+
+void UMyTransformUpdateSequenceMovementComponent::BeginPlay()
+{
+    Super::BeginPlay();
+
+}
+
+void UMyTransformUpdateSequenceMovementComponent::ApplyWorldOffset(const FVector& InOffset, bool bWorldShift)
+{
+    Super::ApplyWorldOffset(InOffset, bWorldShift);
+
+}
+
+bool UMyTransformUpdateSequenceMovementComponent::tryStartNextSeq()
+{
+    if (m_cTimeLine.IsPlaying()) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("still playing, not start next seq now."));
+        return false;
+    }
+
+    const FTransformUpdateSequencDataCpp* pData = NULL;
+    UCurveVector* pCurve = NULL;
+    
+    if (peekSeqAtCpp(0, pData, pCurve) >= 0) {
+        //we have data
+
+        //the fuck is that: FTimeLine have NOT clear function for static bind type, so create new one
+        FTimeline newTimeLine;
+        m_cTimeLine = newTimeLine;
+
+        MY_VERIFY(IsValid(pCurve));
+        MY_VERIFY(pData);
+
+        m_cTimeLine.AddInterpVector(pCurve, m_cTimeLineVectorDelegate);
+        m_cTimeLine.SetTimelineFinishedFunc(m_cTimeLineFinishEventDelegate);
+
+        float MinVal, MaxVal;
+        pCurve->GetTimeRange(MinVal, MaxVal);
+
+        m_cTimeLine.SetTimelineLengthMode(ETimelineLengthMode::TL_TimelineLength);
+        m_cTimeLine.SetTimelineLength(MaxVal);
+
+        m_cTimeLine.SetPlayRate(MaxVal / pData->m_fTime);
+
+        m_cTimeLine.Play();
+
+        setActivatedMyEncapped(true, TEXT("new seq start"));
+
+        m_dDebugTimeLineStartRealTime = FPlatformTime::Seconds();
+        return true;
+    }
+    else {
+        //stop
+        setActivatedMyEncapped(false, TEXT("no new seq when try start new"));
+        return false;
+    }
+}
+
+void UMyTransformUpdateSequenceMovementComponent::onTimeLineUpdated(FVector vector)
+{
+    const FTransformUpdateSequencDataCpp* pData = NULL;
+    UCurveVector* pCurve = NULL;
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onTimeLineUpdated."));
+
+    if (peekSeqAtCpp(0, pData, pCurve) < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get data in the middle of timelineUpdate"));
+        return;
+    }
+
+    MY_VERIFY(IsValid(pCurve));
+    MY_VERIFY(pData);
+
+    if (pData->m_bLocationEnabledCache || pData->m_bRotatorEnabledCache) {
+        FVector MoveDelta = FVector::ZeroVector;
+        FQuat NewQuat = UpdatedComponent->GetComponentRotation().Quaternion();
+
+        if (pData->m_bLocationEnabledCache) {
+            FVector NewLocation = pData->m_cLocationDelta * vector.X + pData->m_cStart.GetLocation();
+            FVector CurrentLocation = UpdatedComponent->GetComponentLocation();
+            if (NewLocation != CurrentLocation)
+            {
+                MoveDelta = NewLocation - CurrentLocation;
+            }
+        }
+
+        if (pData->m_bRotatorEnabledCache) {
+
+            FRotator rotDelta = pData->m_cRotatorRelativeToStartDelta * vector.Y;
+            if (rotDelta.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 0, %s."), *rotDelta.ToString());
+                return;
+            }
+            FQuat quatDelta = rotDelta.Quaternion();
+            if (quatDelta.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 1, %s."), *quatDelta.ToString());
+                return;
+            }
+            NewQuat = quatDelta * pData->m_cStart.GetRotation();
+            if (NewQuat.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 2, %s."), *NewQuat.ToString());
+                return;
+            }
+        }
+
+        MoveUpdatedComponent(MoveDelta, NewQuat, false);
+    }
+
+    if (pData->m_bScaleEnabledCache) {
+        FVector NewScale = pData->m_cScaleDelta * vector.Z + pData->m_cStart.GetScale3D();
+        MY_VERIFY(IsValid(UpdatedComponent));
+        UpdatedComponent->SetWorldScale3D(NewScale);
+    }
+
+}
+
+void UMyTransformUpdateSequenceMovementComponent::onTimeLineFinished()
+{
+    const FTransformUpdateSequencDataCpp* pData = NULL;
+    UCurveVector* pCurve = NULL;
+    if (peekSeqAtCpp(0, pData, pCurve) < 0) {
+        MY_VERIFY(false);
+        return;
+    }
+    FTransform cT = UpdatedComponent->GetComponentTransform();
+    if (!cT.Equals(pData->m_cDebugEnd, 1.0f)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time line finished but not equal: now %s. target %s."), *cT.ToString(), *pData->m_cDebugEnd.ToString());
+    }
+
+    MY_VERIFY(IsValid(pCurve));
+    MY_VERIFY(pData);
+    float minValue, maxValue, minTime, maxTime;
+    pCurve->GetValueRange(minValue, maxValue);
+    pCurve->GetTimeRange(minTime, maxTime);
+
+    double s1 = FPlatformTime::Seconds();
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onTimeLineFinished, time used %f, time range %f, %f, value range %f, %f."), s1 - m_dDebugTimeLineStartRealTime, minTime, maxTime, minValue, maxValue);
+
+    removeSeqFromHead(1);
+    m_cTimeLine.Stop();
+    tryStartNextSeq();
+}
+
+
+void UMyTransformUpdateSequenceMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+{
+    //QUICK_SCOPE_CYCLE_COUNTER(STAT_InterpToMovementComponent_TickComponent);
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent."));
+
+    // skip if don't want component updated when not rendered or updated component can't move
+    if (!UpdatedComponent || !bIsActive || ShouldSkipUpdate(DeltaTime))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("UpdatedComponent %d, bIsActive %d, ShouldSkipUpdate(DeltaTime) %d."), UpdatedComponent, bIsActive, ShouldSkipUpdate(DeltaTime));
+        return;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent 1."));
+
+    AActor* ActorOwner = UpdatedComponent->GetOwner();
+    if (!ActorOwner || !ActorOwner->CheckStillInWorld())
+    {
+        return;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent 2."));
+
+    if (UpdatedComponent->IsSimulatingPhysics())
+    {
+        return;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent 3."));
+
+    DeltaTime /= ActorOwner->GetActorTimeDilation();
+
+    if (m_cTimeLine.IsPlaying()) {
+        //Todo: handle the case that tick() and addSeq() happen in one loop, which cause 1 tick time defloat
+        m_cTimeLine.TickTimeline(DeltaTime);
+    }
+    else {
+        setActivatedMyEncapped(false, TEXT("in tick() timeline stopped."));
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent out."));
+}
 
 
 AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp() : Super()
@@ -322,14 +692,20 @@ int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBase
     }
 };
 
-
-void AMyMJGameCardBaseCpp::getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const
+int32 AMyMJGameCardBaseCpp::getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const
 {
-    FVector actorScale3D = GetActorScale3D();
-    modelInfo.m_cBoxExtend = m_pCardBox->GetScaledBoxExtent() * actorScale3D;
-    modelInfo.m_cCenterPointRelativeLocation = m_pCardBox->RelativeLocation * actorScale3D;
+    //ignore the root scene/actor's scale, but calc from the box
 
+    //FVector actorScale3D = GetActorScale3D();
+    //m_pCardBox->GetScaledBoxExtent()
+    modelInfo.m_cBoxExtend = m_pCardBox->GetUnscaledBoxExtent() *  m_pCardBox->GetComponentScale();
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("name %s, box scale %s."), *GetName(), *m_pCardBox->GetComponentScale().ToString());
+    modelInfo.m_cCenterPointRelativeLocation = m_pCardBox->RelativeLocation;// * actorScale3D;
+
+    return 0;
 };
+
 
 void AMyMJGameCardBaseCpp::setValueShowing(int32 newValue)
 {

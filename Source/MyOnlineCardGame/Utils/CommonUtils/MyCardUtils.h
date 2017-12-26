@@ -799,21 +799,22 @@ public:
     }
 
     //return NULL if out of range
-    const ItemType* peekRefAt(int32 idxFromHead, int32 *pOutIdxInArrayDebug = NULL) const
+    const ItemType* peekAt(int32 idxFromHead, int32 *pOutIdxInArrayDebug = NULL) const
     {
-        return peekRefAtInternal(idxFromHead, pOutIdxInArrayDebug);
+        return peekAtInternal(idxFromHead, pOutIdxInArrayDebug);
     };
 
     inline const ItemType* peekLast(int32 *pOutIdxInArrayDebug = NULL) const
     {
         if (getCount() > 0) {
-            return peekRefAt(getCount() - 1, pOutIdxInArrayDebug);
+            return peekAt(getCount() - 1, pOutIdxInArrayDebug);
         }
 
         return NULL;
     };
 
-    //return the internal idx new added, < 0 if fail
+    //return the internal idx new added, < 0 if fail.
+    //Warning: since it is cycle buffer, caller MUST reset the content after got a valid elem!!
     inline int32 addToTail(const ItemType* pItemToSetAs, ItemType** ppOutNewAddedItem)
     {
         return addToTailInternal(pItemToSetAs, ppOutNewAddedItem);
@@ -839,8 +840,13 @@ protected:
     //};
 
     //return NULL if out of range
-    const ItemType* peekRefAtInternal(int32 idxFromHead, int32 *pOutIdxInArrayDebug) const
+    const ItemType* peekAtInternal(int32 idxFromHead, int32 *pOutIdxInArrayDebug) const
     {
+
+        if (pOutIdxInArrayDebug) {
+            *pOutIdxInArrayDebug = -1;
+        }
+
         MY_VERIFY(idxFromHead >= 0);
         if (idxFromHead >= m_pMeta->m_iCount) {
             //if m_iCount == 0, this condition is certainly met
@@ -851,7 +857,6 @@ protected:
 
         if (pOutIdxInArrayDebug) {
             *pOutIdxInArrayDebug = idxFound;
-
         }
 
         int32 l = m_paItems->Num();

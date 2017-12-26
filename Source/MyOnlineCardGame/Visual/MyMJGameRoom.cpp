@@ -51,6 +51,7 @@ int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp
 
 UMyMJGameDeskResManagerCpp::UMyMJGameDeskResManagerCpp() : Super()
 {
+    m_pCardCDOInGame = NULL;
 };
 
 UMyMJGameDeskResManagerCpp::~UMyMJGameDeskResManagerCpp()
@@ -60,31 +61,63 @@ UMyMJGameDeskResManagerCpp::~UMyMJGameDeskResManagerCpp()
 
 bool UMyMJGameDeskResManagerCpp::checkSettings() const
 {
-    const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDO();
-    if (IsValid(pCDO)) {
-        return true;
-    }
-    else {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCDO is not valid %p, possible no card class specified."), pCDO);
+    if (!IsValid(m_cCfgCardClass)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cCardClass is invalid: %p"), m_cCfgCardClass.Get());
         return false;
     }
+
+    if (m_cCfgCardClass->GetClass() == AMyMJGameCardBaseCpp::StaticClass()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("you must specify a sub class of AMyMJGameCardBaseCpp, not it self!"));
+        return false;
+    }
+
+    return true;
+};
+
+bool UMyMJGameDeskResManagerCpp::prepareForPlay()
+{
+    if (!IsValid(m_pCardCDOInGame)) {
+
+        if (!checkSettings()) {
+            return false;
+        }
+
+        AActor *parent = Cast<AActor>(GetOuter());
+        MY_VERIFY(IsValid(parent));
+        UWorld *w = parent->GetWorld();
+        MY_VERIFY(IsValid(w));
+
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        m_pCardCDOInGame = w->SpawnActor<AMyMJGameCardBaseCpp>(m_cCfgCardClass, FVector(0, 0, 50), FRotator(0, 0, 0), SpawnParams);
+
+        MY_VERIFY(IsValid(m_pCardCDOInGame));
+        m_pCardCDOInGame->SetActorHiddenInGame(true);
+    }
+
+    return true;
 };
 
 int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const
 {
     cModelInfoCache.clear();
 
-    const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDO();
+    const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDOInGame();
     if (!IsValid(pCDO)) {
         return -1;
     }
 
-    pCDO->getModelInfo(cModelInfoCache.m_cCardModelInfo);
+    int32 ret = pCDO->getModelInfo(cModelInfoCache.m_cCardModelInfo);
+    if (ret != 0) {
+        return ret;
+    }
 
     if (cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.X < 1 || cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.Y < 1 || cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.Z < 1) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("mode size is too small: %s."), *cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.ToString());
         return -1;
     }
+
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("retrieveCfgCache, pCDO name %s, card box: %s."), *pCDO->GetName(), *cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.ToString());
 
     return 0;
 };
@@ -113,7 +146,7 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
 
     double s0 = FPlatformTime::Seconds();
 
-    //const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDO();
+    //const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDOInGame();
     //if (!IsValid(pCDO)) {
         //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCDO is not valid %p, possible no card class specified."), pCDO);
         //return -1;
@@ -141,7 +174,7 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
     l = m_aCards.Num();
     int32 iDebugCOunt = 0;
     for (int32 i = l; i < count2reach; i++) {
-        //AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(pCDO->StaticClass(), SpawnParams);
+        //AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(pCDO->StaticClass(), SpawnParams); //Warning: staticClass is not virtual class, so you can't get actual class
         AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(m_cCfgCardClass, FVector(0, 0, 50), FRotator(0, 0, 0), SpawnParams);
 
         MY_VERIFY(IsValid(pNewCardActor));
@@ -156,22 +189,6 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
 
     return 0;
     //GetWorld()->SpawnActor<AProjectile>(Location, Rotation, SpawnInfo);
-}
-
-const AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardBaseCDO() const
-{
-    if (!IsValid(m_cCfgCardClass)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cCardClass is invalid: %p"), m_cCfgCardClass.Get());
-        return NULL;
-    }
-
-    AMyMJGameCardBaseCpp *pCDO = m_cCfgCardClass->GetDefaultObject<AMyMJGameCardBaseCpp>();
-    if (!IsValid(pCDO)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card pCDO is invalid: %p"), pCDO);
-        return NULL;
-    }
-
-    return pCDO;
 }
 
 AMyMJGameRoomCpp::AMyMJGameRoomCpp() : Super()
@@ -258,6 +275,8 @@ void AMyMJGameRoomCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & 
 void AMyMJGameRoomCpp::BeginPlay()
 {
     Super::BeginPlay();
+
+    m_pResManager->prepareForPlay();
 
     if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this)) {
         startVisual();

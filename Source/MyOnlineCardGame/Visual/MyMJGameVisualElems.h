@@ -5,7 +5,8 @@
 #include "CoreMinimal.h"
 #include "MJ/Utils/MyMJUtils.h"
 #include "MyMJGameVisualCommon.h"
-
+#include "GameFramework/MovementComponent.h"
+#include "Components/TimelineComponent.h"
 #include "MyMJGameVisualElems.generated.h"
 
 #define MyCardStaticMeshMIDParamInBaseColor (TEXT("InBaseColor"))
@@ -146,6 +147,154 @@ public:
     FMyMJGameActorVisualResultBaseCpp m_cVisualResult;
 };
 
+USTRUCT(BlueprintType)
+struct FTransformUpdateSequencDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FTransformUpdateSequencDataCpp()
+    {
+        reset();
+    };
+
+    void reset()
+    {
+        FTransform tempT;
+        m_cStart = m_cDebugEnd = tempT;
+
+        m_cLocationDelta = FVector::ZeroVector;
+        m_cRotatorRelativeToStartDelta = FRotator::ZeroRotator;
+        m_cScaleDelta = FVector::ZeroVector;
+
+        m_bLocationEnabledCache = false;
+        m_bRotatorEnabledCache = false;
+        m_bScaleEnabledCache = false;
+
+        m_fTime = 0;
+    };
+
+    void helperSetDataBySrcAndDst(const FTransform& cStart, const FTransform& cEnd, float fTime, int32 iLocalRollExtra = 0, int32 iLocalPitchExtra = 0, int32 iLocalYawExtra = 0);
+
+    FTransform m_cStart;
+    FTransform m_cDebugEnd;
+
+    FVector m_cLocationDelta;
+    FRotator m_cRotatorRelativeToStartDelta;
+    FVector m_cScaleDelta;
+
+    //fast flag to avoid float calc
+    bool m_bLocationEnabledCache;
+    bool m_bRotatorEnabledCache;
+    bool m_bScaleEnabledCache;
+
+    float m_fTime;
+};
+
+//UCLASS(ClassGroup = Movement, meta = (BlueprintSpawnableComponent), HideCategories = Velocity)
+//class ENGINE_API UInterpToMovementComponent : public UMovementComponent
+
+/**
+* make the actor move accroding to preset sequences
+*
+*/
+UCLASS(ClassGroup = Movement, meta = (BlueprintSpawnableComponent))
+class MYONLINECARDGAME_API UMyTransformUpdateSequenceMovementComponent : public UMovementComponent
+{
+    //GENERATED_UCLASS_BODY()
+    GENERATED_BODY()
+
+public:
+    UMyTransformUpdateSequenceMovementComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+    //UMyCurveSeqMovementComponent();
+
+    //return the internal idx new added, < 0 means fail, do NOT use it as peek idx, use getSeqCount() or getSeqLast() to ref the last added one
+    //curve's value range is supposed to 0 - 1, out of that is also allowed, 0 means start, 1 means dest, time range is 0 - N. 
+    UFUNCTION(BlueprintCallable)
+        int32 addSeqToTail(const FTransformUpdateSequencDataCpp& data, UCurveVector* curve);
+
+    //return the number removed
+    UFUNCTION(BlueprintCallable)
+    int32 removeSeqFromHead(int32 iCount);
+
+    //return the internal idx, < 0 means not exist, not it is slower since have struct data copy step
+    UFUNCTION(BlueprintCallable)
+    int32 peekSeqAt(int32 idxFromHead, FTransformUpdateSequencDataCpp& outData, UCurveVector*& outCurve) const;
+
+    int32 peekSeqAtCpp(int32 idxFromHead, const FTransformUpdateSequencDataCpp*& poutData, UCurveVector*& outCurve) const;
+
+    //UFUNCTION(BlueprintCallable)
+    //const UCurveVector* peekSeqAt2(int32 idxFromHead, FTransformUpdateSequencDataCpp& outData) const;
+
+    UFUNCTION(BlueprintCallable)
+    int32 peekSeqLast(FTransformUpdateSequencDataCpp& outData, UCurveVector*& outCurve) const;
+
+    UFUNCTION(BlueprintCallable)
+    int32 getSeqCount() const;
+
+    UFUNCTION(BlueprintCallable)
+    void clearSeq();
+
+    UFUNCTION(BlueprintCallable)
+    static void helperSetDataBySrcAndDst(FTransformUpdateSequencDataCpp& data, const FTransform& cStart, const FTransform& cEnd, float fTime, int32 iLocalRollExtra = 0, int32 iLocalPitchExtra = 0, int32 iLocalYawExtra = 0)
+    {
+        data.helperSetDataBySrcAndDst(cStart, cEnd, fTime, iLocalRollExtra, iLocalPitchExtra, iLocalYawExtra);
+    };
+
+protected:
+
+    //Begin UActorComponent Interface
+    virtual void BeginPlay() override;
+    virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+    virtual void ApplyWorldOffset(const FVector& InOffset, bool bWorldShift) override;
+    //End UActorComponent Interface
+
+    //mainly used for debug and allow switch the implement quickly
+    inline void setActivatedMyEncapped(bool bNew, FString reason = TEXT("none"))
+    {
+        if (IsActive() != bNew) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("activate component change %d -> %d, reason %s."), !bNew, bNew, *reason);
+            if (bNew) {
+                Activate();
+            }
+            else {
+                Deactivate();
+            }
+        }
+    };
+
+
+    //return true if new play started
+    bool tryStartNextSeq();
+
+    void onTimeLineUpdated(FVector vector);
+    void onTimeLineFinished();
+
+    UPROPERTY()
+    FTimeline m_cTimeLine;
+
+    FOnTimelineVectorStatic m_cTimeLineVectorDelegate;
+    FOnTimelineEventStatic  m_cTimeLineFinishEventDelegate;
+
+    UPROPERTY()
+    TArray<FTransformUpdateSequencDataCpp> m_aDataItems;
+
+    UPROPERTY()
+    FMyCycleBufferMetaDataCpp m_cDataMeta;
+
+    //Warning:: we assume curve value from 0 - 1. if value out of range, that means final interp out of range, maybe desired in some case
+    UPROPERTY()
+    TArray<UCurveVector *> m_aCurveItems;
+
+    UPROPERTY()
+    FMyCycleBufferMetaDataCpp m_cCurveMeta;
+
+    FMyCycleBuffer<FTransformUpdateSequencDataCpp> m_cDataCycleBuffer;
+    FMyCycleBuffer<UCurveVector*> m_cCurveCycleBuffer;
+
+    double m_dDebugTimeLineStartRealTime;
+};
+
 UCLASS(Blueprintable)
 class MYONLINECARDGAME_API AMyMJGameCardBaseCpp : public AActor
 {
@@ -157,10 +306,9 @@ public:
 
     virtual ~AMyMJGameCardBaseCpp();
 
-    //AMyMJGameCardBaseCpp(const FObjectInitializer& ObjectInitializer);
-
-    UFUNCTION(BlueprintCallable)
-    void getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const;
+    //return error code, 0 means OK
+    UFUNCTION(BlueprintPure, meta = (CallableWithoutWorldContext))
+    int32 getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const;
 
     UFUNCTION(BlueprintSetter)
     void setValueShowing(int32 newValue);
@@ -206,13 +354,13 @@ protected:
 
     //components
     //root scene
-    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "root scene"))
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "root scene"))
     class USceneComponent *m_pRootScene;
 
-    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "card box"))
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "card box"))
     class UBoxComponent *m_pCardBox;
 
-    UPROPERTY(VisibleAnywhere, Instanced, meta = (DisplayName = "card static mesh"))
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "card static mesh"))
     class UStaticMeshComponent *m_pCardStaticMesh;
 
 
@@ -287,5 +435,4 @@ protected:
 
     UPROPERTY(meta = (DisplayName = "cards"))
     TArray<FMyMJGameCardVisualInfoAndResultCpp> m_aCards;
-
 };

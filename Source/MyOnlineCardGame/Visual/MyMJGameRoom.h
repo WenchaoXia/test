@@ -103,21 +103,7 @@ public:
     virtual ~UMyMJGameDeskResManagerCpp();
 
     bool checkSettings() const;
-
-    UFUNCTION(BlueprintPure)
-    inline int32 getCardModelInfoUnscaled(FMyMJGameActorModelInfoBoxCpp& modelInfo) const
-    {
-        const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDO();
-        if (IsValid(pCDO)) {
-            pCDO->getModelInfo(modelInfo);
-            return 0;
-        }
-        else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCDO is not valid %p."), pCDO);
-            modelInfo.reset();
-            return -1;
-        }
-    };
+    bool prepareForPlay();
 
     //always success, core dump if fail
     UFUNCTION(BlueprintCallable)
@@ -132,8 +118,15 @@ public:
 
 protected:
 
-    //Warning: it is not the actually specified one, but casted to base type
-    const AMyMJGameCardBaseCpp* getCardBaseCDO() const;
+    //return a created in world one, which have final info
+    inline const AMyMJGameCardBaseCpp* getCardBaseCDOInGame() const
+    {
+        if (!IsValid(m_pCardCDOInGame)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pCardCDOInGame is invalid: %p"), m_pCardCDOInGame);
+            return NULL;
+        }
+        return m_pCardCDOInGame;
+    };
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "cards"))
         TArray<AMyMJGameCardBaseCpp*> m_aCards;
@@ -141,6 +134,8 @@ protected:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg card class"))
         TSubclassOf<AMyMJGameCardBaseCpp> m_cCfgCardClass;
 
+    UPROPERTY()
+    AMyMJGameCardBaseCpp *m_pCardCDOInGame;
     //it seems UBT have bug which require declare sequence
     //UPROPERTY(BlueprintSetter = setCfgCardModelAssetPath, BlueprintSetter = getCfgCardModelAssetPath, EditAnywhere, meta = (DisplayName = "cfg card model asset path"))
     //UPROPERTY(EditAnywhere, BlueprintSetter = setCfgCardModelAssetPath, BlueprintGetter = getCfgCardModelAssetPath, meta = (DisplayName = "cfg card model asset path"))
