@@ -767,24 +767,24 @@ FMyMJValueIdMapCpp::checkShunZi(MyMJChiTypeCpp type, int32 checkingValueInMap, c
             return false;
         }
 
-        collectingValues.Emplace(modValue + 1);
-        collectingValues.Emplace(modValue + 2);
+        collectingValues.Emplace(checkingValue + 1);
+        collectingValues.Emplace(checkingValue + 2);
     }
     else if (type == MyMJChiTypeCpp::ChiMid) {
         if (modValue >= 9 || modValue < 2) {
             return false;
         }
 
-        collectingValues.Emplace(modValue - 1);
-        collectingValues.Emplace(modValue + 1);
+        collectingValues.Emplace(checkingValue - 1);
+        collectingValues.Emplace(checkingValue + 1);
     }
     else if (type == MyMJChiTypeCpp::ChiRight) {
         if (modValue < 3) {
             return false;
         }
 
-        collectingValues.Emplace(modValue - 2);
-        collectingValues.Emplace(modValue - 1);
+        collectingValues.Emplace(checkingValue - 2);
+        collectingValues.Emplace(checkingValue - 1);
         //int32 t = type;
         //MyMJWeaveTypeCpp
     }
