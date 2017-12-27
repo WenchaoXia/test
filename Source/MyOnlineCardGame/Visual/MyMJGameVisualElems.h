@@ -161,14 +161,12 @@ public:
     void reset()
     {
         FTransform tempT;
-        m_cStart = m_cDebugEnd = tempT;
-
-        m_cLocationDelta = FVector::ZeroVector;
-        m_cRotatorRelativeToStartDelta = FRotator::ZeroRotator;
-        m_cScaleDelta = FVector::ZeroVector;
+        m_cStart = m_cEnd = tempT;
+        m_cLocalRotatorExtra = FRotator::ZeroRotator;
 
         m_bLocationEnabledCache = false;
-        m_bRotatorEnabledCache = false;
+        m_bRotatorBasicEnabledCache = false;
+        m_bRotatorExtraEnabledCache = false;
         m_bScaleEnabledCache = false;
 
         m_fTime = 0;
@@ -176,16 +174,16 @@ public:
 
     void helperSetDataBySrcAndDst(const FTransform& cStart, const FTransform& cEnd, float fTime, int32 iLocalRollExtra = 0, int32 iLocalPitchExtra = 0, int32 iLocalYawExtra = 0);
 
+    //Warning:: because Rotator pitch in UE4, can't exceed +- 90D any where, so we can't store rotaion delta, but indirectly store the start and end
     FTransform m_cStart;
-    FTransform m_cDebugEnd;
+    FTransform m_cEnd;
 
-    FVector m_cLocationDelta;
-    FRotator m_cRotatorRelativeToStartDelta;
-    FVector m_cScaleDelta;
+    FRotator m_cLocalRotatorExtra;
 
     //fast flag to avoid float calc
     bool m_bLocationEnabledCache;
-    bool m_bRotatorEnabledCache;
+    bool m_bRotatorBasicEnabledCache;
+    bool m_bRotatorExtraEnabledCache;
     bool m_bScaleEnabledCache;
 
     float m_fTime;

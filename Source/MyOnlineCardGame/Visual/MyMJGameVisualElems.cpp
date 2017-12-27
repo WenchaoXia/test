@@ -25,35 +25,39 @@
 void FTransformUpdateSequencDataCpp::helperSetDataBySrcAndDst(const FTransform& cStart, const FTransform& cEnd, float fTime, int32 iLocalRollExtra, int32 iLocalPitchExtra, int32 iLocalYawExtra)
 {
     m_cStart = cStart;
-    m_cDebugEnd = cEnd;
+    m_cEnd = cEnd;
     m_fTime = fTime;
 
-    m_cLocationDelta = cEnd.GetLocation() - cStart.GetLocation();
+    m_cStart.NormalizeRotation();
+    m_cEnd.NormalizeRotation();
 
-    FQuat B = cEnd.GetRotation();
-    FQuat A = cStart.GetRotation();
-    FQuat X = B * (A.Inverse());
+    m_cLocalRotatorExtra.Roll = iLocalRollExtra * 360;
+    m_cLocalRotatorExtra.Pitch = iLocalPitchExtra * 360;
+    m_cLocalRotatorExtra.Yaw = iLocalYawExtra * 360;
 
-    X.EnforceShortestArcWith(A);
+    FQuat B = m_cStart.GetRotation();
+    FQuat A = m_cEnd.GetRotation();
+    FQuat NegA = A.Inverse();
+    NegA.Normalize();
+    FQuat X = B * NegA;
 
+    FRotator relativeRota;
+    relativeRota = X.Rotator();
+    relativeRota.Normalize();
+
+    //X.EnforceShortestArcWith(FRotator(0, 0, 0).Quaternion());
+    
     //X = FRotator(0, 0, 0).Quaternion() * X;
     //UKismetMathLibrary::ComposeRotators();
 
-    FRotator relativeRota;
+    //FVector v(1, 1, 1), vz(0, 0, 0);
+    //relativeRota = UKismetMathLibrary::FindLookAtRotation(vz, X.Rotator().RotateVector(v)) - UKismetMathLibrary::FindLookAtRotation(vz, v);
+    //relativeRota.Clamp();
+
     //FRotator winding;
      //X.Rotator().GetWindingAndRemainder(winding, relativeRota);
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("X is %s."), *X.ToString());
-    X.EnforceShortestArcWith(A);
-    relativeRota = X.Rotator();
 
-    relativeRota.Roll += iLocalRollExtra * 360;
-    relativeRota.Pitch += iLocalPitchExtra * 360;
-    relativeRota.Yaw += iLocalYawExtra * 360;
-    m_cRotatorRelativeToStartDelta = relativeRota;
-
-    m_cScaleDelta = cEnd.GetScale3D() - cStart.GetScale3D();
-
-    if (m_cLocationDelta.IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
+    if (m_cEnd.GetLocation().Equals(m_cStart.GetLocation(), FTransformUpdateSequencDataCpp_Delta_Min)) {
         m_bLocationEnabledCache = false;
     }
     else {
@@ -61,21 +65,30 @@ void FTransformUpdateSequencDataCpp::helperSetDataBySrcAndDst(const FTransform& 
     }
 
     //since we allow roll at origin 360d, we can't use default isNealyZero() which treat that case zero
-    FVector r = m_cRotatorRelativeToStartDelta.Euler();
-    //if (m_cRotatorRelativeToStartDelta.IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
-    if (r.IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
-        m_bRotatorEnabledCache = false;
+    if (relativeRota.Euler().IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
+        m_bRotatorBasicEnabledCache = false;
     }
     else {
-        m_bRotatorEnabledCache = true;
+        m_bRotatorBasicEnabledCache = true;
     }
 
-    if (m_cScaleDelta.IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
+    if (m_cLocalRotatorExtra.Euler().IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
+        m_bRotatorExtraEnabledCache = false;
+    }
+    else {
+        m_bRotatorExtraEnabledCache = true;
+    }
+
+    if (m_cEnd.GetScale3D().Equals(m_cStart.GetScale3D(), FTransformUpdateSequencDataCpp_Delta_Min)) {
         m_bScaleEnabledCache = false;
     }
     else {
         m_bScaleEnabledCache = true;
     }
+
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%d, %d, %d, %d. r:  %s -> %s, relativeRota %s."), m_bLocationEnabledCache, m_bRotatorBasicEnabledCache, m_bRotatorExtraEnabledCache, m_bScaleEnabledCache,
+             *cStart.GetRotation().Rotator().ToString(), *cEnd.GetRotation().Rotator().ToString(), *relativeRota.ToString());
+
 };
 
 UMyTransformUpdateSequenceMovementComponent::UMyTransformUpdateSequenceMovementComponent(const FObjectInitializer& ObjectInitializer)
@@ -102,7 +115,7 @@ UMyTransformUpdateSequenceMovementComponent::UMyTransformUpdateSequenceMovementC
 
 int32 UMyTransformUpdateSequenceMovementComponent::addSeqToTail(const FTransformUpdateSequencDataCpp& data, UCurveVector* curve)
 {
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("addSeqToTail, rot %d, %s."), data.m_bRotatorEnabledCache, *data.m_cRotatorRelativeToStartDelta.ToString());
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("addSeqToTail, rot %d, %s."), data.m_bRotatorEnabledCache, *data.m_cRotatorRelativeToStartDelta.ToString());
 
     int32 ret0, ret1;
     ret0 = m_cDataCycleBuffer.addToTail(&data, NULL);
@@ -267,12 +280,14 @@ void UMyTransformUpdateSequenceMovementComponent::onTimeLineUpdated(FVector vect
     MY_VERIFY(IsValid(pCurve));
     MY_VERIFY(pData);
 
-    if (pData->m_bLocationEnabledCache || pData->m_bRotatorEnabledCache) {
+    MY_VERIFY(IsValid(UpdatedComponent));
+
+    if (pData->m_bLocationEnabledCache || pData->m_bRotatorBasicEnabledCache || pData->m_bRotatorExtraEnabledCache) {
         FVector MoveDelta = FVector::ZeroVector;
         FQuat NewQuat = UpdatedComponent->GetComponentRotation().Quaternion();
 
         if (pData->m_bLocationEnabledCache) {
-            FVector NewLocation = pData->m_cLocationDelta * vector.X + pData->m_cStart.GetLocation();
+            FVector NewLocation = UKismetMathLibrary::VLerp(pData->m_cStart.GetLocation(), pData->m_cEnd.GetLocation(), vector.X);
             FVector CurrentLocation = UpdatedComponent->GetComponentLocation();
             if (NewLocation != CurrentLocation)
             {
@@ -280,8 +295,25 @@ void UMyTransformUpdateSequenceMovementComponent::onTimeLineUpdated(FVector vect
             }
         }
 
-        if (pData->m_bRotatorEnabledCache) {
+        if (pData->m_bRotatorBasicEnabledCache) {
+            
+            FRotator r = UKismetMathLibrary::RLerp(pData->m_cStart.GetRotation().Rotator(), pData->m_cEnd.GetRotation().Rotator(), vector.Y, true);
+            if (r.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
+                return;
+            }
 
+            NewQuat = r.Quaternion();
+            if (NewQuat.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
+                return;
+            }
+            //FQuat quatDelta = pData->m_cRotatorRelativeToStartDelta.Quaternion() * vector.Y;
+            //NewQuat = quatDelta * pData->m_cStart.GetRotation();
+            //quatDelta.
+            /*
             FRotator rotDelta = pData->m_cRotatorRelativeToStartDelta * vector.Y;
             if (rotDelta.ContainsNaN())
             {
@@ -300,14 +332,37 @@ void UMyTransformUpdateSequenceMovementComponent::onTimeLineUpdated(FVector vect
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 2, %s."), *NewQuat.ToString());
                 return;
             }
+            */
+        }
+
+        if (pData->m_bRotatorExtraEnabledCache) {
+            FRotator r = UKismetMathLibrary::RLerp(FRotator::ZeroRotator, pData->m_cLocalRotatorExtra, vector.Y, false);
+            if (r.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
+                return;
+            }
+
+            FQuat q = r.Quaternion();
+            if (q.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *q.ToString());
+                return;
+            }
+
+            NewQuat = q * NewQuat;
+            if (NewQuat.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
+                return;
+            }
         }
 
         MoveUpdatedComponent(MoveDelta, NewQuat, false);
     }
 
     if (pData->m_bScaleEnabledCache) {
-        FVector NewScale = pData->m_cScaleDelta * vector.Z + pData->m_cStart.GetScale3D();
-        MY_VERIFY(IsValid(UpdatedComponent));
+        FVector NewScale = UKismetMathLibrary::VLerp(pData->m_cStart.GetScale3D(), pData->m_cEnd.GetScale3D(),vector.Z);
         UpdatedComponent->SetWorldScale3D(NewScale);
     }
 
@@ -322,9 +377,12 @@ void UMyTransformUpdateSequenceMovementComponent::onTimeLineFinished()
         return;
     }
     FTransform cT = UpdatedComponent->GetComponentTransform();
-    if (!cT.Equals(pData->m_cDebugEnd, 1.0f)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time line finished but not equal: now %s. target %s."), *cT.ToString(), *pData->m_cDebugEnd.ToString());
+    if (!cT.Equals(pData->m_cEnd, 1.0f)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time line finished but not equal: now %s. target %s."), *cT.ToString(), *pData->m_cEnd.ToString());
     }
+
+    //fix up any defloat by direct set transform
+    UpdatedComponent->SetWorldTransform(pData->m_cEnd);
 
     MY_VERIFY(IsValid(pCurve));
     MY_VERIFY(pData);
