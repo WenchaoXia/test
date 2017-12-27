@@ -16,6 +16,8 @@
 #include "Kismet/KismetStringLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
+#include "Curves/CurveVector.h"
+
 #define MY_MJ_GAME_ROOM_VISUAL_LOOP_TIME_MS (17)
 #define MY_CARD_ACTOR_MAX (1000)
 
@@ -122,6 +124,17 @@ int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModel
     return 0;
 };
 
+#define MyArtDirBase (TEXT("/Game/Art"))
+#define MyArtDirNameCommon (TEXT("Common"))
+#define MyArtDirNameCurves (TEXT("Curves"))
+#define MyArtFileNameCurveVectorDefaultLinear (TEXT("CurveVectorDefaultLinear"))
+
+UCurveVector* UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear()
+{
+    FString fullName = FString(MyArtDirBase) + TEXT("/") + MyArtDirNameCommon + TEXT("/") + MyArtDirNameCurves + TEXT("/") + MyArtFileNameCurveVectorDefaultLinear;
+
+    return UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UCurveVector>(NULL, fullName);
+};
 
 AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx)
 {
@@ -352,7 +365,15 @@ void AMyMJGameRoomCpp::onDeskUpdatedWithImportantChange(FMyMJDataStructWithTimeS
         pCardActor->setValueShowing(cInfoAndResult.m_cVisualInfo.m_iCardValue);
         pCardActor->SetActorHiddenInGame(false);
         //pCardActor->setVisible(false);
-        pCardActor->SetActorTransform(cInfoAndResult.m_cVisualResult.m_cTransform);
+        //pCardActor->SetActorTransform(cInfoAndResult.m_cVisualResult.m_cTransform);
+
+        UMyTransformUpdateSequenceMovementComponent* pSeq = pCardActor->getTransformUpdateSequence();
+        
+        FTransformUpdateSequencDataCpp data;
+        data.helperSetDataBySrcAndDst(pCardActor->GetTransform(), cInfoAndResult.m_cVisualResult.m_cTransform, 1.0f);
+        pSeq->clearSeq();
+        pSeq->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor %03d updated: %s."), idCard, *cInfoAndResult.genDebugString());
     }
 };
@@ -364,7 +385,7 @@ void AMyMJGameRoomCpp::onDeskEventApplied(FMyMJDataStructWithTimeStampBaseCpp& c
                                             FMyMJEventWithTimeStampBaseCpp& cEvent)
 {
     TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mIdCardMap = mNewActorDataIdCards;
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onDeskEventApplied, mIdCardMap.Num() %d."), mIdCardMap.Num());
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onDeskEventApplied, mIdCardMap.Num() %d, dur %u."), mIdCardMap.Num(), cEvent.getDuration_ms());
 
     if (cEvent.getPusherResult(false) && cEvent.getPusherResult(false)->m_aResultDelta.Num() > 0) {
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("desk updating for event : %s"), *cEvent.getPusherResult(false)->m_aResultDelta[0].genDebugString());
@@ -379,7 +400,14 @@ void AMyMJGameRoomCpp::onDeskEventApplied(FMyMJDataStructWithTimeStampBaseCpp& c
 
         pCardActor->setValueShowing(cInfoAndResult.m_cVisualInfo.m_iCardValue);
         pCardActor->SetActorHiddenInGame(false);
-        pCardActor->SetActorTransform(cInfoAndResult.m_cVisualResult.m_cTransform);
+        //pCardActor->SetActorTransform(cInfoAndResult.m_cVisualResult.m_cTransform);
+
+        UMyTransformUpdateSequenceMovementComponent* pSeq = pCardActor->getTransformUpdateSequence();
+
+        FTransformUpdateSequencDataCpp data;
+        data.helperSetDataBySrcAndDst(pCardActor->GetTransform(), cInfoAndResult.m_cVisualResult.m_cTransform, (float)cEvent.getDuration_ms() / 1000);
+        pSeq->clearSeq();
+        pSeq->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
 
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor %03d updated: %s."), idCard, *cInfoAndResult.genDebugString());
     }

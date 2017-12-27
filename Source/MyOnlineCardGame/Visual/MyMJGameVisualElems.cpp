@@ -86,8 +86,8 @@ void FTransformUpdateSequencDataCpp::helperSetDataBySrcAndDst(const FTransform& 
         m_bScaleEnabledCache = true;
     }
 
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%d, %d, %d, %d. r:  %s -> %s, relativeRota %s."), m_bLocationEnabledCache, m_bRotatorBasicEnabledCache, m_bRotatorExtraEnabledCache, m_bScaleEnabledCache,
-             *cStart.GetRotation().Rotator().ToString(), *cEnd.GetRotation().Rotator().ToString(), *relativeRota.ToString());
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%d, %d, %d, %d. r:  %s -> %s, relativeRota %s."), m_bLocationEnabledCache, m_bRotatorBasicEnabledCache, m_bRotatorExtraEnabledCache, m_bScaleEnabledCache,
+    //         *cStart.GetRotation().Rotator().ToString(), *cEnd.GetRotation().Rotator().ToString(), *relativeRota.ToString());
 
 };
 
@@ -108,7 +108,7 @@ UMyTransformUpdateSequenceMovementComponent::UMyTransformUpdateSequenceMovementC
 
     m_cTimeLine.Stop();
 
-    m_dDebugTimeLineStartRealTime = 0.f;
+    m_fDebugTimeLineStartWorldTime = 0.f;
 
 }
 
@@ -117,6 +117,11 @@ int32 UMyTransformUpdateSequenceMovementComponent::addSeqToTail(const FTransform
 {
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("addSeqToTail, rot %d, %s."), data.m_bRotatorEnabledCache, *data.m_cRotatorRelativeToStartDelta.ToString());
 
+    if (!IsValid(curve)) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("curve not valid %p."), curve);
+        return -1;
+    }
+
     int32 ret0, ret1;
     ret0 = m_cDataCycleBuffer.addToTail(&data, NULL);
     ret1 = m_cCurveCycleBuffer.addToTail(&curve, NULL);
@@ -124,7 +129,10 @@ int32 UMyTransformUpdateSequenceMovementComponent::addSeqToTail(const FTransform
     MY_VERIFY(ret0 == ret1);
 
     if (ret0 >= 0) {
-        tryStartNextSeq();
+        tryStartNextSeq(TEXT("addSeqToTail trigger"));
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("addSeqToTail fail, ret %d."), ret0);
     }
 
     return ret0;
@@ -220,7 +228,7 @@ void UMyTransformUpdateSequenceMovementComponent::ApplyWorldOffset(const FVector
 
 }
 
-bool UMyTransformUpdateSequenceMovementComponent::tryStartNextSeq()
+bool UMyTransformUpdateSequenceMovementComponent::tryStartNextSeq(FString sDebugReason)
 {
     if (m_cTimeLine.IsPlaying()) {
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("still playing, not start next seq now."));
@@ -253,14 +261,22 @@ bool UMyTransformUpdateSequenceMovementComponent::tryStartNextSeq()
 
         m_cTimeLine.Play();
 
-        setActivatedMyEncapped(true, TEXT("new seq start"));
+        setActivatedMyEncapped(true, sDebugReason + TEXT(", have new one"));
 
-        m_dDebugTimeLineStartRealTime = FPlatformTime::Seconds();
+        //m_dDebugTimeLineStartRealTime = FPlatformTime::Seconds();
+        UWorld *w = GetWorld();
+        if (IsValid(w)) {
+            m_fDebugTimeLineStartWorldTime = w->GetTimeSeconds();
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
         return true;
     }
     else {
         //stop
-        setActivatedMyEncapped(false, TEXT("no new seq when try start new"));
+        setActivatedMyEncapped(false, sDebugReason + TEXT(", no new seq."));
         return false;
     }
 }
@@ -386,16 +402,26 @@ void UMyTransformUpdateSequenceMovementComponent::onTimeLineFinished()
 
     MY_VERIFY(IsValid(pCurve));
     MY_VERIFY(pData);
-    float minValue, maxValue, minTime, maxTime;
-    pCurve->GetValueRange(minValue, maxValue);
-    pCurve->GetTimeRange(minTime, maxTime);
+    //float minValue, maxValue, minTime, maxTime;
+    //pCurve->GetValueRange(minValue, maxValue);
+    //pCurve->GetTimeRange(minTime, maxTime);
 
-    double s1 = FPlatformTime::Seconds();
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onTimeLineFinished, time used %f, time range %f, %f, value range %f, %f."), s1 - m_dDebugTimeLineStartRealTime, minTime, maxTime, minValue, maxValue);
+    UWorld *w = GetWorld();
+    if (IsValid(w)) {
+        float fTimePassed = w->GetTimeSeconds() - m_fDebugTimeLineStartWorldTime;
+        if (!UKismetMathLibrary::NearlyEqual_FloatFloat(pData->m_fTime, fTimePassed, 0.1)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time line finished but time not quite equal: supposed %f, used %f."), pData->m_fTime, fTimePassed);
+        }
+
+    }
+    else {
+        MY_VERIFY(false);
+    }
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onTimeLineFinished, time used %f, time range %f, %f, value range %f, %f."), s1 - m_dDebugTimeLineStartRealTime, minTime, maxTime, minValue, maxValue);
 
     removeSeqFromHead(1);
     m_cTimeLine.Stop();
-    tryStartNextSeq();
+    tryStartNextSeq(TEXT("pre timeline finish"));
 }
 
 
@@ -557,6 +583,8 @@ void AMyMJGameCardBaseCpp::createComponentsForCDO()
     pStaticMeshComponent->SetupAttachment(m_pCardBox);
     pStaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     m_pCardStaticMesh = pStaticMeshComponent;
+
+    m_pTransformUpdateSequence = CreateDefaultSubobject<UMyTransformUpdateSequenceMovementComponent>(TEXT("transform update sequence movement component"));
 
 }
 

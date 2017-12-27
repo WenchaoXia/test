@@ -251,7 +251,7 @@ protected:
     inline void setActivatedMyEncapped(bool bNew, FString reason = TEXT("none"))
     {
         if (IsActive() != bNew) {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("activate component change %d -> %d, reason %s."), !bNew, bNew, *reason);
+            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("activate component change %d -> %d, reason %s."), !bNew, bNew, *reason);
             if (bNew) {
                 Activate();
             }
@@ -263,7 +263,7 @@ protected:
 
 
     //return true if new play started
-    bool tryStartNextSeq();
+    bool tryStartNextSeq(FString sDebugReason);
 
     void onTimeLineUpdated(FVector vector);
     void onTimeLineFinished();
@@ -290,7 +290,7 @@ protected:
     FMyCycleBuffer<FTransformUpdateSequencDataCpp> m_cDataCycleBuffer;
     FMyCycleBuffer<UCurveVector*> m_cCurveCycleBuffer;
 
-    double m_dDebugTimeLineStartRealTime;
+    float m_fDebugTimeLineStartWorldTime;
 };
 
 UCLASS(Blueprintable)
@@ -319,6 +319,12 @@ public:
 
     UFUNCTION(BlueprintGetter)
     const FDirectoryPath& getResPath() const;
+
+    inline
+    UMyTransformUpdateSequenceMovementComponent* getTransformUpdateSequence()
+    {
+        return m_pTransformUpdateSequence;
+    };
 
 protected:
 
@@ -361,6 +367,8 @@ protected:
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "card static mesh"))
     class UStaticMeshComponent *m_pCardStaticMesh;
 
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "transform update sequence"))
+    UMyTransformUpdateSequenceMovementComponent* m_pTransformUpdateSequence;
 
     //resouce settings, the child calss should specify them
     //Note: only one of ContentDir or RelativeToGameContentDir need to be specified to resulting relative path, their difference is dialog 

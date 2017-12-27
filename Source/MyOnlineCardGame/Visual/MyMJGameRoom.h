@@ -116,6 +116,9 @@ public:
     UFUNCTION(BlueprintPure)
     int32 retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const;
 
+    UFUNCTION(BlueprintCallable)
+    static class UCurveVector* getCurveVectorDefaultLinear();
+
 protected:
 
     //return a created in world one, which have final info
