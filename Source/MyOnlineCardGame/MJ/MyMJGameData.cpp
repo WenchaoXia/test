@@ -5,6 +5,41 @@
 #include "UnrealNetwork.h"
 #include "Engine/ActorChannel.h"
 
+void FMyMJDataDeltaCpp::copyWithRoleFromSysKeeperRole(MyMJGameRoleTypeCpp eTargetRole, FMyMJDataDeltaCpp& cTargetDelta) const
+{
+    MY_VERIFY(eTargetRole != MyMJGameRoleTypeCpp::SysKeeper)
+
+    cTargetDelta = *this;
+
+    //*(StaticCast<FMyMJGamePusherBaseCpp *>(&cTargetDelta)) = *this;
+
+    //cTargetDelta.m_aCoreData = m_aCoreData;
+    //cTargetDelta.m_aRoleDataAttender = m_aRoleDataAttender;
+    //cTargetDelta.m_aRoleDataPrivate = m_aRoleDataPrivate;
+    //cTargetDelta.m_iIdxAttenderActionInitiator = m_iIdxAttenderActionInitiator;
+    //cTargetDelta.m_iGameId = m_iGameId;
+
+    int32 l = cTargetDelta.m_aRoleDataAttender.Num();
+    MY_VERIFY(l <= 1);
+    for (int32 i = 0; i < l; i++) {
+        if ((uint8)eTargetRole != i) {
+            cTargetDelta.m_aRoleDataAttender[i].m_aDataPrivate.Reset();
+        }
+    }
+
+    l = cTargetDelta.m_aRoleDataPrivate.Num();
+    MY_VERIFY(l <= 1);
+    if (l > 0) {
+        bool bShouldKeepInfo = (cTargetDelta.m_aRoleDataPrivate[0].m_iRoleMaskForDataPrivateClone & (1 << (uint8)eTargetRole)) > 0;
+        if (bShouldKeepInfo) {
+            cTargetDelta.m_aRoleDataPrivate[0].m_eRoleType = eTargetRole;
+        }
+        else {
+            cTargetDelta.m_aRoleDataPrivate.Reset();
+        }
+    }
+};
+
 FMyMJDataStructCpp::FMyMJDataStructCpp()
 {
     m_eRole = MyMJGameRoleTypeCpp::Max;
@@ -35,6 +70,72 @@ FMyMJDataStructCpp::FMyMJDataStructCpp()
 FMyMJDataStructCpp::~FMyMJDataStructCpp()
 {
 
+};
+
+int32 FMyMJDataStructCpp::checkPrivateDataInExpect() const
+{
+    const FMyMJCoreDataPublicCpp& cdp = getCoreDataPublicRefConst();
+    if (cdp.m_iPusherIdLast < 0) {
+        return 0;
+    }
+
+    if ((uint8)m_eRole >= (uint8)MyMJGameRoleTypeCpp::Max || (uint8)m_eRole < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d is not valid."), (uint8)m_eRole);
+        return -1;
+    }
+
+    const FMyMJCardInfoPackCpp&  cCardInfoPack  = cdp.m_cCardInfoPack;
+    const FMyMJCardValuePackCpp& cCardValuePack = getRoleDataPrivateRefConst().m_cCardValuePack;
+
+    int32 cardCount = cdp.m_cCardInfoPack.getLength();
+    bool bGameEnd = cdp.m_eGameState == MyMJGameStateCpp::GameEnd;
+
+    if ((uint8)m_eRole < 4 || m_eRole == MyMJGameRoleTypeCpp::Observer) {
+        for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
+            const FMyMJRoleDataAttenderPrivateCpp& rdap = getRoleDataAttenderPrivateRefConst(idxAttender);
+            if (idxAttender != (uint8)m_eRole) {
+                if (!rdap.isEmpty()) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d: %d's private data not empty!"), (uint8)m_eRole, idxAttender);
+                    return -10;
+                }
+            }
+        }
+    }
+
+    for (int32 i = 0; i < cardCount; i++) {
+        const FMyMJCardInfoCpp& cInfo = cCardInfoPack.getRefByIdxConst(i);
+        int32 value = cCardValuePack.getByIdx(i);
+        if (bGameEnd || m_eRole == MyMJGameRoleTypeCpp::SysKeeper) {
+            if (value == 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d: game ended, unexpected card %s, value %d."), (uint8)m_eRole, *cInfo.genDebugMsg(), value);
+                return -100;
+            }
+        }
+        else if (cInfo.m_cPosi.m_eSlot == MyMJCardSlotTypeCpp::Untaken) {
+            if (value != 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d: unexpected card %s, value %d."), (uint8)m_eRole, *cInfo.genDebugMsg(), value);
+                return -110;
+            }
+        }
+        else {
+            if (cInfo.m_cPosi.m_iIdxAttender == (uint8)m_eRole || cInfo.m_eFlipState == MyMJCardFlipStateCpp::Up) {
+                //supposed to know
+                if (value == 0) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d: unexpected card %s, value %d."), (uint8)m_eRole, *cInfo.genDebugMsg(), value);
+                    return -120;
+                }
+            }
+            else {
+                if (value > 0) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d: unexpected card %s, value %d."), (uint8)m_eRole, *cInfo.genDebugMsg(), value);
+                    return -130;
+                }
+            }
+        }
+    }
+
+
+    return 0;
 };
 
 void FMyMJDataAccessorCpp::applyBase(const FMyMJDataStructCpp &base, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)

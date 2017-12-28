@@ -57,7 +57,7 @@ void AMyMJGamePlayerControllerCpp::BeginPlay()
         //warn: we forbid the using local multiple player mode!
         m_bUseAsLocalClientDataBridge = IsLocalPlayerController();
 
-        resetupWithRoleWithAuth(m_eRoleType, m_bUseAsLocalClientDataBridge);
+        resetupWithViewRoleAndAuth(m_eViewRoleType, m_bUseAsLocalClientDataBridge);
     }
     else {
         m_bUseAsLocalClientDataBridge = false;
@@ -93,7 +93,7 @@ void AMyMJGamePlayerControllerCpp::GetLifetimeReplicatedProps(TArray< FLifetimeP
     DOREPLIFETIME(AMyMJGamePlayerControllerCpp, m_pExtRoomCoreDataSourceSeq);
 };
 
-bool AMyMJGamePlayerControllerCpp::resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRoleType, bool bUseAsLocalClientDataBridge)
+bool AMyMJGamePlayerControllerCpp::resetupWithViewRoleAndAuth(MyMJGameRoleTypeCpp eRoleType, bool bUseAsLocalClientDataBridge)
 {
     MY_VERIFY(HasAuthority());
 
@@ -239,7 +239,7 @@ void AMyMJGamePlayerControllerCpp::loopOfSyncForMJCoreFullDataOnNetworkClient()
     }
 }
 
-void AMyMJGamePlayerControllerCpp::setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType)
+void AMyMJGamePlayerControllerCpp::setViewRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType)
 {
     if (!HasAuthority()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("can't set Role Type without auth."));
@@ -251,12 +251,12 @@ void AMyMJGamePlayerControllerCpp::setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRole
         return;
     }
 
-    if (m_pExtRoomCoreDataSourceSeq == NULL || m_eRoleType != eRoleType) {
+    if (m_pExtRoomCoreDataSourceSeq == NULL || m_eViewRoleType != eRoleType) {
         //update the pointer
-        resetupWithRoleWithAuth(eRoleType, m_bUseAsLocalClientDataBridge);
+        resetupWithViewRoleAndAuth(eRoleType, m_bUseAsLocalClientDataBridge);
     }
 
-    m_eRoleType = eRoleType;
+    m_eViewRoleType = eRoleType;
 };
 
 void AMyMJGamePlayerControllerCpp::askSyncForMJCoreFullDataOnServer_Implementation()

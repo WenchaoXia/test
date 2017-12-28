@@ -66,7 +66,8 @@ public:
     };
 
     //only with authority it can be changed
-    void setRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType);
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    void setViewRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType);
 
     UFUNCTION(BlueprintCallable)
     void setDebugHaltFeedData(bool bDebugHaltFeedData)
@@ -96,7 +97,7 @@ protected:
         void answerSyncForMJCoreFullDataOnClient(MyMJGameRoleTypeCpp eRole, const FMyMJDataStructWithTimeStampBaseCpp& cFullData);
 
     //will assert it have auth
-    bool resetupWithRoleWithAuth(MyMJGameRoleTypeCpp eRoleType, bool bUseAsLocalClientDataBridge);
+    bool resetupWithViewRoleAndAuth(MyMJGameRoleTypeCpp eRoleType, bool bUseAsLocalClientDataBridge);
 
     void loop();
 

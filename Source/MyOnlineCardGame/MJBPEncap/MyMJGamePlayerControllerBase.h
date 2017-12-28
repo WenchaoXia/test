@@ -22,7 +22,7 @@ public:
 
     AMyMJGamePlayerControllerBaseCpp() : Super()
     {
-        m_eRoleType = MyMJGameRoleTypeCpp::Observer;
+        m_eViewRoleType = MyMJGameRoleTypeCpp::Observer;
     };
 
     inline
@@ -32,9 +32,9 @@ public:
     };
 
     inline
-    MyMJGameRoleTypeCpp getRoleType() const
+    MyMJGameRoleTypeCpp getViewRoleType() const
     {
-        return m_eRoleType;
+        return m_eViewRoleType;
     };
 
     //Object id, serverWorldTime_ms
@@ -53,5 +53,5 @@ protected:
     */
 
     UPROPERTY(Replicated)
-    MyMJGameRoleTypeCpp m_eRoleType;
+    MyMJGameRoleTypeCpp m_eViewRoleType;
 };

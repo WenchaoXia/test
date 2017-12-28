@@ -321,6 +321,17 @@ int32 FMyMJGameDeskProcessorRunnableCpp::mainThreadTryFeedEvents(UMyMJDataSequen
 
         const FMyMJDataStructWithTimeStampBaseCpp& cFullData = pSeq->getFullData();
 
+        //debug
+        /*
+        int32 err = cFullData.checkPrivateDataInExpect();
+        if (err != 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("full data check fail, err %d."), err);
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("full data check OK."));
+        }
+        */
+
         if ((cFullData.getIdEventApplied() + 1) < idEventFirstToPick) {
             //we don't have a valid base
             return MyTryFeedEventRetNeedSyncBase;
@@ -365,6 +376,30 @@ int32 FMyMJGameDeskProcessorRunnableCpp::mainThreadTryFeedEvents(UMyMJDataSequen
         }
 
         const FMyMJEventWithTimeStampBaseCpp& event = pEvents->peekRefAt(idx);
+
+        //debug
+        /*
+        const FMyMJGamePusherResultCpp* pPusherResult = event.getPusherResult(false);
+        if (pPusherResult) {
+            if (pPusherResult->m_aResultBase.Num() > 0) {
+                int32 err = pPusherResult->m_aResultBase[0].checkPrivateDataInExpect();
+                if (err != 0) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error,   TEXT("event with base check fail, err %d."), err);
+                }
+                else {
+                    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("event with base check OK."));
+                }
+            }
+            else {
+                MY_VERIFY(pPusherResult->m_aResultDelta.Num() == 1);
+                const FMyMJDataDeltaCpp& delta = pPusherResult->m_aResultDelta[0];
+                if (delta.m_aRoleDataPrivate.Num() > 0) {
+                    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("debug: giveing delta event with revealing values, event %s, %s."), *event.genDebugMsg(),
+                    *UMyMJUtilsLibrary::formatStrIdValuePairs(delta.m_aRoleDataPrivate[0].m_aIdValuePairs2Reveal));
+                }
+            }
+        }
+        */
 
         pIn->reset();
         MY_VERIFY(pIn->m_apNewDeltaEvent.Emplace() == 0);
@@ -832,11 +867,22 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 int32 l0 = aIdHandCards.Num();
                 int32 l1 = aIdJustTakenCards.Num();
 
+                //int32 debugCheckingIdx = 36;
+                //int32 debugValue = 0;
+
                 FMyMJValueIdMapCpp m_cSortCards;
+                //m_cSortCards.setDebugInfo(1, FString::Printf(TEXT("%d's handcard"), idxAttender));
                 m_cSortCards.changeKeepOrder(true, false);
+
                 for (int32 i = 0; i < l0; i++) {
                     int32 cardId = aIdHandCards[i];
                     int32 cardValue = ccardValuePack.getByIdx(cardId);
+
+                    //if (cardId == debugCheckingIdx) {
+                    //    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("step 0: card [%d: %d]."), debugCheckingIdx, cardValue);
+                    //    debugValue = cardValue;
+                    //}
+
                     MY_VERIFY(m_cSortCards.insert(cardId, cardValue));
                 }
                 MY_VERIFY(m_cSortCards.getCount() == l0);
@@ -849,6 +895,15 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     int32 cardId = aPairs[i].m_iId;
                     const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
                     int32 cardValue = aPairs[i].m_iValue;
+
+                    //if (cardId == debugCheckingIdx) {
+                    //    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("step 1: card [%d: %d]."), debugCheckingIdx, cardValue);
+                    //    if (cardValue != debugValue) {
+                    //        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("got error!"), debugCheckingIdx, cardValue);
+                    //        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_cSortCards: %s."), *m_cSortCards.dump());
+                    //        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("aPairs: %s."), *UMyMJUtilsLibrary::formatStrIdValuePairs(aPairs));
+                    //    }
+                    //}
 
                     FMyMJGameCardVisualInfoCpp* pCardVisualInfo = &mIdCardVisualInfoTemp.FindOrAdd(cCardInfo.m_iId);
                     pCardVisualInfo->reset();

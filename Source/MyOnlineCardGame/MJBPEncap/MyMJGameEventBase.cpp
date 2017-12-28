@@ -744,7 +744,7 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
 
     int32 l = m_aDatas.Num();
 
-    MyMJGameRoleTypeCpp eClientRole = MyMJGameRoleTypeCpp::Observer;
+    MyMJGameRoleTypeCpp eClientViewRole = MyMJGameRoleTypeCpp::Observer;
     if (RepFlags && RepFlags->bReplay) {
         MyMJGameRoleTypeCpp eClientRole = MyMJGameRoleTypeCpp::SysKeeper;
     }
@@ -762,11 +762,11 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
             return WroteSomething;
         }
 
-        eClientRole = pCBase->getRoleType();
+        eClientViewRole = pCBase->getViewRoleType();
     }
 
-    if (eClientRole >= MyMJGameRoleTypeCpp::Max) {
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("ReplicateSubobjects, will not replicate since role is %d."), (uint8)eClientRole);
+    if (eClientViewRole >= MyMJGameRoleTypeCpp::Max) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("ReplicateSubobjects, will not replicate since role is %d."), (uint8)eClientViewRole);
         return WroteSomething;
     }
     
@@ -804,7 +804,7 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
             {
 
                 MY_VERIFY((uint8)pData->getRole() < (uint8)MyMJGameRoleTypeCpp::Max);
-                if (pData->getRole() != eClientRole) {
+                if (pData->getRole() != eClientViewRole) {
                     continue;
                 }
 

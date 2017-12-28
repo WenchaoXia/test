@@ -652,6 +652,11 @@ public:
         m_bBanPaoHuLocalCS = false;
     };
 
+    inline bool isEmpty() const
+    {
+        return m_cActionContainor.m_aActionChoices.Num() == 0 && m_cHuScoreResultTingGroup.getCount() == 0 && m_bBanPaoHuLocalCS == false;
+    };
+
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "action containor"))
     FMyMJGameActionContainorForBPCpp m_cActionContainor;
 
@@ -845,39 +850,8 @@ public:
     };
 
     //self must be syskeeper's role
-    void copyWithRoleFromSysKeeperRole(MyMJGameRoleTypeCpp eTargetRole, FMyMJDataDeltaCpp& cTargetDelta) const
-    {
-        MY_VERIFY(eTargetRole != MyMJGameRoleTypeCpp::SysKeeper)
+    void copyWithRoleFromSysKeeperRole(MyMJGameRoleTypeCpp eTargetRole, FMyMJDataDeltaCpp& cTargetDelta) const;
 
-        *(StaticCast<FMyMJGamePusherBaseCpp *>(&cTargetDelta)) = *this;
-
-        cTargetDelta.m_aCoreData = m_aCoreData;
-        cTargetDelta.m_aRoleDataAttender = m_aRoleDataAttender;
-        cTargetDelta.m_aRoleDataPrivate = m_aRoleDataPrivate;
-        cTargetDelta.m_iIdxAttenderActionInitiator = m_iIdxAttenderActionInitiator;
-        cTargetDelta.m_iGameId = m_iGameId;
-
-
-        int32 l = cTargetDelta.m_aRoleDataAttender.Num();
-        MY_VERIFY(l <= 1);
-        for (int32 i = 0; i < l; i++) {
-            if ((uint8)eTargetRole != i) {
-                cTargetDelta.m_aRoleDataAttender[i].m_aDataPrivate.Reset();
-            }
-        }
-
-        l = cTargetDelta.m_aRoleDataPrivate.Num();
-        MY_VERIFY(l <= 1);
-        if (l > 0) {
-            bool bShouldKeepInfo = (cTargetDelta.m_aRoleDataPrivate[0].m_iRoleMaskForDataPrivateClone & (uint8)eTargetRole) > 0;
-            if (bShouldKeepInfo) {
-                cTargetDelta.m_aRoleDataPrivate[0].m_eRoleType = eTargetRole;
-            }
-            else {
-                cTargetDelta.m_aRoleDataPrivate.Reset();
-            }
-        }
-    };
 
     //Num > 0 means valid, and num must equal 1 in that case
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "core data"))
@@ -989,6 +963,9 @@ public:
     {
         m_eRole = eRole;
     };
+
+    //return 0 if OK, other wise errorcode
+    int32 checkPrivateDataInExpect() const;
 
 protected:
 

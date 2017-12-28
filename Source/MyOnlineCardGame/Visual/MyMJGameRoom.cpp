@@ -353,7 +353,8 @@ void AMyMJGameRoomCpp::onDeskUpdatedWithImportantChange(FMyMJDataStructWithTimeS
                                                         TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices)
 {
     TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mIdCardMap = mNewActorDataIdCards;
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onDeskUpdatedWithImportantChange, mIdCardMap.Num() %d."), mIdCardMap.Num());
+    //cCoreData.checkPrivateDataInExpect();
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("onDeskUpdatedWithImportantChange, mIdCardMap.Num() %d, role %d, pusherIdLast %d."), mIdCardMap.Num(), (uint8)cCoreData.getRole(), cCoreData.getCoreDataPublicRefConst().m_iPusherIdLast);
 
     for (auto& Elem : mIdCardMap)
     {
@@ -385,11 +386,16 @@ void AMyMJGameRoomCpp::onDeskEventApplied(FMyMJDataStructWithTimeStampBaseCpp& c
                                             FMyMJEventWithTimeStampBaseCpp& cEvent)
 {
     TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mIdCardMap = mNewActorDataIdCards;
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onDeskEventApplied, mIdCardMap.Num() %d, dur %u."), mIdCardMap.Num(), cEvent.getDuration_ms());
+    //cCoreData.checkPrivateDataInExpect();
+    int32 checkId = 36;
+    int32 checkValue = cCoreData.getRoleDataPrivateRefConst().m_cCardValuePack.getByIdx(checkId);
 
+    FString eventStr = TEXT("other");
     if (cEvent.getPusherResult(false) && cEvent.getPusherResult(false)->m_aResultDelta.Num() > 0) {
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("desk updating for event : %s"), *cEvent.getPusherResult(false)->m_aResultDelta[0].genDebugString());
+        eventStr = cEvent.getPusherResult(false)->m_aResultDelta[0].genDebugString();
     }
+
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onDeskEventApplied: %s, mIdCardMap.Num() %d, dur %u, role %d, checking [%d:%d]"), *eventStr, mIdCardMap.Num(), cEvent.getDuration_ms(), (uint8)cCoreData.getRole(), checkId, checkValue);
 
     for (auto& Elem : mIdCardMap)
     {

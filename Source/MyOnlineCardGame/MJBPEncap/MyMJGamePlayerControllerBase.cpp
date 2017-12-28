@@ -15,7 +15,7 @@ void AMyMJGamePlayerControllerBaseCpp::GetLifetimeReplicatedProps(TArray< FLifet
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(AMyMJGamePlayerControllerBaseCpp, m_eRoleType);
+    DOREPLIFETIME(AMyMJGamePlayerControllerBaseCpp, m_eViewRoleType);
 
    // UObject* pO;
     //pO->uni
