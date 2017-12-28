@@ -15,12 +15,24 @@ FMyValueIdMapCpp::clear()
 bool
 FMyValueIdMapCpp::insert(int32 id, int32 value)
 {
+    /*
+    if (m_iDebugLevel) {
+        int32 debugCheckingIdx = 36;
+        if (id == debugCheckingIdx) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("insert [%d: %d]."), id, value);
+        }
+    }
+    */
+
+    bool bNeedSort = false;
     FMyIdCollectionCpp* pMapElem;
     if (m_iKeepOrder > 0) {
         pMapElem = m_mValueMap.Find(value);
         if (pMapElem == NULL) {
-            pMapElem = &m_mValueMap.Add(value);
-            sortByValue((m_iKeepOrder - 1) > 0);
+            //pMapElem = &m_mValueMap.Add(value);
+            pMapElem = &m_mValueMap.FindOrAdd(value);
+
+            bNeedSort = true;
         }
     }
     else {
@@ -31,6 +43,10 @@ FMyValueIdMapCpp::insert(int32 id, int32 value)
     if (!bExist) {
         pMapElem->m_aIds.Add(id);
         m_iCount++;
+    }
+
+    if (bNeedSort) {
+        sortByValue((m_iKeepOrder - 1) > 0);
     }
     invalidCaches();
 
@@ -275,6 +291,10 @@ FMyValueIdMapCpp::keys(TArray<int32>& outKeys) const
 
 void FMyValueIdMapCpp::sortByValue(bool bBig2Little)
 {
+    if (m_iDebugLevel > 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%s: bBig2Little %d, before sort: %s."), *m_sDebugString, bBig2Little, *dump());
+    }
+
     if (bBig2Little) {
         m_mValueMap.KeySort([](int32 v0, int32 v1) {
             return  v0 > v1;
@@ -285,6 +305,38 @@ void FMyValueIdMapCpp::sortByValue(bool bBig2Little)
             return  v0 < v1;
         });
     }
+
+    if (m_iDebugLevel > 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%s: bBig2Little %d, after sort: %s."), *m_sDebugString, bBig2Little, *dump());
+    }
+}
+
+FString FMyValueIdMapCpp::dump() const
+{
+    FString ret = FString::Printf(TEXT("%d elems: "), getCount());
+    ret += TEXT("[");
+
+    int32 debugIdCount = 0;
+    for (auto It = m_mValueMap.CreateConstIterator(); It; ++It)
+    {
+        int32 cardValue = It.Key();
+        const FMyIdCollectionCpp* pMapElem = &It.Value();
+        int32  l = pMapElem->m_aIds.Num();
+        for (int32 i = 0; i < l; i++) {
+            int32 cardId = pMapElem->m_aIds[i];
+            ret += FString::Printf(TEXT("(%d,%d)"), cardId, cardValue);
+            debugIdCount++;
+        }
+    }
+
+    ret += TEXT("]");
+
+    if (getCount() != debugIdCount || (m_aIdsAllCached.Num() > 0 && debugIdCount != m_aIdsAllCached.Num())) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("count not equal: count %d, cached %d, real %d"), getCount(), m_aIdsAllCached.Num(), debugIdCount);
+        MY_VERIFY(false);
+    }
+
+    return ret;
 }
 
 FThreadSafeCounter FMyRunnableBaseCpp::s_iThreadCount = 0;

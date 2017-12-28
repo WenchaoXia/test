@@ -200,6 +200,8 @@ struct FMyMJCardInfoCpp
         m_cPosi.reset();
     };
 
+    FString genDebugMsg() const;
+
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "id"))
         int32 m_iId; // >= 0 means valid
 

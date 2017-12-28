@@ -9,6 +9,11 @@ FString FMyMJCardPosiCpp::genDebugMsg() const
     return FString::Printf(TEXT("[%d, %s, %d, %d]"), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardSlotTypeCpp"), (uint8)m_eSlot), m_iIdxInSlot0, m_iIdxInSlot1);
 };
 
+FString FMyMJCardInfoCpp::genDebugMsg() const
+{
+    return FString::Printf(TEXT("[id %d, flip %s]"), m_iId, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eFlipState)) + m_cPosi.genDebugMsg();
+};
+
 void FMyMJCardValuePackCpp::helperVerifyValues() const
 {
     int32 l = m_aCardValues.Num();
@@ -1524,7 +1529,7 @@ UMyMJUtilsLibrary::formatStrIdValuePairs(const TArray<FMyIdValuePair> &aIdValues
     FString str;
     int32 l = aIdValues.Num();
     for (int32 i = 0; i < l; i++) {
-        str += aIdValues[i].genDebugStr() + TEXT(", ");
+        str += aIdValues[i].genDebugStr() + TEXT(",");
         //str += FString::Printf(TEXT("(%d, %d), "), aIdValues[i].m_iId, aIdValues[i].m_iValue);
     }
 

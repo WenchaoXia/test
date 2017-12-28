@@ -72,7 +72,7 @@ struct FMyIdValuePair
     inline FString genDebugStr() const
     {
 
-        return FString::Printf(TEXT("(%d, %d)"), m_iId, m_iValue);
+        return FString::Printf(TEXT("(%d,%d)"), m_iId, m_iValue);
 
     };
 
@@ -177,8 +177,11 @@ struct FMyValueIdMapCpp
 
     FMyValueIdMapCpp()
     {
+        m_iKeepOrder = 0;
         changeKeepOrder(false, false);
         clear();
+
+        m_iDebugLevel = 0;
     };
 
 
@@ -190,6 +193,12 @@ struct FMyValueIdMapCpp
 
         copyDeep(&rhs);
         return *this;
+    };
+
+    inline void setDebugInfo(int32 iDebugLevel, FString sDebugString)
+    {
+        m_iDebugLevel = iDebugLevel;
+        m_sDebugString = sDebugString;
     };
 
     void clear();
@@ -268,8 +277,10 @@ struct FMyValueIdMapCpp
             m_iKeepOrder = 1;
         }
 
-        sortByValue(bOrderBig2Little);
-        invalidCaches();
+        if (getCount() > 0) {
+            sortByValue(bOrderBig2Little);
+            invalidCaches();
+        }
     };
 
     /*
@@ -279,6 +290,8 @@ struct FMyValueIdMapCpp
         return m_mValueMap;
     };
     */
+
+    FString dump() const;
 
 protected:
 
@@ -301,6 +314,9 @@ protected:
 
     UPROPERTY()
     TArray<int32> m_aIdsAllCached;
+
+    int32 m_iDebugLevel;
+    FString m_sDebugString;
 };
 
 class FMyRunnableBaseCpp : public FRunnable
