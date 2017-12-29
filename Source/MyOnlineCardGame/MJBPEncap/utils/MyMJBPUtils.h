@@ -188,4 +188,7 @@ public:
     UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", CallableWithoutWorldContext, Keywords = "log print", AdvancedDisplay = "2"), Category = "Utilities|String")
     static void MyBpLog(UObject* WorldContextObject, const FString& InString = FString(TEXT("Hello")), bool bPrintToScreen = true, bool bPrintToLog = true, MyLogVerbosity eV = MyLogVerbosity::Display, FLinearColor TextColor = FLinearColor(0.0, 0.66, 1.0), float Duration = 2.f);
     //float GetRealTimeSeconds() const;
+
+    //return like /Game/[subpath], or Empty if error
+    static FString getClassAssetPath(UClass* pC);
 };

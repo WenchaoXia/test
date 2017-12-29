@@ -495,3 +495,39 @@ void UMyMJBPUtilsLibrary::MyBpLog(UObject* WorldContextObject, const FString& In
     }
 
 };
+
+FString UMyMJBPUtilsLibrary::getClassAssetPath(UClass* pC)
+{   
+    //two way:
+    // 1st is UPackage* pP = Cast<UPackage>(m_cCfgCardClass->GetDefaultObject()->GetOuter()); pP->FileName; result like /Game/CoreBPs/MyMJGameCardBaseBp
+    // 2nd is m_cCfgCardClass->GetPathName(NULL), result like /Game/CoreBPs/MyMJGameCardBaseBp.MyMJGameCardBaseBp_C
+    FString ret;
+
+    if (!pC) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("class is NULL"));
+        return ret;
+    }
+
+    UObject* o = pC->GetDefaultObject()->GetOuter();
+    if (!o) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("outer is NULL"));
+        return ret;
+    }
+    UPackage* pP = Cast<UPackage>(o);
+    if (!o) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to cast, class name is %s."), *o->GetClass()->GetName());
+        return ret;
+    }
+
+    FString assetFullName = pP->FileName.ToString();
+    int32 idxLastDelim = -1;
+    if (!assetFullName.FindLastChar('/', idxLastDelim)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to find delimitor, orinin str %s."), *assetFullName);
+        return ret;
+    }
+
+    MY_VERIFY(idxLastDelim >= 0);
+    ret = assetFullName.Left(idxLastDelim);
+
+    return ret;
+}

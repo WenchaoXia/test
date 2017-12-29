@@ -314,8 +314,11 @@ public:
     UFUNCTION(BlueprintGetter)
     int32 getValueShowing() const;
 
+    //return true if new path is OK
     UFUNCTION(BlueprintSetter)
     void setResPath(const FDirectoryPath& newResPath);
+
+    bool setResPathWithRet(const FDirectoryPath& newResPath);
 
     UFUNCTION(BlueprintGetter)
     const FDirectoryPath& getResPath() const;

@@ -61,7 +61,7 @@ UMyMJGameDeskResManagerCpp::~UMyMJGameDeskResManagerCpp()
 
 };
 
-bool UMyMJGameDeskResManagerCpp::checkSettings() const
+bool UMyMJGameDeskResManagerCpp::checkSettings(bool bCheckAll) const
 {
     if (!IsValid(m_cCfgCardClass)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cCardClass is invalid: %p"), m_cCfgCardClass.Get());
@@ -72,6 +72,20 @@ bool UMyMJGameDeskResManagerCpp::checkSettings() const
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("you must specify a sub class of AMyMJGameCardBaseCpp, not it self!"));
         return false;
     }
+    
+    //if (m_cCfgCardResPath.Path.IsEmpty()) {
+    //    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card resource path not specified!"));
+    //    return false;
+    //}
+
+    if (bCheckAll)
+    {
+        if (!IsValid(getCardBaseCDOInGame()))
+        {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card base CDO not exist, may be cfg not correct!"));
+            return false;
+        }
+    }
 
     return true;
 };
@@ -80,7 +94,7 @@ bool UMyMJGameDeskResManagerCpp::prepareForPlay()
 {
     if (!IsValid(m_pCardCDOInGame)) {
 
-        if (!checkSettings()) {
+        if (!checkSettings(false)) {
             return false;
         }
 
@@ -92,9 +106,20 @@ bool UMyMJGameDeskResManagerCpp::prepareForPlay()
         FActorSpawnParameters SpawnParams;
         SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
         m_pCardCDOInGame = w->SpawnActor<AMyMJGameCardBaseCpp>(m_cCfgCardClass, FVector(0, 0, 50), FRotator(0, 0, 0), SpawnParams);
+        
+        /*
+        if (!m_pCardCDOInGame->setResPathWithRet(m_cCfgCardResPath))
+        {
+            m_pCardCDOInGame->Destroy();
+            m_pCardCDOInGame = NULL;
+            return false;
+        }
+        */
 
         MY_VERIFY(IsValid(m_pCardCDOInGame));
         m_pCardCDOInGame->SetActorHiddenInGame(true);
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("card CDO in game created."));
     }
 
     return true;
@@ -189,6 +214,7 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
     for (int32 i = l; i < count2reach; i++) {
         //AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(pCDO->StaticClass(), SpawnParams); //Warning: staticClass is not virtual class, so you can't get actual class
         AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(m_cCfgCardClass, FVector(0, 0, 50), FRotator(0, 0, 0), SpawnParams);
+        //pNewCardActor->setResPathWithRet(m_cCfgCardResPath);
 
         MY_VERIFY(IsValid(pNewCardActor));
         pNewCardActor->SetActorHiddenInGame(true);
@@ -287,6 +313,8 @@ void AMyMJGameRoomCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & 
 
 void AMyMJGameRoomCpp::BeginPlay()
 {
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameRoomCpp BeginPlay()"));
+
     Super::BeginPlay();
 
     m_pResManager->prepareForPlay();
@@ -307,7 +335,7 @@ void AMyMJGameRoomCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 bool AMyMJGameRoomCpp::checkSettings() const
 {
-    if (!m_pResManager->checkSettings()) {
+    if (!m_pResManager->checkSettings(true)) {
         return false;
     }
 

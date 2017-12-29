@@ -12,9 +12,9 @@ bool AMyMJGameRoomRootActorCpp::checkSettings() const
         return false;
     }
 
-    if (!m_pRoomActor->checkSettings()) {
-        return false;
-    }
+    //if (!m_pRoomActor->checkSettings()) {
+    //    return false;
+    //}
 
     if (!IsValid(m_pCoreDataSource)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pCoreDataSource %p is not valid."), m_pCoreDataSource);

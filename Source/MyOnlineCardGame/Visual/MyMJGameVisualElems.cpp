@@ -530,6 +530,8 @@ void AMyMJGameCardBaseCpp::PostInitializeComponents()
 
 #if WITH_EDITOR
 
+#define MY_MODEL_RES_RELATIVE_PATH TEXT("Res")
+
 void AMyMJGameCardBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty, %s"), *m_cResPath.Path);
@@ -550,7 +552,11 @@ void AMyMJGameCardBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
         if (PropertyName == GET_MEMBER_NAME_CHECKED(AMyMJGameCardBaseCpp, m_cResPath))
         {
             //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty 2, this %p, %s"), this, *m_cResPath.Path);
-            checkAndLoadCardBasicResources(m_cResPath.Path);
+            if (0 != checkAndLoadCardBasicResources(m_cResPath.Path)) {
+                UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Retrying for default settings."));
+                m_cResPath.Path = UMyMJBPUtilsLibrary::getClassAssetPath(this->GetClass()) + TEXT("/") + MY_MODEL_RES_RELATIVE_PATH;
+                checkAndLoadCardBasicResources(m_cResPath.Path);
+            }
             updateVisual();
         }
     }
@@ -590,6 +596,7 @@ void AMyMJGameCardBaseCpp::createComponentsForCDO()
 
 int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath)
 {
+    int32 ret = 0;
     if (inPath.IsEmpty()) {
         m_pResMesh = nullptr;
         m_pResMI = nullptr;
@@ -608,6 +615,7 @@ int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath
     if (!IsValid(pMeshAsset)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to load mesh asset from %s."), *meshFullPathName);
         m_pResMesh = nullptr;
+        ret |= 0x01;
     }
     else {
         m_pResMesh = pMeshAsset;
@@ -617,6 +625,7 @@ int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath
     if (!IsValid(pMatInstAsset)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to load material default instance asset from %s."), *matDefaultInstFullPathName);
         m_pResMI = nullptr;
+        ret |= 0x10;
     }
     else {
         m_pResMI = pMatInstAsset;
@@ -624,11 +633,15 @@ int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath
 
     m_cResPath.Path = modelAssetPath;
 
-    return 0;
+    return ret;
 }
 
 int32 AMyMJGameCardBaseCpp::updateVisual()
 {
+    //if (m_cResPath.Path.IsEmpty()) {
+        //return -1;
+    //}
+
     updateWithCardBasicResources();
     updateWithValue();
 
@@ -665,7 +678,8 @@ int32 AMyMJGameCardBaseCpp::updateWithCardBasicResources()
 
         }
         else {
-
+            m_pCardStaticMesh->SetStaticMesh(NULL);
+            m_pCardBox->SetRelativeLocation(FVector::ZeroVector);
         }
 
         m_pCardBox->SetBoxExtent(boxSizeFix);
@@ -812,15 +826,32 @@ int32 AMyMJGameCardBaseCpp::getValueShowing() const
 
 void AMyMJGameCardBaseCpp::setResPath(const FDirectoryPath& newResPath)
 {
+    setResPathWithRet(newResPath);
+}
+
+bool AMyMJGameCardBaseCpp::setResPathWithRet(const FDirectoryPath& newResPath)
+{
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("setResPath %s."), *newResPath.Path);
 
     if (m_cResPath.Path == newResPath.Path) {
-        return;
+        return true;
     }
+
+    bool ret = true;
+    FDirectoryPath oldPath = m_cResPath;
     m_cResPath = newResPath;
 
-    checkAndLoadCardBasicResources(m_cResPath.Path);
+    if (0 == checkAndLoadCardBasicResources(m_cResPath.Path))
+    {
+    }
+    else {
+        m_cResPath = oldPath;
+        ret = false;
+    }
+
     updateVisual();
+
+    return ret;
 }
 
 const FDirectoryPath& AMyMJGameCardBaseCpp::getResPath() const

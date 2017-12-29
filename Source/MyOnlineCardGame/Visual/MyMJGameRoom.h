@@ -92,6 +92,26 @@ protected:
     TMap<int32, FMyMJGameDeskVisualPointCfgCpp> m_mVisualPointCache;
 };
 
+/*
+USTRUCT(BlueprintType)
+struct FMyResCfgCpp : public FTableRowBase
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyResCfgCpp() : Super()
+    {
+    };
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg card class"))
+    TSubclassOf<AMyMJGameCardBaseCpp> m_cCfgCardClass;
+
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, meta = (DisplayName = "resource path", ContentDir = "true"))
+    FDirectoryPath m_cResPath;
+};
+*/
+
 UCLASS(Blueprintable, NotBlueprintType)
 class MYONLINECARDGAME_API UMyMJGameDeskResManagerCpp : public UActorComponent
 {
@@ -102,7 +122,7 @@ public:
     UMyMJGameDeskResManagerCpp();
     virtual ~UMyMJGameDeskResManagerCpp();
 
-    bool checkSettings() const;
+    bool checkSettings(bool bCheckAll) const;
     bool prepareForPlay();
 
     //always success, core dump if fail
@@ -131,11 +151,11 @@ protected:
         return m_pCardCDOInGame;
     };
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "cards"))
-        TArray<AMyMJGameCardBaseCpp*> m_aCards;
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg card class"))
+    TSubclassOf<AMyMJGameCardBaseCpp> m_cCfgCardClass;
 
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg card class"))
-        TSubclassOf<AMyMJGameCardBaseCpp> m_cCfgCardClass;
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "cards"))
+    TArray<AMyMJGameCardBaseCpp*> m_aCards;
 
     UPROPERTY()
     AMyMJGameCardBaseCpp *m_pCardCDOInGame;
@@ -161,8 +181,6 @@ public:
     void stopVisual();
     void loopVisual();
 
-    bool checkSettings() const;
-
     inline UMyMJGameRoomDataSuite* getRoomDataSuiteVerified() const
     {
         MY_VERIFY(IsValid(m_pDataSuit));
@@ -187,6 +205,8 @@ protected:
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+    bool checkSettings() const;
 
     //return error code
     int32 retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
