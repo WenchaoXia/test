@@ -1491,7 +1491,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveCardTransform(const FMyMJGa
     }
 
     FVector colPoint(0);
-    FVector colOffsetL2R = perColOffsetL2R * colNormalCountForLocCalcBefore + perColOffsetX90DL2R * col90DCountForLocCalcBefore + fColInRowExtraMarginAbs * iColInRowExtraMarginCount;
+    FVector colOffsetL2R = perColOffsetL2R * colNormalCountForLocCalcBefore + perColOffsetX90DL2R * col90DCountForLocCalcBefore + rightV * (fColInRowExtraMarginAbs * iColInRowExtraMarginCount);
     if (eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Left) {
         colPoint = rowPoint - rightV * cAreaBoxExtend.Y + colOffsetL2R;
         localPointOfAttaching2StackPointRelativeLocation += localPointOfAttaching2StackPointRelativeLocationFixL2R;
