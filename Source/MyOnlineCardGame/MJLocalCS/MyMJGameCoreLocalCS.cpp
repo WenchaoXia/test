@@ -266,7 +266,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         int32 idxBase = pRet->m_aResultBase.Emplace();
         FMyMJDataStructCpp &base = pRet->m_aResultBase[idxBase];
 
-        genBaseFromPusherResetGame(pusherReset, base);
+        genBaseFromPusherResetGame(m_pResManager->getRandomStreamRef(), pusherReset, base);
         
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherUpdateAttenderCardsAndState)
@@ -1194,7 +1194,7 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
 }
 
 
-void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherResetGameCpp &pusherReset, FMyMJDataStructCpp &outBase)
+void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(FRandomStream &RS, const FMyMJGamePusherResetGameCpp &pusherReset, FMyMJDataStructCpp &outBase)
 {
     FMyMJDataStructCpp &base = outBase;
 
@@ -1290,18 +1290,45 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
     //let's recalc and arrange them to attender's
     MY_VERIFY(stackCount == pD->m_aUntakenCardStacks.Num());
     //stackCount = pD->m_aUntakenCardStacks.Num();
-    int32 stackArrayLAssumed = stackCount / 4;
 
+    //arrange the dangling stack
+    int32 stackNotEven = stackCount % 4;
+    MY_VERIFY(stackNotEven < 4);
+    int32 tempIdxs[4], tempResults[4];
     for (int32 i = 0; i < 4; i++) {
-        int32 idxStart = i * stackArrayLAssumed;
-        int32 stackL;
+        tempIdxs[i] = i;
+        tempResults[i] = 0;
+    }
+    for (int32 i = 0; i < stackNotEven; i++) {
+        int32 picked = RS.RandRange(0, 3 - i);
+        int32 idxPicked = tempIdxs[picked];
 
-        if (i == 3) {
-            stackL = stackCount - idxStart;
-        }
-        else {
-            stackL = stackArrayLAssumed;
-        }
+        tempResults[idxPicked] = 1;
+
+        //refill for next pick
+        tempIdxs[picked] = tempIdxs[3 - i];
+    }
+    //verify
+    int32 tempCount = 0;
+    for (int32 i = 0; i < 4; i++) {
+        MY_VERIFY(tempResults[i] <= 1);
+        tempCount += tempResults[i];
+    }
+    MY_VERIFY(tempCount == stackNotEven);
+    //final result
+    tempCount = 0;
+    int32 stackLengths[4];
+    for (int32 i = 0; i < 4; i++) {
+        int32 l0 = stackCount / 4 + tempResults[i];
+        tempCount += l0;
+        stackLengths[i] = l0;
+    }
+    MY_VERIFY(tempCount == stackCount);
+
+    int32 idxStart = 0;
+    for (int32 i = 0; i < 4; i++) {
+
+        int32 stackL = stackLengths[i];
 
         //pRet->getRoleDataAttenderPublicRefConst(i);
 
@@ -1327,6 +1354,8 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(const FMyMJGamePusherRe
 
             }
         }
+
+        idxStart += stackL;
     }
 
 

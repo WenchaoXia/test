@@ -50,7 +50,7 @@ protected:
     virtual void handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, FMyMJGameCmdBaseCpp &cmd) override;
 
 
-    static void genBaseFromPusherResetGame(const FMyMJGamePusherResetGameCpp &pusherReset, FMyMJDataStructCpp &outBase);
+    static void genBaseFromPusherResetGame(FRandomStream &RS, const FMyMJGamePusherResetGameCpp &pusherReset, FMyMJDataStructCpp &outBase);
 
     //don't store the pPusher or pAction, it is intended to use in local thread, and managed by other component, so it is only for sure valid in the call stack path
 
