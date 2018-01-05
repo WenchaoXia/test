@@ -50,6 +50,8 @@ public:
         m_iColInRowExtraMarginCount = 0;
 
         m_iCardValue = 0;
+
+        m_iHelperIdxColInRowReal = -1;
     };
 
     inline
@@ -62,15 +64,15 @@ public:
         return m_eFlipState == other.m_eFlipState && m_iIdxAttender == other.m_iIdxAttender && m_eSlot == other.m_eSlot &&
             m_iIdxRow == other.m_iIdxRow && m_iIdxColInRow == other.m_iIdxColInRow && m_iIdxStackInCol == other.m_iIdxStackInCol &&
             m_iRotateX90D == other.m_iRotateX90D && m_iRotateX90DBeforeCount == other.m_iRotateX90DBeforeCount && m_iColInRowExtraMarginCount == other.m_iColInRowExtraMarginCount &&
-            m_iCardValue == other.m_iCardValue;
+            m_iCardValue == other.m_iCardValue && m_iHelperIdxColInRowReal == other.m_iHelperIdxColInRowReal;
     };
 
 
     inline
     FString genDebugString() const
     {
-        return FString::Printf(TEXT("[value %d, flip %s, posi %d:%s, vidxs %d:%d:%d]"), m_iCardValue, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eFlipState), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardSlotTypeCpp"), (uint8)m_eSlot),
-                                m_iIdxRow, m_iIdxColInRow, m_iIdxStackInCol);
+        return FString::Printf(TEXT("[value %d, flip %s, posi %d:%s, vidxs %d:%d:%d:%d]"), m_iCardValue, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eFlipState), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardSlotTypeCpp"), (uint8)m_eSlot),
+                                m_iIdxRow, m_iIdxColInRow, m_iIdxStackInCol, m_iHelperIdxColInRowReal);
     };
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "flip state"))
@@ -108,6 +110,10 @@ public:
 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "card value"))
         int32 m_iCardValue;
+
+    // >= 0 means valid;
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "helper idx col in row real"))
+    int32 m_iHelperIdxColInRowReal;
 };
 
 

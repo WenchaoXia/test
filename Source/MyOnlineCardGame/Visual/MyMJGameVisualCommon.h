@@ -139,6 +139,7 @@ public:
         //m_iColInRowMaxNum = 0;
 
         m_fColInRowExtraMarginAbs = 0;
+        m_iExtra0 = 0;
     };
 
     virtual ~FMyMJGameDeskVisualPointCfgCpp()
@@ -171,4 +172,7 @@ public:
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col in row extra margin abs"))
         float m_fColInRowExtraMarginAbs;
 
+    //in case some unstandard cfg is needed, use this 
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "extra 0"))
+    int32 m_iExtra0;
 };

@@ -120,15 +120,20 @@ public:
             return -2;
         }
 
-        int32 retCount = FMath::CeilToInt(outVisualPointCfg.m_cAreaBoxExtendFinal.Y / cCardModelInfo.m_cBoxExtend.Y);
+        outCount = helperGetColCountByWidth(outVisualPointCfg.m_cAreaBoxExtendFinal.Y, cCardModelInfo.m_cBoxExtend.Y);
+
+        return 0;
+    };
+
+    static inline int32 helperGetColCountByWidth(float fAreaWidth, float fColWidth)
+    {
+        int32 retCount = FMath::CeilToInt(fAreaWidth / fColWidth);
         if (retCount <= 0) {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("fixing retCount it is %d before."), retCount);
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("fAreaWidth %f, fColWidth %f, fixing retCount it is %d before."), fAreaWidth, fColWidth, retCount);
             retCount = 1;
         }
 
-        outCount = retCount;
-
-        return 0;
+        return retCount;
     };
 
     uint32 m_uiStateKey; //Represent the state, used to compare if it is changed.

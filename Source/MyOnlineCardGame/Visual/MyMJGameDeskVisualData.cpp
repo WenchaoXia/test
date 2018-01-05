@@ -856,7 +856,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     //trick for mid alignment
                     if (cVisualPointCfg.m_eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Mid && (pCardVisualInfo->m_iIdxColInRow + emptyColHalf) >= 0) {
                         //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("fixing idx col for Mid alignment %d->%d"), pCardVisualInfo->m_iIdxColInRow, pCardVisualInfo->m_iIdxColInRow + emptyColHalf);
-                        pCardVisualInfo->m_iIdxColInRow += emptyColHalf;
+                        pCardVisualInfo->m_iHelperIdxColInRowReal = pCardVisualInfo->m_iIdxColInRow + emptyColHalf;
                     }
                 }
             }
@@ -924,7 +924,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     //trick for mid alignment
                     if (cVisualPointCfg.m_eColInRowAlignment == MyMJGameHorizontalAlignmentCpp::Mid && (pCardVisualInfo->m_iIdxColInRow + emptyColHalf) >= 0) {
                         //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("fixing idx col for Mid alignment %d->%d"), pCardVisualInfo->m_iIdxColInRow, pCardVisualInfo->m_iIdxColInRow + emptyColHalf);
-                        pCardVisualInfo->m_iIdxColInRow += emptyColHalf;
+                        pCardVisualInfo->m_iHelperIdxColInRowReal = pCardVisualInfo->m_iIdxColInRow + emptyColHalf;
                     }
                 }
             }
@@ -933,6 +933,44 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 const TArray<int32>& aIdGivenOutCards = attenderPublic.m_aIdGivenOutCards;
                 int32 l = aIdGivenOutCards.Num();
 
+                //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("GivenOut: cVisualPointCfg.m_iExtra0 %d."), cVisualPointCfg.m_iExtra0);
+                //support for extra reduce based on row number
+                int32 rowAngle_100 = cVisualPointCfg.m_iExtra0;
+                if (rowAngle_100 == 0) {
+                    rowAngle_100 = 90 * 100;
+                }
+
+                float fCardNum2ReducePerRowHalf = 0;
+                if ((rowAngle_100 % 9000) != 0) {
+                    float fRowHeight = 0;
+                    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("aIdGivenOutCards.Num() %d."), aIdGivenOutCards.Num());
+                    if (aIdGivenOutCards.Num() > 0) {
+                        const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(aIdGivenOutCards[0]);
+                        float fCardWidth = cCfgCache.m_cModelInfo.m_cCardModelInfo.m_cBoxExtend.Y * 2;
+                        if (cCardInfo.m_eFlipState == MyMJCardFlipStateCpp::Up || cCardInfo.m_eFlipState == MyMJCardFlipStateCpp::Down) {
+                            fRowHeight = cCfgCache.m_cModelInfo.m_cCardModelInfo.m_cBoxExtend.Z * 2;
+                        }
+                        else if (cCardInfo.m_eFlipState == MyMJCardFlipStateCpp::Stand)
+                        {
+                            fRowHeight = cCfgCache.m_cModelInfo.m_cCardModelInfo.m_cBoxExtend.X * 2;
+                        }
+                        else {
+                            MY_VERIFY(false);
+                        }
+
+                        float fT = FMath::Tan(FMath::DegreesToRadians((float)rowAngle_100 / 100));
+                        float fLength2ReducePerRowHalf = fRowHeight / fT;
+                        fCardNum2ReducePerRowHalf = fLength2ReducePerRowHalf / fCardWidth;
+   
+                        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("%f, %f."), FMath::Sin(90), FMath::Sin(FMath::DegreesToRadians(90)));
+                        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("rowAngle_100 %d, fT %f, fRowHeight %f, fCardWidth %f, fCardNum2ReducePerRowHalf %f."), rowAngle_100, fT, fRowHeight, fCardWidth, fCardNum2ReducePerRowHalf);
+                    }
+                }
+ 
+                int32 iCol2Skip = 0;
+                int32 iColPerRowNow = iColPerRow - (2 * iCol2Skip);
+                int32 idxRowNow = 0;
+                int32 idxColInRowNow = 0;
                 for (int32 i = 0; i < l; i++) {
                     int32 cardId = aIdGivenOutCards[i];
                     const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
@@ -948,11 +986,24 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     }
                     MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::GivenOut);
 
-                    pCardVisualInfo->m_iIdxRow = i / iColPerRow;
-                    pCardVisualInfo->m_iIdxColInRow = i % iColPerRow;
+                    pCardVisualInfo->m_iIdxRow = idxRowNow;
+                    pCardVisualInfo->m_iIdxColInRow = idxColInRowNow;
+                    pCardVisualInfo->m_iHelperIdxColInRowReal = idxColInRowNow + iCol2Skip;
                     pCardVisualInfo->m_iIdxStackInCol = 0;
 
                     pCardVisualInfo->m_iCardValue = cardValue;
+
+                    idxColInRowNow++;
+                    if (idxColInRowNow >= iColPerRowNow) {
+                        idxRowNow++;
+                        idxColInRowNow = 0;
+                        
+                        iCol2Skip = FMath::FloorToInt(idxRowNow * fCardNum2ReducePerRowHalf);
+                        iColPerRowNow = iColPerRow - (2 * iCol2Skip);
+                        if (iColPerRowNow < 2) {
+                            iColPerRowNow = 2;
+                        }
+                    }
                 }
             }
             else if (eSlot == MyMJCardSlotTypeCpp::Weaved) {
@@ -1321,6 +1372,9 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveCardTransform(const FMyMJGa
 
     int32 idxRow = cCardVisualInfo.m_iIdxRow;
     int32 idxColInRow = cCardVisualInfo.m_iIdxColInRow;
+    if (cCardVisualInfo.m_iHelperIdxColInRowReal >= 0) {
+        idxColInRow = cCardVisualInfo.m_iHelperIdxColInRowReal;
+    }
     int32 idxStackInCol = cCardVisualInfo.m_iIdxStackInCol;
     MyMJCardFlipStateCpp eFlipState = cCardVisualInfo.m_eFlipState;
     int32 iXRotate90D = cCardVisualInfo.m_iRotateX90D;
