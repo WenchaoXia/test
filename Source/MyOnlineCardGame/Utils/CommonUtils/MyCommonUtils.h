@@ -9,7 +9,7 @@
 
 #include "UObject/Object.h"
 #include "UObject/NoExportTypes.h"
-#include "MyCardUtils.generated.h"
+#include "MyCommonUtils.generated.h"
 
 #define MyIntIdDefaultInvalidValue (-1)
 #define MyUIntIdDefaultInvalidValue (0)
@@ -1002,19 +1002,3 @@ Same = false
 };
 };
 */
-
-
-UCLASS()
-class UMyCommonUtilsLibrary :
-    public UBlueprintFunctionLibrary
-{
-    GENERATED_BODY()
-
-public:
-
-    inline
-    static FString genTimeStrFromTimeMs(uint32 uiTime_ms)
-    {
-        return FString::Printf(TEXT("%u.%03u"), uiTime_ms / 1000, uiTime_ms % 1000);
-    };
-};

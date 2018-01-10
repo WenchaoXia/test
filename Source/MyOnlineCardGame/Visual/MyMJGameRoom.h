@@ -188,17 +188,24 @@ public:
     };
 
     
-    void onDeskUpdatedWithImportantChange(FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
-                                              FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
-                                              TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
-                                              TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices);
+    void updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
+                                          const FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
+                                          const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
+                                          const TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
+                                          const TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices,
+                                          uint32 uiSuggestedDur_ms);
 
-    void onDeskEventApplied(FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
-                                           FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
-                                           TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
-                                           TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices,
-                                           FMyMJEventWithTimeStampBaseCpp& cEvent);
+    void tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
+                         const FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
+                         const FMyMJEventWithTimeStampBaseCpp& cEvent);
 
+    void tipDataSkipped();
+
+
+    UFUNCTION(BlueprintCallable)
+    void showVisualTakeCards(int32 idxAttender, const TArray<AMyMJGameCardBaseCpp*>& cardActors, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
+
+    void showVisualGiveOutCards(int32 idxAttender, const TArray<AMyMJGameCardBaseCpp*>& cardActors, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
 
 protected:
 

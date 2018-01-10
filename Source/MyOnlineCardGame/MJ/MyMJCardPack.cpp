@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MyMJCardPack.h"
-#include "utils/CommonUtils/MyCardUtils.h"
+#include "utils/CommonUtils/MyCommonUtils.h"
 
 const FMyMJCardInfoCpp*
 FMyMJCardInfoPackCpp::getByIdxConst(int32 idx) const

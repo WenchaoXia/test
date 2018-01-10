@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Utils/CommonUtils/MyCardUtils.h"
+#include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
 #include "MJ/Utils/MyMJUtils.h"
 #include "MJ/MyMJGameAttender.h"
 

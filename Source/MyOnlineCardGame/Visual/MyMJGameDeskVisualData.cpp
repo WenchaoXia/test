@@ -330,7 +330,7 @@ int32 FMyMJGameDeskProcessorRunnableCpp::mainThreadTryFeedEvents(UMyMJDataSequen
         else {
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("full data check OK."));
         }
-        */
+        */  
 
         if ((cFullData.getIdEventApplied() + 1) < idEventFirstToPick) {
             //we don't have a valid base
@@ -2116,6 +2116,9 @@ void UMyMJGameDeskVisualDataObjCpp::playGameProgressTo(uint32 uiServerTime_ms, b
 
     uint32 uiDataConsumedTime_ms = 0;
 
+    bool bSkippedEvent = false;
+    bool bDataUpdated = false;
+
     //receive
     while (1)
     {
@@ -2139,14 +2142,34 @@ void UMyMJGameDeskVisualDataObjCpp::playGameProgressTo(uint32 uiServerTime_ms, b
             MY_VERIFY(cDelta.m_apNewCoreData.Num() > 0);
             MY_VERIFY(cDelta.m_apNewCoreDataDirtyRecord.Num() > 0);
 
+            bSkippedEvent |= (cDelta.m_bHelperSkippedEventBefore > 0);
+
+            const FMyMJEventWithTimeStampBaseCpp* pEventApplied = NULL;
             if (cDelta.m_apEventJustApplied.Num() > 0) {
-                getRoomVerified()->onDeskEventApplied(cDelta.m_apNewCoreData[0], cDelta.m_apNewCoreDataDirtyRecord[0], cDelta.m_mNewActorDataIdCards, cDelta.m_mNewActorDataIdDices, cDelta.m_apEventJustApplied[0]);
+                bDataUpdated = true;
+                pEventApplied = &cDelta.m_apEventJustApplied[0];
             }
             else {
                 //updating base
-                if (cDelta.m_apNewCoreDataDirtyRecord[0].isEmpty() || cDelta.m_mNewActorDataIdCards.Num() > 0 || cDelta.m_mNewActorDataIdDices.Num() > 0) {
-                    getRoomVerified()->onDeskUpdatedWithImportantChange(cDelta.m_apNewCoreData[0], cDelta.m_apNewCoreDataDirtyRecord[0], cDelta.m_mNewActorDataIdCards, cDelta.m_mNewActorDataIdDices);
+                if (!cDelta.m_apNewCoreDataDirtyRecord[0].isEmpty() || cDelta.m_mNewActorDataIdCards.Num() > 0 || cDelta.m_mNewActorDataIdDices.Num() > 0) {
+                    bDataUpdated = true;
                 }
+            }
+
+            if (bDataUpdated) {
+                getRoomVerified()->updateVisualData(m_cDeskVisualDataNow.getCfgRefConst(), cDelta.m_apNewCoreData[0], cDelta.m_apNewCoreDataDirtyRecord[0], cDelta.m_mNewActorDataIdCards, cDelta.m_mNewActorDataIdDices, pEventApplied ? pEventApplied->getDuration_ms() : 0);
+                bDataUpdated = false;
+            }
+
+            if (!bCatchUp && pEventApplied) {
+                if (bSkippedEvent) {
+                    getRoomVerified()->tipDataSkipped();
+                    bSkippedEvent = false;
+                }
+                else {
+                    getRoomVerified()->tipEventApplied(m_cDeskVisualDataNow.getCfgRefConst(), m_cDeskVisualDataNow.getCoreDataRef(), *pEventApplied);
+                }
+                pEventApplied = NULL;
             }
         }
 

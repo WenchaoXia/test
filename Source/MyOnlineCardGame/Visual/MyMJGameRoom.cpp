@@ -158,7 +158,7 @@ UCurveVector* UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear()
 {
     FString fullName = FString(MyArtDirBase) + TEXT("/") + MyArtDirNameCommon + TEXT("/") + MyArtDirNameCurves + TEXT("/") + MyArtFileNameCurveVectorDefaultLinear;
 
-    return UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UCurveVector>(NULL, fullName);
+    return UMyCommonUtilsLibrary::helperTryFindAndLoadAsset<UCurveVector>(NULL, fullName);
 };
 
 AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx)
@@ -375,19 +375,25 @@ int32 AMyMJGameRoomCpp::retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache)
 };
 
 
-void AMyMJGameRoomCpp::onDeskUpdatedWithImportantChange(FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
-                                                        FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
-                                                        TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
-                                                        TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices)
+void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
+                                        const FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
+                                        const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
+                                        const TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
+                                        const TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices,
+                                        uint32 uiSuggestedDur_ms)
 {
-    TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mIdCardMap = mNewActorDataIdCards;
+    const TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mIdCardMap = mNewActorDataIdCards;
     //cCoreData.checkPrivateDataInExpect();
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("onDeskUpdatedWithImportantChange, mIdCardMap.Num() %d, role %d, pusherIdLast %d."), mIdCardMap.Num(), (uint8)cCoreData.getRole(), cCoreData.getCoreDataPublicRefConst().m_iPusherIdLast);
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("updateVisualData, mIdCardMap.Num() %d, role %d, pusherIdLast %d."), mIdCardMap.Num(), (uint8)cCoreData.getRole(), cCoreData.getCoreDataPublicRefConst().m_iPusherIdLast);
 
+    float fDur = 1.f;
+    if (uiSuggestedDur_ms > 0) {
+        fDur = (float)uiSuggestedDur_ms / 1000;
+    }
     for (auto& Elem : mIdCardMap)
     {
         int32 idCard = Elem.Key;
-        FMyMJGameCardVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
+        const FMyMJGameCardVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
 
         AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(idCard);
 
@@ -399,21 +405,21 @@ void AMyMJGameRoomCpp::onDeskUpdatedWithImportantChange(FMyMJDataStructWithTimeS
         UMyTransformUpdateSequenceMovementComponent* pSeq = pCardActor->getTransformUpdateSequence();
         
         FTransformUpdateSequencDataCpp data;
-        data.helperSetDataBySrcAndDst(pCardActor->GetTransform(), cInfoAndResult.m_cVisualResult.m_cTransform, 1.0f);
+        data.helperSetDataBySrcAndDst(pCardActor->GetTransform(), cInfoAndResult.m_cVisualResult.m_cTransform, fDur);
         pSeq->clearSeq();
         pSeq->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
 
+        pCardActor->setTransform2Go(cInfoAndResult.m_cVisualResult.m_cTransform);
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor %03d updated: %s."), idCard, *cInfoAndResult.genDebugString());
     }
+
+    //Todo: handle other dirty data
 };
 
-void AMyMJGameRoomCpp::onDeskEventApplied(FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
-                                            FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
-                                            TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
-                                            TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices,
-                                            FMyMJEventWithTimeStampBaseCpp& cEvent)
+void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
+                                        const FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
+                                        const FMyMJEventWithTimeStampBaseCpp& cEvent)
 {
-    TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mIdCardMap = mNewActorDataIdCards;
     //cCoreData.checkPrivateDataInExpect();
     int32 checkId = 36;
     int32 checkValue = cCoreData.getRoleDataPrivateRefConst().m_cCardValuePack.getByIdx(checkId);
@@ -423,28 +429,174 @@ void AMyMJGameRoomCpp::onDeskEventApplied(FMyMJDataStructWithTimeStampBaseCpp& c
         eventStr = cEvent.getPusherResult(false)->m_aResultDelta[0].genDebugString();
     }
 
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onDeskEventApplied: %s, mIdCardMap.Num() %d, dur %u, role %d, checking [%d:%d]"), *eventStr, mIdCardMap.Num(), cEvent.getDuration_ms(), (uint8)cCoreData.getRole(), checkId, checkValue);
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("tipEventApplied: %s, dur %u, role %d, checking [%d:%d]"), *eventStr, cEvent.getDuration_ms(), (uint8)cCoreData.getRole(), checkId, checkValue);
 
-    for (auto& Elem : mIdCardMap)
-    {
-        int32 idCard = Elem.Key;
-        FMyMJGameCardVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
+    //let's sum what happend, and inform BP layer
+    if (cEvent.getMainType() == MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult) {
+        const FMyMJGamePusherResultCpp* pPusherResult = cEvent.getPusherResult(true);
+        if (pPusherResult->m_aResultBase.Num() > 0) {
+            //do it later
+        }
+        else {
+            MY_VERIFY(pPusherResult->m_aResultDelta.Num() > 0);
 
-        AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(idCard);
+            const FMyMJDataDeltaCpp& cDelta = pPusherResult->m_aResultDelta[0];
+            MyMJGamePusherTypeCpp ePusherType = cDelta.getType();
 
-        pCardActor->setValueShowing(cInfoAndResult.m_cVisualInfo.m_iCardValue);
-        pCardActor->SetActorHiddenInGame(false);
-        //pCardActor->SetActorTransform(cInfoAndResult.m_cVisualResult.m_cTransform);
+            bool bGotPointerCfgForAttender = false;
+            int32 idxAttender = cDelta.m_iIdxAttenderActionInitiator;
+            FMyMJGameDeskVisualPointCfgCpp cVisualPointForAttender;
+            if (idxAttender >= 0 && idxAttender < 4 && 0 == cCfgCache.m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(idxAttender, MyMJCardSlotTypeCpp::InHand, cVisualPointForAttender)) {
+                bGotPointerCfgForAttender = true;
+            }
 
-        UMyTransformUpdateSequenceMovementComponent* pSeq = pCardActor->getTransformUpdateSequence();
+            if (ePusherType == MyMJGamePusherTypeCpp::ActionTakeCards) {
+      
+                MY_VERIFY(cDelta.m_aCoreData.Num() > 0);
+                TArray<AMyMJGameCardBaseCpp*> aCardActors;
+                for (int32 i = 0; i < cDelta.m_aCoreData[0].m_aCardInfos2Update.Num(); i++) {
+                    const FMyMJCardInfoCpp& cardInfo = cDelta.m_aCoreData[0].m_aCardInfos2Update[i];
+                    if (cardInfo.m_cPosi.m_eSlot != MyMJCardSlotTypeCpp::JustTaken) {
+                        continue;
+                    }
+                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(cardInfo.m_iId);
+                    aCardActors.Emplace(pCardActor);
+                }
 
-        FTransformUpdateSequencDataCpp data;
-        data.helperSetDataBySrcAndDst(pCardActor->GetTransform(), cInfoAndResult.m_cVisualResult.m_cTransform, (float)cEvent.getDuration_ms() / 1000);
-        pSeq->clearSeq();
-        pSeq->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+                if (bGotPointerCfgForAttender) {
+                    showVisualTakeCards(idxAttender, aCardActors, (float)cEvent.getDuration_ms() / 1000, cCfgCache.m_cModelInfo.m_cCardModelInfo, cVisualPointForAttender);
+                }
 
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor %03d updated: %s."), idCard, *cInfoAndResult.genDebugString());
+            }
+            else if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
+                MY_VERIFY(cDelta.m_aCoreData.Num() > 0);
+                TArray<AMyMJGameCardBaseCpp*> aCardActors;
+                for (int32 i = 0; i < cDelta.m_aCoreData[0].m_aCardInfos2Update.Num(); i++) {
+                    const FMyMJCardInfoCpp& cardInfo = cDelta.m_aCoreData[0].m_aCardInfos2Update[i];
+                    if (cardInfo.m_cPosi.m_eSlot != MyMJCardSlotTypeCpp::GivenOut) {
+                        continue;
+                    }
+                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(cardInfo.m_iId);
+                    aCardActors.Emplace(pCardActor);
+                }
+
+                if (bGotPointerCfgForAttender) {
+                    showVisualGiveOutCards(idxAttender, aCardActors, (float)cEvent.getDuration_ms() / 1000, cCfgCache.m_cModelInfo.m_cCardModelInfo, cVisualPointForAttender);
+                }
+            }
+            else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave) {
+
+            }
+            else if (ePusherType == MyMJGamePusherTypeCpp::ActionHu) {
+
+            }
+            else if (ePusherType == MyMJGamePusherTypeCpp::ActionZhaNiaoLocalCS) {
+
+            }
+            else if (ePusherType == MyMJGamePusherTypeCpp::ActionHuBornLocalCS) {
+
+            }
+            else if (ePusherType == MyMJGamePusherTypeCpp::ActionStateUpdate) {
+
+            }
+            else if (ePusherType == MyMJGamePusherTypeCpp::ActionThrowDices) {
+
+            }
+            else if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart) {
+
+            }
+            else {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got a unhandled delta event with type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
+            }
+        }
     }
+    else if (cEvent.getMainType() == MyMJGameCoreRelatedEventMainTypeCpp::Trival) {
 
+    }
+};
+
+void AMyMJGameRoomCpp::tipDataSkipped()
+{
 
 };
+
+
+void AMyMJGameRoomCpp::showVisualTakeCards(int32 idxAttender, const TArray<AMyMJGameCardBaseCpp*>& cardActors, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender)
+{
+    float fUp2Add = cardModelInfo.m_cBoxExtend.Z * 2 * 1;
+    
+    float fDur0 = totalDur * 0.4;
+    float fDur1 = totalDur * 0.4;
+    float fDur2 = totalDur - fDur0 - fDur1;
+
+    int32 l = cardActors.Num();
+
+    for (int32 i = 0; i < l; i++) {
+        AMyMJGameCardBaseCpp* pCardActor = cardActors[i];
+        UMyTransformUpdateSequenceMovementComponent *pSeqComp = pCardActor->getTransformUpdateSequence();
+
+        const FTransform& cT2Go = pCardActor->getTransform2GoRefConst();
+
+        FVector cMidLoc = UKismetMathLibrary::GetUpVector(cT2Go.GetRotation().Rotator()) * fUp2Add + cT2Go.GetLocation();
+        FTransform cMidTransform = cT2Go;
+        cMidTransform.SetLocation(cMidLoc);
+        pSeqComp->clearSeq();
+
+        FTransformUpdateSequencDataCpp data;
+        data.helperSetDataBySrcAndDst(pCardActor->GetTransform(), cMidTransform, fDur0);
+        pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+        data.helperSetDataBySrcAndDst(cMidTransform, cMidTransform, fDur1);
+        pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+        data.helperSetDataBySrcAndDst(cMidTransform, cT2Go, fDur2);
+        pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+    }
+}
+
+void AMyMJGameRoomCpp::showVisualGiveOutCards(int32 idxAttender, const TArray<AMyMJGameCardBaseCpp*>& cardActors, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender)
+{
+    FVector2D popPosi(0.5, 0.6);
+    float vPercentInScreen = 0.2f;
+    FTransform popTrans;
+
+    UMyCommonUtilsLibrary::invalidScreenDataCache();
+    UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCamera(this, popPosi, vPercentInScreen, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
+
+    float fDur0 = totalDur * 0.1;
+    float fDur1 = totalDur * 0.3;
+    float fDur2 = totalDur * 0.4;
+    float fDur3 = totalDur - fDur0 - fDur1 - fDur2;
+
+    int32 l = cardActors.Num();
+
+    for (int32 i = 0; i < l; i++) {
+        AMyMJGameCardBaseCpp* pCardActor = cardActors[i];
+        UMyTransformUpdateSequenceMovementComponent *pSeqComp = pCardActor->getTransformUpdateSequence();
+
+        const FTransform& cT2Go = pCardActor->getTransform2GoRefConst();
+
+        FTransform cMidTransform0, cMidTransform1;
+        FTransformUpdateSequencDataCpp data;
+
+        pSeqComp->clearSeq();
+
+        cMidTransform0 = pCardActor->GetTransform();
+        cMidTransform0.SetLocation(popTrans.GetLocation());
+        data.helperSetDataBySrcAndDst(pCardActor->GetTransform(), cMidTransform0, fDur0);
+        pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+        cMidTransform1 = cMidTransform0;
+        cMidTransform1.SetRotation(cT2Go.GetRotation());
+        data.helperSetDataBySrcAndDst(cMidTransform0, cMidTransform1, fDur1);
+        pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+        data.helperSetDataBySrcAndDst(cMidTransform1, cMidTransform1, fDur2);
+        pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+        data.helperSetDataBySrcAndDst(cMidTransform1, cT2Go, fDur3);
+        pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+    }
+}

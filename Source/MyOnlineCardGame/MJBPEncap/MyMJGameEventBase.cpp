@@ -23,9 +23,9 @@ FMyMJCoreRelatedEventCorePusherCfgCpp::FMyMJCoreRelatedEventCorePusherCfgCpp()
 
     m_uiHuBornLocalCS = 1000;
 
-    m_uiTakeCards = 300;
+    m_uiTakeCards = 1000;
 
-    m_uiGiveCards = 300;
+    m_uiGiveCards = 1000;
 
     m_uiWeaveChi = 500;
 

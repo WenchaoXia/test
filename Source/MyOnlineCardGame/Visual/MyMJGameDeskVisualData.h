@@ -7,7 +7,7 @@
 
 #include "MJBPEncap/MyMJGameCoreBP.h"
 #include "MyMJGameVisualElems.h"
-#include "Utils/CommonUtils/MyCardUtils.h"
+#include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
 
 
 #include "MyMJGameDeskVisualData.generated.h"
@@ -767,7 +767,7 @@ public:
     void getDataTimeRange(uint32 &uiFirstDataGotServerTime_ms, uint32 &uiLastDataGotServerTime_ms) const;
     
     UFUNCTION(BlueprintCallable)
-    static void testHelperResolveCardTransform(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
+    static void helperResolveCardTransformForBp(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
                                             const FMyMJGameActorModelInfoBoxCpp& cCardModelInfo,
                                             const FMyMJGameCardVisualInfoCpp& cCardVisualInfo,
                                             FTransform& outTransform)

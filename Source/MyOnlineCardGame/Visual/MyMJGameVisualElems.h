@@ -335,6 +335,16 @@ public:
         return m_pTransformUpdateSequence;
     };
 
+    inline const FTransform& getTransform2GoRefConst() const
+    {
+        return m_cTransform2Go;
+    };
+
+    inline void setTransform2Go(const FTransform& cTransform2Go)
+    {
+        m_cTransform2Go = cTransform2Go;
+    };
+
 protected:
 
     virtual void OnConstruction(const FTransform& Transform) override;
@@ -392,6 +402,10 @@ protected:
 
     UPROPERTY(BlueprintReadOnly)
     class UMaterialInstance *m_pResMI;
+
+    //where this card should go, but allow it not be there now(should move smoothly there)
+    UPROPERTY(BlueprintReadOnly)
+    FTransform m_cTransform2Go;
 
 };
 

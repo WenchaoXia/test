@@ -8,7 +8,7 @@
 
 #include "Kismet/BlueprintFunctionLibrary.h"
 
-#include "Utils/CommonUtils/MyCardUtils.h"
+#include "Utils/CommonUtils/MyCommonUtils.h"
 
 
 #include "MyMJUtils.generated.h"

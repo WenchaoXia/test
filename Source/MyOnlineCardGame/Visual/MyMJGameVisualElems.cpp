@@ -2,6 +2,7 @@
 
 #include "MyMJGameVisualElems.h"
 
+#include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
 #include "MJ/Utils/MyMJUtils.h"
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
@@ -129,7 +130,9 @@ int32 UMyTransformUpdateSequenceMovementComponent::addSeqToTail(const FTransform
     MY_VERIFY(ret0 == ret1);
 
     if (ret0 >= 0) {
-        tryStartNextSeq(TEXT("addSeqToTail trigger"));
+        if (!m_cTimeLine.IsPlaying()) {
+            tryStartNextSeq(TEXT("addSeqToTail trigger"));
+        }
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("addSeqToTail fail, ret %d."), ret0);
@@ -554,7 +557,7 @@ void AMyMJGameCardBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
             //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty 2, this %p, %s"), this, *m_cResPath.Path);
             if (0 != checkAndLoadCardBasicResources(m_cResPath.Path)) {
                 UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Retrying for default settings."));
-                m_cResPath.Path = UMyMJBPUtilsLibrary::getClassAssetPath(this->GetClass()) + TEXT("/") + MY_MODEL_RES_RELATIVE_PATH;
+                m_cResPath.Path = UMyCommonUtilsLibrary::getClassAssetPath(this->GetClass()) + TEXT("/") + MY_MODEL_RES_RELATIVE_PATH;
                 checkAndLoadCardBasicResources(m_cResPath.Path);
             }
             updateVisual();
@@ -611,7 +614,7 @@ int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath
     FString meshFullPathName = modelAssetPath + TEXT("/") + MyCardAssetPartialNameStaticMesh;
     FString matDefaultInstFullPathName = modelAssetPath + TEXT("/") + MyCardAssetPartialNameStaticMeshDefaultMI;
 
-    UStaticMesh *pMeshAsset = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UStaticMesh>(NULL, meshFullPathName);
+    UStaticMesh *pMeshAsset = UMyCommonUtilsLibrary::helperTryFindAndLoadAsset<UStaticMesh>(NULL, meshFullPathName);
     if (!IsValid(pMeshAsset)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to load mesh asset from %s."), *meshFullPathName);
         m_pResMesh = nullptr;
@@ -621,7 +624,7 @@ int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath
         m_pResMesh = pMeshAsset;
     }
 
-    UMaterialInstance *pMatInstAsset = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UMaterialInstance>(NULL, matDefaultInstFullPathName);
+    UMaterialInstance *pMatInstAsset = UMyCommonUtilsLibrary::helperTryFindAndLoadAsset<UMaterialInstance>(NULL, matDefaultInstFullPathName);
     if (!IsValid(pMatInstAsset)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to load material default instance asset from %s."), *matDefaultInstFullPathName);
         m_pResMI = nullptr;
@@ -865,7 +868,7 @@ bool AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, c
 
     if (ppOutBaseColorTexture) {
         FString baseColorFullPathName = modelAssetPath + TEXT("/") + valuePrefix + MyCardAssetPartialNameSuffixValueBaseColorTexture;
-        UTexture* pTBaseColor = UMyMJBPUtilsLibrary::helperTryFindAndLoadAsset<UTexture>(nullptr, baseColorFullPathName);
+        UTexture* pTBaseColor = UMyCommonUtilsLibrary::helperTryFindAndLoadAsset<UTexture>(nullptr, baseColorFullPathName);
         if (IsValid(pTBaseColor)) {
             *ppOutBaseColorTexture = pTBaseColor;
         }
