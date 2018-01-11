@@ -219,11 +219,11 @@ void UMyTransformUpdateSequenceMovementComponent::clearSeq()
 }
 
 
-void UMyTransformUpdateSequenceMovementComponent::BeginPlay()
-{
-    Super::BeginPlay();
-
-}
+//void UMyTransformUpdateSequenceMovementComponent::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//}
 
 void UMyTransformUpdateSequenceMovementComponent::ApplyWorldOffset(const FVector& InOffset, bool bWorldShift)
 {
@@ -473,28 +473,153 @@ void UMyTransformUpdateSequenceMovementComponent::TickComponent(float DeltaTime,
 }
 
 
+AMyMoveWithSeqActorBaseCpp::AMyMoveWithSeqActorBaseCpp() : Super()
+{
+    bNetLoadOnClient = true;
+
+    m_bFakeUpdateSettings = false;
+
+    createComponentsForCDO();
+}
+
+AMyMoveWithSeqActorBaseCpp::~AMyMoveWithSeqActorBaseCpp()
+{
+
+}
+
+
+void AMyMoveWithSeqActorBaseCpp::createComponentsForCDO()
+{
+
+    USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
+    MY_VERIFY(IsValid(pRootSceneComponent));
+    RootComponent = pRootSceneComponent;
+    m_pRootScene = pRootSceneComponent;
+
+
+    UBoxComponent* pBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("MainBox"));
+    MY_VERIFY(IsValid(pBoxComponent));
+    pBoxComponent->SetupAttachment(m_pRootScene);
+    pBoxComponent->SetCollisionProfileName(TEXT("CollistionProfileBox"));
+    pBoxComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); //by default disable collision
+    m_pMainBox = pBoxComponent;
+
+
+    UStaticMeshComponent* pStaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MainStaticMesh"));
+    MY_VERIFY(IsValid(pStaticMeshComponent));
+    pStaticMeshComponent->SetupAttachment(m_pMainBox);
+    pStaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    m_pMainStaticMesh = pStaticMeshComponent;
+
+    m_pTransformUpdateSequence = CreateDefaultSubobject<UMyTransformUpdateSequenceMovementComponent>(TEXT("transform update sequence movement component"));
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_pMainBox created as 0x%p, this 0x%p."), m_pMainBox, this);
+
+}
+
+int32 AMyMoveWithSeqActorBaseCpp::getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const
+{
+    //ignore the root scene/actor's scale, but calc from the box
+
+    //FVector actorScale3D = GetActorScale3D();
+    //m_pMainBox->GetScaledBoxExtent()
+    modelInfo.m_cBoxExtend = m_pMainBox->GetUnscaledBoxExtent() *  m_pMainBox->GetComponentScale();
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("name %s, box scale %s."), *GetName(), *m_pMainBox->GetComponentScale().ToString());
+    modelInfo.m_cCenterPointRelativeLocation = m_pMainBox->RelativeLocation;// * actorScale3D;
+
+    return 0;
+};
+
+
+#if WITH_EDITOR
+
+void AMyMoveWithSeqActorBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty, %s"), *m_cResPath.Path);
+    FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
+
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(AMyMoveWithSeqActorBaseCpp, m_bFakeUpdateSettings))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_bFakeUpdateSettings clicked."));
+        updateSettings();
+    }
+    else {
+    }
+
+    Super::PostEditChangeProperty(e);
+}
+
+#endif
+
+
+int32 AMyMoveWithSeqActorBaseCpp::updateSettings()
+{
+    if (!IsValid(m_pMainBox)) {
+        UClass* uc = this->GetClass();
+        UObject* CDO = uc->GetDefaultObject();
+
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMainBox invalid 0x%p, this 0x%p, cdo 0x%p."), m_pMainBox, this, CDO);
+        MY_VERIFY(false);
+    }
+
+    //MY_VERIFY(IsValid(m_pMainBox));
+    MY_VERIFY(IsValid(m_pMainStaticMesh));
+
+    UStaticMesh* pMeshNow = m_pMainStaticMesh->GetStaticMesh();
+
+    FVector boxSizeFix = FVector::ZeroVector, meshOrigin = FVector::ZeroVector;
+
+    if (IsValid(pMeshNow)) {
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("updating mesh and material for this %p."), this);
+
+        FBox meshBox = pMeshNow->GetBoundingBox();
+        FVector meshBoxSize = meshBox.Max - meshBox.Min;
+
+        boxSizeFix.X = UKismetMathLibrary::FCeil(meshBoxSize.X) / 2;
+        boxSizeFix.Y = UKismetMathLibrary::FCeil(meshBoxSize.Y) / 2;
+        boxSizeFix.Z = UKismetMathLibrary::FCeil(meshBoxSize.Z) / 2;
+
+
+        meshOrigin.X = (meshBox.Min.X + meshBox.Max.X) / 2;
+        meshOrigin.Y = (meshBox.Min.Y + meshBox.Max.Y) / 2;
+        meshOrigin.Z = (meshBox.Min.Z + meshBox.Max.Z) / 2;
+
+    }
+    else {
+
+
+    }
+
+    m_pMainBox->SetRelativeLocation(FVector::ZeroVector);
+    m_pMainBox->SetBoxExtent(boxSizeFix);
+
+    m_pMainStaticMesh->SetRelativeLocation(-meshOrigin);
+
+    return 0;
+}
+
+/*
+void AMyMoveWithSeqActorBaseCpp::OnConstruction(const FTransform& Transform)
+{
+    Super::OnConstruction(Transform);
+
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnConstruction m_pMainBox 0x%p, this 0x%p."), m_pMainBox, this);
+}
+*/
+
 AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp() : Super()
 {
     //UClass* uc = this->GetClass();
     //UObject* CDO = uc->GetDefaultObject();
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGameCardBaseCpp, %s, this: %p, uc %s, cdo %p."), *m_cResPath.Path, this, *uc->GetFullName(), CDO);
 
-    bNetLoadOnClient = true;
-
-
     m_iValueShowing = MyMJGameCardBaseCppDefaultShowingValue;
     m_iValueUpdatedBefore = MyMJGameCardBaseCppDefaultShowingValue - 1;
-
-    m_pRootScene = NULL;
-    m_pCardBox = NULL;
-    m_pCardStaticMesh = NULL;
 
     m_cResPath.Path.Reset();
     m_pResMesh = NULL;
     m_pResMI = NULL;
-
-    
-    createComponentsForCDO();
 }
 
 AMyMJGameCardBaseCpp::~AMyMJGameCardBaseCpp()
@@ -525,7 +650,7 @@ void AMyMJGameCardBaseCpp::OnConstruction(const FTransform& Transform)
 
 void AMyMJGameCardBaseCpp::PostInitializeComponents()
 {
-    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostInitializeComponents, this %p, %s, %p, %p, compo: %p."), this, *m_cResPath.Path, m_pResMesh, m_pResMI, m_pCardStaticMesh);
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostInitializeComponents, this %p, %s, %p, %p, compo: %p."), this, *m_cResPath.Path, m_pResMesh, m_pResMI, m_pMainStaticMesh);
     Super::PostInitializeComponents();
 
     updateVisual();
@@ -569,32 +694,22 @@ void AMyMJGameCardBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
 
 #endif
 
-
-void AMyMJGameCardBaseCpp::createComponentsForCDO()
+int32 AMyMJGameCardBaseCpp::updateSettings()
 {
+    int32 ret = Super::updateSettings();
+    if (ret != 0) {
+        return ret;
+    }
 
-    USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
-    MY_VERIFY(IsValid(pRootSceneComponent));
-    RootComponent = pRootSceneComponent;
-    m_pRootScene = pRootSceneComponent;
+    FVector boxSize = m_pMainBox->GetScaledBoxExtent();
+    FVector alignPoint = FVector::ZeroVector;
 
+    alignPoint.X = -boxSize.X;
+    alignPoint.Z = -boxSize.Z;
 
-    UBoxComponent* pBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBox"));
-    MY_VERIFY(IsValid(pBoxComponent));
-    pBoxComponent->SetupAttachment(m_pRootScene);
-    pBoxComponent->SetCollisionProfileName(TEXT("CollistionProfileBox"));
-    pBoxComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); //by default disable collision
-    m_pCardBox = pBoxComponent;
+    m_pMainBox->SetRelativeLocation(-alignPoint);
 
-
-    UStaticMeshComponent* pStaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CardStaticMesh"));
-    MY_VERIFY(IsValid(pStaticMeshComponent));
-    pStaticMeshComponent->SetupAttachment(m_pCardBox);
-    pStaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    m_pCardStaticMesh = pStaticMeshComponent;
-
-    m_pTransformUpdateSequence = CreateDefaultSubobject<UMyTransformUpdateSequenceMovementComponent>(TEXT("transform update sequence movement component"));
-
+    return 0;
 }
 
 int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath)
@@ -653,55 +768,34 @@ int32 AMyMJGameCardBaseCpp::updateVisual()
 
 int32 AMyMJGameCardBaseCpp::updateWithCardBasicResources()
 {
-    MY_VERIFY(IsValid(m_pCardBox));
-    MY_VERIFY(IsValid(m_pCardStaticMesh));
+    if (!IsValid(m_pMainBox)) {
+        UClass* uc = this->GetClass();
+        UObject* CDO = uc->GetDefaultObject();
 
-    UStaticMesh* pMeshNow = m_pCardStaticMesh->GetStaticMesh();
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMainBox invalid 0x%p, this 0x%p, cdo 0x%p."), m_pMainBox, this, CDO);
+        MY_VERIFY(false);
+    }
+
+    //MY_VERIFY(IsValid(m_pMainBox));
+    MY_VERIFY(IsValid(m_pMainStaticMesh));
+
+    UStaticMesh* pMeshNow = m_pMainStaticMesh->GetStaticMesh();
     if (pMeshNow != m_pResMesh) {
-
-        FVector boxSizeFix(0), boxSizeFixPivotOffset(0), boxOrigin(0);
-
-        if (IsValid(m_pResMesh)) {
-            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("updating mesh and material for this %p."), this);
-
-            FBox box = m_pResMesh->GetBoundingBox();
-            FVector boxSize = box.Max - box.Min;
-
-            boxSizeFix.X = UKismetMathLibrary::FCeil(boxSize.X) / 2;
-            boxSizeFix.Y = UKismetMathLibrary::FCeil(boxSize.Y) / 2;
-            boxSizeFix.Z = UKismetMathLibrary::FCeil(boxSize.Z) / 2;
-
-            //boxSizeFixPivotOffset = boxSizeFix;
-            boxSizeFixPivotOffset.X = -boxSizeFix.X;
-            boxSizeFixPivotOffset.Z = -boxSizeFix.Z;
-
-            boxOrigin.X = (box.Min.X + box.Max.X) / 2;
-            boxOrigin.Y = (box.Min.Y + box.Max.Y) / 2;
-            boxOrigin.Z = (box.Min.Z + box.Max.Z) / 2;
-
-        }
-        else {
-            m_pCardStaticMesh->SetStaticMesh(NULL);
-            m_pCardBox->SetRelativeLocation(FVector::ZeroVector);
-        }
-
-        m_pCardBox->SetBoxExtent(boxSizeFix);
-        m_pCardBox->SetRelativeLocation(-boxSizeFixPivotOffset);
-
-        m_pCardStaticMesh->SetStaticMesh(m_pResMesh);
-        m_pCardStaticMesh->SetRelativeLocation(-boxOrigin);
+        //only update when mesh changes, give BP a chance to adjust them manually
+        m_pMainStaticMesh->SetStaticMesh(m_pResMesh);
+        updateSettings();
     }
 
 
-    UMaterialInstanceDynamic* pMIDNow = Cast<UMaterialInstanceDynamic>(m_pCardStaticMesh->GetMaterial(0));
+    UMaterialInstanceDynamic* pMIDNow = Cast<UMaterialInstanceDynamic>(m_pMainStaticMesh->GetMaterial(0));
     if (IsValid(m_pResMI)) {
         if (IsValid(pMIDNow) && pMIDNow->Parent == m_pResMI) {
             //equal
         }
         else {
-            UMaterialInstanceDynamic* pMID = UMaterialInstanceDynamic::Create(m_pResMI, m_pCardStaticMesh);
+            UMaterialInstanceDynamic* pMID = UMaterialInstanceDynamic::Create(m_pResMI, m_pMainStaticMesh);
             MY_VERIFY(IsValid(pMID));
-            m_pCardStaticMesh->SetMaterial(0, pMID);
+            m_pMainStaticMesh->SetMaterial(0, pMID);
         }
     }
     else {
@@ -710,7 +804,7 @@ int32 AMyMJGameCardBaseCpp::updateWithCardBasicResources()
             //equal
         }
         else {
-            m_pCardStaticMesh->SetMaterial(0, nullptr);
+            m_pMainStaticMesh->SetMaterial(0, nullptr);
         }
     }
  
@@ -749,9 +843,9 @@ int32 AMyMJGameCardBaseCpp::updateWithValue()
 
 int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBaseColor)
 {
-    MY_VERIFY(IsValid(m_pCardStaticMesh));
+    MY_VERIFY(IsValid(m_pMainStaticMesh));
 
-    UMaterialInterface* pMat = m_pCardStaticMesh->GetMaterial(0);
+    UMaterialInterface* pMat = m_pMainStaticMesh->GetMaterial(0);
     if (IsValid(pMat)) {
         UMaterialInstanceDynamic* DynamicMaterial = Cast<UMaterialInstanceDynamic>(pMat);
         if (!DynamicMaterial)
@@ -777,7 +871,7 @@ int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBase
         //if (InBaseColor == nullptr) {
             //test
             //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("doing test."));
-            //m_pCardStaticMesh->SetMaterial(0, nullptr);
+            //m_pMainStaticMesh->SetMaterial(0, nullptr);
             //return 0;
         //}
 
@@ -794,21 +888,6 @@ int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBase
         }
     }
 };
-
-int32 AMyMJGameCardBaseCpp::getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const
-{
-    //ignore the root scene/actor's scale, but calc from the box
-
-    //FVector actorScale3D = GetActorScale3D();
-    //m_pCardBox->GetScaledBoxExtent()
-    modelInfo.m_cBoxExtend = m_pCardBox->GetUnscaledBoxExtent() *  m_pCardBox->GetComponentScale();
-
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("name %s, box scale %s."), *GetName(), *m_pCardBox->GetComponentScale().ToString());
-    modelInfo.m_cCenterPointRelativeLocation = m_pCardBox->RelativeLocation;// * actorScale3D;
-
-    return 0;
-};
-
 
 void AMyMJGameCardBaseCpp::setValueShowing(int32 newValue)
 {
@@ -879,4 +958,13 @@ bool AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, c
     }
 
     return bRet;
+};
+
+
+AMyMJGameTrivalDancingActorBaseCpp::AMyMJGameTrivalDancingActorBaseCpp() : Super()
+{
+};
+
+AMyMJGameTrivalDancingActorBaseCpp::~AMyMJGameTrivalDancingActorBaseCpp()
+{
 };

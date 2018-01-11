@@ -73,7 +73,7 @@ UMyMJGameDeskResManagerCpp::~UMyMJGameDeskResManagerCpp()
 
 };
 
-bool UMyMJGameDeskResManagerCpp::checkSettings(bool bCheckAll) const
+bool UMyMJGameDeskResManagerCpp::checkSettings(bool bCheckDataInGame) const
 {
     if (!IsValid(m_cCfgCardClass)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cCardClass is invalid: %p"), m_cCfgCardClass.Get());
@@ -90,7 +90,28 @@ bool UMyMJGameDeskResManagerCpp::checkSettings(bool bCheckAll) const
     //    return false;
     //}
 
-    if (bCheckAll)
+    for (int32 i = ((int32)MyMJGameTrivalDancingTypeCpp::Invalid + 1); i < (int32)MyMJGameTrivalDancingTypeCpp::Max; i++)
+    {
+        MyMJGameTrivalDancingTypeCpp eType = (MyMJGameTrivalDancingTypeCpp)i;
+        const TSubclassOf<AMyMJGameTrivalDancingActorBaseCpp>* pSubClass = m_mCfgTrivalDancingClasses.Find(eType);
+        if (pSubClass == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("subclass not specified for type: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameTrivalDancingTypeCpp"), (uint8)eType));
+            return false;
+        }
+
+        if (!IsValid(*pSubClass)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("subclass not valid for type: %s, pointer %p."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameTrivalDancingTypeCpp"), (uint8)eType), pSubClass);
+            return false;
+        }
+
+        if ((*pSubClass)->GetClass() == AMyMJGameTrivalDancingActorBaseCpp::StaticClass()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("you must specify a sub class of AMyMJGameTrivalDancingActorBaseCpp, not it self, type: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameTrivalDancingTypeCpp"), (uint8)eType));
+            return false;
+        }
+    }
+
+
+    if (bCheckDataInGame)
     {
         if (!IsValid(getCardBaseCDOInGame()))
         {
@@ -102,8 +123,36 @@ bool UMyMJGameDeskResManagerCpp::checkSettings(bool bCheckAll) const
     return true;
 };
 
-bool UMyMJGameDeskResManagerCpp::prepareForPlay()
+void UMyMJGameDeskResManagerCpp::reset()
 {
+    if (IsValid(m_pCardCDOInGame)) {
+        m_pCardCDOInGame->K2_DestroyActor();
+        m_pCardCDOInGame = NULL;
+    }
+
+    for (int32 i = 0; i < m_aCardActors.Num(); i++)
+    {
+        AMyMJGameCardBaseCpp* pA = m_aCardActors[i];
+        if (IsValid(pA)) {
+            pA->K2_DestroyActor();
+        }
+    }
+    m_aCardActors.Reset();
+
+    for (int32 i = 0; i < m_aTrivalDancingActors.Num(); i++)
+    {
+        AMyMJGameTrivalDancingActorBaseCpp* pA = m_aTrivalDancingActors[i];
+        if (IsValid(pA)) {
+            pA->K2_DestroyActor();
+        }
+    }
+    m_aTrivalDancingActors.Reset();
+};
+
+bool UMyMJGameDeskResManagerCpp::OnBeginPlay()
+{
+    reset();
+
     if (!IsValid(m_pCardCDOInGame)) {
 
         if (!checkSettings(false)) {
@@ -135,6 +184,11 @@ bool UMyMJGameDeskResManagerCpp::prepareForPlay()
     }
 
     return true;
+};
+
+int32 UMyMJGameDeskResManagerCpp::prepareForVisual(int32 cardActorNum)
+{
+    return prepareCardActor(cardActorNum);
 };
 
 int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const
@@ -177,17 +231,23 @@ AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx)
 {
     MY_VERIFY(idx >= 0);
     MY_VERIFY(idx < MY_CARD_ACTOR_MAX); //we don't allow too much
-    if (idx >= m_aCards.Num()) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("requiring a card not prepared ahead, existing %d, required idx %d."), m_aCards.Num(), idx);
+    if (idx >= m_aCardActors.Num()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("requiring a card not prepared ahead, existing %d, required idx %d."), m_aCardActors.Num(), idx);
         prepareCardActor(idx + 1);
     }
 
-    MY_VERIFY(idx < m_aCards.Num());
-    AMyMJGameCardBaseCpp* pRet = m_aCards[idx];
+    MY_VERIFY(idx < m_aCardActors.Num());
+    AMyMJGameCardBaseCpp* pRet = m_aCardActors[idx];
 
     MY_VERIFY(IsValid(pRet));
     return pRet;
 }
+
+AMyMJGameTrivalDancingActorBaseCpp* UMyMJGameDeskResManagerCpp::getTrivalDancingActorByType(MyMJGameTrivalDancingTypeCpp type, bool freeActorOnly)
+{
+    return NULL;
+}
+
 
 int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
 {
@@ -207,9 +267,9 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
         return -1;
     }
 
-    int32 l = m_aCards.Num();
+    int32 l = m_aCardActors.Num();
     for (int32 i = (l - 1); i >= count2reach; i--) {
-        AMyMJGameCardBaseCpp* pPoped = m_aCards.Pop();
+        AMyMJGameCardBaseCpp* pPoped = m_aCardActors.Pop();
         pPoped->K2_DestroyActor();
     }
 
@@ -221,7 +281,7 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
     UWorld *w = parent->GetWorld();
     MY_VERIFY(IsValid(w));
 
-    l = m_aCards.Num();
+    l = m_aCardActors.Num();
     int32 iDebugCOunt = 0;
     for (int32 i = l; i < count2reach; i++) {
         //AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(pCDO->StaticClass(), SpawnParams); //Warning: staticClass is not virtual class, so you can't get actual class
@@ -230,7 +290,7 @@ int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
 
         MY_VERIFY(IsValid(pNewCardActor));
         pNewCardActor->SetActorHiddenInGame(true);
-        MY_VERIFY(m_aCards.Emplace(pNewCardActor) == i);
+        MY_VERIFY(m_aCardActors.Emplace(pNewCardActor) == i);
         iDebugCOunt++;
     }
 
@@ -288,7 +348,7 @@ void AMyMJGameRoomCpp::startVisual()
         MY_VERIFY(false);
     }
 
-    m_pResManager->prepareCardActor((27 + 3 + 2) * 4);
+    m_pResManager->prepareForVisual((27 + 3 + 2) * 4);
 };
 
 void AMyMJGameRoomCpp::stopVisual()
@@ -329,7 +389,10 @@ void AMyMJGameRoomCpp::BeginPlay()
 
     Super::BeginPlay();
 
-    m_pResManager->prepareForPlay();
+    if (!m_pResManager->OnBeginPlay())
+    {
+        return;
+    }
 
     if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this)) {
         startVisual();
@@ -570,7 +633,7 @@ void AMyMJGameRoomCpp::showVisualTakeCards(int32 idxAttender, const TArray<AMyMJ
 void AMyMJGameRoomCpp::showVisualGiveOutCards(int32 idxAttender, const TArray<AMyMJGameCardBaseCpp*>& cardActors, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender)
 {
     float cardPosiFromCenterPercentOfRadiusInScreen = 0.3;
-    float vPercentInScreen = 0.2f;
+    float vPercentInScreen = 0.3f;
 
     UMyCommonUtilsLibrary::invalidScreenDataCache();
 

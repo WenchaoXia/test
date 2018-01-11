@@ -121,6 +121,19 @@ public:
 };
 */
 
+UENUM(BlueprintType)
+enum class MyMJGameTrivalDancingTypeCpp : uint8
+{
+    Invalid = 0                       UMETA(DisplayName = "Invalid"),
+    Chi = 1                           UMETA(DisplayName = "Chi"),
+    Peng = 2                          UMETA(DisplayName = "Peng"),
+    Gang = 3                          UMETA(DisplayName = "Gang"),
+    Bu = 4                            UMETA(DisplayName = "Bu"),
+    Hu = 5                            UMETA(DisplayName = "Hu"),
+    Max = 6                           UMETA(DisplayName = "Max"),
+};
+
+
 UCLASS(Blueprintable, NotBlueprintType)
 class MYONLINECARDGAME_API UMyMJGameDeskResManagerCpp : public UActorComponent
 {
@@ -131,15 +144,21 @@ public:
     UMyMJGameDeskResManagerCpp();
     virtual ~UMyMJGameDeskResManagerCpp();
 
-    bool checkSettings(bool bCheckAll) const;
-    bool prepareForPlay();
+    bool checkSettings(bool bCheckDataInGame) const;
+    void reset();
 
-    //always success, core dump if fail
+    bool OnBeginPlay();
+
+    //return error code, 0 means ok
+    int32 prepareForVisual(int32 cardActorNum);
+
+    //always success, core dump if fail, returned actor managed by this class
     UFUNCTION(BlueprintCallable)
     AMyMJGameCardBaseCpp* getCardActorByIdx(int32 idx);
 
-    //UFUNCTION(BlueprintCallable)
-    int32 prepareCardActor(int32 count2reach);
+    //always success, core dump if fail, returned actor managed by this class
+    UFUNCTION(BlueprintCallable)
+    AMyMJGameTrivalDancingActorBaseCpp* getTrivalDancingActorByType(MyMJGameTrivalDancingTypeCpp type, bool freeActorOnly);
 
     //return error code
     UFUNCTION(BlueprintPure)
@@ -149,6 +168,10 @@ public:
     static class UCurveVector* getCurveVectorDefaultLinear();
 
 protected:
+
+    //return error code, 0 means ok
+    //UFUNCTION(BlueprintCallable)
+    int32 prepareCardActor(int32 count2reach);
 
     //return a created in world one, which have final info
     inline const AMyMJGameCardBaseCpp* getCardBaseCDOInGame() const
@@ -163,10 +186,17 @@ protected:
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg card class"))
     TSubclassOf<AMyMJGameCardBaseCpp> m_cCfgCardClass;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "cards"))
-    TArray<AMyMJGameCardBaseCpp*> m_aCards;
+    //core types must all be specified, otherwise runtime error will be reported
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg trival dancing classes"))
+    TMap<MyMJGameTrivalDancingTypeCpp, TSubclassOf<AMyMJGameTrivalDancingActorBaseCpp>> m_mCfgTrivalDancingClasses;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, Transient, meta = (DisplayName = "card actors"))
+    TArray<AMyMJGameCardBaseCpp*> m_aCardActors;
+
+    UPROPERTY(BlueprintReadOnly, Transient, meta = (DisplayName = "trival dancing actors"))
+    TArray<AMyMJGameTrivalDancingActorBaseCpp*> m_aTrivalDancingActors;
+
+    UPROPERTY(Transient)
     AMyMJGameCardBaseCpp *m_pCardCDOInGame;
     //it seems UBT have bug which require declare sequence
     //UPROPERTY(BlueprintSetter = setCfgCardModelAssetPath, BlueprintSetter = getCfgCardModelAssetPath, EditAnywhere, meta = (DisplayName = "cfg card model asset path"))

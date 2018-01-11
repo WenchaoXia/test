@@ -248,7 +248,7 @@ public:
 protected:
 
     //Begin UActorComponent Interface
-    virtual void BeginPlay() override;
+    //virtual void BeginPlay() override;
     virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
     virtual void ApplyWorldOffset(const FVector& InOffset, bool bWorldShift) override;
     //End UActorComponent Interface
@@ -300,7 +300,61 @@ protected:
 };
 
 UCLASS(Blueprintable)
-class MYONLINECARDGAME_API AMyMJGameCardBaseCpp : public AActor
+class MYONLINECARDGAME_API AMyMoveWithSeqActorBaseCpp : public AActor
+{
+    GENERATED_BODY()
+
+public:
+
+    AMyMoveWithSeqActorBaseCpp();
+
+    virtual ~AMyMoveWithSeqActorBaseCpp();
+
+    inline
+    UMyTransformUpdateSequenceMovementComponent* getTransformUpdateSequence()
+    {
+        return m_pTransformUpdateSequence;
+    };
+
+
+    //return error code, 0 means OK
+    UFUNCTION(BlueprintPure, meta = (CallableWithoutWorldContext))
+    int32 getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const;
+
+protected:
+
+    //virtual void OnConstruction(const FTransform& Transform) override;
+
+#if WITH_EDITOR
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
+#endif
+
+    //return errcode if got wrong, 0 if OK, here it just adjust boxExtend to cover the mesh exactly
+    virtual int32 updateSettings();
+
+    //components
+    //root scene
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "root scene"))
+        class USceneComponent *m_pRootScene;
+
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "main box"))
+        class UBoxComponent *m_pMainBox;
+
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "main static mesh"))
+        class UStaticMeshComponent *m_pMainStaticMesh;
+
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "transform update sequence"))
+        UMyTransformUpdateSequenceMovementComponent* m_pTransformUpdateSequence;
+
+    UPROPERTY(EditDefaultsOnly, Category = "My Helper", meta = (DisplayName = "fake button to update settings"))
+    bool m_bFakeUpdateSettings;
+
+private:
+    void createComponentsForCDO();
+};
+
+UCLASS(Blueprintable)
+class MYONLINECARDGAME_API AMyMJGameCardBaseCpp : public AMyMoveWithSeqActorBaseCpp
 {
     GENERATED_BODY()
 
@@ -309,10 +363,6 @@ public:
     AMyMJGameCardBaseCpp();
 
     virtual ~AMyMJGameCardBaseCpp();
-
-    //return error code, 0 means OK
-    UFUNCTION(BlueprintPure, meta = (CallableWithoutWorldContext))
-    int32 getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const;
 
     UFUNCTION(BlueprintSetter)
     void setValueShowing(int32 newValue);
@@ -329,12 +379,6 @@ public:
     UFUNCTION(BlueprintGetter)
     const FDirectoryPath& getResPath() const;
 
-    inline
-    UMyTransformUpdateSequenceMovementComponent* getTransformUpdateSequence()
-    {
-        return m_pTransformUpdateSequence;
-    };
-
     inline const FTransform& getTransform2GoRefConst() const
     {
         return m_cTransform2Go;
@@ -347,14 +391,16 @@ public:
 
 protected:
 
-    virtual void OnConstruction(const FTransform& Transform) override;
-    virtual void PostInitializeComponents() override;
-
 #if WITH_EDITOR
     virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
 #endif
 
-    void createComponentsForCDO();
+    virtual void OnConstruction(const FTransform& Transform) override;
+    virtual void PostInitializeComponents() override;
+
+    //it make box aligh the bottom end point
+    virtual int32 updateSettings() override;
+
     int32 checkAndLoadCardBasicResources(const FString &inPath);
 
     //the update rule is: always update if new settings arrive, and always reflect it even fail, never revert values
@@ -374,20 +420,6 @@ protected:
     int32 m_iValueShowing;
 
     int32 m_iValueUpdatedBefore;
-
-    //components
-    //root scene
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "root scene"))
-    class USceneComponent *m_pRootScene;
-
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "card box"))
-    class UBoxComponent *m_pCardBox;
-
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "card static mesh"))
-    class UStaticMeshComponent *m_pCardStaticMesh;
-
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "transform update sequence"))
-    UMyTransformUpdateSequenceMovementComponent* m_pTransformUpdateSequence;
 
     //resouce settings, the child calss should specify them
     //Note: only one of ContentDir or RelativeToGameContentDir need to be specified to resulting relative path, their difference is dialog 
@@ -464,4 +496,19 @@ protected:
 
     UPROPERTY(meta = (DisplayName = "cards"))
     TArray<FMyMJGameCardVisualInfoAndResultCpp> m_aCards;
+};
+
+UCLASS(Blueprintable)
+class MYONLINECARDGAME_API AMyMJGameTrivalDancingActorBaseCpp : public AMyMoveWithSeqActorBaseCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    AMyMJGameTrivalDancingActorBaseCpp();
+
+    virtual ~AMyMJGameTrivalDancingActorBaseCpp();
+
+protected:
+
 };
