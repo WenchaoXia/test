@@ -237,7 +237,9 @@ struct FMyScreenDataCache
 {
 public:
     FSceneViewProjectionData m_cSceneViewProjectionData;
+    FMatrix m_cViewProjMatrix;
     FMatrix m_cInvViewProjMatrix;
+
 };
 
 static FMyScreenDataCache g_sMyScreenDataCache;
@@ -258,7 +260,8 @@ void UMyCommonUtilsLibrary::refillScreenDataCache(const UObject* WorldContextObj
         // get the projection data
         if (LP->GetProjectionData(LP->ViewportClient->Viewport, eSSP_FULL, /*out*/ g_sMyScreenDataCache.m_cSceneViewProjectionData))
         {
-            g_sMyScreenDataCache.m_cInvViewProjMatrix = g_sMyScreenDataCache.m_cSceneViewProjectionData.ComputeViewProjectionMatrix().InverseFast();
+            g_sMyScreenDataCache.m_cViewProjMatrix = g_sMyScreenDataCache.m_cSceneViewProjectionData.ComputeViewProjectionMatrix();
+            g_sMyScreenDataCache.m_cInvViewProjMatrix = g_sMyScreenDataCache.m_cViewProjMatrix.InverseFast();
             g_bMyScreenDataCacheValid = true;
 
             //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("GetConstrainedViewRect(): %s; %s"),
@@ -329,15 +332,66 @@ void UMyCommonUtilsLibrary::playerScreenConstrainedPosiPercentToPlayerScreenCons
     ConstrainedPosiAbsolute.Y = ConstrainedPosiPercent.Y * r.Height();
 }
 
-bool UMyCommonUtilsLibrary::myDeprojectScreenToWorld(const UObject* WorldContextObject, const FVector2D& PosiAbsolute, bool IsPosiConstrained, FVector& WorldPosition, FVector& WorldDirection)
+void UMyCommonUtilsLibrary::getPlayerScreenSizeAbsolute(const UObject* WorldContextObject, FVector2D& ConstrainedSize, FVector2D& FullSize)
 {
+    ConstrainedSize = FullSize = FVector2D(100, 100);
+
     if (!g_bMyScreenDataCacheValid) {
         refillScreenDataCache(WorldContextObject);
     }
 
     if (!g_bMyScreenDataCacheValid) {
-        WorldPosition = FVector::ZeroVector;
-        WorldDirection = FVector::ZeroVector;
+        return;
+    }
+
+    ConstrainedSize = g_sMyScreenDataCache.m_cSceneViewProjectionData.GetConstrainedViewRect().Size();
+    FullSize = g_sMyScreenDataCache.m_cSceneViewProjectionData.GetViewRect().Size();
+};
+
+bool UMyCommonUtilsLibrary::myProjectWorldToScreen(const UObject* WorldContextObject, const FVector& WorldPosition, bool ShouldOutScreenPosiAbsoluteConstrained, FVector2D& OutScreenPosiAbsolute)
+{
+    OutScreenPosiAbsolute = FVector2D::ZeroVector;
+
+    if (!g_bMyScreenDataCacheValid) {
+        refillScreenDataCache(WorldContextObject);
+    }
+
+    if (!g_bMyScreenDataCacheValid) {
+        return false;
+    }
+
+    const FSceneViewProjectionData& ProjectionData = g_sMyScreenDataCache.m_cSceneViewProjectionData;
+    const FMatrix& ViewProjectionMatrix = g_sMyScreenDataCache.m_cViewProjMatrix;
+
+    FVector2D posi;
+    const bool bResult = FSceneView::ProjectWorldToScreen(WorldPosition, ProjectionData.GetConstrainedViewRect(), ViewProjectionMatrix, posi);
+
+    if (bResult) {
+        if (ShouldOutScreenPosiAbsoluteConstrained) {
+            playerScreenFullPosiAbsoluteToPlayerScreenConstrainedPosiAbsolute(WorldContextObject, posi, OutScreenPosiAbsolute);
+        }
+        else {
+            OutScreenPosiAbsolute = posi;
+        }
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed in ProjectWorldToScreen()."));
+    }
+
+    return bResult;
+
+};
+
+bool UMyCommonUtilsLibrary::myDeprojectScreenToWorld(const UObject* WorldContextObject, const FVector2D& PosiAbsolute, bool IsPosiConstrained, FVector& WorldPosition, FVector& WorldDirection)
+{
+    WorldPosition = FVector::ZeroVector;
+    WorldDirection = FVector::ZeroVector;
+
+    if (!g_bMyScreenDataCacheValid) {
+        refillScreenDataCache(WorldContextObject);
+    }
+
+    if (!g_bMyScreenDataCacheValid) {
         return false;
     }
 

@@ -39,6 +39,18 @@ int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp
         }
     }
 
+    for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
+        for (uint8 eSubtype = ((uint8)MyMJGameDeskVisualElemAttenderSubtypeCpp::Invalid + 1); eSubtype < (uint8)MyMJGameDeskVisualElemAttenderSubtypeCpp::Max; eSubtype++) {
+            ret = retrieveAttenderVisualPointCfg(idxAttender, (MyMJGameDeskVisualElemAttenderSubtypeCpp)eSubtype, temp);
+            if (ret != 0) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got error when retrieving attender cfg from Blueprint idxAttender %d, eSlot %d."), idxAttender, eSubtype);
+                return ret;
+            }
+
+            cPointCfgCache.setAttenderVisualPointCfg(idxAttender, (MyMJGameDeskVisualElemAttenderSubtypeCpp)eSubtype, temp);
+        }
+    }
+
     MyMJGameDeskVisualElemTypeCpp elemType = MyMJGameDeskVisualElemTypeCpp::Dice;
     ret = retrieveTrivalVisualPointCfg(elemType, 0, 0, temp);
     if (ret != 0) {
@@ -446,7 +458,7 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
             bool bGotPointerCfgForAttender = false;
             int32 idxAttender = cDelta.m_iIdxAttenderActionInitiator;
             FMyMJGameDeskVisualPointCfgCpp cVisualPointForAttender;
-            if (idxAttender >= 0 && idxAttender < 4 && 0 == cCfgCache.m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(idxAttender, MyMJCardSlotTypeCpp::InHand, cVisualPointForAttender)) {
+            if (idxAttender >= 0 && idxAttender < 4 && 0 == cCfgCache.m_cPointCfg.getAttenderVisualPointCfg(idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp::OnDeskLocation, cVisualPointForAttender)) {
                 bGotPointerCfgForAttender = true;
             }
 
@@ -557,12 +569,46 @@ void AMyMJGameRoomCpp::showVisualTakeCards(int32 idxAttender, const TArray<AMyMJ
 
 void AMyMJGameRoomCpp::showVisualGiveOutCards(int32 idxAttender, const TArray<AMyMJGameCardBaseCpp*>& cardActors, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender)
 {
-    FVector2D popPosi(0.5, 0.6);
+    float cardPosiFromCenterPercentOfRadiusInScreen = 0.3;
     float vPercentInScreen = 0.2f;
-    FTransform popTrans;
 
     UMyCommonUtilsLibrary::invalidScreenDataCache();
-    UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCamera(this, popPosi, vPercentInScreen, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
+
+    FVector2D attenderProjectedPointer;
+    if (!UMyCommonUtilsLibrary::myProjectWorldToScreen(this, visualPointForAttender.m_cCenterPointWorldTransform.GetLocation(), true, attenderProjectedPointer)) {
+        return;
+    }
+    FVector2D constrainedScreenSize, fullScreenSize;
+    UMyCommonUtilsLibrary::getPlayerScreenSizeAbsolute(this, constrainedScreenSize, fullScreenSize);
+
+    FVector centerMapped = FVector::ZeroVector, attenderMapped = FVector::ZeroVector;
+    centerMapped.X = constrainedScreenSize.X / 2;
+    centerMapped.Y = constrainedScreenSize.Y / 2;
+
+    attenderMapped.X = attenderProjectedPointer.X;
+    attenderMapped.Y = attenderProjectedPointer.Y;
+
+    FVector dirCenterToBorderMapped;
+    float lenToAttenderPoint;
+    (attenderMapped - centerMapped).ToDirectionAndLength(dirCenterToBorderMapped, lenToAttenderPoint);
+
+    float xLen = BIG_NUMBER;
+    if (!FMath::IsNearlyEqual(dirCenterToBorderMapped.X, 0, KINDA_SMALL_NUMBER)) {
+        xLen = FMath::Abs(centerMapped.X / dirCenterToBorderMapped.X);
+    }
+    float yLen = BIG_NUMBER;
+    if (!FMath::IsNearlyEqual(dirCenterToBorderMapped.Y, 0, KINDA_SMALL_NUMBER)) {
+        yLen = FMath::Abs(centerMapped.Y / dirCenterToBorderMapped.Y);
+    }
+    float lenToScreenBorder = FMath::Min(xLen, yLen);
+
+    FVector popPointMapped = centerMapped + lenToScreenBorder * cardPosiFromCenterPercentOfRadiusInScreen * dirCenterToBorderMapped;
+    FVector2D popPoint;
+    popPoint.X = popPointMapped.X / constrainedScreenSize.X;
+    popPoint.Y = popPointMapped.Y / constrainedScreenSize.Y;
+
+    FTransform popTrans;
+    UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCamera(this, popPoint, vPercentInScreen, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
 
     float fDur0 = totalDur * 0.1;
     float fDur1 = totalDur * 0.3;

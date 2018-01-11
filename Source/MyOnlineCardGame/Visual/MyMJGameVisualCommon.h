@@ -14,7 +14,15 @@ enum class MyMJGameDeskVisualElemTypeCpp : uint8
     Invalid = 0                        UMETA(DisplayName = "Invalid"),
     Card = 1                           UMETA(DisplayName = "Card"),
     Dice = 2                           UMETA(DisplayName = "Dice"),
+    Attender = 3                       UMETA(DisplayName = "Attender"),
+};
 
+UENUM(BlueprintType)
+enum class MyMJGameDeskVisualElemAttenderSubtypeCpp : uint8
+{
+    Invalid = 0                        UMETA(DisplayName = "Invalid"),
+    OnDeskLocation = 1                 UMETA(DisplayName = "OnDeskLocation"),
+    Max = 2                            UMETA(DisplayName = "Max"),
 };
 
 UENUM()

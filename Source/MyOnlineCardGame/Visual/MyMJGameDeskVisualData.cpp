@@ -34,7 +34,7 @@
 int32 FMyMJGameDeskVisualPointCfgCacheCpp::getCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
 {
 
-    int32 errCode = helperGetVisualPointCfgByIdxs(0, idxAttender, (int32)eSlot, m_mCardVisualPointCache, visualPoint);
+    int32 errCode = helperGetVisualPointCfgByIdxs((int32)MyMJGameDeskVisualElemTypeCpp::Card, idxAttender, (int32)eSlot, m_mCardVisualPointCache, visualPoint);
     if (errCode != 0) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getCardVisualPointCfgByIdxAttenderAndSlot() failed, idxAttender %d, eSlot %d, errorCode: %d."), idxAttender, (int32)eSlot, errCode);
     }
@@ -44,7 +44,22 @@ int32 FMyMJGameDeskVisualPointCfgCacheCpp::getCardVisualPointCfgByIdxAttenderAnd
 
 void  FMyMJGameDeskVisualPointCfgCacheCpp::setCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, const FMyMJGameDeskVisualPointCfgCpp &visualPoint)
 {
-    helperSetVisualPointCfgByIdxs(0, idxAttender, (int32)eSlot, m_mCardVisualPointCache, visualPoint);
+    helperSetVisualPointCfgByIdxs((int32)MyMJGameDeskVisualElemTypeCpp::Card, idxAttender, (int32)eSlot, m_mCardVisualPointCache, visualPoint);
+};
+
+int32 FMyMJGameDeskVisualPointCfgCacheCpp::getAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
+{
+    int32 errCode = helperGetVisualPointCfgByIdxs((int32)MyMJGameDeskVisualElemTypeCpp::Attender, idxAttender, (int32)eSubtype, m_mCardVisualPointCache, visualPoint);
+    if (errCode != 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getAttenderVisualPointCfg() failed, idxAttender %d, eSubType %d, errorCode: %d."), idxAttender, (int32)eSubtype, errCode);
+    }
+
+    return errCode;
+};
+
+void FMyMJGameDeskVisualPointCfgCacheCpp::setAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, const FMyMJGameDeskVisualPointCfgCpp &visualPoint)
+{
+    helperSetVisualPointCfgByIdxs((int32)MyMJGameDeskVisualElemTypeCpp::Attender, idxAttender, (int32)eSubtype, m_mCardVisualPointCache, visualPoint);
 };
 
 int32 FMyMJGameDeskVisualPointCfgCacheCpp::getTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
