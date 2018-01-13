@@ -406,10 +406,10 @@ bool UMyCommonUtilsLibrary::myDeprojectScreenToWorld(const UObject* WorldContext
     return true;
 }
 
-void UMyCommonUtilsLibrary::playerScreenConstrainedVLengthAbsoluteToDistanceFromCamera(const UObject* WorldContextObject, float ConstrainedVLengthAbsoluteInCamera, float ModelInWorldHeight, float &DistanceFromCamera, FRotator &rotatorFacingCameraInWorld)
+void UMyCommonUtilsLibrary::playerScreenConstrainedVLengthAbsoluteToDistanceFromCamera(const UObject* WorldContextObject, float ConstrainedVLengthAbsoluteInCamera, float ModelInWorldHeight, float &DistanceFromCamera, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection)
 {
     DistanceFromCamera = 100;
-    rotatorFacingCameraInWorld = FRotator::ZeroRotator;
+    CameraCenterWorldPosition = CameraCenterDirection = FVector(0, 0, 1);
 
     if (!g_bMyScreenDataCacheValid) {
         refillScreenDataCache(WorldContextObject);
@@ -456,32 +456,38 @@ void UMyCommonUtilsLibrary::playerScreenConstrainedVLengthAbsoluteToDistanceFrom
         DistanceFromCamera = 0;
     }
 
-    if (!myDeprojectScreenToWorld(WorldContextObject, pCenter, true, worldPosition0, worldDirection0)) {
+    if (!myDeprojectScreenToWorld(WorldContextObject, pCenter, true, CameraCenterWorldPosition, CameraCenterDirection)) {
         return;
     }
 
-    rotatorFacingCameraInWorld = UKismetMathLibrary::FindLookAtRotation(worldDirection0 * 100, FVector::ZeroVector);
+    //rotatorFacingCameraInWorld = UKismetMathLibrary::FindLookAtRotation(worldDirection0 * 100, FVector::ZeroVector);
 
     return;
 }
 
-void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCamera(const UObject* WorldContextObject, FVector2D ConstrainedPosiPercentInCamera, float ConstrainedVLengthPercentInCamera, float ModelInWorldHeight, FTransform& ResultTransform)
+
+void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByAbsolute(const UObject* WorldContextObject, FVector2D ConstrainedPosiAbsoluteInCamera, float ConstrainedVLengthAbsoluteInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection)
 {
-    FVector2D vPercent(0, 0), vAbsolute(0, 0);
-    vPercent.Y = ConstrainedVLengthPercentInCamera;
-
-    playerScreenConstrainedPosiPercentToPlayerScreenConstrainedPosiAbsolute(WorldContextObject, vPercent, vAbsolute);
-    float distanceFromCamera = 0;
-    FRotator rotatorCenterFacingCamera = FRotator::ZeroRotator;
-    playerScreenConstrainedVLengthAbsoluteToDistanceFromCamera(WorldContextObject, vAbsolute.Y, ModelInWorldHeight, distanceFromCamera, rotatorCenterFacingCamera);
-
-    playerScreenConstrainedPosiPercentToPlayerScreenConstrainedPosiAbsolute(WorldContextObject, ConstrainedPosiPercentInCamera, vAbsolute);
+    float distanceFromCamera = 10;
+    playerScreenConstrainedVLengthAbsoluteToDistanceFromCamera(WorldContextObject, ConstrainedVLengthAbsoluteInCamera, ModelInWorldHeight, distanceFromCamera, CameraCenterWorldPosition, CameraCenterDirection);
 
     FVector worldPosition0(0, 0, 0), worldDirection0(0, 0, 0);
-    myDeprojectScreenToWorld(WorldContextObject, vAbsolute, true, worldPosition0, worldDirection0);
+    myDeprojectScreenToWorld(WorldContextObject, ConstrainedPosiAbsoluteInCamera, true, worldPosition0, worldDirection0);
 
     FVector loc = worldPosition0 + (worldDirection0 * distanceFromCamera);
     ResultTransform.SetLocation(loc);
-    ResultTransform.SetRotation(rotatorCenterFacingCamera.Quaternion());
+    ResultTransform.SetRotation(UKismetMathLibrary::FindLookAtRotation(CameraCenterDirection * 100, FVector::ZeroVector).Quaternion());
     ResultTransform.SetScale3D(FVector(1, 1, 1));
+}
+
+void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByPercent(const UObject* WorldContextObject, FVector2D ConstrainedPosiPercentInCamera, float ConstrainedVLengthPercentInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection)
+{
+    FVector2D ConstrainedPosiAbsoluteInCamera;
+    playerScreenConstrainedPosiPercentToPlayerScreenConstrainedPosiAbsolute(WorldContextObject, ConstrainedPosiPercentInCamera, ConstrainedPosiAbsoluteInCamera);
+
+    FVector2D vPercent(0, 0), vAbsolute(0, 0);
+    vPercent.Y = ConstrainedVLengthPercentInCamera;
+    playerScreenConstrainedPosiPercentToPlayerScreenConstrainedPosiAbsolute(WorldContextObject, vPercent, vAbsolute);
+
+    helperResolveWorldTransformFromPlayerCameraByAbsolute(WorldContextObject, ConstrainedPosiAbsoluteInCamera, vAbsolute.Y, ModelInWorldHeight, ResultTransform, CameraCenterWorldPosition, CameraCenterDirection);
 }

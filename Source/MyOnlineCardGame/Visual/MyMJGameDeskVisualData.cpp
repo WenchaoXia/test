@@ -2182,7 +2182,7 @@ void UMyMJGameDeskVisualDataObjCpp::playGameProgressTo(uint32 uiServerTime_ms, b
                     bSkippedEvent = false;
                 }
                 else {
-                    getRoomVerified()->tipEventApplied(m_cDeskVisualDataNow.getCfgRefConst(), m_cDeskVisualDataNow.getCoreDataRef(), *pEventApplied);
+                    getRoomVerified()->tipEventApplied(m_cDeskVisualDataNow.getCfgRefConst(), m_cDeskVisualDataNow.getCoreDataRef(), cDelta.m_mNewActorDataIdCards, *pEventApplied);
                 }
                 pEventApplied = NULL;
             }

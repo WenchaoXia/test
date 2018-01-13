@@ -101,25 +101,97 @@ protected:
     TMap<int32, FMyMJGameDeskVisualPointCfgCpp> m_mVisualPointCache;
 };
 
-/*
-USTRUCT(BlueprintType)
-struct FMyResCfgCpp : public FTableRowBase
+
+USTRUCT()
+struct FMyMJGamePointerFromCenterOnPlayerScreenCfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGamePointerFromCenterOnPlayerScreenCfgCpp()
+    {
+        reset();
+    };
+
+    virtual ~FMyMJGamePointerFromCenterOnPlayerScreenCfgCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        m_fShowPosiFromCenterToBorderPercent = 0;
+        m_cExtraOffsetScreenPercent = FVector2D::ZeroVector;
+        m_fTargetVLengthOnScreenScreenPercent = 0.1;
+    };
+
+    UPROPERTY()
+        float m_fShowPosiFromCenterToBorderPercent;
+
+    UPROPERTY()
+        FVector2D m_cExtraOffsetScreenPercent;
+
+    UPROPERTY()
+        float m_fTargetVLengthOnScreenScreenPercent;
+};
+
+USTRUCT()
+struct FMyMJGameAttenderAreaOnPlayerScreenCfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGameAttenderAreaOnPlayerScreenCfgCpp()
+    {
+    };
+
+    virtual ~FMyMJGameAttenderAreaOnPlayerScreenCfgCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        m_cCardShowPoint.reset();
+        m_cCommonActionShowPoint.reset();
+    };
+
+    UPROPERTY()
+        FMyMJGamePointerFromCenterOnPlayerScreenCfgCpp m_cCardShowPoint;
+
+    UPROPERTY()
+        FMyMJGamePointerFromCenterOnPlayerScreenCfgCpp m_cCommonActionShowPoint;
+};
+
+USTRUCT()
+struct FMyMJGameInGamePlayerScreenCfgCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyResCfgCpp() : Super()
+    FMyMJGameInGamePlayerScreenCfgCpp()
     {
     };
 
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg card class"))
-    TSubclassOf<AMyMJGameCardBaseCpp> m_cCfgCardClass;
+    virtual ~FMyMJGameInGamePlayerScreenCfgCpp()
+    {
 
-    UPROPERTY(BlueprintReadOnly, EditAnywhere, meta = (DisplayName = "resource path", ContentDir = "true"))
-    FDirectoryPath m_cResPath;
+    };
+
+    inline void reset()
+    {
+        for (int32 i = 0; i < 4; i++) {
+            m_aAttenderAreas[i].reset();
+        }
+    };
+
+    //mainly for test
+    void fillDefaultData();
+
+    UPROPERTY()
+        FMyMJGameAttenderAreaOnPlayerScreenCfgCpp m_aAttenderAreas[4];
 };
-*/
 
 UENUM(BlueprintType)
 enum class MyMJGameTrivalDancingTypeCpp : uint8
@@ -167,6 +239,11 @@ public:
     UFUNCTION(BlueprintCallable)
     static class UCurveVector* getCurveVectorDefaultLinear();
 
+    inline const FMyMJGameInGamePlayerScreenCfgCpp& getInGamePlayerScreenCfgRefConst() const
+    {
+        return m_cInGamePlayerScreenCfg;
+    };
+
 protected:
 
     //return error code, 0 means ok
@@ -202,7 +279,48 @@ protected:
     //UPROPERTY(BlueprintSetter = setCfgCardModelAssetPath, BlueprintSetter = getCfgCardModelAssetPath, EditAnywhere, meta = (DisplayName = "cfg card model asset path"))
     //UPROPERTY(EditAnywhere, BlueprintSetter = setCfgCardModelAssetPath, BlueprintGetter = getCfgCardModelAssetPath, meta = (DisplayName = "cfg card model asset path"))
 
+    //screen
+    UPROPERTY(Transient)
+    FMyMJGameInGamePlayerScreenCfgCpp m_cInGamePlayerScreenCfg;
+
 };
+
+
+struct FMyMJGamePointerOnPlayerScreenConstrainedMeta
+{
+
+public:
+    FMyMJGamePointerOnPlayerScreenConstrainedMeta()
+    {
+        reset();
+    };
+
+    virtual ~FMyMJGamePointerOnPlayerScreenConstrainedMeta()
+    {
+
+    };
+
+    inline void reset()
+    {
+        m_iIdxAttenderBelongTo = 0;
+        m_cScreenPointerMapped = m_cDirectionCenterToPointerMapped = FVector::ZeroVector;
+        m_cScreenCenterMapped = FVector(1, 1, 0);
+        m_fCenterToPointerLength = m_fCenterToPointerUntilBorderLength = 0;
+    };
+
+    FVector m_cScreenPointerMapped; //Z is 0
+
+    //    2
+    // 3 [ ] 1
+    //    0
+    int32 m_iIdxAttenderBelongTo;
+    FVector m_cScreenCenterMapped; //Z is 0
+    FVector m_cDirectionCenterToPointerMapped; //Z is 0
+    float m_fCenterToPointerLength;
+    float m_fCenterToPointerUntilBorderLength;
+};
+
+
 
 //this is used for visual layer, no replication code goes in
 //note that we handle two type data here: one is time synced data like frame sync, one is not
@@ -236,6 +354,7 @@ public:
 
     void tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
                          const FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
+                         const TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mIdCardChanged,
                          const FMyMJEventWithTimeStampBaseCpp& cEvent);
 
     void tipDataSkipped();
@@ -244,7 +363,14 @@ public:
     UFUNCTION(BlueprintCallable)
     void showVisualTakeCards(int32 idxAttender, const TArray<AMyMJGameCardBaseCpp*>& cardActors, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
 
-    void showVisualGiveOutCards(int32 idxAttender, const TArray<AMyMJGameCardBaseCpp*>& cardActors, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
+    void showVisualGiveOutCards(int32 idxAttender, const FMyMJRoleDataAttenderPublicCpp& attenderDataPublic, const TArray<AMyMJGameCardBaseCpp*>& cardActorsGiveOut, const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
+
+    static void helperResolvePointerOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FVector& pointerInWorld, FMyMJGamePointerOnPlayerScreenConstrainedMeta &outMeta);
+    static void helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FMyMJGamePointerOnPlayerScreenConstrainedMeta &meta,
+                                                                               float targetPosiFromCenterToBorderOnScreenPercent,
+                                                                               float targetVOnScreenPercent,
+                                                                               float targetModelHeightInWorld,
+                                                                               FTransform &outTargetTranform);
 
 protected:
 

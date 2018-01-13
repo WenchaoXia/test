@@ -608,7 +608,7 @@ void AMyMoveWithSeqActorBaseCpp::OnConstruction(const FTransform& Transform)
 }
 */
 
-AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp() : Super()
+AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp() : Super(), m_cTargetToGoHistory(TEXT("card TargetToGoHistory"), NULL, NULL, 2)
 {
     //UClass* uc = this->GetClass();
     //UObject* CDO = uc->GetDefaultObject();

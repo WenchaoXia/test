@@ -126,13 +126,22 @@ struct FMyMJGameCardVisualInfoAndResultCpp
 
 public:
 
+    inline void reset()
+    {
+        m_cVisualInfo.reset();
+        m_cVisualResult.reset();
+    };
+
     inline
     FString genDebugString() const
     {
         return m_cVisualInfo.genDebugString() + m_cVisualResult.genDebugString();
     };
 
+    UPROPERTY(BlueprintReadOnly)
     FMyMJGameCardVisualInfoCpp  m_cVisualInfo;
+
+    UPROPERTY(BlueprintReadOnly)
     FMyMJGameActorVisualResultBaseCpp m_cVisualResult;
 };
 
@@ -379,15 +388,40 @@ public:
     UFUNCTION(BlueprintGetter)
     const FDirectoryPath& getResPath() const;
 
-    inline const FTransform& getTransform2GoRefConst() const
+    //Todo: incomplete yet
+    inline void reset()
     {
-        return m_cTransform2Go;
+        m_cTargetToGoHistory.clearInGame();
     };
 
-    inline void setTransform2Go(const FTransform& cTransform2Go)
+    inline void addTargetToGoHistory(const FMyMJGameCardVisualInfoAndResultCpp& cTargetToGo)
     {
-        m_cTransform2Go = cTransform2Go;
+        if (m_cTargetToGoHistory.isFull()) {
+            m_cTargetToGoHistory.removeFromHead(1);
+        };
+
+        m_cTargetToGoHistory.addToTail(&cTargetToGo, NULL);
     };
+
+    inline const FMyMJGameCardVisualInfoAndResultCpp* getTargetToGoHistory(int32 idxFromLast, bool bVerifyValid = true) const
+    {
+        const FMyMJGameCardVisualInfoAndResultCpp* ret;
+        int32 idx = m_cTargetToGoHistory.getCount() - 1 - idxFromLast;
+        if (idx < m_cTargetToGoHistory.getCount()) {
+            ret = m_cTargetToGoHistory.peekAt(idx);
+        }
+        else {
+            ret = NULL;
+        }
+
+        if (bVerifyValid)
+        {
+            MY_VERIFY(ret != NULL);
+        }
+
+        return ret;
+    };
+
 
 protected:
 
@@ -436,8 +470,7 @@ protected:
     class UMaterialInstance *m_pResMI;
 
     //where this card should go, but allow it not be there now(should move smoothly there)
-    UPROPERTY(BlueprintReadOnly)
-    FTransform m_cTransform2Go;
+    FMyCycleBuffer<FMyMJGameCardVisualInfoAndResultCpp> m_cTargetToGoHistory;
 
 };
 
