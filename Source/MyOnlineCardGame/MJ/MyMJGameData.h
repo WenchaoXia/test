@@ -849,6 +849,42 @@ public:
         return m_iIdxAttenderActionInitiator;
     };
 
+    inline const FMyMJRoleDataAttenderPublicDeltaCpp* getRoleDataAttenderPublicDeltaConst(int32 idxAttender) const
+    {
+        const FMyMJRoleDataAttenderPublicDeltaCpp* ret = NULL;
+        for (int32 i = 0; i < m_aRoleDataAttender.Num(); i++) {
+            if (m_aRoleDataAttender[i].m_iIdxAttender != idxAttender) {
+                continue;
+            }
+
+            if (m_aRoleDataAttender[i].m_aDataPublic.Num() > 0) {
+                ret = &m_aRoleDataAttender[i].m_aDataPublic[0];
+            }
+
+            break;
+        }
+
+        return ret;
+    };
+
+    inline const FMyMJRoleDataAttenderPrivateDeltaCpp* getRoleDataAttenderPrivateDeltaConst(int32 idxAttender) const
+    {
+        const FMyMJRoleDataAttenderPrivateDeltaCpp* ret = NULL;
+        for (int32 i = 0; i < m_aRoleDataAttender.Num(); i++) {
+            if (m_aRoleDataAttender[i].m_iIdxAttender != idxAttender) {
+                continue;
+            }
+
+            if (m_aRoleDataAttender[i].m_aDataPrivate.Num() > 0) {
+                ret = &m_aRoleDataAttender[i].m_aDataPrivate[0];
+            }
+
+            break;
+        }
+
+        return ret;
+    };
+
     //self must be syskeeper's role
     void copyWithRoleFromSysKeeperRole(MyMJGameRoleTypeCpp eTargetRole, FMyMJDataDeltaCpp& cTargetDelta) const;
 

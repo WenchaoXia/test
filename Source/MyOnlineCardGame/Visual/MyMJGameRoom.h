@@ -244,6 +244,9 @@ public:
         return m_cInGamePlayerScreenCfg;
     };
 
+    //return "Invalid" if have error
+    static MyMJGameTrivalDancingTypeCpp helperGetWeaveDancingTypeFromWeave(MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave);
+
 protected:
 
     //return error code, 0 means ok
@@ -365,9 +368,12 @@ public:
 
     void showVisualGiveOutCards(int32 idxAttender, const FMyMJRoleDataAttenderPublicCpp& attenderDataPublic, const TArray<AMyMJGameCardBaseCpp*>& cardActorsGiveOut, const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
 
+    void showVisualWeave(int32 idxAttender, MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave, TArray<AMyMJGameCardBaseCpp*>& cardActorsWeaved, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
+
     static void helperResolvePointerOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FVector& pointerInWorld, FMyMJGamePointerOnPlayerScreenConstrainedMeta &outMeta);
     static void helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FMyMJGamePointerOnPlayerScreenConstrainedMeta &meta,
                                                                                float targetPosiFromCenterToBorderOnScreenPercent,
+                                                                               const FVector2D& targetPosiFixOnScreenPercent,
                                                                                float targetVOnScreenPercent,
                                                                                float targetModelHeightInWorld,
                                                                                FTransform &outTargetTranform);

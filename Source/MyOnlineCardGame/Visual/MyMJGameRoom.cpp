@@ -68,8 +68,13 @@ void FMyMJGameInGamePlayerScreenCfgCpp::fillDefaultData()
 {
     for (int32 i = 0; i < 4; i++) {
         m_aAttenderAreas[i].reset();
-        m_aAttenderAreas[i].m_cCardShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.2;
-        m_aAttenderAreas[i].m_cCardShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.2;
+        m_aAttenderAreas[i].m_cCardShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.1;
+        m_aAttenderAreas[i].m_cCardShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.3;
+        m_aAttenderAreas[i].m_cCardShowPoint.m_cExtraOffsetScreenPercent.Y = -0.05;
+
+        m_aAttenderAreas[i].m_cCommonActionShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.6;
+        m_aAttenderAreas[i].m_cCommonActionShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.4;
+        m_aAttenderAreas[i].m_cCommonActionShowPoint.m_cExtraOffsetScreenPercent.Y = -0.05;
     }
 };
 
@@ -239,6 +244,39 @@ UCurveVector* UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear()
     FString fullName = FString(MyArtDirBase) + TEXT("/") + MyArtDirNameCommon + TEXT("/") + MyArtDirNameCurves + TEXT("/") + MyArtFileNameCurveVectorDefaultLinear;
 
     return UMyCommonUtilsLibrary::helperTryFindAndLoadAsset<UCurveVector>(NULL, fullName);
+};
+
+
+MyMJGameTrivalDancingTypeCpp UMyMJGameDeskResManagerCpp::helperGetWeaveDancingTypeFromWeave(MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave)
+{
+    if (ruleType == MyMJGameRuleTypeCpp::LocalCS)
+    {
+        MyMJWeaveTypeCpp eWeaveType = weave.getType();
+
+        if (eWeaveType == MyMJWeaveTypeCpp::ShunZiAn || eWeaveType == MyMJWeaveTypeCpp::ShunZiMing) {
+            return MyMJGameTrivalDancingTypeCpp::Chi;
+        }
+        else if (eWeaveType == MyMJWeaveTypeCpp::KeZiAn || eWeaveType == MyMJWeaveTypeCpp::KeZiMing) {
+            return MyMJGameTrivalDancingTypeCpp::Peng;
+        }
+        else if (eWeaveType == MyMJWeaveTypeCpp::GangAn || eWeaveType == MyMJWeaveTypeCpp::GangMing) {
+            bool bIsBuZhang = weave.getGangBuZhangLocalCS();
+            if (bIsBuZhang) {
+                return MyMJGameTrivalDancingTypeCpp::Bu;
+            }
+            else {
+                return MyMJGameTrivalDancingTypeCpp::Gang;
+            }
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected weave type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)eWeaveType));
+            return MyMJGameTrivalDancingTypeCpp::Invalid;
+        }
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("meet unsupported rule type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)ruleType));
+        return MyMJGameTrivalDancingTypeCpp::Invalid;
+    }
 };
 
 AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx)
@@ -641,7 +679,7 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
 
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
-                MY_VERIFY(cDelta.m_aCoreData.Num() > 0);
+ 
                 TArray<AMyMJGameCardBaseCpp*> aCardActorsGiveOutForAttender, aCardActorsOtherForAttender;
 
                 for (auto& Elem : mIdCardChanged)
@@ -669,7 +707,27 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
                 }
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave) {
+ 
+                TArray<AMyMJGameCardBaseCpp*> aCardActorsWeavedForAttender;
 
+                const FMyMJRoleDataAttenderPublicDeltaCpp* pAttenderPublicDelta = cDelta.getRoleDataAttenderPublicDeltaConst(idxAttender);
+                MY_VERIFY(pAttenderPublicDelta);
+
+                MY_VERIFY(pAttenderPublicDelta->m_aWeave2Add.Num() > 0);
+                const FMyMJWeaveCpp& cWeave = pAttenderPublicDelta->m_aWeave2Add[0];
+                const TArray<int32>& aIds = cWeave.getIdsRefConst();
+                int32 l = aIds.Num();
+                for (int32 i = 0; i < l; i++)
+                {
+                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(aIds[i]);
+                    aCardActorsWeavedForAttender.Emplace(pCardActor);
+                }
+
+
+                if (bGotPointerCfgForAttender) {
+                    MyMJGameRuleTypeCpp eRuleType = cCoreData.getCoreDataPublicRefConst().m_cGameCfg.m_eRuleType;
+                    showVisualWeave(idxAttender, eRuleType, cWeave, aCardActorsWeavedForAttender, (float)cEvent.getDuration_ms() / 1000, cCfgCache.m_cModelInfo.m_cCardModelInfo, cVisualPointForAttender);
+                }
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionHu) {
 
@@ -719,8 +777,9 @@ void AMyMJGameRoomCpp::showVisualTakeCards(int32 idxAttender, const TArray<AMyMJ
         int32 idxAttenderOnScreen = attenderOnScreenMeta.m_iIdxAttenderBelongTo;
         float fCenterToBorderPercent = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_fShowPosiFromCenterToBorderPercent;
         float fVLengthOnScreenPercent = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_fTargetVLengthOnScreenScreenPercent;
+        const FVector2D& posiFix = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_cExtraOffsetScreenPercent;
         FTransform popTrans;
-        helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
+        helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, posiFix, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
 
         bMidLocOverride = true;
         MidLocOverride = popTrans.GetLocation();
@@ -774,9 +833,10 @@ void AMyMJGameRoomCpp::showVisualGiveOutCards(int32 idxAttender, const FMyMJRole
     int32 idxAttenderOnScreen = attenderOnScreenMeta.m_iIdxAttenderBelongTo;
     float fCenterToBorderPercent = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_fShowPosiFromCenterToBorderPercent;
     float fVLengthOnScreenPercent = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_fTargetVLengthOnScreenScreenPercent;
+    const FVector2D& posiFix = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_cExtraOffsetScreenPercent;
 
     FTransform popTrans;
-    helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
+    helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, posiFix, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
 
     float fDur0 = totalDur * 0.1;
     float fDur1 = totalDur * 0.3;
@@ -899,6 +959,125 @@ void AMyMJGameRoomCpp::showVisualGiveOutCards(int32 idxAttender, const FMyMJRole
     }
 }
 
+void AMyMJGameRoomCpp::showVisualWeave(int32 idxAttender, MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave, TArray<AMyMJGameCardBaseCpp*>& cardActorsWeaved, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender)
+{
+    UMyCommonUtilsLibrary::invalidScreenDataCache();
+
+    FMyMJGamePointerOnPlayerScreenConstrainedMeta attenderOnScreenMeta;
+    helperResolvePointerOnPlayerScreenConstrainedMeta(this, visualPointForAttender.m_cCenterPointWorldTransform.GetLocation(), attenderOnScreenMeta);
+
+    const FMyMJGameInGamePlayerScreenCfgCpp& cScreenCfg = m_pResManager->getInGamePlayerScreenCfgRefConst();
+    int32 idxAttenderOnScreen = attenderOnScreenMeta.m_iIdxAttenderBelongTo;
+    float fCenterToBorderPercent = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_fShowPosiFromCenterToBorderPercent;
+    float fVLengthOnScreenPercent = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_fTargetVLengthOnScreenScreenPercent;
+    const FVector2D& posiFix = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_cExtraOffsetScreenPercent;
+
+    FTransform popTransForCards;
+    helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, posiFix, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTransForCards);
+
+    float fDur0 = totalDur * 0.1;
+    float fDur1 = totalDur * 0.3;
+    float fDur2 = totalDur * 0.4;
+    float fDur3 = totalDur - fDur0 - fDur1 - fDur2;
+
+    if (cardActorsWeaved.Num() > 0) {
+        cardActorsWeaved.Sort([](AMyMJGameCardBaseCpp& pA,AMyMJGameCardBaseCpp& pB) {
+            return pA.getTargetToGoHistory(0, true)->m_cVisualInfo.m_iIdxColInRow < pB.getTargetToGoHistory(0, true)->m_cVisualInfo.m_iIdxColInRow;
+        });
+
+        int32 l = cardActorsWeaved.Num();
+        const AMyMJGameCardBaseCpp* pCardActorCenter = cardActorsWeaved[(l / 2)];
+        const FTransform& cT2GoCardActorCenter = pCardActorCenter->getTargetToGoHistory(0)->m_cVisualResult.m_cTransform;
+
+        for (int32 i = 0; i < l; i++) {
+            AMyMJGameCardBaseCpp* pCardActor = cardActorsWeaved[i];
+
+            UMyTransformUpdateSequenceMovementComponent *pSeqComp = pCardActor->getTransformUpdateSequence();
+            const FTransform& cT2Go = pCardActor->getTargetToGoHistory(0)->m_cVisualResult.m_cTransform;
+
+            FTransform cMidTransform0, cMidTransform1;
+            FTransformUpdateSequencDataCpp data;
+
+            pSeqComp->clearSeq();
+            
+            FVector popLocation;
+            if (pCardActor == pCardActorCenter) {
+                popLocation = popTransForCards.GetLocation();
+            }
+            else {
+                popLocation = popTransForCards.GetLocation() + (cT2Go.GetLocation() - cT2GoCardActorCenter.GetLocation());
+            }
+            cMidTransform0.SetLocation(popLocation);
+
+            data.helperSetDataBySrcAndDst(pCardActor->GetTransform(), cMidTransform0, fDur0);
+            pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+            cMidTransform1 = cMidTransform0;
+            cMidTransform1.SetRotation(cT2Go.GetRotation());
+            data.helperSetDataBySrcAndDst(cMidTransform0, cMidTransform1, fDur1);
+            pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+            data.helperSetDataBySrcAndDst(cMidTransform1, cMidTransform1, fDur2);
+            pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+            data.helperSetDataBySrcAndDst(cMidTransform1, cT2Go, fDur3);
+            pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+        }
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("weave card actor num is zero."));
+        MY_VERIFY(false);
+    }
+
+    {
+        fDur0 = totalDur * 0.2;
+        fDur1 = totalDur * 0.6;
+        fDur2 = totalDur - fDur0 - fDur1;
+
+
+        MyMJGameTrivalDancingTypeCpp eDancingType = UMyMJGameDeskResManagerCpp::helperGetWeaveDancingTypeFromWeave(ruleType, weave);
+        MY_VERIFY(eDancingType != MyMJGameTrivalDancingTypeCpp::Invalid);
+
+        AMyMJGameTrivalDancingActorBaseCpp* pDancingActor = m_pResManager->getTrivalDancingActorByType(eDancingType, true);
+        pDancingActor->SetActorHiddenInGame(false);
+        FMyMJGameActorModelInfoBoxCpp dancingActorModelInfo;
+        MY_VERIFY(pDancingActor->getModelInfo(dancingActorModelInfo) == 0);
+
+        float fCenterToBorderDancingPercent = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCommonActionShowPoint.m_fShowPosiFromCenterToBorderPercent;
+        float fVLengthOnScreenDancingPercent = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCommonActionShowPoint.m_fTargetVLengthOnScreenScreenPercent;
+        const FVector2D& posiFixDancing = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_cExtraOffsetScreenPercent;
+
+
+        FTransform popTransForDancingActor;
+        helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderDancingPercent, posiFixDancing, fVLengthOnScreenDancingPercent, dancingActorModelInfo.m_cBoxExtend.Z * 2, popTransForDancingActor);
+
+        FTransform popTransStartForDancingActor;
+        helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderDancingPercent, posiFixDancing, 0.9, dancingActorModelInfo.m_cBoxExtend.Z * 2, popTransStartForDancingActor);
+
+        FTransform popTransEndForDancingActor;
+        helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderDancingPercent, posiFixDancing, 0.01, dancingActorModelInfo.m_cBoxExtend.Z * 2, popTransEndForDancingActor);
+
+        pDancingActor->SetActorTransform(popTransStartForDancingActor);
+        UMyTransformUpdateSequenceMovementComponent *pSeqComp = pDancingActor->getTransformUpdateSequence();
+
+        pSeqComp->clearSeq();
+
+        //FTransform cMidTransform0, cMidTransform1;
+        FTransformUpdateSequencDataCpp data;
+
+        data.helperSetDataBySrcAndDst(pDancingActor->GetTransform(), popTransForDancingActor, fDur0);
+        pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+        data.helperSetDataBySrcAndDst(popTransForDancingActor, popTransForDancingActor, fDur1);
+        pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+        data.helperSetDataBySrcAndDst(popTransForDancingActor, popTransEndForDancingActor, fDur2);
+        pSeqComp->addSeqToTail(data, UMyMJGameDeskResManagerCpp::getCurveVectorDefaultLinear());
+
+    }
+
+}
+
 void AMyMJGameRoomCpp::helperResolvePointerOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FVector& pointerInWorld, FMyMJGamePointerOnPlayerScreenConstrainedMeta &outMeta)
 {
     outMeta.reset();
@@ -965,6 +1144,7 @@ void AMyMJGameRoomCpp::helperResolvePointerOnPlayerScreenConstrainedMeta(const U
 
 void AMyMJGameRoomCpp::helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FMyMJGamePointerOnPlayerScreenConstrainedMeta &meta,
                                                                                         float targetPosiFromCenterToBorderOnScreenPercent,
+                                                                                        const FVector2D& targetPosiFixOnScreenPercent,
                                                                                         float targetVOnScreenPercent,
                                                                                         float targetModelHeightInWorld,
                                                                                         FTransform &outTargetTranform)
@@ -973,6 +1153,10 @@ void AMyMJGameRoomCpp::helperResolveTransformFromPointerOnPlayerScreenConstraine
     FVector2D popPoint;
     popPoint.X = popPointMapped.X;
     popPoint.Y = popPointMapped.Y;
+
+    popPoint.X += meta.m_cScreenCenterMapped.X * 2 * targetPosiFixOnScreenPercent.X;
+    popPoint.Y += meta.m_cScreenCenterMapped.Y * 2 * targetPosiFixOnScreenPercent.Y;
+
     float vAbsoluteOnScreen = targetVOnScreenPercent * meta.m_cScreenCenterMapped.Y * 2;
 
     FVector cameraCenterLoc, cameraCenterDir;

@@ -27,13 +27,13 @@ FMyMJCoreRelatedEventCorePusherCfgCpp::FMyMJCoreRelatedEventCorePusherCfgCpp()
 
     m_uiGiveCards = 1000;
 
-    m_uiWeaveChi = 500;
+    m_uiWeaveChi = 1000;
 
-    m_uiWeavePeng = 500;
+    m_uiWeavePeng = 1000;
 
-    m_uiWeaveGang = 500;
+    m_uiWeaveGang = 1000;
 
-    m_uiWeaveGangBuZhangLocalCS = 500;
+    m_uiWeaveGangBuZhangLocalCS = 1000;
 
     m_uiHu = 1000;
 
