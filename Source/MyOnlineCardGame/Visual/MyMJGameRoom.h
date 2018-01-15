@@ -102,110 +102,6 @@ protected:
 };
 
 
-USTRUCT()
-struct FMyMJGamePointerFromCenterOnPlayerScreenCfgCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyMJGamePointerFromCenterOnPlayerScreenCfgCpp()
-    {
-        reset();
-    };
-
-    virtual ~FMyMJGamePointerFromCenterOnPlayerScreenCfgCpp()
-    {
-
-    };
-
-    inline void reset()
-    {
-        m_fShowPosiFromCenterToBorderPercent = 0;
-        m_cExtraOffsetScreenPercent = FVector2D::ZeroVector;
-        m_fTargetVLengthOnScreenScreenPercent = 0.1;
-    };
-
-    UPROPERTY()
-        float m_fShowPosiFromCenterToBorderPercent;
-
-    UPROPERTY()
-        FVector2D m_cExtraOffsetScreenPercent;
-
-    UPROPERTY()
-        float m_fTargetVLengthOnScreenScreenPercent;
-};
-
-USTRUCT()
-struct FMyMJGameAttenderAreaOnPlayerScreenCfgCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyMJGameAttenderAreaOnPlayerScreenCfgCpp()
-    {
-    };
-
-    virtual ~FMyMJGameAttenderAreaOnPlayerScreenCfgCpp()
-    {
-
-    };
-
-    inline void reset()
-    {
-        m_cCardShowPoint.reset();
-        m_cCommonActionShowPoint.reset();
-    };
-
-    UPROPERTY()
-        FMyMJGamePointerFromCenterOnPlayerScreenCfgCpp m_cCardShowPoint;
-
-    UPROPERTY()
-        FMyMJGamePointerFromCenterOnPlayerScreenCfgCpp m_cCommonActionShowPoint;
-};
-
-USTRUCT()
-struct FMyMJGameInGamePlayerScreenCfgCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-
-    FMyMJGameInGamePlayerScreenCfgCpp()
-    {
-    };
-
-    virtual ~FMyMJGameInGamePlayerScreenCfgCpp()
-    {
-
-    };
-
-    inline void reset()
-    {
-        for (int32 i = 0; i < 4; i++) {
-            m_aAttenderAreas[i].reset();
-        }
-    };
-
-    //mainly for test
-    void fillDefaultData();
-
-    UPROPERTY()
-        FMyMJGameAttenderAreaOnPlayerScreenCfgCpp m_aAttenderAreas[4];
-};
-
-UENUM(BlueprintType)
-enum class MyMJGameTrivalDancingTypeCpp : uint8
-{
-    Invalid = 0                       UMETA(DisplayName = "Invalid"),
-    Chi = 1                           UMETA(DisplayName = "Chi"),
-    Peng = 2                          UMETA(DisplayName = "Peng"),
-    Gang = 3                          UMETA(DisplayName = "Gang"),
-    Bu = 4                            UMETA(DisplayName = "Bu"),
-    Hu = 5                            UMETA(DisplayName = "Hu"),
-    Max = 6                           UMETA(DisplayName = "Max"),
-};
-
-
 UCLASS(Blueprintable, NotBlueprintType)
 class MYONLINECARDGAME_API UMyMJGameDeskResManagerCpp : public UActorComponent
 {
@@ -270,6 +166,9 @@ protected:
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg trival dancing classes"))
     TMap<MyMJGameTrivalDancingTypeCpp, TSubclassOf<AMyMJGameTrivalDancingActorBaseCpp>> m_mCfgTrivalDancingClasses;
 
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg object"))
+    UMyMJGameVisualCfgType* m_uCfg;
+
     UPROPERTY(BlueprintReadOnly, Transient, meta = (DisplayName = "card actors"))
     TArray<AMyMJGameCardBaseCpp*> m_aCardActors;
 
@@ -287,43 +186,6 @@ protected:
     FMyMJGameInGamePlayerScreenCfgCpp m_cInGamePlayerScreenCfg;
 
 };
-
-
-struct FMyMJGamePointerOnPlayerScreenConstrainedMeta
-{
-
-public:
-    FMyMJGamePointerOnPlayerScreenConstrainedMeta()
-    {
-        reset();
-    };
-
-    virtual ~FMyMJGamePointerOnPlayerScreenConstrainedMeta()
-    {
-
-    };
-
-    inline void reset()
-    {
-        m_iIdxAttenderBelongTo = 0;
-        m_cScreenPointerMapped = m_cDirectionCenterToPointerMapped = FVector::ZeroVector;
-        m_cScreenCenterMapped = FVector(1, 1, 0);
-        m_fCenterToPointerLength = m_fCenterToPointerUntilBorderLength = 0;
-    };
-
-    FVector m_cScreenPointerMapped; //Z is 0
-
-    //    2
-    // 3 [ ] 1
-    //    0
-    int32 m_iIdxAttenderBelongTo;
-    FVector m_cScreenCenterMapped; //Z is 0
-    FVector m_cDirectionCenterToPointerMapped; //Z is 0
-    float m_fCenterToPointerLength;
-    float m_fCenterToPointerUntilBorderLength;
-};
-
-
 
 //this is used for visual layer, no replication code goes in
 //note that we handle two type data here: one is time synced data like frame sync, one is not
@@ -369,14 +231,6 @@ public:
     void showVisualGiveOutCards(int32 idxAttender, const FMyMJRoleDataAttenderPublicCpp& attenderDataPublic, const TArray<AMyMJGameCardBaseCpp*>& cardActorsGiveOut, const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
 
     void showVisualWeave(int32 idxAttender, MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave, TArray<AMyMJGameCardBaseCpp*>& cardActorsWeaved, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
-
-    static void helperResolvePointerOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FVector& pointerInWorld, FMyMJGamePointerOnPlayerScreenConstrainedMeta &outMeta);
-    static void helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FMyMJGamePointerOnPlayerScreenConstrainedMeta &meta,
-                                                                               float targetPosiFromCenterToBorderOnScreenPercent,
-                                                                               const FVector2D& targetPosiFixOnScreenPercent,
-                                                                               float targetVOnScreenPercent,
-                                                                               float targetModelHeightInWorld,
-                                                                               FTransform &outTargetTranform);
 
 protected:
 

@@ -767,8 +767,8 @@ void AMyMJGameRoomCpp::showVisualTakeCards(int32 idxAttender, const TArray<AMyMJ
 {
     UMyCommonUtilsLibrary::invalidScreenDataCache();
 
-    FMyMJGamePointerOnPlayerScreenConstrainedMeta attenderOnScreenMeta;
-    helperResolvePointerOnPlayerScreenConstrainedMeta(this, visualPointForAttender.m_cCenterPointWorldTransform.GetLocation(), attenderOnScreenMeta);
+    FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta attenderOnScreenMeta;
+    UMyCardGameUtilsLibrary::helperResolvePointOnPlayerScreenConstrainedMeta(this, visualPointForAttender.m_cCenterPointWorldTransform.GetLocation(), attenderOnScreenMeta);
 
     bool bMidLocOverride = false;
     FVector MidLocOverride;
@@ -779,7 +779,7 @@ void AMyMJGameRoomCpp::showVisualTakeCards(int32 idxAttender, const TArray<AMyMJ
         float fVLengthOnScreenPercent = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_fTargetVLengthOnScreenScreenPercent;
         const FVector2D& posiFix = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_cExtraOffsetScreenPercent;
         FTransform popTrans;
-        helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, posiFix, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
+        UMyCardGameUtilsLibrary::helperResolveTransformFromPointOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, posiFix, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
 
         bMidLocOverride = true;
         MidLocOverride = popTrans.GetLocation();
@@ -826,8 +826,8 @@ void AMyMJGameRoomCpp::showVisualGiveOutCards(int32 idxAttender, const FMyMJRole
 {
     UMyCommonUtilsLibrary::invalidScreenDataCache();
 
-    FMyMJGamePointerOnPlayerScreenConstrainedMeta attenderOnScreenMeta;
-    helperResolvePointerOnPlayerScreenConstrainedMeta(this, visualPointForAttender.m_cCenterPointWorldTransform.GetLocation(), attenderOnScreenMeta);
+    FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta attenderOnScreenMeta;
+    UMyCardGameUtilsLibrary::helperResolvePointOnPlayerScreenConstrainedMeta(this, visualPointForAttender.m_cCenterPointWorldTransform.GetLocation(), attenderOnScreenMeta);
 
     const FMyMJGameInGamePlayerScreenCfgCpp& cScreenCfg = m_pResManager->getInGamePlayerScreenCfgRefConst();
     int32 idxAttenderOnScreen = attenderOnScreenMeta.m_iIdxAttenderBelongTo;
@@ -836,7 +836,7 @@ void AMyMJGameRoomCpp::showVisualGiveOutCards(int32 idxAttender, const FMyMJRole
     const FVector2D& posiFix = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_cExtraOffsetScreenPercent;
 
     FTransform popTrans;
-    helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, posiFix, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
+    UMyCardGameUtilsLibrary::helperResolveTransformFromPointOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, posiFix, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTrans);
 
     float fDur0 = totalDur * 0.1;
     float fDur1 = totalDur * 0.3;
@@ -963,8 +963,8 @@ void AMyMJGameRoomCpp::showVisualWeave(int32 idxAttender, MyMJGameRuleTypeCpp ru
 {
     UMyCommonUtilsLibrary::invalidScreenDataCache();
 
-    FMyMJGamePointerOnPlayerScreenConstrainedMeta attenderOnScreenMeta;
-    helperResolvePointerOnPlayerScreenConstrainedMeta(this, visualPointForAttender.m_cCenterPointWorldTransform.GetLocation(), attenderOnScreenMeta);
+    FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta attenderOnScreenMeta;
+    UMyCardGameUtilsLibrary::helperResolvePointOnPlayerScreenConstrainedMeta(this, visualPointForAttender.m_cCenterPointWorldTransform.GetLocation(), attenderOnScreenMeta);
 
     const FMyMJGameInGamePlayerScreenCfgCpp& cScreenCfg = m_pResManager->getInGamePlayerScreenCfgRefConst();
     int32 idxAttenderOnScreen = attenderOnScreenMeta.m_iIdxAttenderBelongTo;
@@ -973,7 +973,7 @@ void AMyMJGameRoomCpp::showVisualWeave(int32 idxAttender, MyMJGameRuleTypeCpp ru
     const FVector2D& posiFix = cScreenCfg.m_aAttenderAreas[idxAttenderOnScreen].m_cCardShowPoint.m_cExtraOffsetScreenPercent;
 
     FTransform popTransForCards;
-    helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, posiFix, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTransForCards);
+    UMyCardGameUtilsLibrary::helperResolveTransformFromPointOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderPercent, posiFix, fVLengthOnScreenPercent, cardModelInfo.m_cBoxExtend.Z * 2, popTransForCards);
 
     float fDur0 = totalDur * 0.1;
     float fDur1 = totalDur * 0.3;
@@ -1049,13 +1049,13 @@ void AMyMJGameRoomCpp::showVisualWeave(int32 idxAttender, MyMJGameRuleTypeCpp ru
 
 
         FTransform popTransForDancingActor;
-        helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderDancingPercent, posiFixDancing, fVLengthOnScreenDancingPercent, dancingActorModelInfo.m_cBoxExtend.Z * 2, popTransForDancingActor);
+        UMyCardGameUtilsLibrary::helperResolveTransformFromPointOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderDancingPercent, posiFixDancing, fVLengthOnScreenDancingPercent, dancingActorModelInfo.m_cBoxExtend.Z * 2, popTransForDancingActor);
 
         FTransform popTransStartForDancingActor;
-        helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderDancingPercent, posiFixDancing, 0.9, dancingActorModelInfo.m_cBoxExtend.Z * 2, popTransStartForDancingActor);
+        UMyCardGameUtilsLibrary::helperResolveTransformFromPointOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderDancingPercent, posiFixDancing, 0.9, dancingActorModelInfo.m_cBoxExtend.Z * 2, popTransStartForDancingActor);
 
         FTransform popTransEndForDancingActor;
-        helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderDancingPercent, posiFixDancing, 0.01, dancingActorModelInfo.m_cBoxExtend.Z * 2, popTransEndForDancingActor);
+        UMyCardGameUtilsLibrary::helperResolveTransformFromPointOnPlayerScreenConstrainedMeta(this, attenderOnScreenMeta, fCenterToBorderDancingPercent, posiFixDancing, 0.01, dancingActorModelInfo.m_cBoxExtend.Z * 2, popTransEndForDancingActor);
 
         pDancingActor->SetActorTransform(popTransStartForDancingActor);
         UMyTransformUpdateSequenceMovementComponent *pSeqComp = pDancingActor->getTransformUpdateSequence();
@@ -1076,89 +1076,4 @@ void AMyMJGameRoomCpp::showVisualWeave(int32 idxAttender, MyMJGameRuleTypeCpp ru
 
     }
 
-}
-
-void AMyMJGameRoomCpp::helperResolvePointerOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FVector& pointerInWorld, FMyMJGamePointerOnPlayerScreenConstrainedMeta &outMeta)
-{
-    outMeta.reset();
-
-    FVector2D projectedPointer;
-    if (!UMyCommonUtilsLibrary::myProjectWorldToScreen(WorldContextObject, pointerInWorld, true, projectedPointer)) {
-        return;
-    }
-    FVector2D constrainedScreenSize, fullScreenSize;
-    UMyCommonUtilsLibrary::getPlayerScreenSizeAbsolute(WorldContextObject, constrainedScreenSize, fullScreenSize);
-
-    //judge which attender in screen
-    float supposedY = constrainedScreenSize.Y / constrainedScreenSize.X * projectedPointer.X;
-    float mirroredY = constrainedScreenSize.Y - supposedY;
-
-    int32& outIdxAttenderOnScreen = outMeta.m_iIdxAttenderBelongTo;
-    if (projectedPointer.X < (constrainedScreenSize.X / 2))
-    {
-        if (projectedPointer.Y < supposedY) {
-            outIdxAttenderOnScreen = 2;
-        }
-        else if (projectedPointer.Y < mirroredY) {
-            outIdxAttenderOnScreen = 3;
-        }
-        else {
-            outIdxAttenderOnScreen = 0;
-        }
-    }
-    else {
-        if (projectedPointer.Y < mirroredY) {
-            outIdxAttenderOnScreen = 2;
-        }
-        else if (projectedPointer.Y < supposedY) {
-            outIdxAttenderOnScreen = 1;
-        }
-        else {
-            outIdxAttenderOnScreen = 0;
-        }
-    }
-
-    FVector& centerMapped = outMeta.m_cScreenCenterMapped;
-    FVector& pointerMapped = outMeta.m_cScreenPointerMapped;
-    centerMapped.X = constrainedScreenSize.X / 2;
-    centerMapped.Y = constrainedScreenSize.Y / 2;
-
-    pointerMapped.X = projectedPointer.X;
-    pointerMapped.Y = projectedPointer.Y;
-
-    FVector& dir = outMeta.m_cDirectionCenterToPointerMapped;
-    float& lenToPoint = outMeta.m_fCenterToPointerLength;
-    (pointerMapped - centerMapped).ToDirectionAndLength(dir, lenToPoint);
-
-    float xLen = BIG_NUMBER;
-    if (!FMath::IsNearlyEqual(dir.X, 0, KINDA_SMALL_NUMBER)) {
-        xLen = FMath::Abs(centerMapped.X / dir.X);
-    }
-    float yLen = BIG_NUMBER;
-    if (!FMath::IsNearlyEqual(dir.Y, 0, KINDA_SMALL_NUMBER)) {
-        yLen = FMath::Abs(centerMapped.Y / dir.Y);
-    }
-    outMeta.m_fCenterToPointerUntilBorderLength = FMath::Min(xLen, yLen);
-
-}
-
-void AMyMJGameRoomCpp::helperResolveTransformFromPointerOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FMyMJGamePointerOnPlayerScreenConstrainedMeta &meta,
-                                                                                        float targetPosiFromCenterToBorderOnScreenPercent,
-                                                                                        const FVector2D& targetPosiFixOnScreenPercent,
-                                                                                        float targetVOnScreenPercent,
-                                                                                        float targetModelHeightInWorld,
-                                                                                        FTransform &outTargetTranform)
-{
-    FVector popPointMapped = meta.m_cScreenCenterMapped + targetPosiFromCenterToBorderOnScreenPercent * meta.m_fCenterToPointerUntilBorderLength * meta.m_cDirectionCenterToPointerMapped;
-    FVector2D popPoint;
-    popPoint.X = popPointMapped.X;
-    popPoint.Y = popPointMapped.Y;
-
-    popPoint.X += meta.m_cScreenCenterMapped.X * 2 * targetPosiFixOnScreenPercent.X;
-    popPoint.Y += meta.m_cScreenCenterMapped.Y * 2 * targetPosiFixOnScreenPercent.Y;
-
-    float vAbsoluteOnScreen = targetVOnScreenPercent * meta.m_cScreenCenterMapped.Y * 2;
-
-    FVector cameraCenterLoc, cameraCenterDir;
-    UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByAbsolute(WorldContextObject, popPoint, vAbsoluteOnScreen, targetModelHeightInWorld, outTargetTranform, cameraCenterLoc, cameraCenterDir);
 }

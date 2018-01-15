@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/DataAsset.h"
+#include "Utils/CardGameUtils/MyCardGameUtilsLibrary.h"
 #include "MJ/Utils/MyMJUtils.h"
 #include "MyMJGameVisualCommon.h"
 #include "GameFramework/MovementComponent.h"
@@ -531,6 +533,19 @@ protected:
     TArray<FMyMJGameCardVisualInfoAndResultCpp> m_aCards;
 };
 
+
+UENUM(BlueprintType)
+enum class MyMJGameTrivalDancingTypeCpp : uint8
+{
+    Invalid = 0                       UMETA(DisplayName = "Invalid"),
+    Chi = 1                           UMETA(DisplayName = "Chi"),
+    Peng = 2                          UMETA(DisplayName = "Peng"),
+    Gang = 3                          UMETA(DisplayName = "Gang"),
+    Bu = 4                            UMETA(DisplayName = "Bu"),
+    Hu = 5                            UMETA(DisplayName = "Hu"),
+    Max = 6                           UMETA(DisplayName = "Max"),
+};
+
 UCLASS(Blueprintable)
 class MYONLINECARDGAME_API AMyMJGameTrivalDancingActorBaseCpp : public AMyMoveWithSeqActorBaseCpp
 {
@@ -544,4 +559,83 @@ public:
 
 protected:
 
+};
+
+
+USTRUCT()
+struct FMyMJGameInGameAttenderAreaOnPlayerScreenCfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGameInGameAttenderAreaOnPlayerScreenCfgCpp()
+    {
+    };
+
+    virtual ~FMyMJGameInGameAttenderAreaOnPlayerScreenCfgCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        m_cCardShowPoint.reset();
+        m_cCommonActionShowPoint.reset();
+    };
+
+    UPROPERTY()
+    FMyCardGamePointFromCenterOnPlayerScreenCfgCpp m_cCardShowPoint;
+
+    UPROPERTY()
+    FMyCardGamePointFromCenterOnPlayerScreenCfgCpp m_cCommonActionShowPoint;
+};
+
+USTRUCT()
+struct FMyMJGameInGamePlayerScreenCfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameInGamePlayerScreenCfgCpp()
+    {
+        m_aAttenderAreas.Reset();
+        m_aAttenderAreas.AddDefaulted(4);
+    };
+
+    virtual ~FMyMJGameInGamePlayerScreenCfgCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        for (int32 i = 0; i < 4; i++) {
+            m_aAttenderAreas[i].reset();
+        }
+    };
+
+    //mainly for test
+    void fillDefaultData();
+
+    UPROPERTY()
+    TArray<FMyMJGameInGameAttenderAreaOnPlayerScreenCfgCpp> m_aAttenderAreas;
+};
+
+
+UCLASS()
+class MYONLINECARDGAME_API UMyMJGameVisualCfgType : public UDataAsset
+{
+    GENERATED_BODY()
+
+public:
+
+    UPROPERTY(VisibleAnywhere)
+    FMyMJGameInGamePlayerScreenCfgCpp m_cPlayerScreenCfg;
+
+    UPROPERTY(VisibleAnywhere)
+    int32 m_iTest;
+
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg card class"))
+        TSubclassOf<AMyMJGameCardBaseCpp> m_cCfgCardClass;
 };
