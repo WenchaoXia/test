@@ -491,3 +491,18 @@ void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByPercent
 
     helperResolveWorldTransformFromPlayerCameraByAbsolute(WorldContextObject, ConstrainedPosiAbsoluteInCamera, vAbsolute.Y, ModelInWorldHeight, ResultTransform, CameraCenterWorldPosition, CameraCenterDirection);
 }
+
+#define MyArtDirBase (TEXT("/Game/Art"))
+#define MyArtDirNameCommon (TEXT("Common"))
+#define MyArtDirNameCurves (TEXT("Curves"))
+#define MyArtFileNameCurveVectorDefaultLinear (TEXT("CurveVectorDefaultLinear"))
+
+UCurveVector* UMyCommonUtilsLibrary::getCurveVectorDefaultLinear()
+{
+    FString fullName = FString(MyArtDirBase) + TEXT("/") + MyArtDirNameCommon + TEXT("/") + MyArtDirNameCurves + TEXT("/") + MyArtFileNameCurveVectorDefaultLinear;
+
+    UCurveVector* pRet = UMyCommonUtilsLibrary::helperTryFindAndLoadAsset<UCurveVector>(NULL, fullName);
+    MY_VERIFY(pRet);
+
+    return pRet;
+};

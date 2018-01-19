@@ -120,7 +120,6 @@ void AMyMJGameCoreDataSourceCpp::BeginPlay()
     //clearInGame();
 
     bool bHaveLogic = UMyMJBPUtilsLibrary::haveServerLogicLayer(this);
-    setCoreFullPartEnabled(bHaveLogic);
 
     m_eDebugNetMode = GetNetMode();
 
@@ -453,7 +452,7 @@ void AMyMJGameCoreDataSourceCpp::coreDataPullLoopInner()
 
     if (m_pMJDataAll->getServerWorldTime_ms() >= timeNowMs) {
         //this ensure every data updating will always have a different time stamp
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("server world time have not moved forward:, %u, %u, skip to next loop."), timeNowMs, m_pMJDataAll->getServerWorldTime_ms());
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("server world time have not moved forward:, %u, %u, skip to next loop."), timeNowMs, m_pMJDataAll->getServerWorldTime_ms());
         return;
     }
 

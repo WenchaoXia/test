@@ -47,7 +47,7 @@ void AMyMJGamePlayerControllerCpp::clearInGame()
 
 void AMyMJGamePlayerControllerCpp::BeginPlay()
 {
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGamePlayerControllerCpp BeginPlay()"));
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGamePlayerControllerCpp BeginPlay()"));
 
     Super::BeginPlay();
 

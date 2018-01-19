@@ -12,6 +12,32 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetStringLibrary.h"
 
+void UMyCardGameUtilsLibrary::helperUpdatePointOnPlayerScreenConstrainedMeta(int32 iIdxAttenderBelongTo,
+                                                                            FVector centerMapped,
+                                                                            FVector PointMapped,
+                                                                            FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta &outMeta)
+{
+    PointMapped.Z = 0;
+
+    outMeta.m_iIdxAttenderBelongTo = iIdxAttenderBelongTo;
+    outMeta.m_cScreenCenterMapped = centerMapped; //Z is 0
+    outMeta.m_cScreenCenterMapped.Z = 0;
+
+    FVector& dir = outMeta.m_cDirectionCenterToPointMapped;
+    float& lenToPoint = outMeta.m_fCenterToPointLength;
+    (PointMapped - centerMapped).ToDirectionAndLength(dir, lenToPoint);
+
+    float xLen = BIG_NUMBER;
+    if (!FMath::IsNearlyEqual(dir.X, 0, KINDA_SMALL_NUMBER)) {
+        xLen = FMath::Abs(centerMapped.X / dir.X);
+    }
+    float yLen = BIG_NUMBER;
+    if (!FMath::IsNearlyEqual(dir.Y, 0, KINDA_SMALL_NUMBER)) {
+        yLen = FMath::Abs(centerMapped.Y / dir.Y);
+    }
+    outMeta.m_fCenterToPointUntilBorderLength = FMath::Min(xLen, yLen);
+}
+
 void UMyCardGameUtilsLibrary::helperResolvePointOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FVector& pointInWorld, FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta &outMeta)
 {
     outMeta.reset();
@@ -27,52 +53,40 @@ void UMyCardGameUtilsLibrary::helperResolvePointOnPlayerScreenConstrainedMeta(co
     float supposedY = constrainedScreenSize.Y / constrainedScreenSize.X * projectedPoint.X;
     float mirroredY = constrainedScreenSize.Y - supposedY;
 
-    int32& outIdxAttenderOnScreen = outMeta.m_iIdxAttenderBelongTo;
+    int32 idxAttenderOnScreen;
     if (projectedPoint.X < (constrainedScreenSize.X / 2))
     {
         if (projectedPoint.Y < supposedY) {
-            outIdxAttenderOnScreen = 2;
+            idxAttenderOnScreen = 2;
         }
         else if (projectedPoint.Y < mirroredY) {
-            outIdxAttenderOnScreen = 3;
+            idxAttenderOnScreen = 3;
         }
         else {
-            outIdxAttenderOnScreen = 0;
+            idxAttenderOnScreen = 0;
         }
     }
     else {
         if (projectedPoint.Y < mirroredY) {
-            outIdxAttenderOnScreen = 2;
+            idxAttenderOnScreen = 2;
         }
         else if (projectedPoint.Y < supposedY) {
-            outIdxAttenderOnScreen = 1;
+            idxAttenderOnScreen = 1;
         }
         else {
-            outIdxAttenderOnScreen = 0;
+            idxAttenderOnScreen = 0;
         }
     }
 
-    FVector& centerMapped = outMeta.m_cScreenCenterMapped;
-    FVector& PointMapped = outMeta.m_cScreenPointMapped;
+    FVector centerMapped;
+    FVector PointMapped;
     centerMapped.X = constrainedScreenSize.X / 2;
     centerMapped.Y = constrainedScreenSize.Y / 2;
 
     PointMapped.X = projectedPoint.X;
     PointMapped.Y = projectedPoint.Y;
 
-    FVector& dir = outMeta.m_cDirectionCenterToPointMapped;
-    float& lenToPoint = outMeta.m_fCenterToPointLength;
-    (PointMapped - centerMapped).ToDirectionAndLength(dir, lenToPoint);
-
-    float xLen = BIG_NUMBER;
-    if (!FMath::IsNearlyEqual(dir.X, 0, KINDA_SMALL_NUMBER)) {
-        xLen = FMath::Abs(centerMapped.X / dir.X);
-    }
-    float yLen = BIG_NUMBER;
-    if (!FMath::IsNearlyEqual(dir.Y, 0, KINDA_SMALL_NUMBER)) {
-        yLen = FMath::Abs(centerMapped.Y / dir.Y);
-    }
-    outMeta.m_fCenterToPointUntilBorderLength = FMath::Min(xLen, yLen);
+    helperUpdatePointOnPlayerScreenConstrainedMeta(idxAttenderOnScreen, centerMapped, PointMapped, outMeta);
 }
 
 void UMyCardGameUtilsLibrary::helperResolveTransformFromPointOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta &meta,

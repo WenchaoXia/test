@@ -13,8 +13,10 @@
 
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
-FMyMJCoreRelatedEventCorePusherCfgCpp::FMyMJCoreRelatedEventCorePusherCfgCpp()
+FMyMJGameEventTimeCfgCpp::FMyMJGameEventTimeCfgCpp()
 {
+    m_uiBaseResetAtStart = 500;
+
     m_uiGameStarted = 1000;
 
     m_uiThrowDices = 500;
@@ -42,7 +44,7 @@ FMyMJCoreRelatedEventCorePusherCfgCpp::FMyMJCoreRelatedEventCorePusherCfgCpp()
     m_uiGameEnded = 500;
 };
 
-uint32 FMyMJCoreRelatedEventCorePusherCfgCpp::helperGetDeltaDur(const FMyMJDataDeltaCpp& delta) const
+uint32 FMyMJGameEventTimeCfgCpp::helperGetDeltaDur(MyMJGameRuleTypeCpp ruleType, const FMyMJDataDeltaCpp& delta) const
 {
     uint32 ret = 0;
     MyMJGamePusherTypeCpp ePusherType = delta.getType();
@@ -58,24 +60,31 @@ uint32 FMyMJCoreRelatedEventCorePusherCfgCpp::helperGetDeltaDur(const FMyMJDataD
         MY_VERIFY(delta.m_aRoleDataAttender[0].m_aDataPublic.Num() == 1);
         MY_VERIFY(delta.m_aRoleDataAttender[0].m_aDataPublic[0].m_aWeave2Add.Num() == 1);
         const FMyMJWeaveCpp& cWeave = delta.m_aRoleDataAttender[0].m_aDataPublic[0].m_aWeave2Add[0];
-        MyMJWeaveTypeCpp eWeaveType = cWeave.getType();
 
-        if (eWeaveType == MyMJWeaveTypeCpp::ShunZiMing) {
+        MyMJGameWeaveVisualTypeCpp eWeaveVisualType = UMyMJBPUtilsLibrary::helperGetWeaveVisualTypeFromWeave(ruleType, cWeave);
+
+        //MyMJWeaveTypeCpp eWeaveType = cWeave.getType();
+
+        if (eWeaveVisualType == MyMJGameWeaveVisualTypeCpp::Chi) {
             ret = m_uiWeaveChi;
         }
-        else if (eWeaveType == MyMJWeaveTypeCpp::KeZiMing) {
+        else if (eWeaveVisualType == MyMJGameWeaveVisualTypeCpp::Peng) {
             ret = m_uiWeavePeng;
         }
-        else if (eWeaveType == MyMJWeaveTypeCpp::GangAn || eWeaveType == MyMJWeaveTypeCpp::GangMing) {
-            if (cWeave.getGangBuZhangLocalCS()) {
+        else if (eWeaveVisualType == MyMJGameWeaveVisualTypeCpp::Gang) {
+            ret = m_uiWeaveGang;
+        }
+        else if (eWeaveVisualType == MyMJGameWeaveVisualTypeCpp::Bu) {
+            if (ruleType == MyMJGameRuleTypeCpp::LocalCS) {
                 ret = m_uiWeaveGangBuZhangLocalCS;
             }
             else {
-                ret = m_uiWeaveGang;
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid rule type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)ruleType));
+                MY_VERIFY(false);
             }
         }
         else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid weave type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)eWeaveType));
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid weave visual type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameWeaveVisualTypeCpp"), (uint8)eWeaveVisualType));
             MY_VERIFY(false);
         }
     }
@@ -89,6 +98,7 @@ uint32 FMyMJCoreRelatedEventCorePusherCfgCpp::helperGetDeltaDur(const FMyMJDataD
         if (delta.m_aCoreData.Num() > 0) {
             MyMJGameStateCpp eGameState = delta.m_aCoreData[0].m_eGameState;
             if (eGameState == MyMJGameStateCpp::GameStarted) {
+                //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("returning game start time."));
                 ret = m_uiGameStarted;
             }
             else if (eGameState == MyMJGameStateCpp::GameEnd) {
@@ -167,6 +177,8 @@ UMyMJDataSequencePerRoleCpp::UMyMJDataSequencePerRoleCpp(const FObjectInitialize
     m_uiServerWorldTime_ms = 0;
 
     m_pDeltaDataEvents = NULL;
+
+    m_eRuleTypeLast = MyMJGameRuleTypeCpp::Invalid;
 };
 
 void UMyMJDataSequencePerRoleCpp::createSubObjects(bool bInConstructor)
@@ -324,7 +336,7 @@ bool UMyMJDataSequencePerRoleCpp::isReadyToGiveNextEvent(uint32 uiServerWorldTim
 }
 
 //always success, and the data may squash too fast resulting warning logs, which wll force client to do full sync later
-uint32 UMyMJDataSequencePerRoleCpp::addPusherResult(const FMyMJCoreRelatedEventCorePusherCfgCpp &inEventCorePusherCfg, const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms)
+uint32 UMyMJDataSequencePerRoleCpp::addPusherResult(const FMyMJGameEventTimeCfgCpp &inEventCorePusherCfg, const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms)
 {
     uint32 idEventLast;
     getFullAndDeltaLastData(&idEventLast, NULL);
@@ -354,7 +366,23 @@ uint32 UMyMJDataSequencePerRoleCpp::addPusherResult(const FMyMJCoreRelatedEventC
         MY_VERIFY(pPusherResult->m_aResultDelta.Num() == 1);
 
         const FMyMJDataDeltaCpp& resultDelta = pPusherResult->m_aResultDelta[0];
-        dur_ms = inEventCorePusherCfg.helperGetDeltaDur(resultDelta);
+        dur_ms = inEventCorePusherCfg.helperGetDeltaDur(m_eRuleTypeLast, resultDelta);
+    }
+    else {
+        if (pPusherResult->m_aResultBase.Num() > 0) {
+            MY_VERIFY(pPusherResult->m_aResultBase.Num() == 1);
+
+            const FMyMJDataStructCpp& resultBase = pPusherResult->m_aResultBase[0];
+            int32 iPusherIdLast = resultBase.getCoreDataPublicRefConst().m_iPusherIdLast;
+            if (iPusherIdLast == 0) {
+                dur_ms = inEventCorePusherCfg.helperGetBaseResetAtStartDur();
+            }
+            else {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected iPusherIdLast as base pusher: %d."), iPusherIdLast);
+            }
+
+            m_eRuleTypeLast = resultBase.getCoreDataPublicRefConst().m_cGameCfg.m_eRuleType;
+        }
     }
 
     MY_VERIFY(IsValid(m_pDeltaDataEvents));

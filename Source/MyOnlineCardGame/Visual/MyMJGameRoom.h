@@ -126,22 +126,17 @@ public:
 
     //always success, core dump if fail, returned actor managed by this class
     UFUNCTION(BlueprintCallable)
-    AMyMJGameTrivalDancingActorBaseCpp* getTrivalDancingActorByType(MyMJGameTrivalDancingTypeCpp type, bool freeActorOnly);
+    AMyMJGameTrivalDancingActorBaseCpp* getTrivalDancingActorByClass(TSubclassOf<AMyMJGameTrivalDancingActorBaseCpp> classType, bool freeActorOnly);
 
     //return error code
     UFUNCTION(BlueprintPure)
     int32 retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const;
 
-    UFUNCTION(BlueprintCallable)
-    static class UCurveVector* getCurveVectorDefaultLinear();
-
-    inline const FMyMJGameInGamePlayerScreenCfgCpp& getInGamePlayerScreenCfgRefConst() const
+    inline const UMyMJGameInRoomVisualCfgType* getVisualCfgVerified() const
     {
-        return m_cInGamePlayerScreenCfg;
+        MY_VERIFY(m_pInRoomcfg);
+        return m_pInRoomcfg;
     };
-
-    //return "Invalid" if have error
-    static MyMJGameTrivalDancingTypeCpp helperGetWeaveDancingTypeFromWeave(MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave);
 
 protected:
 
@@ -159,15 +154,8 @@ protected:
         return m_pCardCDOInGame;
     };
 
-    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg card class"))
-    TSubclassOf<AMyMJGameCardBaseCpp> m_cCfgCardClass;
-
-    //core types must all be specified, otherwise runtime error will be reported
-    UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg trival dancing classes"))
-    TMap<MyMJGameTrivalDancingTypeCpp, TSubclassOf<AMyMJGameTrivalDancingActorBaseCpp>> m_mCfgTrivalDancingClasses;
-
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg object"))
-    UMyMJGameVisualCfgType* m_uCfg;
+    UMyMJGameInRoomVisualCfgType* m_pInRoomcfg;
 
     UPROPERTY(BlueprintReadOnly, Transient, meta = (DisplayName = "card actors"))
     TArray<AMyMJGameCardBaseCpp*> m_aCardActors;
@@ -177,13 +165,10 @@ protected:
 
     UPROPERTY(Transient)
     AMyMJGameCardBaseCpp *m_pCardCDOInGame;
+
     //it seems UBT have bug which require declare sequence
     //UPROPERTY(BlueprintSetter = setCfgCardModelAssetPath, BlueprintSetter = getCfgCardModelAssetPath, EditAnywhere, meta = (DisplayName = "cfg card model asset path"))
     //UPROPERTY(EditAnywhere, BlueprintSetter = setCfgCardModelAssetPath, BlueprintGetter = getCfgCardModelAssetPath, meta = (DisplayName = "cfg card model asset path"))
-
-    //screen
-    UPROPERTY(Transient)
-    FMyMJGameInGamePlayerScreenCfgCpp m_cInGamePlayerScreenCfg;
 
 };
 
@@ -199,6 +184,8 @@ public:
     AMyMJGameRoomCpp();
     virtual ~AMyMJGameRoomCpp();
 
+    bool checkSettings() const;
+
     void startVisual();
     void stopVisual();
     void loopVisual();
@@ -209,6 +196,11 @@ public:
         return m_pDataSuit;
     };
 
+    inline UMyMJGameDeskResManagerCpp* getResManagerVerified() const
+    {
+        MY_VERIFY(IsValid(m_pResManager));
+        return m_pResManager;
+    };
     
     void updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
                                           const FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
@@ -224,13 +216,15 @@ public:
 
     void tipDataSkipped();
 
+    void showVisualTakeCards(float totalDur, const FTransform &visualPointTransformForAttender, const TArray<AMyMJGameCardBaseCpp*>& takenCardActors);
 
-    UFUNCTION(BlueprintCallable)
-    void showVisualTakeCards(int32 idxAttender, const TArray<AMyMJGameCardBaseCpp*>& cardActors, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
+    void showVisualGiveOutCards(float totalDur, const FTransform &visualPointTransformForAttender, int32 handCardNum,
+                                const TArray<AMyMJGameCardBaseCpp*>& cardActorsGiveOut,
+                                const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving);
 
-    void showVisualGiveOutCards(int32 idxAttender, const FMyMJRoleDataAttenderPublicCpp& attenderDataPublic, const TArray<AMyMJGameCardBaseCpp*>& cardActorsGiveOut, const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
-
-    void showVisualWeave(int32 idxAttender, MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave, TArray<AMyMJGameCardBaseCpp*>& cardActorsWeaved, float totalDur, const FMyMJGameActorModelInfoBoxCpp& cardModelInfo, const FMyMJGameDeskVisualPointCfgCpp &visualPointForAttender);
+    void showVisualWeave(float totalDur, const FTransform &visualPointTransformForAttender, MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave,
+                         const TArray<AMyMJGameCardBaseCpp*>& cardActorsWeaved,
+                         const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving);
 
 protected:
 
@@ -238,7 +232,7 @@ protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-    bool checkSettings() const;
+
 
     //return error code
     int32 retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);

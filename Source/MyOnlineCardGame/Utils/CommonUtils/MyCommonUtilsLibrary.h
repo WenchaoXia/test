@@ -3,7 +3,7 @@
 #pragma once
 
 #include "MyCommonUtils.h"
-
+#include "Components/TimelineComponent.h"
 #include "MyCommonUtilsLibrary.generated.h"
 
 UENUM()
@@ -111,4 +111,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
     static void helperResolveWorldTransformFromPlayerCameraByPercent(const UObject* WorldContextObject, FVector2D ConstrainedPosiPercentInCamera, float ConstrainedVLengthPercentInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection);
 
+    //following is bond to project resource setup
+    UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary", meta = (UnsafeDuringActorConstruction = "true"))
+    static UCurveVector* getCurveVectorDefaultLinear();
 };

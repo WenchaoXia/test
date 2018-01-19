@@ -10,3 +10,6 @@ LoadObject（）后续call是否会触发i/o，应该是不会，里面是dict，但还没找到code
 确认MID无法在ctor保存的原因
 
 idEvent, time_ms 溢出统一检查
+
+统一测试代码使能宏
+使用tick代替重要的timer

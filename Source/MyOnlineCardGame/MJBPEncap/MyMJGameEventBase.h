@@ -107,16 +107,23 @@ enum class MyMJGameCoreRelatedEventMainTypeCpp : uint8
 
 //uint is MS
 USTRUCT()
-struct FMyMJCoreRelatedEventCorePusherCfgCpp
+struct FMyMJGameEventTimeCfgCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyMJCoreRelatedEventCorePusherCfgCpp();
+    FMyMJGameEventTimeCfgCpp();
 
     //return uint is ms, resolved
-    uint32 helperGetDeltaDur(const FMyMJDataDeltaCpp& delta) const;
+    uint32 helperGetDeltaDur(MyMJGameRuleTypeCpp ruleType, const FMyMJDataDeltaCpp& delta) const;
+
+    uint32 helperGetBaseResetAtStartDur() const
+    {
+        return m_uiBaseResetAtStart;
+    };
+
+    uint32 m_uiBaseResetAtStart;
 
     uint32 m_uiGameStarted;
 
@@ -948,6 +955,7 @@ public:
         if (IsValid(m_pDeltaDataEvents)) {
             m_pDeltaDataEvents->clearInGame();
         }
+        m_eRuleTypeLast = MyMJGameRuleTypeCpp::Invalid;
         m_uiServerWorldTime_ms = 0;
 
         m_cReplicateDelegate.Clear();
@@ -1054,7 +1062,7 @@ public:
     bool isReadyToGiveNextEvent(uint32 uiServerWorldTime_ms) const;
 
     //return the new added event's id
-    uint32 addPusherResult(const FMyMJCoreRelatedEventCorePusherCfgCpp &inEventCorePusherCfg, const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms);
+    uint32 addPusherResult(const FMyMJGameEventTimeCfgCpp &inEventCorePusherCfg, const FMyMJGamePusherResultCpp& cPusherResult, uint32 uiServerWorldTime_ms);
 
 
     void doTestChange()
@@ -1235,6 +1243,9 @@ protected:
 
     UPROPERTY(ReplicatedUsing = OnRep_ServerWorldTime_ms)
     uint32 m_uiServerWorldTime_ms;
+
+    UPROPERTY(Replicated)
+    MyMJGameRuleTypeCpp m_eRuleTypeLast;
 
     FMyMJDataAccessorCpp m_cAccessor;
 
@@ -1688,6 +1699,11 @@ public:
 
     void updateDebugInfo(float fWorldRealTimeNow, uint32 uiIdEventBefore);
 
+    inline FMyMJGameEventTimeCfgCpp& getEventTimeCfgRef()
+    {
+        return m_cEventCorePusherCfg;
+    };
+
     UPROPERTY(Replicated)
     int32 m_iTest;
 
@@ -1729,7 +1745,7 @@ protected:
     //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "test Buffer"))
     //UMyMJGameEventCycleBuffer *m_pTestBuffer;
 
-    FMyMJCoreRelatedEventCorePusherCfgCpp m_cEventCorePusherCfg;
+    FMyMJGameEventTimeCfgCpp m_cEventCorePusherCfg;
 
     //UPROPERTY(BlueprintReadOnly, Replicated, meta = (DisplayName = "datas"))
     //TArray<UMyMJDataAtOneMomentPerRoleCpp *> m_aDatas;

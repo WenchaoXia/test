@@ -90,6 +90,15 @@ public:
 
 };
 
+UENUM()
+enum class MyMJGameWeaveVisualTypeCpp : uint8
+{
+    Invalid = 0     UMETA(DisplayName = "Invalid"),
+    Chi = 1     UMETA(DisplayName = "Chi"),
+    Peng = 2    UMETA(DisplayName = "Peng"),
+    Gang = 3    UMETA(DisplayName = "Gang"),
+    Bu = 4      UMETA(DisplayName = "Bu"),
+};
 
 UCLASS()
 class UMyMJBPUtilsLibrary :
@@ -140,4 +149,7 @@ public:
 
     UFUNCTION(BlueprintCallable)
     static bool testLoadAsset(UObject* outer, FString fullPathName);
+
+    //return "Invalid" if have error
+    static MyMJGameWeaveVisualTypeCpp helperGetWeaveVisualTypeFromWeave(MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave);
 };

@@ -64,13 +64,16 @@ public:
         m_fTargetVLengthOnScreenScreenPercent = 0.1;
     };
 
-    UPROPERTY()
+    //position to show on player screen, unit is percent of distance from center to border
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "position from center to border percent"))
         float m_fShowPosiFromCenterToBorderPercent;
 
-    UPROPERTY()
+    //extra postion offset on player screen, unit is percent of player screen's width and height
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "extra offset percent"))
         FVector2D m_cExtraOffsetScreenPercent;
 
-    UPROPERTY()
+    //the length to display on player screen, unit is percent of player screen's height
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "target height percent"))
         float m_fTargetVLengthOnScreenScreenPercent;
 };
 
@@ -83,6 +86,11 @@ class UMyCardGameUtilsLibrary :
     GENERATED_BODY()
 
 public:
+
+    static void helperUpdatePointOnPlayerScreenConstrainedMeta(int32 iIdxAttenderBelongTo,
+                                                               FVector centerMapped,
+                                                               FVector PointMapped,
+                                                               FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta &outMeta);
 
     static void helperResolvePointOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FVector& pointInWorld, FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta &outMeta);
 

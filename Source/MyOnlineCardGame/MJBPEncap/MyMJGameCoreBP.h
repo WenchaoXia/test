@@ -172,6 +172,9 @@ public:
         return m_pMJDataAll;
     };
 
+    bool getCoreFullPartEnabled() const;
+    void setCoreFullPartEnabled(bool bEnabled);
+
     //FMyMJDataSeqReplicatedDelegate m_cReplicateFilteredDelegate;
 
     UPROPERTY(Replicated)
@@ -186,9 +189,6 @@ protected:
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
     //virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
     virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
-
-    bool getCoreFullPartEnabled() const;
-    void setCoreFullPartEnabled(bool bEnabled);
 
     void loop();
     void coreDataPullLoopInner();

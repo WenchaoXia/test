@@ -2,6 +2,8 @@
 
 #include "MyMJGameRoomLevelScriptActorCpp.h"
 
+#include "MyMJGameRoom.h"
+
 #include "Engine.h"
 
 
@@ -12,9 +14,10 @@ bool AMyMJGameRoomRootActorCpp::checkSettings() const
         return false;
     }
 
-    //if (!m_pRoomActor->checkSettings()) {
-    //    return false;
-    //}
+    if (!m_pRoomActor->getResManagerVerified()->checkSettings(false))
+    {
+        return false;
+    }
 
     if (!IsValid(m_pCoreDataSource)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pCoreDataSource %p is not valid."), m_pCoreDataSource);
@@ -82,5 +85,22 @@ bool AMyMJGameRoomLevelScriptActorCpp::checkSettings() const
     return m_pRoomRootActor->checkSettings();
 };
 
+void AMyMJGameRoomLevelScriptActorCpp::BeginPlay()
+{
+    Super::BeginPlay();
+
+    if (!checkSettings())
+    {
+        return;
+    }
+
+    const UMyMJGameInRoomVisualCfgType* pCfgObj = m_pRoomRootActor->m_pRoomActor->getResManagerVerified()->getVisualCfgVerified();
+
+    FMyMJGameEventTimeCfgCpp& cfg = m_pRoomRootActor->m_pCoreDataSource->getMJDataAll()->getEventTimeCfgRef();
+    UMyMJGameInRoomVisualCfgType::helperMapToSimplifiedTimeCfg(pCfgObj->m_cEventCfg, cfg);
+
+    m_pRoomRootActor->m_pCoreDataSource->setCoreFullPartEnabled(true);
+
+};
 
 

@@ -35,6 +35,7 @@ public:
 protected:
 
     friend class AMyMJGamePlayerControllerCpp;
+    friend class AMyMJGameRoomLevelScriptActorCpp;
 
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "room actor"))
         AMyMJGameRoomCpp* m_pRoomActor;
@@ -72,12 +73,7 @@ protected:
 
     friend class AMyMJGameRoomRootActorCpp;
 
-    virtual void BeginPlay() override
-    {
-        Super::BeginPlay();
-
-        checkSettings();
-    };
+    virtual void BeginPlay() override;
 
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "room root actor"))
         AMyMJGameRoomRootActorCpp* m_pRoomRootActor;
