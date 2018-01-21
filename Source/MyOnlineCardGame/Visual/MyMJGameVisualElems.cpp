@@ -299,6 +299,24 @@ bool UMyTransformUpdateSequenceMovementComponent::tryStartNextSeq(FString sDebug
     const FTransformUpdateSequencDataCpp* pData = NULL;
     UCurveVector* pCurve = NULL;
     
+    while (1)
+    {
+        if (peekSeqAtCpp(0, pData, pCurve) < 0) {
+            break;
+        }
+
+        if (pData->m_fTime < MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT)
+        {
+            //directly teleport
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("teleporting for short dur seq: %f sec."), pData->m_fTime);
+            UpdatedComponent->SetWorldTransform(pData->m_cEnd);
+            removeSeqFromHead(1);
+        }
+        else {
+            break;
+        }
+    }
+
     if (peekSeqAtCpp(0, pData, pCurve) >= 0) {
         //we have data
 
@@ -1234,7 +1252,7 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps->Reset();
 
     pStep->reset();
-    pStep->m_fTimePercent = 0.05;
+    pStep->m_fTimePercent = 0.001;
     pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::DisappearAtAttenderBorderOnPlayerScreen;
     pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::FacingPlayerScreen;
     pSteps->Emplace(*pStep);
