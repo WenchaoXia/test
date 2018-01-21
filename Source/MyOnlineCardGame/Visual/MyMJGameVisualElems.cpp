@@ -574,6 +574,30 @@ AMyMoveWithSeqActorBaseCpp::~AMyMoveWithSeqActorBaseCpp()
 
 }
 
+int32 AMyMoveWithSeqActorBaseCpp::getModelInfo(FMyActorModelInfoBoxCpp& modelInfo, bool verify) const
+{
+    //ignore the root scene/actor's scale, but calc from the box
+
+    //FVector actorScale3D = GetActorScale3D();
+    //m_pMainBox->GetScaledBoxExtent()
+    modelInfo.m_cBoxExtend = m_pMainBox->GetUnscaledBoxExtent() *  m_pMainBox->GetComponentScale();
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("name %s, box scale %s."), *GetName(), *m_pMainBox->GetComponentScale().ToString());
+    modelInfo.m_cCenterPointRelativeLocation = m_pMainBox->RelativeLocation;// * actorScale3D;
+
+    return 0;
+}
+
+UMyTransformUpdateSequenceMovementComponent* AMyMoveWithSeqActorBaseCpp::getTransformUpdateSequence(bool verify)
+{
+    UMyTransformUpdateSequenceMovementComponent* pRet = m_pTransformUpdateSequence;
+
+    if (verify)
+    {
+        MY_VERIFY(IsValid(pRet));
+    }
+    return pRet;
+}
 
 void AMyMoveWithSeqActorBaseCpp::createComponentsForCDO()
 {
@@ -603,20 +627,6 @@ void AMyMoveWithSeqActorBaseCpp::createComponentsForCDO()
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_pMainBox created as 0x%p, this 0x%p."), m_pMainBox, this);
 
 }
-
-int32 AMyMoveWithSeqActorBaseCpp::getModelInfo(FMyMJGameActorModelInfoBoxCpp& modelInfo) const
-{
-    //ignore the root scene/actor's scale, but calc from the box
-
-    //FVector actorScale3D = GetActorScale3D();
-    //m_pMainBox->GetScaledBoxExtent()
-    modelInfo.m_cBoxExtend = m_pMainBox->GetUnscaledBoxExtent() *  m_pMainBox->GetComponentScale();
-
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("name %s, box scale %s."), *GetName(), *m_pMainBox->GetComponentScale().ToString());
-    modelInfo.m_cCenterPointRelativeLocation = m_pMainBox->RelativeLocation;// * actorScale3D;
-
-    return 0;
-};
 
 
 #if WITH_EDITOR
@@ -684,6 +694,34 @@ int32 AMyMoveWithSeqActorBaseCpp::updateSettings()
     m_pMainStaticMesh->SetRelativeLocation(-meshOrigin);
 
     return 0;
+}
+
+
+void AMyMoveWithSeqActorBaseCpp::helperTestAnimationStep(float time, FString debugStr, const TArray<AMyMoveWithSeqActorBaseCpp*>& actors)
+{
+    FMyTransformUpdateAnimationMetaCpp meta;
+    FMyActorTransformUpdateAnimationStepCpp stepData;
+
+    meta.m_sDebugString = debugStr;
+    meta.m_fTotalTime = time;
+    meta.m_cModelBoxExtend = FVector(20, 30, 60);
+
+    stepData.m_fTimePercent = 1;
+    stepData.m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::offsetFromPrevLocation;
+    stepData.m_cLocationOffsetPercent = FVector(0, 0, 1);
+
+    TArray<UMyTransformUpdateSequenceMovementComponent *> actorComponentsSortedGroup;
+
+    for (int32 i = 0; i < actors.Num(); i++)
+    {
+        UMyTransformUpdateSequenceMovementComponent* pComp = actors[i]->getTransformUpdateSequence();
+        FTransform targetT;
+        targetT.SetLocation(FVector(0, 0, 100));
+        pComp->setHelperTransformFinal(targetT);
+        actorComponentsSortedGroup.Emplace(pComp);
+    }
+
+    UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStep(meta, stepData, actorComponentsSortedGroup);
 }
 
 /*
@@ -1047,7 +1085,7 @@ bool AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, c
     return bRet;
 };
 
-void AMyMJGameCardBaseCpp::helperToSeqActors(const TArray<AMyMJGameCardBaseCpp*>& aSub, bool bSort, TArray<AMyMoveWithSeqActorBaseCpp*> &aBase)
+void AMyMJGameCardBaseCpp::helperToSeqActors(const TArray<AMyMJGameCardBaseCpp*>& aSub, bool bSort, TArray<IMyTransformUpdateSequenceInterface*> &aBase)
 {
     TArray<AMyMJGameCardBaseCpp*> aTemp;
 
@@ -1066,7 +1104,10 @@ void AMyMJGameCardBaseCpp::helperToSeqActors(const TArray<AMyMJGameCardBaseCpp*>
     aBase.Reset();
     for (int32 i = 0; i < l; i++)
     {
-        aBase.Emplace((*pSrc)[i]);
+        AMyMJGameCardBaseCpp* pA = (*pSrc)[i];
+        IMyTransformUpdateSequenceInterface* pI = Cast<IMyTransformUpdateSequenceInterface>(pA);
+        MY_VERIFY(pI != NULL);
+        aBase.Emplace(pI);
     }
 };
 
@@ -1091,7 +1132,7 @@ void FMyMJGameInGamePlayerScreenCfgCpp::fillDefaultData()
         area.m_cCommonActionShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.4;
         area.m_cCommonActionShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.25;
 
-        FMyCardGamePointFromCenterOnPlayerScreenCfgCpp& pointCfg = area.m_cCommonActionShowPoint;
+        FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp& pointCfg = area.m_cCommonActionShowPoint;
         if (i == 1)
         {
             area.m_bAttenderPointOnScreenOverride = true;
@@ -1139,7 +1180,7 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps->Emplace(*pStep);
 
     pStep->reset();
-    pStep->m_fTimePercent = UMyMJGameInRoomVisualCfgType::helperGetRemainTimePercent(*pSteps);
+    pStep->m_fTimePercent = UMyCommonUtilsLibrary::helperGetRemainTimePercent(*pSteps);
     pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::FinalLocation;
     pSteps->Emplace(*pStep);
 
@@ -1159,7 +1200,7 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps->Emplace(*pStep);
 
     pStep->reset();
-    pStep->m_fTimePercent = UMyMJGameInRoomVisualCfgType::helperGetRemainTimePercent(*pSteps);
+    pStep->m_fTimePercent = UMyCommonUtilsLibrary::helperGetRemainTimePercent(*pSteps);
     pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::FinalLocation;
     pSteps->Emplace(*pStep);
 
@@ -1180,7 +1221,7 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps->Emplace(*pStep);
 
     pStep->reset();
-    pStep->m_fTimePercent = UMyMJGameInRoomVisualCfgType::helperGetRemainTimePercent(*pSteps);
+    pStep->m_fTimePercent = UMyCommonUtilsLibrary::helperGetRemainTimePercent(*pSteps);
     pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::FinalLocation;
     pSteps->Emplace(*pStep);
 
@@ -1205,7 +1246,7 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps->Emplace(*pStep);
 
     pStep->reset();
-    pStep->m_fTimePercent = UMyMJGameInRoomVisualCfgType::helperGetRemainTimePercent(*pSteps);
+    pStep->m_fTimePercent = UMyCommonUtilsLibrary::helperGetRemainTimePercent(*pSteps);
     pSteps->Emplace(*pStep);
 
     m_cWeavePeng.copyExceptClass(m_cWeaveChi);
@@ -1310,287 +1351,4 @@ void UMyMJGameInRoomVisualCfgType::helperMapToSimplifiedTimeCfg(const FMyMJGameI
 
     outSimplifiedTimeCfg.m_uiHuBornLocalCS =cPusherCfg.m_cLocalCSHuBorn.m_fTotalTime * 1000;
     outSimplifiedTimeCfg.m_uiZhaNiaoLocalCS =cPusherCfg.m_cLocalCSZhaNiao.m_fTotalTime * 1000;
-};
-
-void UMyMJGameInRoomVisualCfgType::helperSetupTransformUpdateAnimationStep(const FMyTransformUpdateAnimationMetaCpp& meta,
-                                                                            const FMyActorTransformUpdateAnimationStepCpp& stepData,
-                                                                            const TArray<UMyTransformUpdateSequenceMovementComponent *>& actorComponentsSortedGroup)
-{
-    float fTotalTime = meta.m_fTotalTime;
-    const FTransform& pointTransform = meta.m_cPointTransform;
-    const FTransform& disappearTransform = meta.m_cDisappearTransform;
-    const FVector& modelBoxExtend = meta.m_cModelBoxExtend;
-
-    const FMyActorTransformUpdateAnimationStepCpp& cStepData = stepData;
-
-    TArray<FTransform> aNextTransforms;
-
-    int32 l = actorComponentsSortedGroup.Num();
-
-    aNextTransforms.Reset();
-    aNextTransforms.AddDefaulted(l);
-
-    if (l <= 0) {
-        return;
-    };
-
-    for (int32 i = 0; i < l; i++) {
-        if (actorComponentsSortedGroup[i] == NULL)
-        {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("actorComponentsSortedGroup[%d] == NULL."), i);
-            return;
-        }
-    }
-
-    //find the middle one
-    int32 idxCenter = l / 2;
-    UMyTransformUpdateSequenceMovementComponent* componentCenter = actorComponentsSortedGroup[idxCenter];
-    FTransform& nextTransformCenter = aNextTransforms[idxCenter];
-
-
-    if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::PrevLocation)
-    {
-        for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformPrevRefConst().GetLocation());
-        }
-    }
-    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::FinalLocation)
-    {
-        for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation());
-        }
-    }
-    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::offsetFromPrevLocation)
-    {
-        for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformPrevRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
-        }
-    }
-    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::offsetFromFinalLocation)
-    {
-        for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
-        }
-    }
-    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::PointOnPlayerScreen)
-    {
-        FVector location = pointTransform.GetLocation();
-        for (int32 i = 0; i < l; i++) {
-            if (i == idxCenter) {
-                aNextTransforms[i].SetLocation(location);
-            }
-            else {
-                aNextTransforms[i].SetLocation(location + actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() - componentCenter->getHelperTransformFinalRefConst().GetLocation());
-            }
-        }
-    }
-    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::DisappearAtAttenderBorderOnPlayerScreen)
-    {
-        FVector location = disappearTransform.GetLocation();
-        for (int32 i = 0; i < l; i++) {
-            if (i == idxCenter) {
-                aNextTransforms[i].SetLocation(location);
-            }
-            else {
-                aNextTransforms[i].SetLocation(location + actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() - componentCenter->getHelperTransformFinalRefConst().GetLocation());
-            }
-        }
-    }
-
-    if (cStepData.m_eRotationUpdateType == MyActorTransformUpdateAnimationRotationType::PrevRotation)
-    {
-        for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetRotation(actorComponentsSortedGroup[i]->getHelperTransformPrevRefConst().GetRotation());
-        }
-    }
-    else if (cStepData.m_eRotationUpdateType == MyActorTransformUpdateAnimationRotationType::FinalRotation)
-    {
-        for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetRotation(actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetRotation());
-        }
-    }
-    else if (cStepData.m_eRotationUpdateType == MyActorTransformUpdateAnimationRotationType::FacingPlayerScreen)
-    {
-        for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetRotation(pointTransform.GetRotation());
-        }
-    }
-
-    if (cStepData.m_eScaleUpdateType == MyActorTransformUpdateAnimationScaleType::PrevScale)
-    {
-        for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetScale3D(actorComponentsSortedGroup[i]->getHelperTransformPrevRefConst().GetScale3D());
-        }
-    }
-    else  if (cStepData.m_eScaleUpdateType == MyActorTransformUpdateAnimationScaleType::FinalScale)
-    {
-        for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetScale3D(actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetScale3D());
-        }
-    }
-    else  if (cStepData.m_eScaleUpdateType == MyActorTransformUpdateAnimationScaleType::Specified)
-    {
-        for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetScale3D(cStepData.m_cScaleSpecified);
-        }
-    }
-
-
-    float fDur = fTotalTime * cStepData.m_fTimePercent;
-    for (int32 i = 0; i < l; i++) {
-
-        UMyTransformUpdateSequenceMovementComponent *pSeqComp = actorComponentsSortedGroup[i];
-
-        FTransformUpdateSequencDataCpp data;
-        data.helperSetDataBySrcAndDst(pSeqComp->getHelperTransformPrevRefConst(), aNextTransforms[i], fDur, cStepData.m_cRotationUpdateExtraCycles);
-        pSeqComp->addSeqToTail(data, cStepData.m_pCurve == NULL ? UMyCommonUtilsLibrary::getCurveVectorDefaultLinear() : cStepData.m_pCurve);
-    }
-};
-
-void UMyMJGameInRoomVisualCfgType::helperSetupTransformUpdateAnimationSteps(const FMyTransformUpdateAnimationMetaCpp& meta,
-                                                                            const TArray<FMyActorTransformUpdateAnimationStepCpp>& stepDatas,
-                                                                            const TArray<UMyTransformUpdateSequenceMovementComponent *>& actorComponentsSortedGroup)
-{
-    TArray<float> m_aTimePercents;
-    float total = 0;
-
-    int32 l = stepDatas.Num();
-    for (int32 i = 0; i < l; i++) {
-        helperSetupTransformUpdateAnimationStep(meta, stepDatas[i], actorComponentsSortedGroup);
-        float f = stepDatas[i].m_fTimePercent;
-        m_aTimePercents.Emplace(f);
-        total += f;
-    }
-
-    if (l > 0 && !FMath::IsNearlyEqual(total, 1, MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT))
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("total time is not 100%, str %s. now it is %f."), *meta.m_sDebugString, total);
-    };
-}
-
-float UMyMJGameInRoomVisualCfgType::helperGetRemainTimePercent(const TArray<FMyActorTransformUpdateAnimationStepCpp>& stepDatas)
-{
-    float total = 1;
-    int32 l = stepDatas.Num();
-    for (int32 i = 0; i < l; i++) {
-        total -= stepDatas[i].m_fTimePercent;
-    }
-
-    if (total < 0) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("total remain is negative: %f."), total);
-        return 0;
-    }
-
-    return total;
-}
-
-void UMyMJGameInRoomVisualCfgType::helperSetupTransformUpdateAnimationStepsForPoint(const UObject* WorldContextObject,
-                                                                                    float totalDur,
-                                                                                    const FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta& pointOnScreeMeta,
-                                                                                    const FMyCardGamePointFromCenterOnPlayerScreenCfgCpp& pointCfg,
-                                                                                    const TArray<FMyActorTransformUpdateAnimationStepCpp>& stepDatas,
-                                                                                    float extraDelayDur,
-                                                                                    const TArray<AMyMoveWithSeqActorBaseCpp*>& actors,
-                                                                                    FString debugName,
-                                                                                    bool clearSeq)
-{
-    FMyTransformUpdateAnimationMetaCpp meta, *pMeta = &meta;
-    TArray<UMyTransformUpdateSequenceMovementComponent *> aComponents, *pComponents = &aComponents;
-
-    //prepare meta
-    pMeta->m_sDebugString = debugName;
-    pMeta->m_fTotalTime = totalDur;
-    if (actors.Num() <= 0) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("actor num is zero."));
-        return;
-    }
-    FMyMJGameActorModelInfoBoxCpp modelInfo;
-    actors[0]->getModelInfo(modelInfo);
-    pMeta->m_cModelBoxExtend = modelInfo.m_cBoxExtend;
-    UMyCardGameUtilsLibrary::helperResolveTransformFromPointOnPlayerScreenConstrainedMeta(WorldContextObject, pointOnScreeMeta, pointCfg.m_fShowPosiFromCenterToBorderPercent, pointCfg.m_cExtraOffsetScreenPercent, pointCfg.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelBoxExtend.Z * 2, pMeta->m_cPointTransform);
-    UMyCardGameUtilsLibrary::helperResolveTransformFromPointOnPlayerScreenConstrainedMeta(WorldContextObject, pointOnScreeMeta, 1.2, pointCfg.m_cExtraOffsetScreenPercent, pointCfg.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelBoxExtend.Z * 2, pMeta->m_cDisappearTransform);
-
-    bool bDelay = extraDelayDur >= MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT;
-
-    pComponents->Reset();
-    int32 l = actors.Num();
-    for (int32 i = 0; i < l; i++) {
-        UMyTransformUpdateSequenceMovementComponent* pSeq = actors[i]->getTransformUpdateSequence();
-        pComponents->Emplace(pSeq);
-        if (clearSeq) {
-            pSeq->clearSeq();
-        }
-    }
-
-    if (bDelay) {
-        UMyMJGameInRoomVisualCfgType::helperAddWaitStep2(extraDelayDur, debugName + TEXT(" wait"), *pComponents);
-    }
-
-    UMyMJGameInRoomVisualCfgType::helperSetupTransformUpdateAnimationSteps(meta, stepDatas, *pComponents);
-}
-
-void UMyMJGameInRoomVisualCfgType::helperAddWaitStep(float waitTime, FString debugStr, const TArray<AMyMoveWithSeqActorBaseCpp*>& actors)
-{
-
-    TArray<UMyTransformUpdateSequenceMovementComponent *> actorComponentsSortedGroup;
-
-    for (int32 i = 0; i < actors.Num(); i++)
-    {
-        actorComponentsSortedGroup.Emplace(actors[i]->getTransformUpdateSequence());
-    }
-
-    helperAddWaitStep2(waitTime, debugStr, actorComponentsSortedGroup);
-}
-
-void UMyMJGameInRoomVisualCfgType::helperAddWaitStep2(float waitTime, FString debugStr, const TArray<UMyTransformUpdateSequenceMovementComponent*>& comps)
-{
-    FMyTransformUpdateAnimationMetaCpp meta;
-    FMyActorTransformUpdateAnimationStepCpp stepData;
-
-    meta.m_sDebugString = debugStr;
-    meta.m_fTotalTime = waitTime;
-
-    stepData.m_fTimePercent = 1;
-
-
-    helperSetupTransformUpdateAnimationStep(meta, stepData, comps);
-}
-
-void UMyMJGameInRoomVisualCfgType::helperTestAnimationStep(float time, FString debugStr, const TArray<AMyMoveWithSeqActorBaseCpp*>& actors)
-{
-    FMyTransformUpdateAnimationMetaCpp meta;
-    FMyActorTransformUpdateAnimationStepCpp stepData;
-
-    meta.m_sDebugString = debugStr;
-    meta.m_fTotalTime = time;
-    meta.m_cModelBoxExtend = FVector(20, 30, 60);
-
-    stepData.m_fTimePercent = 1;
-    stepData.m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::offsetFromPrevLocation;
-    stepData.m_cLocationOffsetPercent = FVector(0, 0, 1);
-
-    TArray<UMyTransformUpdateSequenceMovementComponent *> actorComponentsSortedGroup;
-
-    for (int32 i = 0; i < actors.Num(); i++)
-    {
-        UMyTransformUpdateSequenceMovementComponent* pComp = actors[i]->getTransformUpdateSequence();
-        FTransform targetT;
-        targetT.SetLocation(FVector(0, 0, 100));
-        pComp->setHelperTransformFinal(targetT);
-        actorComponentsSortedGroup.Emplace(pComp);
-    }
-
-    helperSetupTransformUpdateAnimationStep(meta, stepData, actorComponentsSortedGroup);
-}
-
-void UMyMJGameInRoomVisualCfgType::helperFixPointOnScreeMeta(const FVector2D& pointOnScreenPercent,
-                                                            const FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta& pointOnScreeMetaOld,
-                                                            FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta& pointOnScreeMetaNew)
-{
-    FVector pointMapped;
-    pointMapped.X = pointOnScreenPercent.X * pointOnScreeMetaOld.m_cScreenCenterMapped.X * 2;
-    pointMapped.Y = pointOnScreenPercent.Y * pointOnScreeMetaOld.m_cScreenCenterMapped.Y * 2;
-    pointMapped.Z = 0;
-
-    UMyCardGameUtilsLibrary::helperUpdatePointOnPlayerScreenConstrainedMeta(pointOnScreeMetaOld.m_iIdxAttenderBelongTo, pointOnScreeMetaOld.m_cScreenCenterMapped, pointMapped, pointOnScreeMetaNew);
 };

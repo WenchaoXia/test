@@ -12,10 +12,10 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetStringLibrary.h"
 
-void UMyCardGameUtilsLibrary::helperUpdatePointOnPlayerScreenConstrainedMeta(int32 iIdxAttenderBelongTo,
+void UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(int32 iIdxAttenderBelongTo,
                                                                             FVector centerMapped,
                                                                             FVector PointMapped,
-                                                                            FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta &outMeta)
+                                                                            FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp &outMeta)
 {
     PointMapped.Z = 0;
 
@@ -38,7 +38,20 @@ void UMyCardGameUtilsLibrary::helperUpdatePointOnPlayerScreenConstrainedMeta(int
     outMeta.m_fCenterToPointUntilBorderLength = FMath::Min(xLen, yLen);
 }
 
-void UMyCardGameUtilsLibrary::helperResolvePointOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FVector& pointInWorld, FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta &outMeta)
+void UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrainedByPointPercent(int32 iIdxAttenderBelongTo,
+                                                                                                    FVector centerMapped,
+                                                                                                    const FVector2D& pointPercent,
+                                                                                                    FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp& outMeta)
+{
+    FVector pointMapped;
+    pointMapped.X = pointPercent.X * centerMapped.X * 2;
+    pointMapped.Y = pointPercent.Y * centerMapped.Y * 2;
+    pointMapped.Z = 0;
+
+    UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(iIdxAttenderBelongTo, centerMapped, pointMapped, outMeta);
+};
+
+void UMyCardGameUtilsLibrary::helperPointInWorldToPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FVector& pointInWorld, FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp &outMeta)
 {
     outMeta.reset();
 
@@ -86,26 +99,5 @@ void UMyCardGameUtilsLibrary::helperResolvePointOnPlayerScreenConstrainedMeta(co
     PointMapped.X = projectedPoint.X;
     PointMapped.Y = projectedPoint.Y;
 
-    helperUpdatePointOnPlayerScreenConstrainedMeta(idxAttenderOnScreen, centerMapped, PointMapped, outMeta);
-}
-
-void UMyCardGameUtilsLibrary::helperResolveTransformFromPointOnPlayerScreenConstrainedMeta(const UObject* WorldContextObject, const FMyCardGamePointFromCenterOnPlayerScreenConstrainedMeta &meta,
-                                                                                            float targetPosiFromCenterToBorderOnScreenPercent,
-                                                                                            const FVector2D& targetPosiFixOnScreenPercent,
-                                                                                            float targetVOnScreenPercent,
-                                                                                            float targetModelHeightInWorld,
-                                                                                            FTransform &outTargetTranform)
-{
-    FVector popPointMapped = meta.m_cScreenCenterMapped + targetPosiFromCenterToBorderOnScreenPercent * meta.m_fCenterToPointUntilBorderLength * meta.m_cDirectionCenterToPointMapped;
-    FVector2D popPoint;
-    popPoint.X = popPointMapped.X;
-    popPoint.Y = popPointMapped.Y;
-
-    popPoint.X += meta.m_cScreenCenterMapped.X * 2 * targetPosiFixOnScreenPercent.X;
-    popPoint.Y += meta.m_cScreenCenterMapped.Y * 2 * targetPosiFixOnScreenPercent.Y;
-
-    float vAbsoluteOnScreen = targetVOnScreenPercent * meta.m_cScreenCenterMapped.Y * 2;
-
-    FVector cameraCenterLoc, cameraCenterDir;
-    UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByAbsolute(WorldContextObject, popPoint, vAbsoluteOnScreen, targetModelHeightInWorld, outTargetTranform, cameraCenterLoc, cameraCenterDir);
+    helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(idxAttenderOnScreen, centerMapped, PointMapped, outMeta);
 }

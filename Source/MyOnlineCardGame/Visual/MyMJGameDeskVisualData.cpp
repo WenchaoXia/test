@@ -1318,7 +1318,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const F
 };
 
 void FMyMJGameDeskProcessorRunnableCpp::helperResolveCardVisualResultChanges(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
-                                                                            const FMyMJGameActorModelInfoBoxCpp& cCardModelInfo,
+                                                                            const FMyActorModelInfoBoxCpp& cCardModelInfo,
                                                                             const TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoKnownChanges,
                                                                             TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultAccumulatedChanges)
 {
@@ -1343,12 +1343,12 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveCardVisualResultChanges(con
 }
 
 void FMyMJGameDeskProcessorRunnableCpp::helperResolveCardTransform(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
-                                                                   const FMyMJGameActorModelInfoBoxCpp& cCardModelInfo,
+                                                                   const FMyActorModelInfoBoxCpp& cCardModelInfo,
                                                                    const FMyMJGameCardVisualInfoCpp& cCardVisualInfo,
                                                                    FTransform& outTransform)
 {
     const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCenter = cVisualPointCfg;
-    const FMyMJGameActorModelInfoBoxCpp& cardModelInfoFinal = cCardModelInfo;
+    const FMyActorModelInfoBoxCpp& cardModelInfoFinal = cCardModelInfo;
 
     const FTransform& cTransFormCenter = cVisualPointCenter.m_cCenterPointWorldTransform;
     const FVector& cAreaBoxExtend = cVisualPointCenter.m_cAreaBoxExtendFinal;
@@ -1840,7 +1840,7 @@ void UMyMJGameDeskSuiteCpp::helperResolveTargetCardVisualState(int32 idxCard, FM
         return;
         }
 
-        FMyMJGameActorModelInfoBoxCpp cModelInfo;
+        FMyActorModelInfoBoxCpp cModelInfo;
         if (0 != m_pResManager->getCardModelInfoUnscaled(cModelInfo)) {
         return;
         }
@@ -1857,7 +1857,7 @@ void UMyMJGameDeskSuiteCpp::helperResolveTargetCardVisualState(int32 idxCard, FM
 
 
 /*
-int32 UMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMyMJGameActorModelInfoBoxCpp& cardModelInfoFinal, const FMyMJGameCardVisualInfoCpp& cardVisualInfoFinal, const FMyMJGameDeskVisualPointCfgCpp& visualPointCfg, FTransform& outTransform)
+int32 UMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMyActorModelInfoBoxCpp& cardModelInfoFinal, const FMyMJGameCardVisualInfoCpp& cardVisualInfoFinal, const FMyMJGameDeskVisualPointCfgCpp& visualPointCfg, FTransform& outTransform)
 {
 
 }

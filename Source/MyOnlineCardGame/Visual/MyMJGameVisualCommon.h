@@ -44,59 +44,6 @@ enum class MyMJGameVerticalAlignmentCpp : uint8
 };
 
 
-//model always and must facing x axis
-USTRUCT(BlueprintType)
-struct FMyMJGameActorModelInfoBaseCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyMJGameActorModelInfoBaseCpp()
-    {
-        m_cCenterPointRelativeLocation = FVector(0);
-    };
-
-    virtual ~FMyMJGameActorModelInfoBaseCpp()
-    {
-
-    };
-
-    void reset()
-    {
-        m_cCenterPointRelativeLocation = FVector(0);
-    };
-
-    //final size after all actor scale, component scale applied
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "center point final relative location"))
-        FVector m_cCenterPointRelativeLocation;
-};
-
-USTRUCT(BlueprintType)
-struct FMyMJGameActorModelInfoBoxCpp : public FMyMJGameActorModelInfoBaseCpp
-
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyMJGameActorModelInfoBoxCpp() : Super()
-    {
-        m_cBoxExtend = FVector(1);
-    };
-
-    void reset()
-    {
-        Super::reset();
-
-        m_cBoxExtend = FVector(1);
-    };
-
-    //final size after all actor scale, component scale applied
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "box extend final"))
-        FVector m_cBoxExtend;
-
-};
-
-
 USTRUCT(BlueprintType)
 struct FMyMJGameActorVisualResultBaseCpp
 

@@ -506,3 +506,270 @@ UCurveVector* UMyCommonUtilsLibrary::getCurveVectorDefaultLinear()
 
     return pRet;
 };
+
+void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp &meta,
+                                                                                                        float targetPosiFromCenterToBorderOnScreenPercent,
+                                                                                                        const FVector2D& targetPosiFixOnScreenPercent,
+                                                                                                        float targetVOnScreenPercent,
+                                                                                                        float targetModelHeightInWorld,
+                                                                                                        FTransform &outTargetTranform)
+{
+    FVector popPointMapped = meta.m_cScreenCenterMapped + targetPosiFromCenterToBorderOnScreenPercent * meta.m_fCenterToPointUntilBorderLength * meta.m_cDirectionCenterToPointMapped;
+    FVector2D popPoint;
+    popPoint.X = popPointMapped.X;
+    popPoint.Y = popPointMapped.Y;
+
+    popPoint.X += meta.m_cScreenCenterMapped.X * 2 * targetPosiFixOnScreenPercent.X;
+    popPoint.Y += meta.m_cScreenCenterMapped.Y * 2 * targetPosiFixOnScreenPercent.Y;
+
+    float vAbsoluteOnScreen = targetVOnScreenPercent * meta.m_cScreenCenterMapped.Y * 2;
+
+    FVector cameraCenterLoc, cameraCenterDir;
+    UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByAbsolute(WorldContextObject, popPoint, vAbsoluteOnScreen, targetModelHeightInWorld, outTargetTranform, cameraCenterLoc, cameraCenterDir);
+}
+
+float UMyCommonUtilsLibrary::helperGetRemainTimePercent(const TArray<FMyActorTransformUpdateAnimationStepCpp>& stepDatas)
+{
+    float total = 1;
+    int32 l = stepDatas.Num();
+    for (int32 i = 0; i < l; i++) {
+        total -= stepDatas[i].m_fTimePercent;
+    }
+
+    if (total < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("total remain is negative: %f."), total);
+        return 0;
+    }
+
+    return total;
+}
+
+void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStep(const FMyTransformUpdateAnimationMetaCpp& meta,
+                                                                    const FMyActorTransformUpdateAnimationStepCpp& stepData,
+                                                                    const TArray<UMyTransformUpdateSequenceMovementComponent *>& actorComponentsSortedGroup)
+{
+    float fTotalTime = meta.m_fTotalTime;
+    const FTransform& pointTransform = meta.m_cPointTransform;
+    const FTransform& disappearTransform = meta.m_cDisappearTransform;
+    const FVector& modelBoxExtend = meta.m_cModelBoxExtend;
+
+    const FMyActorTransformUpdateAnimationStepCpp& cStepData = stepData;
+
+    TArray<FTransform> aNextTransforms;
+
+    int32 l = actorComponentsSortedGroup.Num();
+
+    aNextTransforms.Reset();
+    aNextTransforms.AddDefaulted(l);
+
+    if (l <= 0) {
+        return;
+    };
+
+    for (int32 i = 0; i < l; i++) {
+        if (actorComponentsSortedGroup[i] == NULL)
+        {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("actorComponentsSortedGroup[%d] == NULL."), i);
+            return;
+        }
+    }
+
+    //find the middle one
+    int32 idxCenter = l / 2;
+    UMyTransformUpdateSequenceMovementComponent* componentCenter = actorComponentsSortedGroup[idxCenter];
+    FTransform& nextTransformCenter = aNextTransforms[idxCenter];
+
+
+    if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::PrevLocation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformPrevRefConst().GetLocation());
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::FinalLocation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation());
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::offsetFromPrevLocation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformPrevRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::offsetFromFinalLocation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::PointOnPlayerScreen)
+    {
+        FVector location = pointTransform.GetLocation();
+        for (int32 i = 0; i < l; i++) {
+            if (i == idxCenter) {
+                aNextTransforms[i].SetLocation(location);
+            }
+            else {
+                aNextTransforms[i].SetLocation(location + actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() - componentCenter->getHelperTransformFinalRefConst().GetLocation());
+            }
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::DisappearAtAttenderBorderOnPlayerScreen)
+    {
+        FVector location = disappearTransform.GetLocation();
+        for (int32 i = 0; i < l; i++) {
+            if (i == idxCenter) {
+                aNextTransforms[i].SetLocation(location);
+            }
+            else {
+                aNextTransforms[i].SetLocation(location + actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() - componentCenter->getHelperTransformFinalRefConst().GetLocation());
+            }
+        }
+    }
+
+    if (cStepData.m_eRotationUpdateType == MyActorTransformUpdateAnimationRotationType::PrevRotation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetRotation(actorComponentsSortedGroup[i]->getHelperTransformPrevRefConst().GetRotation());
+        }
+    }
+    else if (cStepData.m_eRotationUpdateType == MyActorTransformUpdateAnimationRotationType::FinalRotation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetRotation(actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetRotation());
+        }
+    }
+    else if (cStepData.m_eRotationUpdateType == MyActorTransformUpdateAnimationRotationType::FacingPlayerScreen)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetRotation(pointTransform.GetRotation());
+        }
+    }
+
+    if (cStepData.m_eScaleUpdateType == MyActorTransformUpdateAnimationScaleType::PrevScale)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetScale3D(actorComponentsSortedGroup[i]->getHelperTransformPrevRefConst().GetScale3D());
+        }
+    }
+    else  if (cStepData.m_eScaleUpdateType == MyActorTransformUpdateAnimationScaleType::FinalScale)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetScale3D(actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetScale3D());
+        }
+    }
+    else  if (cStepData.m_eScaleUpdateType == MyActorTransformUpdateAnimationScaleType::Specified)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetScale3D(cStepData.m_cScaleSpecified);
+        }
+    }
+
+
+    float fDur = fTotalTime * cStepData.m_fTimePercent;
+    for (int32 i = 0; i < l; i++) {
+
+        UMyTransformUpdateSequenceMovementComponent *pSeqComp = actorComponentsSortedGroup[i];
+
+        FTransformUpdateSequencDataCpp data;
+        data.helperSetDataBySrcAndDst(pSeqComp->getHelperTransformPrevRefConst(), aNextTransforms[i], fDur, cStepData.m_cRotationUpdateExtraCycles);
+        pSeqComp->addSeqToTail(data, cStepData.m_pCurve == NULL ? UMyCommonUtilsLibrary::getCurveVectorDefaultLinear() : cStepData.m_pCurve);
+    }
+};
+
+void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationSteps(const FMyTransformUpdateAnimationMetaCpp& meta,
+                                                                        const TArray<FMyActorTransformUpdateAnimationStepCpp>& stepDatas,
+                                                                        const TArray<UMyTransformUpdateSequenceMovementComponent *>& actorComponentsSortedGroup)
+{
+    TArray<float> m_aTimePercents;
+    float total = 0;
+
+    int32 l = stepDatas.Num();
+    for (int32 i = 0; i < l; i++) {
+        helperSetupTransformUpdateAnimationStep(meta, stepDatas[i], actorComponentsSortedGroup);
+        float f = stepDatas[i].m_fTimePercent;
+        m_aTimePercents.Emplace(f);
+        total += f;
+    }
+
+    if (l > 0 && !FMath::IsNearlyEqual(total, 1, MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("total time is not 100%, str %s. now it is %f."), *meta.m_sDebugString, total);
+    };
+}
+
+void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(const UObject* WorldContextObject,
+                                                                                float totalDur,
+                                                                                const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp& pointAndCenterMeta,
+                                                                                const FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp& pointInfo,
+                                                                                const TArray<FMyActorTransformUpdateAnimationStepCpp>& stepDatas,
+                                                                                float extraDelayDur,
+                                                                                const TArray<IMyTransformUpdateSequenceInterface*>& actorsInterfaces,
+                                                                                FString debugName,
+                                                                                bool clearSeq)
+{
+    FMyTransformUpdateAnimationMetaCpp meta, *pMeta = &meta;
+    TArray<UMyTransformUpdateSequenceMovementComponent *> aComponents, *pComponents = &aComponents;
+
+    //prepare meta
+    pMeta->m_sDebugString = debugName;
+    pMeta->m_fTotalTime = totalDur;
+    if (actorsInterfaces.Num() <= 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("actorsInterfaces num is zero."));
+        return;
+    }
+    FMyActorModelInfoBoxCpp modelInfo;
+    actorsInterfaces[0]->getModelInfo(modelInfo);
+    pMeta->m_cModelBoxExtend = modelInfo.m_cBoxExtend;
+
+    helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, pointInfo.m_fShowPosiFromCenterToBorderPercent, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelBoxExtend.Z * 2, pMeta->m_cPointTransform);
+    helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, 1.2, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelBoxExtend.Z * 2, pMeta->m_cDisappearTransform);
+
+    bool bDelay = extraDelayDur >= MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT;
+
+    pComponents->Reset();
+    int32 l = actorsInterfaces.Num();
+    for (int32 i = 0; i < l; i++) {
+        UMyTransformUpdateSequenceMovementComponent* pSeq = actorsInterfaces[i]->getTransformUpdateSequence();
+        pComponents->Emplace(pSeq);
+        if (clearSeq) {
+            pSeq->clearSeq();
+        }
+    }
+
+    if (bDelay) {
+        UMyCommonUtilsLibrary::helperAddWaitStep(extraDelayDur, debugName + TEXT(" wait"), *pComponents);
+    }
+
+    UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationSteps(meta, stepDatas, *pComponents);
+}
+
+void UMyCommonUtilsLibrary::helperAddWaitStep(float waitTime, FString debugStr, const TArray<UMyTransformUpdateSequenceMovementComponent*>& comps)
+{
+    FMyTransformUpdateAnimationMetaCpp meta;
+    FMyActorTransformUpdateAnimationStepCpp stepData;
+
+    meta.m_sDebugString = debugStr;
+    meta.m_fTotalTime = waitTime;
+
+    stepData.m_fTimePercent = 1;
+
+
+    helperSetupTransformUpdateAnimationStep(meta, stepData, comps);
+}
+
+void UMyCommonUtilsLibrary::helperAddWaitStep(float waitTime, FString debugStr, const TArray<IMyTransformUpdateSequenceInterface*>& interfaces)
+{
+
+    TArray<UMyTransformUpdateSequenceMovementComponent *> actorComponentsSortedGroup;
+
+    for (int32 i = 0; i < interfaces.Num(); i++)
+    {
+        actorComponentsSortedGroup.Emplace(interfaces[i]->getTransformUpdateSequence());
+    }
+
+    UMyCommonUtilsLibrary::helperAddWaitStep(waitTime, debugStr, actorComponentsSortedGroup);
+}
+

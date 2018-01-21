@@ -81,8 +81,8 @@ public:
         m_cDiceModelInfo.reset();
     };
 
-    FMyMJGameActorModelInfoBoxCpp m_cCardModelInfo;
-    FMyMJGameActorModelInfoBoxCpp m_cDiceModelInfo;
+    FMyActorModelInfoBoxCpp m_cCardModelInfo;
+    FMyActorModelInfoBoxCpp m_cDiceModelInfo;
 };
 
 USTRUCT(BlueprintType)
@@ -117,7 +117,7 @@ public:
             return retCode;
         }
 
-        const FMyMJGameActorModelInfoBoxCpp &cCardModelInfo = m_cModelInfo.m_cCardModelInfo;
+        const FMyActorModelInfoBoxCpp &cCardModelInfo = m_cModelInfo.m_cCardModelInfo;
 
         if (cCardModelInfo.m_cBoxExtend.Y < 1) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cCardModelInfo.m_cBoxExtend.Y too small: %f."), cCardModelInfo.m_cBoxExtend.Y);
@@ -630,7 +630,7 @@ public:
 
     //make it public for test purpose
     static void helperResolveCardTransform(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
-                                            const FMyMJGameActorModelInfoBoxCpp& cCardModelInfo,
+                                            const FMyActorModelInfoBoxCpp& cCardModelInfo,
                                             const FMyMJGameCardVisualInfoCpp& cCardVisualInfo,
                                             FTransform& outTransform);
 
@@ -675,7 +675,7 @@ protected:
 
     //do the final work with resolved same point cfg and card model in prev step
     static void helperResolveCardVisualResultChanges(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
-                                                     const FMyMJGameActorModelInfoBoxCpp& cCardModelInfo,
+                                                     const FMyActorModelInfoBoxCpp& cCardModelInfo,
                                                      const TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoKnownChanges,
                                                      TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultAccumulatedChanges);
 
@@ -772,7 +772,7 @@ public:
     
     UFUNCTION(BlueprintCallable)
     static void helperResolveCardTransformForBp(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
-                                            const FMyMJGameActorModelInfoBoxCpp& cCardModelInfo,
+                                            const FMyActorModelInfoBoxCpp& cCardModelInfo,
                                             const FMyMJGameCardVisualInfoCpp& cCardVisualInfo,
                                             FTransform& outTransform)
     {
