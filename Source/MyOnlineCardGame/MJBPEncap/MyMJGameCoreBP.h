@@ -187,6 +187,8 @@ protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+    virtual void Tick(float DeltaSeconds) override;
+
     //virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
     virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
 
@@ -215,7 +217,7 @@ protected:
     UPROPERTY(BlueprintReadOnly, Instanced, ReplicatedUsing = OnRep_MJDataAllPointer, meta = (DisplayName = "data of all roles"))
     UMyMJDataAllCpp* m_pMJDataAll;
 
-    FTimerHandle m_cToCoreFullLoopTimerHandle;
+    //FTimerHandle m_cToCoreFullLoopTimerHandle;
     bool m_bCoreFullPartEnabled;
 
     float m_fFakeReplicationForLocalVisualLayerLastRealTime;

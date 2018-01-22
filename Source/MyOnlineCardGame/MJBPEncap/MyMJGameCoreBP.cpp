@@ -46,6 +46,8 @@ FMyMJGameCoreRunnableCpp::~FMyMJGameCoreRunnableCpp()
 
 AMyMJGameCoreDataSourceCpp::AMyMJGameCoreDataSourceCpp(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
+    PrimaryActorTick.bCanEverTick = true;
+
     m_iTest0 = 0;
     m_iSeed2OverWrite = 0;
     m_pCoreFullWithThread = NULL;
@@ -87,7 +89,7 @@ void AMyMJGameCoreDataSourceCpp::clearInGame()
 
     UWorld *world = GetWorld();
     if (IsValid(world)) {
-        world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
+        //world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
     }
 
 }
@@ -128,8 +130,8 @@ void AMyMJGameCoreDataSourceCpp::BeginPlay()
     if (bHaveLogic) {
         UWorld *world = GetWorld();
         if (IsValid(world)) {
-            world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
-            world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJGameCoreDataSourceCpp::loop, ((float)MY_MJ_GAME_CORE_FULL_MAIN_THREAD_LOOP_TIME_MS) / (float)1000, true);
+            //world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
+            //world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJGameCoreDataSourceCpp::loop, ((float)MY_MJ_GAME_CORE_FULL_MAIN_THREAD_LOOP_TIME_MS) / (float)1000, true);
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
@@ -185,6 +187,15 @@ void AMyMJGameCoreDataSourceCpp::PreReplication(IRepChangedPropertyTracker & Cha
         setNeedReboot(true, MyNeedRebootReason_LackServerWorldTimeMs);
     }
     */
+};
+
+void AMyMJGameCoreDataSourceCpp::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor tick %f"), DeltaSeconds);
+
+    loop();
 };
 
 void AMyMJGameCoreDataSourceCpp::doTestChange()
