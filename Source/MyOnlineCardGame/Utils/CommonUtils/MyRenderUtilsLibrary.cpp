@@ -7,12 +7,14 @@
 #include "UnrealNetwork.h"
 #include "HAL/IConsoleManager.h"
 #include "Engine/Console.h"
+#include "Engine/SceneCapture2D.h"
 
 #include "Math/UnrealMathUtility.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetStringLibrary.h"
 #include "Kismet/KismetRenderingLibrary.h"
+#include "Kismet/KismetMaterialLibrary.h"
 //#include "Classes/PaperSprite.h"
 
 #if WITH_EDITOR
@@ -22,6 +24,126 @@
 #include "IContentBrowserSingleton.h"
 #include "PackageTools.h"
 #endif
+
+bool AMyTextureGenSuitBaseCpp::checkSettings() const
+{
+    if (!IsValid(m_pSceneCapture2D))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pSceneCapture2D invalid: %p."), m_pSceneCapture2D);
+        return false;
+    }
+
+    if (m_aTargetActors.Num() <= 0)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_aTargetActors not specified."));
+        return false;
+    }
+
+    if (!IsValid(m_pRenderTarget))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pRenderTarget invalid: %p."), m_pRenderTarget);
+        return false;
+    }
+
+    if (!IsValid(m_pRenderMaterial))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pRenderMaterial invalid: %p."), m_pRenderMaterial);
+        return false;
+    }
+
+    if (m_sRenderMaterialTextureParamName.IsNone())
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_sRenderMaterialTextureParamName not specified."));
+        return false;
+    };
+
+    return true;
+}
+
+int32 AMyTextureGenSuitBaseCpp::genPrepare()
+{
+    if (!AMyTextureGenSuitBaseCpp::checkSettings()) {
+        return -1;
+    }
+
+    //prepare the capture excutor
+    USceneCaptureComponent2D* pCC = m_pSceneCapture2D->GetCaptureComponent2D();
+
+    pCC->CaptureSource = ESceneCaptureSource::SCS_SceneColorHDR;
+    pCC->CompositeMode = ESceneCaptureCompositeMode::SCCM_Overwrite;
+    pCC->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+    pCC->bCaptureEveryFrame = false;
+    pCC->bCaptureOnMovement = false;
+    pCC->ClearShowOnlyComponents(NULL);
+    int32 l = m_aTargetActors.Num();
+    for (int32 i = 0; i < l; i++)
+    {
+        pCC->ShowOnlyActorComponents(m_aTargetActors[i]);
+    }
+
+    if (IsValid(m_pTempRenderTarget)) {
+        m_pTempRenderTarget->MarkPendingKill();
+        m_pTempRenderTarget = NULL;
+    }
+    m_pTempRenderTarget = UKismetRenderingLibrary::CreateRenderTarget2D(this, m_pRenderTarget->SizeX, m_pRenderTarget->SizeY, m_pRenderTarget->RenderTargetFormat);
+    MY_VERIFY(IsValid(m_pTempRenderTarget));
+
+    if (IsValid(m_pTempRenderMaterialInstance)) {
+        m_pTempRenderMaterialInstance->MarkPendingKill();
+        m_pTempRenderMaterialInstance = NULL;
+    }
+
+    m_pTempRenderMaterialInstance = UKismetMaterialLibrary::CreateDynamicMaterialInstance(this, m_pRenderMaterial);
+    MY_VERIFY(IsValid(m_pTempRenderMaterialInstance));
+
+    return 0;
+}
+
+int32 AMyTextureGenSuitBaseCpp::genDo(FString newTextureName)
+{
+    if (newTextureName.IsEmpty()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("newTextureName not specified."));
+        return -1;
+    }
+
+    if (!AMyTextureGenSuitBaseCpp::checkSettings()) 
+    {
+        return -2;
+    }
+
+    if (!IsValid(m_pTempRenderTarget)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pTempRenderTarget invalid: %p."), m_pTempRenderTarget);
+        return -11;
+    }
+
+    if (!IsValid(m_pTempRenderMaterialInstance)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pTempRenderMaterialInstance invalid: %p."), m_pTempRenderMaterialInstance);
+        return -12;
+    }
+
+    UTextureRenderTarget2D *pTarget0 = m_pTempRenderTarget, *pTarget1 = m_pRenderTarget;
+
+    USceneCaptureComponent2D* pCC = m_pSceneCapture2D->GetCaptureComponent2D();
+    pCC->TextureTarget = pTarget0;
+
+    pCC->CaptureScene();
+
+    m_pTempRenderMaterialInstance->SetTextureParameterValue(m_sRenderMaterialTextureParamName, pTarget0);
+
+    UKismetRenderingLibrary::ClearRenderTarget2D(this, pTarget1);
+    UKismetRenderingLibrary::DrawMaterialToRenderTarget(this, pTarget1, m_pTempRenderMaterialInstance);
+
+
+    UTexture2D* pNew = UMyRenderUtilsLibrary::RenderTargetCreateStaticTexture2DTryBest(pTarget1, newTextureName, TextureCompressionSettings::TC_Default, TMGS_NoMipmaps);
+
+    if (IsValid(pNew))
+    {
+        return 0;
+    }
+    else {
+        return - 100;
+    }
+}
 
 bool UMyRenderUtilsLibrary::RenderTargetIsSizePowerOfTwo(class UTextureRenderTarget2D* inTextureRenderTarget)
 {

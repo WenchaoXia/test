@@ -6,6 +6,69 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "MyRenderUtilsLibrary.generated.h"
 
+UCLASS(Blueprintable, HideCategories = (Collision, Rendering))
+class MYONLINECARDGAME_API AMyTextureGenSuitBaseCpp : public AActor
+{
+    GENERATED_BODY()
+
+public:
+
+    AMyTextureGenSuitBaseCpp() : Super()
+    {
+        reset();
+    };
+
+    virtual ~AMyTextureGenSuitBaseCpp()
+    {
+
+    };
+
+    void reset()
+    {
+        m_pSceneCapture2D = NULL;
+        m_aTargetActors.Reset();
+        m_pRenderTarget = NULL;
+        m_pRenderMaterial = NULL;
+        m_sRenderMaterialTextureParamName = TEXT("InBaseColor");
+        m_pTempRenderTarget = NULL;
+        m_pTempRenderMaterialInstance = NULL;
+    };
+
+    UFUNCTION(BlueprintCallable, meta = (UnsafeDuringActorConstruction = "true"))
+    virtual bool checkSettings() const;
+
+    UFUNCTION(BlueprintCallable, meta = (UnsafeDuringActorConstruction = "true"))
+    int32 genPrepare();
+
+    //return error code, and by default it have no mips. Caller should clear target package before calling, otherwise a rename of new texture will happen, and still return 0.
+    UFUNCTION(BlueprintCallable, meta = (UnsafeDuringActorConstruction = "true"))
+    int32 genDo(FString newTextureName);
+
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, meta = (DisplayName = "scene capture 2d"))
+    class ASceneCapture2D* m_pSceneCapture2D;
+
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, meta = (DisplayName = "target actors"))
+    TArray<AActor*> m_aTargetActors;
+
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, meta = (DisplayName = "render target"))
+    UTextureRenderTarget2D* m_pRenderTarget;
+
+    //the material to handle the generated render target datas, we will have alpha inversed in that, and the material should handle the case
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, meta = (DisplayName = "render material"))
+    UMaterialInterface* m_pRenderMaterial;
+
+    //will use it to set texture parameter to "render material"
+    UPROPERTY(BlueprintReadOnly, EditAnywhere, meta = (DisplayName = "render material texture param name"))
+    FName m_sRenderMaterialTextureParamName;
+
+    UPROPERTY(BlueprintReadOnly, Transient, meta = (DisplayName = "temp render target"))
+    UTextureRenderTarget2D* m_pTempRenderTarget;
+
+    UPROPERTY(BlueprintReadOnly, Transient, meta = (DisplayName = "temp render material instance"))
+    UMaterialInstanceDynamic* m_pTempRenderMaterialInstance;
+};
+
+
 //Warn: we don't support multiple player screen in one client now!
 UCLASS()
 class UMyRenderUtilsLibrary :

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/DataAsset.h"
+//#include "Engine/DataAsset.h"
 #include "Utils/CardGameUtils/MyCardGameUtilsLibrary.h"
 
 #include "MJ/Utils/MyMJUtils.h"
