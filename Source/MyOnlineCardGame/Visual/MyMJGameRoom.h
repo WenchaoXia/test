@@ -6,7 +6,7 @@
 #include "MJ/Utils/MyMJUtils.h"
 
 #include "MJBPEncap/MyMJGameCoreBP.h"
-#include "MyMJGameVisualElems.h"
+#include "MyMJGameVisualCfg.h"
 
 #include "MyMJGameRoomDataSuite.h"
 
