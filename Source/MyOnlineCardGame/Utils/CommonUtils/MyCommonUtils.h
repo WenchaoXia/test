@@ -17,6 +17,7 @@
 #define MyUInt32IdWarnBottomValue (0xF0000000)
 #define MyUInt32IdCriticalBottomValue (0xF8000000)
 #define MyUInt32IdCoreDumpBottomValue (0xFFFFFFFF - 10)
+#define MyUint32IdNeedReboot(id) (id >= MyUInt32IdWarnBottomValue && id < (MyUInt32IdWarnBottomValue + 2))
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMyUtilsI, Display, All);
 

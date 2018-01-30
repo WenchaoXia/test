@@ -562,7 +562,7 @@ void UMyMJDataSequencePerRoleCpp::trySquashBaseAndEvents(uint32 uiServerWorldTim
 void UMyMJDataSequencePerRoleCpp::OnRep_ServerWorldTime_ms()
 {
 
-    UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiServerWorldTime_ms);
+    //UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiServerWorldTime_ms);
 
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnRep_ServerWorldTime_ms, role %d, time %s."), (uint8)m_eRole, *UMyCommonUtilsLibrary::genTimeStrFromTimeMs(m_uiServerWorldTime_ms));
     m_cReplicateDelegate.Broadcast();
@@ -790,7 +790,7 @@ bool UMyMJDataAllCpp::ReplicateSubobjects(class UActorChannel *Channel, class FO
             return WroteSomething;
         }
 
-        eClientViewRole = pCBase->getViewRoleType();
+        eClientViewRole = pCBase->getDataRoleType();
     }
 
     if (eClientViewRole >= MyMJGameRoleTypeCpp::Max) {
@@ -920,7 +920,7 @@ void UMyMJDataAllCpp::addPusherResult(const FMyMJGamePusherResultCpp& cPusherRes
             uint32 idEventNew = m_aDatas[i]->addPusherResult(m_cEventCorePusherCfg, cPusherResult, uiServerWorldTime_ms);
 
             //check event id here, time_ms check should goto actor
-            if (idEventNew >= MyUInt32IdWarnBottomValue && idEventNew < (MyUInt32IdWarnBottomValue + 2)) {
+            if (MyUint32IdNeedReboot(idEventNew)) {
 
                 UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("uint32 id is too large as %d, require reboot!"), idEventNew);
 

@@ -189,6 +189,19 @@ void AMyMJGameCoreDataSourceCpp::PreReplication(IRepChangedPropertyTracker & Cha
     */
 };
 
+/*
+void AMyMJGameCoreDataSourceCpp::ForceNetUpdate()
+{
+    Super::ForceNetUpdate();
+
+    UWorld *world = GetWorld();
+    MY_VERIFY(IsValid(world));
+    float realTimeNow = world->GetRealTimeSeconds();
+
+    fakeReplicationForLocalVisualLayer(realTimeNow, true);
+};
+*/
+
 void AMyMJGameCoreDataSourceCpp::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
@@ -511,47 +524,56 @@ void AMyMJGameCoreDataSourceCpp::coreDataPullLoopInner()
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("bHaveNextPuhserResult1 %d, bIsReadyFOrNextPushserResult %d."), bHaveNextPuhserResult, bIsReadyFOrNextPushserResult);
     }
 
+    //Todo: pull trival events
+
+
     if (bNeedRebootForIdEvent) {
         setNeedReboot(true, MyNeedRebootReason_LackIdEvent);
     }
+    if (MyUint32IdNeedReboot(timeNowMs)) {
+        setNeedReboot(true, MyNeedRebootReason_LackServerWorldTimeMs);
+    }
 
-    float realTimeNow = world->GetRealTimeSeconds();
-    if (bHaveProgress) {
-        notifyGameHaveNewProgress(realTimeNow);
+    markDataChanged(timeNowMs, bHaveProgress);
 
-        //detect data speed
+    //debug
+    if (bHaveProgress)
+    {
+        MY_VERIFY(UMyMJBPUtilsLibrary::haveServerLogicLayer(this));
+        ENetMode mode = GetNetMode();
+        if (m_eDebugNetMode != mode) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("netmode changed %d -> %d!"), (int32)m_eDebugNetMode, (int32)mode);
+        }
+
+        float realTimeNow = world->GetRealTimeSeconds();
         m_pMJDataAll->updateDebugInfo(realTimeNow, uiIdEventBefore);
     }
 
-    fakeReplicationForLocalVisualLayer(realTimeNow, false);
-    //Todo: pull trival events
 }
 
-void AMyMJGameCoreDataSourceCpp::notifyGameHaveNewProgress(float fWorldRealTime)
+void AMyMJGameCoreDataSourceCpp::markDataChanged(uint32 uiServerWorldTime_ms, bool bForceUpdate)
 {
-    ENetMode mode = GetNetMode();
-    if (m_eDebugNetMode != mode) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("netmode changed %d -> %d!"), (int32)m_eDebugNetMode, (int32)mode);
-    }
-
-    MY_VERIFY(UMyMJBPUtilsLibrary::haveServerLogicLayer(this));
+    m_pMJDataAll->setServerWorldTime_ms(uiServerWorldTime_ms);
 
     if (UMyMJBPUtilsLibrary::haveServerNetworkLayer(this)) {
         //m_pMJDataAll->markAllDirtyForRep();
-        ForceNetUpdate();
+        if (bForceUpdate) {
+            ForceNetUpdate();
+        }
+        else {
+            //let network layer handle it automatically
+        }
     }
 
-    fakeReplicationForLocalVisualLayer(fWorldRealTime, true);
-}
-
-void AMyMJGameCoreDataSourceCpp::fakeReplicationForLocalVisualLayer(float fWorldRealTime, bool bForced)
-{
     if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this)) {
+        UWorld *world = GetWorld();
+        MY_VERIFY(IsValid(world));
+        float fWorldRealTime = world->GetRealTimeSeconds();
 
-        if (bForced || (fWorldRealTime - m_fFakeReplicationForLocalVisualLayerLastRealTime) >= (1.f / (float)MyReplicateUpdateFreq)) {
+        if (bForceUpdate || (fWorldRealTime - m_fFakeReplicationForLocalVisualLayerLastRealTime) >= (1.f / (float)MyReplicateUpdateFreq)) {
             //we have local visual layer, here we suppose only two roles used
-            m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::Observer)->m_cReplicateDelegate.Broadcast();
-            m_pMJDataAll->getDataByRoleTypeConst(MyMJGameRoleTypeCpp::SysKeeper)->m_cReplicateDelegate.Broadcast();
+            m_pMJDataAll->getDataByRoleType(MyMJGameRoleTypeCpp::Observer)->OnRep_ServerWorldTime_ms();
+            m_pMJDataAll->getDataByRoleType(MyMJGameRoleTypeCpp::SysKeeper)->OnRep_ServerWorldTime_ms();
 
             m_fFakeReplicationForLocalVisualLayerLastRealTime = fWorldRealTime;
         }
@@ -565,7 +587,9 @@ void AMyMJGameCoreDataSourceCpp::setNeedReboot(bool bNeedReboot, int32 iDebugRea
 
 void AMyMJGameCoreDataSourceCpp::loop()
 {
-    coreDataPullLoopInner();
+    if (UMyMJBPUtilsLibrary::haveServerLogicLayer(this)) {
+        coreDataPullLoopInner();
+    }
 };
 
 /*

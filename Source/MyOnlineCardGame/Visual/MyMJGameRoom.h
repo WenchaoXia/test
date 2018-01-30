@@ -120,6 +120,10 @@ public:
     //return error code, 0 means ok
     int32 prepareForVisual(int32 cardActorNum);
 
+    //core dump if fail when Verify = true, will try create one if not exist before
+    UFUNCTION(BlueprintCallable)
+    UMyMJGameInRoomUIMainWidgetBaseCpp* getInRoomUIMain(bool verify = true);
+
     //always success, core dump if fail, returned actor managed by this class
     UFUNCTION(BlueprintCallable)
     AMyMJGameCardBaseCpp* getCardActorByIdx(int32 idx);
@@ -134,7 +138,10 @@ public:
 
     inline const UMyMJGameInRoomVisualCfgType* getVisualCfgVerified() const
     {
-        MY_VERIFY(m_pInRoomcfg);
+        if (m_pInRoomcfg == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pInRoomcfg is invalid: %p"), m_pInRoomcfg);
+            MY_VERIFY(false);
+        }
         return m_pInRoomcfg;
     };
 
@@ -157,10 +164,13 @@ protected:
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg object"))
     UMyMJGameInRoomVisualCfgType* m_pInRoomcfg;
 
-    UPROPERTY(BlueprintReadOnly, Transient, meta = (DisplayName = "card actors"))
+    UPROPERTY(Transient, meta = (DisplayName = "In Room UI Main"))
+    UMyMJGameInRoomUIMainWidgetBaseCpp *m_pInRoomUIMain;
+
+    UPROPERTY(Transient, meta = (DisplayName = "card actors"))
     TArray<AMyMJGameCardBaseCpp*> m_aCardActors;
 
-    UPROPERTY(BlueprintReadOnly, Transient, meta = (DisplayName = "trival dancing actors"))
+    UPROPERTY(Transient, meta = (DisplayName = "trival dancing actors"))
     TArray<AMyMJGameTrivalDancingActorBaseCpp*> m_aTrivalDancingActors;
 
     UPROPERTY(Transient)

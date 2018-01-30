@@ -15,6 +15,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetStringLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Public/Blueprint/WidgetBlueprintLibrary.h"
 
 #include "Curves/CurveVector.h"
 
@@ -66,8 +67,10 @@ int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp
 
 UMyMJGameDeskResManagerCpp::UMyMJGameDeskResManagerCpp() : Super()
 {
-    m_pCardCDOInGame = NULL;
     m_pInRoomcfg = NULL;
+
+    m_pInRoomUIMain = NULL;
+    m_pCardCDOInGame = NULL;
 };
 
 UMyMJGameDeskResManagerCpp::~UMyMJGameDeskResManagerCpp()
@@ -109,6 +112,13 @@ void UMyMJGameDeskResManagerCpp::reset()
     if (IsValid(m_pCardCDOInGame)) {
         m_pCardCDOInGame->K2_DestroyActor();
         m_pCardCDOInGame = NULL;
+    }
+
+    if (IsValid(m_pInRoomUIMain))
+    {
+        m_pInRoomUIMain->RemoveFromParent();
+        //m_pInRoomUIMain->MarkPendingKill();
+        m_pInRoomUIMain = NULL;
     }
 
     for (int32 i = 0; i < m_aCardActors.Num(); i++)
@@ -196,6 +206,30 @@ int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModel
     UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("retrieveCfgCache, pCDO name %s, card box: %s."), *pCDO->GetName(), *cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.ToString());
 
     return 0;
+};
+
+UMyMJGameInRoomUIMainWidgetBaseCpp* UMyMJGameDeskResManagerCpp::getInRoomUIMain(bool verify)
+{
+    if (!IsValid(m_pInRoomUIMain))
+    {
+        //getVisualCfgVerified()->m_cMainActorClassCfg.checkSettings();
+        if (IsValid(m_pInRoomcfg) && m_pInRoomcfg->m_cMainActorClassCfg.checkSettings())
+        {
+            const TSubclassOf<UMyMJGameInRoomUIMainWidgetBaseCpp>& widgetClass = getVisualCfgVerified()->m_cMainActorClassCfg.m_cInRoomUIMainWidgetClass;
+            m_pInRoomUIMain = Cast<UMyMJGameInRoomUIMainWidgetBaseCpp>(UWidgetBlueprintLibrary::Create(this, widgetClass, NULL)); //no player controller owns it but let this class manage it
+            MY_VERIFY(IsValid(m_pInRoomUIMain));
+        }
+    }
+
+    if (!IsValid(m_pInRoomUIMain))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pInRoomUIMain is invalid: %p."), m_pInRoomUIMain);
+        if (verify) {
+            MY_VERIFY(false);
+        }
+    }
+
+    return m_pInRoomUIMain;
 };
 
 AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx)
@@ -415,6 +449,8 @@ void AMyMJGameRoomCpp::stopVisual()
     if (IsValid(world)) {
         world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
     }
+
+    m_pResManager->reset();
 };
 
 void AMyMJGameRoomCpp::loopVisual()

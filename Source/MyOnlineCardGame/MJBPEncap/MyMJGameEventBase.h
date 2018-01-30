@@ -1167,6 +1167,10 @@ public:
         return true;
     };
 
+    //design is simple: timestamp can represent the state's key, that means same key always have same content
+    UFUNCTION()
+    void OnRep_ServerWorldTime_ms();
+
     FMyMJDataSeqReplicatedDelegate m_cReplicateDelegate;
 
 protected:
@@ -1224,10 +1228,6 @@ protected:
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Role %d's events replicated."), (uint8)m_eRole);
         //m_cReplicateDelegate.Broadcast();
     //};
-
-    //design is simple: timestamp can represent the state's key, that means same key always have same content
-    UFUNCTION()
-        void OnRep_ServerWorldTime_ms();
 
     //following is the core data, representing
 

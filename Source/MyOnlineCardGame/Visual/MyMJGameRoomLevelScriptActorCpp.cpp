@@ -94,12 +94,19 @@ void AMyMJGameRoomLevelScriptActorCpp::BeginPlay()
         return;
     }
 
-    const UMyMJGameInRoomVisualCfgType* pCfgObj = m_pRoomRootActor->m_pRoomActor->getResManagerVerified()->getVisualCfgVerified();
+    bool bHaveLogic = UMyMJBPUtilsLibrary::haveServerLogicLayer(m_pRoomRootActor->m_pCoreDataSource);
 
-    FMyMJGameEventTimeCfgCpp& cfg = m_pRoomRootActor->m_pCoreDataSource->getMJDataAll()->getEventTimeCfgRef();
-    UMyMJGameInRoomVisualCfgType::helperMapToSimplifiedTimeCfg(pCfgObj->m_cEventCfg, cfg);
+    if (bHaveLogic) {
+        const UMyMJGameInRoomVisualCfgType* pCfgObj = m_pRoomRootActor->m_pRoomActor->getResManagerVerified()->getVisualCfgVerified();
 
-    m_pRoomRootActor->m_pCoreDataSource->setCoreFullPartEnabled(true);
+        FMyMJGameEventTimeCfgCpp& cfg = m_pRoomRootActor->m_pCoreDataSource->getMJDataAll()->getEventTimeCfgRef();
+        UMyMJGameInRoomVisualCfgType::helperMapToSimplifiedTimeCfg(pCfgObj->m_cEventCfg, cfg);
+
+        m_pRoomRootActor->m_pCoreDataSource->setCoreFullPartEnabled(true);
+    }
+    else {
+        m_pRoomRootActor->m_pCoreDataSource->setCoreFullPartEnabled(false);
+    }
 
 };
 

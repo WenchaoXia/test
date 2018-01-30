@@ -187,6 +187,7 @@ protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+    //virtual void ForceNetUpdate() override;
     virtual void Tick(float DeltaSeconds) override;
 
     //virtual bool ReplicateSubobjects(class UActorChannel *Channel, class FOutBunch *Bunch, FReplicationFlags *RepFlags) override;
@@ -194,8 +195,9 @@ protected:
 
     void loop();
     void coreDataPullLoopInner();
-    void notifyGameHaveNewProgress(float fWorldRealTime);
-    void fakeReplicationForLocalVisualLayer(float fWorldRealTime, bool bForced);
+    void markDataChanged(uint32 uiServerWorldTime_ms, bool bForceUpdate); //uiServerWorldTime_ms is the key representing the state, and this function encapsule all data notify to clients in any game mode
+    //void notifyGameHaveNewProgress(float fWorldRealTime);
+    //void fakeReplicationForLocalVisualLayer(float fWorldRealTime, bool bForced);
 
     void setNeedReboot(bool bNeedReboot, int32 iDebugReason);
 

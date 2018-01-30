@@ -67,7 +67,7 @@ public:
 
     //only with authority it can be changed
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
-    void setViewRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType);
+    void setDataRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType);
 
     UFUNCTION(BlueprintCallable)
     void setDebugHaltFeedData(bool bDebugHaltFeedData)
@@ -151,7 +151,6 @@ protected:
 
     UPROPERTY(ReplicatedUsing = OnRep_ExtRoomTrivalDataSourceSeqPointer)
     AMyMJGameTrivalDataSourceCpp *m_pExtRoomTrivalDataSource;
-
 
     uint32 m_fHelperFilterLastRepClientRealtTime;
 
