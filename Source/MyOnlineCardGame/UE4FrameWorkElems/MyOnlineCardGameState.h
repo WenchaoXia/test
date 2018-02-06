@@ -11,16 +11,6 @@
  * 
  */
 
-//only for test now
-UCLASS()
-class AMyMJGameRoomViewerPawnCpp : public APawn
-{
-    GENERATED_BODY()
-
-public:
-
-};
-
 UCLASS()
 class MYONLINECARDGAME_API AMyOnlineCardGameStateCpp : public AGameState
 {

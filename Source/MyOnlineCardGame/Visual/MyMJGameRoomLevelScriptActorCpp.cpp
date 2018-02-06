@@ -97,7 +97,7 @@ void AMyMJGameRoomLevelScriptActorCpp::BeginPlay()
     bool bHaveLogic = UMyMJBPUtilsLibrary::haveServerLogicLayer(m_pRoomRootActor->m_pCoreDataSource);
 
     if (bHaveLogic) {
-        const UMyMJGameInRoomVisualCfgType* pCfgObj = m_pRoomRootActor->m_pRoomActor->getResManagerVerified()->getVisualCfgVerified();
+        const UMyMJGameInRoomVisualCfgType* pCfgObj = m_pRoomRootActor->m_pRoomActor->getResManagerVerified()->getVisualCfg();
 
         FMyMJGameEventTimeCfgCpp& cfg = m_pRoomRootActor->m_pCoreDataSource->getMJDataAll()->getEventTimeCfgRef();
         UMyMJGameInRoomVisualCfgType::helperMapToSimplifiedTimeCfg(pCfgObj->m_cEventCfg, cfg);

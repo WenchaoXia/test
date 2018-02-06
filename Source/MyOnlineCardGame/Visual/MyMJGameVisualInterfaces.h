@@ -30,3 +30,22 @@ public:
 protected:
 
 };
+
+UINTERFACE()
+class UMyPawnUIInterface : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMyPawnUIInterface
+{
+    GENERATED_BODY()
+
+public:
+
+    virtual void OnPossessedByLocalPlayerController(APlayerController* newController) = NULL;
+    virtual void OnUnPossessedByLocalPlayerController(APlayerController* oldController) = NULL;
+
+protected:
+
+};

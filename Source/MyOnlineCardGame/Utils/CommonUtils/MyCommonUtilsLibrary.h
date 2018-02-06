@@ -66,6 +66,8 @@ public:
     float m_fTime;
 };
 
+DECLARE_MULTICAST_DELEGATE(FMyMJDataSeqReplicatedDelegate);
+
 //UCLASS(ClassGroup = Movement, meta = (BlueprintSpawnableComponent), HideCategories = Velocity)
 //class ENGINE_API UInterpToMovementComponent : public UMovementComponent
 

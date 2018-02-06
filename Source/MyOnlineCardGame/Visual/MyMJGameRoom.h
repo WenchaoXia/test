@@ -120,10 +120,6 @@ public:
     //return error code, 0 means ok
     int32 prepareForVisual(int32 cardActorNum);
 
-    //core dump if fail when Verify = true, will try create one if not exist before
-    UFUNCTION(BlueprintCallable)
-    UMyMJGameInRoomUIMainWidgetBaseCpp* getInRoomUIMain(bool verify = true);
-
     //always success, core dump if fail, returned actor managed by this class
     UFUNCTION(BlueprintCallable)
     AMyMJGameCardBaseCpp* getCardActorByIdx(int32 idx);
@@ -136,9 +132,9 @@ public:
     UFUNCTION(BlueprintPure)
     int32 retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const;
 
-    inline const UMyMJGameInRoomVisualCfgType* getVisualCfgVerified() const
+    inline const UMyMJGameInRoomVisualCfgType* getVisualCfg(bool verify = true) const
     {
-        if (m_pInRoomcfg == NULL) {
+        if (m_pInRoomcfg == NULL && verify) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pInRoomcfg is invalid: %p"), m_pInRoomcfg);
             MY_VERIFY(false);
         }
@@ -164,9 +160,6 @@ protected:
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg object"))
     UMyMJGameInRoomVisualCfgType* m_pInRoomcfg;
 
-    UPROPERTY(Transient, meta = (DisplayName = "In Room UI Main"))
-    UMyMJGameInRoomUIMainWidgetBaseCpp *m_pInRoomUIMain;
-
     UPROPERTY(Transient, meta = (DisplayName = "card actors"))
     TArray<AMyMJGameCardBaseCpp*> m_aCardActors;
 
@@ -182,6 +175,34 @@ protected:
 
 };
 
+USTRUCT()
+struct FMyCardGameCameraDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyCardGameCameraDataCpp()
+    {
+        m_fFOV = 90;
+    };
+
+    virtual ~FMyCardGameCameraDataCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        FTransform t;
+        m_cTransform = t;
+        m_fFOV = 90;
+    };
+
+    FTransform m_cTransform;
+    float m_fFOV;
+};
+
 //this is used for visual layer, no replication code goes in
 //note that we handle two type data here: one is time synced data like frame sync, one is not
 UCLASS(Blueprintable, HideCategories = (Collision, Rendering, "Utilities|Transformation"))
@@ -195,6 +216,7 @@ public:
     virtual ~AMyMJGameRoomCpp();
 
     bool checkSettings() const;
+    void getCameraData(MyMJGameRoleTypeCpp roleType, FMyCardGameCameraDataCpp& cameraData) const;
 
     void startVisual();
     void stopVisual();

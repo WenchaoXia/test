@@ -26,12 +26,6 @@ public:
     };
 
     inline
-    void reset()
-    {
-        //m_mHelerReplicationServerWorldTimeMap.Reset();
-    };
-
-    inline
     MyMJGameRoleTypeCpp getDataRoleType() const
     {
         return m_eDataRoleType;

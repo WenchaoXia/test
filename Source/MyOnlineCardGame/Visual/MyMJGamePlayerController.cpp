@@ -1,18 +1,26 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MyMJGamePlayerController.h"
+
+#include "MyMJGameVisualInterfaces.h"
+
 #include "UnrealNetwork.h"
 #include "Engine/World.h"
 #include "MyMJGameRoomLevelScriptActorCpp.h"
 #include "MyMJGameDeskVisualData.h"
 
-AMyMJGamePlayerControllerCpp::AMyMJGamePlayerControllerCpp() : Super()
+#include "Kismet/GameplayStatics.h"
+#include "Public/Blueprint/WidgetBlueprintLibrary.h"
+
+AMyMJGamePlayerControllerCommunicationCpp::AMyMJGamePlayerControllerCommunicationCpp() : Super()
 {
     bReplicates = true;
     bAlwaysRelevant = false;
     bOnlyRelevantToOwner = true; //subclass can change it
     bNetLoadOnClient = true;
     NetUpdateFrequency = 5;
+
+    OldPawnMy = NULL;
 
     m_pExtRoomActor = NULL;
     m_pExtRoomTrivalDataSource = NULL;
@@ -32,12 +40,12 @@ AMyMJGamePlayerControllerCpp::AMyMJGamePlayerControllerCpp() : Super()
 
 };
 
-AMyMJGamePlayerControllerCpp::~AMyMJGamePlayerControllerCpp()
+AMyMJGamePlayerControllerCommunicationCpp::~AMyMJGamePlayerControllerCommunicationCpp()
 {
 
 };
 
-void AMyMJGamePlayerControllerCpp::clearInGame()
+void AMyMJGamePlayerControllerCommunicationCpp::clearInGame()
 {
     UWorld *world = GetWorld();
     if (IsValid(world)) {
@@ -45,9 +53,47 @@ void AMyMJGamePlayerControllerCpp::clearInGame()
     }
 };
 
-void AMyMJGamePlayerControllerCpp::BeginPlay()
+void AMyMJGamePlayerControllerCommunicationCpp::Possess(APawn* InPawn)
 {
-    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGamePlayerControllerCpp BeginPlay()"));
+    Super::Possess(InPawn);
+
+    if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this) && IsLocalController()) {
+        OnRep_Pawn();
+    }
+}
+
+void AMyMJGamePlayerControllerCommunicationCpp::UnPossess()
+{
+    Super::UnPossess();
+
+    if (UMyMJBPUtilsLibrary::haveClientVisualLayer(this) && IsLocalController()) {
+        OnRep_Pawn();
+    }
+}
+
+void AMyMJGamePlayerControllerCommunicationCpp::OnRep_Pawn()
+{
+    APawn* pNewPawn = GetPawn();
+
+    if (!IsLocalController())
+    {
+        int32 id = UGameplayStatics::GetPlayerControllerID(this);
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("not a local player controller: id %d, pc %p."), id, this);
+    }
+
+    // Detect when pawn changes, so we can NULL out the controller on the old pawn
+    if (pNewPawn != OldPawnMy.Get())
+    {
+        onPawnChanged(OldPawnMy.Get(), pNewPawn);
+        OldPawnMy = pNewPawn;
+    }
+
+    Super::OnRep_Pawn();
+}
+
+void AMyMJGamePlayerControllerCommunicationCpp::BeginPlay()
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("AMyMJGamePlayerControllerCommunicationCpp BeginPlay()"));
 
     Super::BeginPlay();
 
@@ -66,7 +112,7 @@ void AMyMJGamePlayerControllerCpp::BeginPlay()
     UWorld *world = GetWorld();
     if (IsValid(world)) {
         world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
-        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &AMyMJGamePlayerControllerCpp::loop, (float)MyMJGamePlayerControllerLoopTimeMs / 1000);
+        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &AMyMJGamePlayerControllerCommunicationCpp::loop, (float)MyMJGamePlayerControllerLoopTimeMs / 1000);
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
@@ -76,24 +122,56 @@ void AMyMJGamePlayerControllerCpp::BeginPlay()
     m_eDebugNetmodeAtStart = GetNetMode();
 };
 
-void AMyMJGamePlayerControllerCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void AMyMJGamePlayerControllerCommunicationCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     Super::EndPlay(EndPlayReason);
 
     clearInGame();
 };
 
-
-void AMyMJGamePlayerControllerCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+void AMyMJGamePlayerControllerCommunicationCpp::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(AMyMJGamePlayerControllerCpp, m_pExtRoomActor);
-    DOREPLIFETIME(AMyMJGamePlayerControllerCpp, m_pExtRoomTrivalDataSource);
-    DOREPLIFETIME(AMyMJGamePlayerControllerCpp, m_pExtRoomCoreDataSourceSeq);
+    DOREPLIFETIME(AMyMJGamePlayerControllerCommunicationCpp, m_pExtRoomActor);
+    DOREPLIFETIME(AMyMJGamePlayerControllerCommunicationCpp, m_pExtRoomTrivalDataSource);
+    DOREPLIFETIME(AMyMJGamePlayerControllerCommunicationCpp, m_pExtRoomCoreDataSourceSeq);
 };
 
-bool AMyMJGamePlayerControllerCpp::resetupWithViewRoleAndAuth(MyMJGameRoleTypeCpp eRoleType, bool bUseAsLocalClientDataBridge)
+void AMyMJGamePlayerControllerCommunicationCpp::onPawnChanged(APawn* oldPawn, APawn* newPawn)
+{
+    if (IsValid(oldPawn))
+    {
+        //we can't assume OldPawnMy->Controller == this since that property may be replicated already before
+        /*
+        if (OldPawnMy->Controller == this)
+        {
+        IMyPawnUIInterface* pI = Cast<IMyPawnUIInterface>(OldPawnMy.Get());
+        if (pI) {
+        pI->OnUnPossessedByLocalPlayerController(this);
+        }
+        }
+        else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("oldpawn's controller is not this, unexpected, old's %p, this %p."), OldPawnMy->Controller, this);
+        }
+        */
+
+        IMyPawnUIInterface* pI = Cast<IMyPawnUIInterface>(oldPawn);
+        if (pI) {
+            pI->OnUnPossessedByLocalPlayerController(this);
+        }
+    }
+
+    if (IsValid(newPawn))
+    {
+        IMyPawnUIInterface* pI = Cast<IMyPawnUIInterface>(newPawn);
+        if (pI) {
+            pI->OnPossessedByLocalPlayerController(this);
+        }
+    }
+}
+
+bool AMyMJGamePlayerControllerCommunicationCpp::resetupWithViewRoleAndAuth(MyMJGameRoleTypeCpp eRoleType, bool bUseAsLocalClientDataBridge)
 {
     MY_VERIFY(HasAuthority());
 
@@ -160,13 +238,13 @@ bool AMyMJGamePlayerControllerCpp::resetupWithViewRoleAndAuth(MyMJGameRoleTypeCp
 
     if (bUseAsLocalClientDataBridge) {
         m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.Clear();
-        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGamePlayerControllerCpp::tryFeedDataToConsumerWithFilter);
+        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGamePlayerControllerCommunicationCpp::tryFeedDataToConsumerWithFilter);
     }
 
     return true;
 };
 
-void AMyMJGamePlayerControllerCpp::loop()
+void AMyMJGamePlayerControllerCommunicationCpp::loop()
 {
     ENetMode mode = GetNetMode();
     if (mode != m_eDebugNetmodeAtStart) {
@@ -184,7 +262,7 @@ void AMyMJGamePlayerControllerCpp::loop()
     }
 };
 
-void AMyMJGamePlayerControllerCpp::loopOfSyncForMJCoreFullDataOnNetworkServer()
+void AMyMJGamePlayerControllerCommunicationCpp::loopOfSyncForMJCoreFullDataOnNetworkServer()
 {
     UWorld *world = GetWorld();
     if (!IsValid(world)) {
@@ -213,7 +291,7 @@ void AMyMJGamePlayerControllerCpp::loopOfSyncForMJCoreFullDataOnNetworkServer()
     }
 };
 
-void AMyMJGamePlayerControllerCpp::loopOfSyncForMJCoreFullDataOnNetworkClient()
+void AMyMJGamePlayerControllerCommunicationCpp::loopOfSyncForMJCoreFullDataOnNetworkClient()
 {
     UWorld *world = GetWorld();
     if (!IsValid(world)) {
@@ -239,7 +317,7 @@ void AMyMJGamePlayerControllerCpp::loopOfSyncForMJCoreFullDataOnNetworkClient()
     }
 }
 
-void AMyMJGamePlayerControllerCpp::setDataRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType)
+void AMyMJGamePlayerControllerCommunicationCpp::setDataRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType)
 {
     if (!HasAuthority()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("can't set Role Type without auth."));
@@ -259,7 +337,7 @@ void AMyMJGamePlayerControllerCpp::setDataRoleTypeWithAuth(MyMJGameRoleTypeCpp e
     m_eDataRoleType = eRoleType;
 };
 
-void AMyMJGamePlayerControllerCpp::askSyncForMJCoreFullDataOnServer_Implementation()
+void AMyMJGamePlayerControllerCommunicationCpp::askSyncForMJCoreFullDataOnServer_Implementation()
 {
     //FPlatformProcess::Sleep(v1);
     if (!HasAuthority()) {
@@ -270,7 +348,7 @@ void AMyMJGamePlayerControllerCpp::askSyncForMJCoreFullDataOnServer_Implementati
     markNeedAnswerSyncForMJCoreFullData();
 }
 
-bool AMyMJGamePlayerControllerCpp::askSyncForMJCoreFullDataOnServer_Validate()
+bool AMyMJGamePlayerControllerCommunicationCpp::askSyncForMJCoreFullDataOnServer_Validate()
 {
     if (!HasAuthority()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("authority wrong!"));
@@ -286,7 +364,7 @@ bool AMyMJGamePlayerControllerCpp::askSyncForMJCoreFullDataOnServer_Validate()
 
 }
 
-void AMyMJGamePlayerControllerCpp::answerSyncForMJCoreFullDataOnClient_Implementation(MyMJGameRoleTypeCpp eRole, const FMyMJDataStructWithTimeStampBaseCpp& cFullData)
+void AMyMJGamePlayerControllerCommunicationCpp::answerSyncForMJCoreFullDataOnClient_Implementation(MyMJGameRoleTypeCpp eRole, const FMyMJDataStructWithTimeStampBaseCpp& cFullData)
 {
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("answerSyncForMJCoreFullDataOnClient_Implementation()!"));
 
@@ -309,7 +387,7 @@ void AMyMJGamePlayerControllerCpp::answerSyncForMJCoreFullDataOnClient_Implement
 }
 
 
-void AMyMJGamePlayerControllerCpp::tryFeedDataToConsumerWithFilter()
+void AMyMJGamePlayerControllerCommunicationCpp::tryFeedDataToConsumerWithFilter()
 {
     UWorld *world = GetWorld();
     if (!IsValid(world)) {
@@ -331,7 +409,7 @@ void AMyMJGamePlayerControllerCpp::tryFeedDataToConsumerWithFilter()
 };
 
 
-bool AMyMJGamePlayerControllerCpp::tryFeedDataToConsumer()
+bool AMyMJGamePlayerControllerCommunicationCpp::tryFeedDataToConsumer()
 {
     if (m_bDebugHaltFeedData) {
         return false;
@@ -356,3 +434,131 @@ bool AMyMJGamePlayerControllerCpp::tryFeedDataToConsumer()
 };
 
 
+
+void UMyMJGameUIManagerCpp::reset()
+{
+    changeUIMode(MyMJGameUIModeCpp::Invalid);
+
+    if (IsValid(m_pInRoomUIMain))
+    {
+        m_pInRoomUIMain->RemoveFromParent();
+        m_pInRoomUIMain = NULL;
+    }
+};
+
+void UMyMJGameUIManagerCpp::changeUIMode(MyMJGameUIModeCpp UIMode)
+{
+    if (m_eUIMode != UIMode)
+    {
+        //change old
+        if (m_eUIMode == MyMJGameUIModeCpp::InRoomPlay) {
+            UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = getInRoomUIMain(false, false);
+            if (pUI) {
+                pUI->RemoveFromParent();
+            }
+        }
+
+        if (UIMode == MyMJGameUIModeCpp::InRoomPlay) {
+            UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = getInRoomUIMain(true, false);
+            if (pUI) {
+                pUI->AddToPlayerScreen();
+            }
+        }
+
+        m_eUIMode = UIMode;
+    }
+};
+
+UMyMJGameInRoomUIMainWidgetBaseCpp* UMyMJGameUIManagerCpp::getInRoomUIMain(bool createIfNotExist, bool verify)
+{
+    AActor *pOwner = this->GetOwner();
+    MY_VERIFY(pOwner != NULL);
+    AMyMJGamePlayerControllerCpp *pPC = Cast<AMyMJGamePlayerControllerCpp>(pOwner);
+    if (!IsValid(pPC)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("owner is supposed to be AMyMJGamePlayerControllerCpp but it is %s, %p."), *pOwner->GetClass()->GetName(), pOwner);
+        MY_VERIFY(false);
+    }
+    if (!pPC->IsLocalController())
+    {
+        int32 id = UGameplayStatics::GetPlayerControllerID(pPC);
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("player controller is not local one, not supposed to happen, %p, id %d."), pPC, id);
+
+        if (verify)
+        {
+            MY_VERIFY(false);
+        }
+
+        return NULL;
+    }
+
+    while (!IsValid(m_pInRoomUIMain) && createIfNotExist)
+    {
+        if (!IsValid(pPC->m_pExtRoomActor)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("room is invalid, not cfged?, %p."), pPC->m_pExtRoomActor);
+            break;
+        }
+
+        const UMyMJGameInRoomVisualCfgType* pCfg = pPC->m_pExtRoomActor->getResManagerVerified()->getVisualCfg(false);
+        if (pCfg == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cfg object is not specified."));
+            break;
+        }
+
+        //getVisualCfg()->m_cMainActorClassCfg.checkSettings();
+        if (pCfg->m_cMainActorClassCfg.checkSettings())
+        {
+            const TSubclassOf<UMyMJGameInRoomUIMainWidgetBaseCpp>& widgetClass = pCfg->m_cMainActorClassCfg.m_cInRoomUIMainWidgetClass;
+            m_pInRoomUIMain = Cast<UMyMJGameInRoomUIMainWidgetBaseCpp>(UWidgetBlueprintLibrary::Create(this, widgetClass, pPC)); //no player controller owns it but let this class manage it
+            MY_VERIFY(IsValid(m_pInRoomUIMain));
+        }
+
+        break;
+    }
+
+    if (!IsValid(m_pInRoomUIMain))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pInRoomUIMain is invalid: %p."), m_pInRoomUIMain);
+        if (verify) {
+            MY_VERIFY(false);
+        }
+    }
+
+    return m_pInRoomUIMain;
+};
+
+
+AMyMJGamePlayerControllerCpp::AMyMJGamePlayerControllerCpp() : Super()
+{
+    m_pUIManager = CreateDefaultSubobject<UMyMJGameUIManagerCpp>(TEXT("UI manager"));
+};
+
+AMyMJGamePlayerControllerCpp::~AMyMJGamePlayerControllerCpp()
+{
+
+};
+
+void AMyMJGamePlayerControllerCpp::clearInGame()
+{
+    Super::clearInGame();
+
+    m_pUIManager->reset();
+};
+
+AMyMJGamePlayerControllerCpp* AMyMJGamePlayerControllerCpp::helperGetLocalController(const UObject* WorldContextObject)
+{
+    APlayerController *pC = UGameplayStatics::GetPlayerController(WorldContextObject, 0);
+    MY_VERIFY(pC != NULL);
+
+    AMyMJGamePlayerControllerCpp *pRet = Cast<AMyMJGamePlayerControllerCpp>(pC);
+    if (!IsValid(pRet)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("player controller class not currect, %p, class %s."), pRet, *pC->GetClass()->GetName());
+        MY_VERIFY(false);
+    }
+
+    return pRet;
+};
+
+UMyMJGameInRoomUIMainWidgetBaseCpp* AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(const UObject* WorldContextObject, bool verify)
+{
+    return helperGetLocalController(WorldContextObject)->getUIManagerVerified()->getInRoomUIMain(false, verify);
+};

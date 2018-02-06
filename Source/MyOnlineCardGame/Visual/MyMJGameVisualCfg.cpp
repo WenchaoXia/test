@@ -3,6 +3,24 @@
 #include "MyMJGameVisualCfg.h"
 
 #define MyScreenAttender_13_AreaPointOverrideYPecent (0.1)
+
+bool FMyMJGameInGamePlayerScreenCfgCpp::checkSettings() const
+{
+    if (m_fAttenderCameraFOV <= 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_fAttenderCameraFOV should not be negative, value now %f."), m_fAttenderCameraFOV);
+        return false;
+    }
+
+    FVector loc = m_cAttenderCameraRelativeTransform.GetLocation();
+    if (loc.IsNearlyZero())
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cAttenderCameraRelativeTransform's location is near zero, value now %s."), *loc.ToString());
+        return false;
+    }
+
+    return true;
+};
+
 void FMyMJGameInGamePlayerScreenCfgCpp::fillDefaultData()
 {
     for (int32 i = 0; i < 4; i++) {
@@ -27,6 +45,12 @@ void FMyMJGameInGamePlayerScreenCfgCpp::fillDefaultData()
             area.m_cAttenderPointOnScreenPercentOverride.Y = MyScreenAttender_13_AreaPointOverrideYPecent;
         }
     }
+
+    m_cAttenderCameraRelativeTransform.SetLocation(FVector(-1250, 0, 1030));
+    m_cAttenderCameraRelativeTransform.SetRotation(FRotator(0, -40, 0).Quaternion());
+    m_cAttenderCameraRelativeTransform.SetScale3D(FVector(1, 1, 1));
+
+    m_fAttenderCameraFOV = 30;
 };
 
 void FMyMJGameEventPusherCfgCpp::fillDefaultData()
@@ -189,6 +213,11 @@ void UMyMJGameInRoomVisualCfgType::fillDefaultData()
 
 bool UMyMJGameInRoomVisualCfgType::checkSettings() const
 {
+    if (!m_cPlayerScreenCfg.checkSettings())
+    {
+        return false;
+    }
+
     if (!m_cEventCfg.checkSettings())
     {
         return false;

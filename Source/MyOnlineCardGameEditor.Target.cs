@@ -10,5 +10,14 @@ public class MyOnlineCardGameEditorTarget : TargetRules
 		Type = TargetType.Editor;
 
 		ExtraModuleNames.AddRange( new string[] { "MyOnlineCardGame" } );
-	}
+
+        //bFasterWithoutUnity = true;
+
+        bEnforceIWYU = true;
+
+        bUseUnityBuild = false;
+        bForceUnityBuild = false;
+        bUseAdaptiveUnityBuild = false;
+        MinGameModuleSourceFilesForUnityBuild = 10;
+    }
 }

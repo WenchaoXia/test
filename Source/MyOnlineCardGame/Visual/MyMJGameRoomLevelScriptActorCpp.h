@@ -34,7 +34,7 @@ public:
 
 protected:
 
-    friend class AMyMJGamePlayerControllerCpp;
+    friend class AMyMJGamePlayerControllerCommunicationCpp;
     friend class AMyMJGameRoomLevelScriptActorCpp;
 
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "room actor"))

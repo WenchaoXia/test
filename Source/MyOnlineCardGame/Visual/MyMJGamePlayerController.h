@@ -30,15 +30,15 @@
 
 //Our player controller will help do replication work, and only replication help code goes here
 UCLASS()
-class MYONLINECARDGAME_API AMyMJGamePlayerControllerCpp : public AMyMJGamePlayerControllerBaseCpp
+class MYONLINECARDGAME_API AMyMJGamePlayerControllerCommunicationCpp : public AMyMJGamePlayerControllerBaseCpp
 {
 	GENERATED_BODY()
 
 public:
-    AMyMJGamePlayerControllerCpp();
-    virtual ~AMyMJGamePlayerControllerCpp();
+    AMyMJGamePlayerControllerCommunicationCpp();
+    virtual ~AMyMJGamePlayerControllerCommunicationCpp();
 
-    void clearInGame();
+    virtual void clearInGame();
 
     inline
     void markNeedAnswerSyncForMJCoreFullData()
@@ -86,9 +86,15 @@ public:
 
 protected:
 
+    virtual void Possess(APawn* InPawn) override;
+    virtual void UnPossess() override;
+    virtual void OnRep_Pawn() override;
+
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+
+    virtual void onPawnChanged(APawn* oldPawn, APawn* newPawn);
 
     UFUNCTION(BlueprintCallable, Server, unreliable, WithValidation)
         void askSyncForMJCoreFullDataOnServer();
@@ -119,7 +125,7 @@ protected:
 
         //trick is that, onRep only happen on client, and in that case only one instance need to be notified
         m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.Clear();
-        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGamePlayerControllerCpp::tryFeedDataToConsumerWithFilter);
+        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGamePlayerControllerCommunicationCpp::tryFeedDataToConsumerWithFilter);
     };
 
     UFUNCTION()
@@ -143,6 +149,9 @@ protected:
     //return true if need to sync full, note it will already marked sync flag inside if needed
     bool tryFeedDataToConsumer();
 
+    //custom tracker of pawn
+    TWeakObjectPtr< APawn > OldPawnMy;
+
     UPROPERTY(ReplicatedUsing = OnRep_ExtRoomActorPointer)
     AMyMJGameRoomCpp* m_pExtRoomActor;
 
@@ -165,5 +174,78 @@ protected:
 
     ENetMode m_eDebugNetmodeAtStart;
     bool m_bDebugHaltFeedData; //used to force client fall behind the progress
+
+};
+
+UENUM()
+enum class MyMJGameUIModeCpp : uint8
+{
+    Invalid = 0     UMETA(DisplayName = "Invalid"),
+    InRoomPlay = 1     UMETA(DisplayName = "InRoomPlay"),
+    InRoomReplay = 2    UMETA(DisplayName = "InRoomReplay"),
+    MainUI = 11    UMETA(DisplayName = "MainUI"),
+};
+
+UCLASS()
+class MYONLINECARDGAME_API UMyMJGameUIManagerCpp : public UActorComponent
+{
+    GENERATED_BODY()
+
+public:
+
+    UMyMJGameUIManagerCpp() : Super()
+    {
+        m_pInRoomUIMain = NULL;
+        m_eUIMode = MyMJGameUIModeCpp::Invalid;
+    };
+
+    virtual ~UMyMJGameUIManagerCpp()
+    {
+
+    };
+
+    void reset();
+
+    UFUNCTION(BlueprintCallable)
+    void changeUIMode(MyMJGameUIModeCpp UIMode);
+
+    //let's manage UI
+    UFUNCTION(BlueprintCallable)
+    UMyMJGameInRoomUIMainWidgetBaseCpp* getInRoomUIMain(bool createIfNotExist = false, bool verify = true);
+
+protected:
+
+    UPROPERTY(Transient, meta = (DisplayName = "In Room UI Main"))
+    UMyMJGameInRoomUIMainWidgetBaseCpp *m_pInRoomUIMain;
+
+    MyMJGameUIModeCpp m_eUIMode;
+};
+
+UCLASS(Blueprintable)
+class MYONLINECARDGAME_API AMyMJGamePlayerControllerCpp : public AMyMJGamePlayerControllerCommunicationCpp
+{
+    GENERATED_BODY()
+
+public:
+    AMyMJGamePlayerControllerCpp();
+    virtual ~AMyMJGamePlayerControllerCpp();
+
+    virtual void clearInGame() override;
+
+    inline UMyMJGameUIManagerCpp* getUIManagerVerified()
+    {
+        MY_VERIFY(m_pUIManager != NULL);
+        return m_pUIManager;
+    };
+
+    //always succeed
+    static AMyMJGamePlayerControllerCpp* helperGetLocalController(const UObject* WorldContextObject);
+    static UMyMJGameInRoomUIMainWidgetBaseCpp* helperGetInRoomUIMain(const UObject* WorldContextObject, bool verify = true);
+
+protected:
+
+    friend class UMyMJGameUIManagerCpp;
+
+    UMyMJGameUIManagerCpp* m_pUIManager;
 
 };

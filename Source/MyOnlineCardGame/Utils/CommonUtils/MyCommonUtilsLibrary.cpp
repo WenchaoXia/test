@@ -14,6 +14,565 @@
 //#include "Kismet/KismetRenderingLibrary.h"
 //#include "Classes/PaperSprite.h"
 
+
+#define MY_TRANSFORM_UPDATE_CYCLE_BUFFER_COUNT (64)
+
+void FTransformUpdateSequencDataCpp::helperSetDataBySrcAndDst(const FTransform& cStart, const FTransform& cEnd, float fTime, FIntVector extraRotateCycle)
+{
+    m_cStart = cStart;
+    m_cEnd = cEnd;
+    m_fTime = fTime;
+
+    m_cStart.NormalizeRotation();
+    m_cEnd.NormalizeRotation();
+
+    m_cLocalRotatorExtra.Roll = extraRotateCycle.X * 360;
+    m_cLocalRotatorExtra.Pitch = extraRotateCycle.Y * 360;
+    m_cLocalRotatorExtra.Yaw = extraRotateCycle.Z * 360;
+
+    FQuat B = m_cStart.GetRotation();
+    FQuat A = m_cEnd.GetRotation();
+    FQuat NegA = A.Inverse();
+    NegA.Normalize();
+    FQuat X = B * NegA;
+
+    FRotator relativeRota;
+    relativeRota = X.Rotator();
+    relativeRota.Normalize();
+
+    //X.EnforceShortestArcWith(FRotator(0, 0, 0).Quaternion());
+
+    //X = FRotator(0, 0, 0).Quaternion() * X;
+    //UKismetMathLibrary::ComposeRotators();
+
+    //FVector v(1, 1, 1), vz(0, 0, 0);
+    //relativeRota = UKismetMathLibrary::FindLookAtRotation(vz, X.Rotator().RotateVector(v)) - UKismetMathLibrary::FindLookAtRotation(vz, v);
+    //relativeRota.Clamp();
+
+    //FRotator winding;
+    //X.Rotator().GetWindingAndRemainder(winding, relativeRota);
+
+    if (m_cEnd.GetLocation().Equals(m_cStart.GetLocation(), FTransformUpdateSequencDataCpp_Delta_Min)) {
+        m_bLocationEnabledCache = false;
+    }
+    else {
+        m_bLocationEnabledCache = true;
+    }
+
+    //since we allow roll at origin 360d, we can't use default isNealyZero() which treat that case zero
+    if (relativeRota.Euler().IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
+        m_bRotatorBasicEnabledCache = false;
+    }
+    else {
+        m_bRotatorBasicEnabledCache = true;
+    }
+
+    if (m_cLocalRotatorExtra.Euler().IsNearlyZero(FTransformUpdateSequencDataCpp_Delta_Min)) {
+        m_bRotatorExtraEnabledCache = false;
+    }
+    else {
+        m_bRotatorExtraEnabledCache = true;
+    }
+
+    if (m_cEnd.GetScale3D().Equals(m_cStart.GetScale3D(), FTransformUpdateSequencDataCpp_Delta_Min)) {
+        m_bScaleEnabledCache = false;
+    }
+    else {
+        m_bScaleEnabledCache = true;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%d, %d, %d, %d. r:  %s -> %s, relativeRota %s."), m_bLocationEnabledCache, m_bRotatorBasicEnabledCache, m_bRotatorExtraEnabledCache, m_bScaleEnabledCache,
+    //         *cStart.GetRotation().Rotator().ToString(), *cEnd.GetRotation().Rotator().ToString(), *relativeRota.ToString());
+
+};
+
+UMyTransformUpdateSequenceMovementComponent::UMyTransformUpdateSequenceMovementComponent(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
+{
+    PrimaryComponentTick.TickGroup = TG_PrePhysics;
+    PrimaryComponentTick.TickInterval = 0;
+    bUpdateOnlyIfRendered = false;
+
+    bWantsInitializeComponent = true;
+    bAutoActivate = false;
+    SetTickableWhenPaused(false);
+
+    m_cDataCycleBuffer.reinit(TEXT("transform update data Cycle buffer"), &m_aDataItems, &m_cDataMeta, MY_TRANSFORM_UPDATE_CYCLE_BUFFER_COUNT);
+    m_cCurveCycleBuffer.reinit(TEXT("transform update curve Cycle buffer"), &m_aCurveItems, &m_cCurveMeta, MY_TRANSFORM_UPDATE_CYCLE_BUFFER_COUNT);
+
+    m_cTimeLineVectorDelegate.BindUObject(this, &UMyTransformUpdateSequenceMovementComponent::onTimeLineUpdated);
+    m_cTimeLineFinishEventDelegate.BindUObject(this, &UMyTransformUpdateSequenceMovementComponent::onTimeLineFinished);
+
+    m_cTimeLine.Stop();
+
+    m_fDebugTimeLineStartWorldTime = 0.f;
+    m_uDebugLastTickWorldTime_ms = 0;
+
+    m_bShowWhenActivated = false;
+    m_bHideWhenInactived = false;
+
+}
+
+
+int32 UMyTransformUpdateSequenceMovementComponent::addSeqToTail(const FTransformUpdateSequencDataCpp& data, UCurveVector* curve)
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("addSeqToTail, rot %d, %s."), data.m_bRotatorEnabledCache, *data.m_cRotatorRelativeToStartDelta.ToString());
+
+    if (!IsValid(curve)) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("curve not valid %p."), curve);
+        return -1;
+    }
+
+    int32 ret0, ret1;
+    ret0 = m_cDataCycleBuffer.addToTail(&data, NULL);
+    ret1 = m_cCurveCycleBuffer.addToTail(&curve, NULL);
+
+    MY_VERIFY(ret0 == ret1);
+
+    if (ret0 >= 0) {
+        if (!m_cTimeLine.IsPlaying()) {
+            tryStartNextSeq(TEXT("addSeqToTail trigger"));
+        }
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("addSeqToTail fail, ret %d."), ret0);
+    }
+
+    return ret0;
+}
+
+int32 UMyTransformUpdateSequenceMovementComponent::removeSeqFromHead(int32 iCount)
+{
+    int32 ret0, ret1;
+    ret0 = m_cDataCycleBuffer.removeFromHead(iCount);
+    ret1 = m_cCurveCycleBuffer.removeFromHead(iCount);
+
+    MY_VERIFY(ret0 == ret1);
+
+    if (getSeqCount() <= 0) {
+        m_cTimeLine.Stop();
+    }
+    return ret0;
+}
+
+int32 UMyTransformUpdateSequenceMovementComponent::peekSeqAt(int32 idxFromHead, FTransformUpdateSequencDataCpp& outData, UCurveVector*& outCurve) const
+{
+    const FTransformUpdateSequencDataCpp* pData = NULL;
+    UCurveVector* pCurve = NULL;
+    int32 ret = peekSeqAtCpp(idxFromHead, pData, pCurve);
+
+    if (ret >= 0) {
+        MY_VERIFY(pData);
+        outData = *pData;
+
+        MY_VERIFY(pCurve);
+        outCurve = pCurve;
+    }
+
+    return ret;
+}
+
+int32 UMyTransformUpdateSequenceMovementComponent::peekSeqAtCpp(int32 idxFromHead, const FTransformUpdateSequencDataCpp*& poutData, UCurveVector*& outCurve) const
+{
+    int32 ret0 = 0, ret1 = 0;
+    poutData = m_cDataCycleBuffer.peekAt(idxFromHead, &ret0);
+    UCurveVector* const * ppC = m_cCurveCycleBuffer.peekAt(idxFromHead, &ret1);
+    if (ppC) {
+        outCurve = *ppC;
+    }
+    else {
+        outCurve = NULL;
+    }
+
+    MY_VERIFY(ret0 == ret1);
+    return ret0;
+}
+
+int32 UMyTransformUpdateSequenceMovementComponent::peekSeqLast(FTransformUpdateSequencDataCpp& outData, UCurveVector*& outCurve) const
+{
+    int32 l = getSeqCount();
+    if (l > 0) {
+        return peekSeqAt(l - 1, outData, outCurve);
+    }
+    else {
+        return -1;
+    }
+};
+
+int32 UMyTransformUpdateSequenceMovementComponent::getSeqCount() const
+{
+    int32 ret0, ret1;
+    ret0 = m_cDataCycleBuffer.getCount();
+    ret1 = m_cCurveCycleBuffer.getCount();
+
+    MY_VERIFY(ret0 == ret1);
+    return ret0;
+}
+
+void UMyTransformUpdateSequenceMovementComponent::clearSeq()
+{
+    m_cDataCycleBuffer.clearInGame();
+    m_cCurveCycleBuffer.clearInGame();
+
+    MY_VERIFY(getSeqCount() == 0);
+    m_cTimeLine.Stop();
+
+    //FTransform zT;
+    //m_cHelperTransformFinal = zT;
+}
+
+const FTransform& UMyTransformUpdateSequenceMovementComponent::getHelperTransformPrevRefConst() const
+{
+    int32 l = getSeqCount();
+    if (l > 0) {
+        const FTransformUpdateSequencDataCpp* pData = m_cDataCycleBuffer.peekAt(l - 1, NULL);
+        return pData->m_cEnd;
+    }
+
+    if (UpdatedComponent) {
+        return UpdatedComponent->GetComponentTransform();
+    }
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("UpdatedComponent is NULL!"));
+
+    //return a error ref
+    return m_cHelperTransformFinal;
+};
+
+//void UMyTransformUpdateSequenceMovementComponent::BeginPlay()
+//{
+//    Super::BeginPlay();
+//
+//}
+
+void UMyTransformUpdateSequenceMovementComponent::ApplyWorldOffset(const FVector& InOffset, bool bWorldShift)
+{
+    Super::ApplyWorldOffset(InOffset, bWorldShift);
+
+}
+
+void UMyTransformUpdateSequenceMovementComponent::setActivatedMyEncapped(bool bNew, FString reason)
+{
+    if (IsActive() != bNew) {
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("activate component change %d -> %d, reason %s, last tick time ms %u."), !bNew, bNew, *reason, m_uDebugLastTickWorldTime_ms);
+        if (bNew) {
+            Activate();
+            if (m_bShowWhenActivated) {
+                AActor* actor = GetOwner();
+                if (IsValid(actor)) {
+                    actor->SetActorHiddenInGame(false);
+                }
+                else {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("UMyTransformUpdateSequenceMovementComponent's owner actor is NULL!"));
+                }
+            }
+
+
+        }
+        else {
+            Deactivate();
+            if (m_bHideWhenInactived) {
+                AActor* actor = GetOwner();
+                if (IsValid(actor)) {
+                    actor->SetActorHiddenInGame(true);
+                }
+                else {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("UMyTransformUpdateSequenceMovementComponent's owner actor is NULL!"));
+                }
+            }
+        }
+
+        m_uDebugLastTickWorldTime_ms = 0;
+    }
+};
+
+bool UMyTransformUpdateSequenceMovementComponent::tryStartNextSeq(FString sDebugReason)
+{
+    if (m_cTimeLine.IsPlaying()) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("still playing, not start next seq now."));
+        return false;
+    }
+
+    const FTransformUpdateSequencDataCpp* pData = NULL;
+    UCurveVector* pCurve = NULL;
+
+    while (1)
+    {
+        if (peekSeqAtCpp(0, pData, pCurve) < 0) {
+            break;
+        }
+
+        if (pData->m_fTime < MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT)
+        {
+            //directly teleport
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("teleporting for short dur seq: %f sec."), pData->m_fTime);
+            UpdatedComponent->SetWorldTransform(pData->m_cEnd);
+            removeSeqFromHead(1);
+        }
+        else {
+            break;
+        }
+    }
+
+    if (peekSeqAtCpp(0, pData, pCurve) >= 0) {
+        //we have data
+
+        //the fuck is that: FTimeLine have NOT clear function for static bind type, so create new one
+        FTimeline newTimeLine;
+        m_cTimeLine = newTimeLine;
+
+        MY_VERIFY(IsValid(pCurve));
+        MY_VERIFY(pData);
+
+        m_cTimeLine.AddInterpVector(pCurve, m_cTimeLineVectorDelegate);
+        m_cTimeLine.SetTimelineFinishedFunc(m_cTimeLineFinishEventDelegate);
+
+        float MinVal, MaxVal;
+        pCurve->GetTimeRange(MinVal, MaxVal);
+
+        m_cTimeLine.SetTimelineLengthMode(ETimelineLengthMode::TL_TimelineLength);
+        m_cTimeLine.SetTimelineLength(MaxVal);
+
+        m_cTimeLine.SetPlayRate(MaxVal / pData->m_fTime);
+
+        m_cTimeLine.Play();
+
+        setActivatedMyEncapped(true, sDebugReason + TEXT(", have new one"));
+
+        //m_dDebugTimeLineStartRealTime = FPlatformTime::Seconds();
+        UWorld *w = GetWorld();
+        if (IsValid(w)) {
+            m_fDebugTimeLineStartWorldTime = w->GetTimeSeconds();
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
+        return true;
+    }
+    else {
+        //stop
+        setActivatedMyEncapped(false, sDebugReason + TEXT(", no new seq."));
+        return false;
+    }
+}
+
+void UMyTransformUpdateSequenceMovementComponent::onTimeLineUpdated(FVector vector)
+{
+    const FTransformUpdateSequencDataCpp* pData = NULL;
+    UCurveVector* pCurve = NULL;
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onTimeLineUpdated."));
+
+    if (peekSeqAtCpp(0, pData, pCurve) < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get data in the middle of timelineUpdate"));
+        return;
+    }
+
+    MY_VERIFY(IsValid(pCurve));
+    MY_VERIFY(pData);
+
+    MY_VERIFY(IsValid(UpdatedComponent));
+
+    if (pData->m_bLocationEnabledCache || pData->m_bRotatorBasicEnabledCache || pData->m_bRotatorExtraEnabledCache) {
+        FVector MoveDelta = FVector::ZeroVector;
+        FQuat NewQuat = UpdatedComponent->GetComponentRotation().Quaternion();
+        FVector NewLocation = UpdatedComponent->GetComponentLocation();
+        if (pData->m_bLocationEnabledCache) {
+            NewLocation = UKismetMathLibrary::VLerp(pData->m_cStart.GetLocation(), pData->m_cEnd.GetLocation(), vector.X);
+            UpdatedComponent->SetWorldLocation(NewLocation);
+            //FVector CurrentLocation = UpdatedComponent->GetComponentLocation();
+            //if (NewLocation != CurrentLocation)
+            //{
+            //MoveDelta = NewLocation - CurrentLocation;
+            //}
+        }
+
+        if (pData->m_bRotatorBasicEnabledCache) {
+
+            FRotator r = UKismetMathLibrary::RLerp(pData->m_cStart.GetRotation().Rotator(), pData->m_cEnd.GetRotation().Rotator(), vector.Y, true);
+            if (r.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
+                return;
+            }
+
+            NewQuat = r.Quaternion();
+            if (NewQuat.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
+                return;
+            }
+            //FQuat quatDelta = pData->m_cRotatorRelativeToStartDelta.Quaternion() * vector.Y;
+            //NewQuat = quatDelta * pData->m_cStart.GetRotation();
+            //quatDelta.
+            /*
+            FRotator rotDelta = pData->m_cRotatorRelativeToStartDelta * vector.Y;
+            if (rotDelta.ContainsNaN())
+            {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 0, %s."), *rotDelta.ToString());
+            return;
+            }
+            FQuat quatDelta = rotDelta.Quaternion();
+            if (quatDelta.ContainsNaN())
+            {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 1, %s."), *quatDelta.ToString());
+            return;
+            }
+            NewQuat = quatDelta * pData->m_cStart.GetRotation();
+            if (NewQuat.ContainsNaN())
+            {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 2, %s."), *NewQuat.ToString());
+            return;
+            }
+            */
+        }
+
+        if (pData->m_bRotatorExtraEnabledCache) {
+            FRotator r = UKismetMathLibrary::RLerp(FRotator::ZeroRotator, pData->m_cLocalRotatorExtra, vector.Y, false);
+            if (r.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
+                return;
+            }
+
+            FQuat q = r.Quaternion();
+            if (q.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *q.ToString());
+                return;
+            }
+
+            NewQuat = q * NewQuat;
+            if (NewQuat.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
+                return;
+            }
+        }
+
+        UpdatedComponent->SetWorldRotation(NewQuat);
+        //MoveUpdatedComponent(MoveDelta, NewQuat, false);
+    }
+
+    if (pData->m_bScaleEnabledCache) {
+        FVector NewScale = UKismetMathLibrary::VLerp(pData->m_cStart.GetScale3D(), pData->m_cEnd.GetScale3D(), vector.Z);
+        UpdatedComponent->SetWorldScale3D(NewScale);
+    }
+
+}
+
+void UMyTransformUpdateSequenceMovementComponent::onTimeLineFinished()
+{
+    const FTransformUpdateSequencDataCpp* pData = NULL;
+    UCurveVector* pCurve = NULL;
+    if (peekSeqAtCpp(0, pData, pCurve) < 0) {
+        MY_VERIFY(false);
+        return;
+    }
+    FTransform cT = UpdatedComponent->GetComponentTransform();
+    if (!cT.Equals(pData->m_cEnd, 1.0f)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time line finished but not equal: now %s. target %s."), *cT.ToString(), *pData->m_cEnd.ToString());
+    }
+
+    //fix up any defloat by direct set transform
+    UpdatedComponent->SetWorldTransform(pData->m_cEnd);
+
+    MY_VERIFY(IsValid(pCurve));
+    MY_VERIFY(pData);
+    //float minValue, maxValue, minTime, maxTime;
+    //pCurve->GetValueRange(minValue, maxValue);
+    //pCurve->GetTimeRange(minTime, maxTime);
+
+    UWorld *w = GetWorld();
+    if (IsValid(w)) {
+        float fTimePassed = w->GetTimeSeconds() - m_fDebugTimeLineStartWorldTime;
+        if (!UKismetMathLibrary::NearlyEqual_FloatFloat(pData->m_fTime, fTimePassed, 0.1)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time line finished but time not quite equal: supposed %f, used %f."), pData->m_fTime, fTimePassed);
+        }
+
+    }
+    else {
+        MY_VERIFY(false);
+    }
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onTimeLineFinished, time used %f, time range %f, %f, value range %f, %f."), s1 - m_dDebugTimeLineStartRealTime, minTime, maxTime, minValue, maxValue);
+
+    removeSeqFromHead(1);
+    m_cTimeLine.Stop();
+    tryStartNextSeq(TEXT("pre timeline finish"));
+}
+
+
+void UMyTransformUpdateSequenceMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+{
+    //QUICK_SCOPE_CYCLE_COUNTER(STAT_InterpToMovementComponent_TickComponent);
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent."));
+
+    // skip if don't want component updated when not rendered or updated component can't move
+    if (!UpdatedComponent || !bIsActive || ShouldSkipUpdate(DeltaTime))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("UpdatedComponent %d, bIsActive %d, ShouldSkipUpdate(DeltaTime) %d."), UpdatedComponent, bIsActive, ShouldSkipUpdate(DeltaTime));
+        return;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent 1."));
+
+    AActor* ActorOwner = UpdatedComponent->GetOwner();
+    if (!ActorOwner || !ActorOwner->CheckStillInWorld())
+    {
+        return;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent 2."));
+
+    if (UpdatedComponent->IsSimulatingPhysics())
+    {
+        return;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent 3."));
+
+    /*
+    //debug
+    UWorld *world = GetWorld();
+    if (!IsValid(world)) {
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
+    MY_VERIFY(false);
+    }
+
+    float timeNow = world->GetTimeSeconds();
+    uint32 timeNowMs = timeNow * 1000;
+
+
+    if (m_uDebugLastTickWorldTime_ms > 0) {
+    if (timeNowMs <= m_uDebugLastTickWorldTime_ms) {
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("time screw detected: timeNowMs %u, m_uDebugLastTickWorldTime_ms %u."), timeNowMs, m_uDebugLastTickWorldTime_ms);
+    }
+    else {
+    uint32 timePassed_ms = timeNowMs - m_uDebugLastTickWorldTime_ms;
+    if (timePassed_ms > 18) {
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("long time tick detected as %u ms, DeltaTime %f. : timeNowMs %u, m_uDebugLastTickWorldTime_ms %u."), timePassed_ms, DeltaTime, timeNowMs, m_uDebugLastTickWorldTime_ms);
+    }
+    }
+    }
+
+    m_uDebugLastTickWorldTime_ms = timeNowMs;
+    */
+
+    DeltaTime /= ActorOwner->GetActorTimeDilation();
+
+    if (m_cTimeLine.IsPlaying()) {
+        //Todo: handle the case that tick() and addSeq() happen in one loop, which cause 1 tick time defloat
+        m_cTimeLine.TickTimeline(DeltaTime);
+    }
+    else {
+        tryStartNextSeq(TEXT("in tick() timeline stopped."));
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent out."));
+}
+
 int32 UMyCommonUtilsLibrary::getEngineNetMode(AActor *actor)
 {
     UWorld *world = actor->GetWorld();

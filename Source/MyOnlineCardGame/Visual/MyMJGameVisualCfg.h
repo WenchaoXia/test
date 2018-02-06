@@ -66,6 +66,8 @@ public:
     {
         m_aAttenderAreas.Reset();
         m_aAttenderAreas.AddDefaulted(4);
+
+        m_fAttenderCameraFOV = 90;
     };
 
     virtual ~FMyMJGameInGamePlayerScreenCfgCpp()
@@ -80,12 +82,20 @@ public:
         }
     };
 
+    bool checkSettings() const;
+
     //mainly for test
     void fillDefaultData();
 
     UPROPERTY(EditAnywhere, EditFixedSize, meta = (DisplayName = "Attender Areas"))
     TArray<FMyMJGameInGameAttenderAreaOnPlayerScreenCfgCpp> m_aAttenderAreas;
 
+    //the relative position to desk center, it will apply it's loc, then it's rotation according to attender idx, then desk center's transform, a typical value will be (-1250, 0, 1030), (0, -40, 0), (1, 1, 1) 
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "attender camera relative transform"))
+    FTransform m_cAttenderCameraRelativeTransform;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "attender camera FOV"))
+    float m_fAttenderCameraFOV;
 };
 
 //MyMJGameCoreRelatedEventMainTypeCpp
