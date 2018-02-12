@@ -18,6 +18,6 @@ public class MyOnlineCardGameEditorTarget : TargetRules
         bUseUnityBuild = false;
         bForceUnityBuild = false;
         bUseAdaptiveUnityBuild = false;
-        MinGameModuleSourceFilesForUnityBuild = 10;
+        //MinGameModuleSourceFilesForUnityBuild = 10;
     }
 }

@@ -8,8 +8,9 @@
 #include "MyMJGameVisualInterfaces.h"
 #include "Camera/CameraComponent.h"
 
-#include "MyMJGameRoomViewerPawnBase.generated.h"
+#include "MyMJGameVisualCfg.h"
 
+#include "MyMJGameRoomViewerPawnBase.generated.h"
 
 //Our player controller will help do replication work, and only replication help code goes here
 UCLASS()
@@ -22,11 +23,9 @@ public:
     virtual ~AMyMJGameRoomViewerPawnBaseCpp();
 
     //always succeed
-    inline UCameraComponent* getCameraComponent()
+    inline UCameraComponent* getCameraComponent() const
     {
-        UCameraComponent* ret = getCameraComponentInner();
-        MY_VERIFY(ret);
-        return ret;
+        return m_pCamera;
     };
 
     //IMyTransformUpdateSequenceInterface begin
@@ -46,6 +45,19 @@ public:
         return m_pTransformUpdateSequence;
     };
 
+
+    UFUNCTION(BlueprintCallable)
+    void helperGetCameraData(int32 idxAttender, struct FMyCardGameCameraDataCpp& cameraData) const;
+    
+    UFUNCTION(BlueprintCallable)
+    void changeInRoomViewRole(MyMJGameRoleTypeCpp roleType);
+
+    UFUNCTION(BlueprintCallable)
+    void changeInRoomViewRole2(int32 idxAttender)
+    {
+        changeInRoomViewRole((MyMJGameRoleTypeCpp) idxAttender);
+    };
+
     //IMyTransformUpdateSequenceInterface end
 protected:
     
@@ -59,15 +71,14 @@ protected:
     virtual void PossessedBy(AController* NewController) override;
     virtual void UnPossessed() override;
 
-    //must succeed
-    UFUNCTION(BlueprintNativeEvent)
-    UCameraComponent* getCameraComponentInner();
+    void onTransformSeqUpdated(const struct FTransformUpdateSequencDataCpp& data, const FVector& vector);
+    void onTransformSeqFinished(const struct FTransformUpdateSequencDataCpp& data);
 
-    UCameraComponent* getCameraComponentInner_Implementation()
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameRoomViewerPawnBaseCpp::getCameraComponentInner() must be overrided by blueprint subclass!"));
-        return NULL;
-    };
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "root scene"))
+    class USceneComponent *m_pRootScene;
+
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Instanced, meta = (DisplayName = "camera component"))
+    UCameraComponent* m_pCamera;
 
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "transform update sequence"))
     UMyTransformUpdateSequenceMovementComponent* m_pTransformUpdateSequence;

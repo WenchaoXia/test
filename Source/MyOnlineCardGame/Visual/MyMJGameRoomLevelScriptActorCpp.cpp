@@ -33,47 +33,63 @@ bool AMyMJGameRoomRootActorCpp::checkSettings() const
 };
 
 
-AMyMJGameRoomRootActorCpp* AMyMJGameRoomRootActorCpp::helperGetRoomRootActor(const UObject* WorldContextObject)
+AMyMJGameRoomRootActorCpp* AMyMJGameRoomRootActorCpp::helperGetRoomRootActor(const UObject* WorldContextObject, bool verifyValid)
 {
-    if (!IsValid(GEngine)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("GEngine %p is not valid."), GEngine);
-        return NULL;
-    }
-    
-    UWorld* world = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+    AMyMJGameRoomRootActorCpp* ret = NULL;
+    while (1) {
+        AMyMJGameRoomLevelScriptActorCpp* pLevel = AMyMJGameRoomLevelScriptActorCpp::helperGetLevel(WorldContextObject, verifyValid);
+        if (pLevel == NULL) {
+            break;
+        }
 
-    if (!IsValid(world)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
-        return NULL;
-    }
+        ret = pLevel->m_pRoomRootActor;
+        if (!IsValid(ret)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pRoomRootActor invalid: %p."), ret);
+            ret = NULL;
+            break;
+        }
 
-    ULevel *pL = world->PersistentLevel;
-    if (!IsValid(pL)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("persisten level is invalid, %p."), pL);
-        return NULL;
-    }
-
-    ALevelScriptActor* pLSA = pL->GetLevelScriptActor();
-
-    if (!IsValid(pLSA)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ALevelScriptActoris invalid, %p."), pLSA);
-        return NULL;
+        break;
     }
 
-    AMyMJGameRoomLevelScriptActorCpp *pLSASub = Cast<AMyMJGameRoomLevelScriptActorCpp>(pLSA);
-    if (!IsValid(pLSASub)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to cast %p, original class name is %s."), pLSASub, *pLSA->GetClass()->GetName());
-        return NULL;
+    if (verifyValid) {
+        if (!IsValid(ret)) {
+            MY_VERIFY(false);
+        }
     }
 
-    AMyMJGameRoomRootActorCpp* pRet = pLSASub->m_pRoomRootActor;
-    if (!IsValid(pRet)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pRoomRootActor not valid %p."), pRet);
-        return NULL;
-    }
-
-    return pRet;
+    return ret;
 };
+
+AMyMJGameRoomCpp* AMyMJGameRoomRootActorCpp::helperGetRoomActor(const UObject* WorldContextObject, bool verifyValid)
+{
+    AMyMJGameRoomCpp* ret = NULL;
+
+    while (1)
+    {
+        AMyMJGameRoomRootActorCpp* pR = AMyMJGameRoomRootActorCpp::helperGetRoomRootActor(WorldContextObject, verifyValid);
+        if (pR == NULL) {
+            break;
+        }
+
+        ret = pR->m_pRoomActor;
+        if (!IsValid(ret)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pRoomActor invalid: %p."), ret);
+            ret = NULL;
+            break;
+        }
+
+        break;
+    }
+
+    if (verifyValid) {
+        if (!IsValid(ret)) {
+            MY_VERIFY(false);
+        }
+    }
+
+    return ret;
+}
 
 bool AMyMJGameRoomLevelScriptActorCpp::checkSettings() const
 {
@@ -83,6 +99,55 @@ bool AMyMJGameRoomLevelScriptActorCpp::checkSettings() const
     }
 
     return m_pRoomRootActor->checkSettings();
+};
+
+AMyMJGameRoomLevelScriptActorCpp* AMyMJGameRoomLevelScriptActorCpp::helperGetLevel(const UObject* WorldContextObject, bool verifyValid)
+{
+    AMyMJGameRoomLevelScriptActorCpp* ret = NULL;
+
+    while (1) {
+        if (!IsValid(GEngine)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("GEngine %p is not valid."), GEngine);
+            break;
+        }
+
+        UWorld* world = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+        if (!IsValid(world)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check outer settings!"));
+            break;
+        }
+
+        ULevel *pL = world->PersistentLevel;
+        if (!IsValid(pL)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("persisten level is invalid, %p."), pL);
+            break;
+        }
+
+        ALevelScriptActor* pLSA = pL->GetLevelScriptActor();
+
+        if (!IsValid(pLSA)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ALevelScriptActoris invalid, %p."), pLSA);
+            break;
+        }
+
+        ret = Cast<AMyMJGameRoomLevelScriptActorCpp>(pLSA);
+
+        if (!IsValid(ret)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("ALevelScriptActoris type cast fail: %p, class: %s."), ret, *pLSA->GetClass()->GetName());
+            ret = NULL;
+            break;
+        }
+
+        break;
+    }
+
+    if (verifyValid) {
+        if (!IsValid(ret)) {
+            MY_VERIFY(false);
+        }
+    }
+
+    return ret;
 };
 
 void AMyMJGameRoomLevelScriptActorCpp::BeginPlay()

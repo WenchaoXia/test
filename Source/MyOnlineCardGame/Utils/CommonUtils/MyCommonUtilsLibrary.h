@@ -23,6 +23,50 @@ enum class MyLogVerbosity : uint8
 
 };
 
+DECLARE_DELEGATE_TwoParams(FTransformUpdateSequencUpdateDelegate, const struct FTransformUpdateSequencDataCpp&, const FVector&);
+DECLARE_DELEGATE_OneParam(FTransformUpdateSequencFinishDelegate, const struct FTransformUpdateSequencDataCpp&);
+
+USTRUCT()
+struct FTransformUpdateSequencExtraDataBaseCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FTransformUpdateSequencExtraDataBaseCpp()
+    {
+        m_bSkipBasicTransformUpdate = false;
+    };
+
+    virtual ~FTransformUpdateSequencExtraDataBaseCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_cUpdateDelegate.Unbind();
+        m_cFinishDeleget.Unbind();
+        m_bSkipBasicTransformUpdate = false;
+    };
+
+    //always succeed, better use compile time skill, but now use virtual function
+    virtual FTransformUpdateSequencExtraDataBaseCpp* createOnHeap()
+    {
+        return new FTransformUpdateSequencExtraDataBaseCpp();
+    };
+
+    virtual void copyContentFrom(const FTransformUpdateSequencExtraDataBaseCpp& other)
+    {
+        *this = other;
+    };
+
+    FTransformUpdateSequencUpdateDelegate m_cUpdateDelegate;
+    FTransformUpdateSequencFinishDelegate m_cFinishDeleget;
+
+    //Whether we skip basic transform update from start to end
+    bool m_bSkipBasicTransformUpdate;
+};
 
 USTRUCT(BlueprintType)
 struct FTransformUpdateSequencDataCpp
@@ -32,7 +76,46 @@ struct FTransformUpdateSequencDataCpp
 public:
     FTransformUpdateSequencDataCpp()
     {
+        m_pExtraDataOnHeap = NULL;
         reset();
+    };
+
+    virtual ~FTransformUpdateSequencDataCpp()
+    {
+        if (m_pExtraDataOnHeap) {
+            delete(m_pExtraDataOnHeap);
+            m_pExtraDataOnHeap = NULL;
+        }
+    };
+
+    FTransformUpdateSequencDataCpp& operator=(const FTransformUpdateSequencDataCpp& rhs)
+    {
+        if (this == &rhs) {
+            return *this;
+        }
+
+        m_cStart = rhs.m_cStart;
+        m_cEnd = rhs.m_cEnd;
+        m_cLocalRotatorExtra = rhs.m_cLocalRotatorExtra;
+        m_bLocationEnabledCache = rhs.m_bLocationEnabledCache;
+        m_bRotatorBasicEnabledCache = rhs.m_bRotatorBasicEnabledCache;
+        m_bRotatorExtraEnabledCache = rhs.m_bRotatorExtraEnabledCache;
+        m_bScaleEnabledCache = rhs.m_bScaleEnabledCache;
+        m_fTime = rhs.m_fTime;
+
+        if (m_pExtraDataOnHeap) {
+            delete(m_pExtraDataOnHeap);
+            m_pExtraDataOnHeap = NULL;
+        }
+
+        if (rhs.m_pExtraDataOnHeap) {
+            this->m_pExtraDataOnHeap = rhs.m_pExtraDataOnHeap->createOnHeap();
+            MY_VERIFY(this->m_pExtraDataOnHeap);
+            this->m_pExtraDataOnHeap->copyContentFrom(*rhs.m_pExtraDataOnHeap);
+            //*this->m_pExtraDataOnHeap = *rhs.m_pExtraDataOnHeap;
+        }
+
+        return *this;
     };
 
     void reset()
@@ -47,6 +130,11 @@ public:
         m_bScaleEnabledCache = false;
 
         m_fTime = 0;
+
+        if (m_pExtraDataOnHeap) {
+            delete(m_pExtraDataOnHeap);
+            m_pExtraDataOnHeap = NULL;
+        }
     };
 
     void helperSetDataBySrcAndDst(const FTransform& cStart, const FTransform& cEnd, float fTime, FIntVector extraRotateCycle = FIntVector::ZeroValue);
@@ -64,6 +152,9 @@ public:
     bool m_bScaleEnabledCache;
 
     float m_fTime;
+
+    //user must allocate it on heap if want to use
+    FTransformUpdateSequencExtraDataBaseCpp* m_pExtraDataOnHeap;
 };
 
 DECLARE_MULTICAST_DELEGATE(FMyMJDataSeqReplicatedDelegate);
@@ -249,12 +340,14 @@ public:
 UINTERFACE(Blueprintable)
 class UMyTransformUpdateSequenceInterface : public UInterface
 {
-    GENERATED_BODY()
+    //GENERATED_BODY()
+    GENERATED_UINTERFACE_BODY()
 };
 
 class IMyTransformUpdateSequenceInterface
 {
-    GENERATED_BODY()
+    //GENERATED_BODY()
+    GENERATED_IINTERFACE_BODY()
 
 public:
 
@@ -483,6 +576,118 @@ public:
     FString m_sDebugString;
 };
 
+//we can use Rotator + center transform to identify one point in world, but may slip around when animate since there are 3 rotation dimension.
+//instead, we define one coordinate system which have only one rotation dimension, make sure they do not 'slip' around
+
+USTRUCT(BlueprintType)
+struct FMyLocationOfZRotationAroundPointCoordinateCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyLocationOfZRotationAroundPointCoordinateCpp(float fRadiusOnXYPlane = 0, float fYawOnXYPlane = 0, float fZoffset = 0)
+    {
+        m_fRadiusOnXYPlane = fRadiusOnXYPlane;
+        m_fYawOnXYPlane = fYawOnXYPlane;
+        m_fZoffset = fZoffset;
+    };
+
+    inline FString ToString() const
+    {
+        return FString::Printf(TEXT("(RadiusOnXYPlane %f, YawOnXYPlane %f, Zoffset %f)"), m_fRadiusOnXYPlane, m_fYawOnXYPlane, m_fZoffset);
+    };
+
+    inline void reset()
+    {
+        m_fRadiusOnXYPlane = 0;
+        m_fYawOnXYPlane = 0;
+        m_fZoffset = 0;
+    };
+
+    inline FMyLocationOfZRotationAroundPointCoordinateCpp operator+(const FMyLocationOfZRotationAroundPointCoordinateCpp& R) const
+    {
+        return FMyLocationOfZRotationAroundPointCoordinateCpp(m_fRadiusOnXYPlane + R.m_fRadiusOnXYPlane, m_fYawOnXYPlane + R.m_fYawOnXYPlane, m_fZoffset + R.m_fZoffset);
+    }
+
+    inline FMyLocationOfZRotationAroundPointCoordinateCpp operator-(const FMyLocationOfZRotationAroundPointCoordinateCpp& R) const
+    {
+        return FMyLocationOfZRotationAroundPointCoordinateCpp(m_fRadiusOnXYPlane - R.m_fRadiusOnXYPlane, m_fYawOnXYPlane - R.m_fYawOnXYPlane, m_fZoffset - R.m_fZoffset);
+    }
+
+    inline FMyLocationOfZRotationAroundPointCoordinateCpp operator*(float& R) const
+    {
+        return FMyLocationOfZRotationAroundPointCoordinateCpp(m_fRadiusOnXYPlane * R, m_fYawOnXYPlane * R, m_fZoffset * R);
+    }
+    
+    inline static bool equals(const FMyLocationOfZRotationAroundPointCoordinateCpp& a, const FMyLocationOfZRotationAroundPointCoordinateCpp& b, float tolerance)
+    {
+        FVector va, vb;
+        va.X = a.m_fRadiusOnXYPlane;
+        va.Y = a.m_fYawOnXYPlane;
+        va.Z = a.m_fZoffset;
+
+        vb.X = b.m_fRadiusOnXYPlane;
+        vb.Y = b.m_fYawOnXYPlane;
+        vb.Z = b.m_fZoffset;
+
+        return va.Equals(vb, tolerance);
+    };
+
+    static void interp(const FMyLocationOfZRotationAroundPointCoordinateCpp& start, const FMyLocationOfZRotationAroundPointCoordinateCpp& end, float percent, FMyLocationOfZRotationAroundPointCoordinateCpp& result);
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "radius on XY Plane"))
+    float m_fRadiusOnXYPlane;
+
+    //in range of [0, 360), when used as output in API
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "yaw on XY Plane"))
+    float m_fYawOnXYPlane; //Degrees
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "z offset"))
+    float m_fZoffset;
+};
+
+USTRUCT(BlueprintType)
+struct FMyTransformOfZRotationAroundPointCoordinateCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyTransformOfZRotationAroundPointCoordinateCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_cLocation.reset();
+        m_cRotatorOffsetFacingCenterPoint = FRotator::ZeroRotator;
+    };
+
+    inline FString ToString() const
+    {
+        return TEXT("[") + m_cLocation.ToString() + TEXT("(") + m_cRotatorOffsetFacingCenterPoint.ToString() + TEXT(")]");
+    };
+
+    inline static bool equals(const FMyTransformOfZRotationAroundPointCoordinateCpp& a, const FMyTransformOfZRotationAroundPointCoordinateCpp& b, float tolerance)
+    {
+        FVector ra = a.m_cRotatorOffsetFacingCenterPoint.Vector();
+        FVector rb = a.m_cRotatorOffsetFacingCenterPoint.Vector();
+
+        return FMyLocationOfZRotationAroundPointCoordinateCpp::equals(a.m_cLocation, b.m_cLocation, tolerance) && ra.Equals(rb, tolerance);
+    };
+
+    static void interp(const FMyTransformOfZRotationAroundPointCoordinateCpp& start, const FMyTransformOfZRotationAroundPointCoordinateCpp& end, float percent, FMyTransformOfZRotationAroundPointCoordinateCpp& result);
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "location of Z rotation coordinate"))
+    FMyLocationOfZRotationAroundPointCoordinateCpp m_cLocation;
+
+    //by default, the point should always facing the center point
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "rotator offset facing center point"))
+    FRotator m_cRotatorOffsetFacingCenterPoint;
+};
+
 //Warn: we don't support multiple player screen in one client now!
 UCLASS()
 class UMyCommonUtilsLibrary :
@@ -615,4 +820,50 @@ public:
     static void helperAddWaitStep(float waitTime, FString debugStr, const TArray<UMyTransformUpdateSequenceMovementComponent*>& comps);
     static void helperAddWaitStep(float waitTime, FString debugStr, const TArray<IMyTransformUpdateSequenceInterface*>& interfaces);
 
+    UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
+    static void calcPointTransformWithLocalOffset(const FTransform& pointTransform, FVector localOffset, FTransform& pointTransformFixed);
+    
+    //round related calc API, begin
+    //note scale3D component in transform, is ignored
+
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (MyTransformZRotation)", CompactNodeTitle = "->", BlueprintAutocast), Category = "UMyCommonUtilsLibrary")
+    static FString Conv_MyTransformZRotationToString(const FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation);
+
+    UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
+    static void MyTransformZRotationToTransformWorld(const FTransform& centerPointTransformWorld, const FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation, FTransform& transformWorld);
+    
+    UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
+    static void TransformWorldToMyTransformZRotation(const FTransform& centerPointTransformWorld, const FTransform& transformWorld, FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation);
+
+    /*
+    local X Y as blow, UE4's coordinate style:
+    
+             X
+          \ /
+      |    /
+      |   / \
+      |  /   Y
+      |d/
+      |/
+    center
+    */
+    //UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
+    //static void calcRingPointTransformAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, float degree, FTransform& ringPointTransform, FVector ringPointLocalOffset = FVector::ZeroVector, FRotator ringPointLocalRotator = FRotator(0, 180, 0));
+    
+    //offset's values are all linear delta
+    //UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
+    //static void calcWorldTransformFromWorldOffsetAndDegreeForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, float degree, const FTransform& worldOffset, FTransform& worldTransform,  FVector ringPointLocalOffset = FVector::ZeroVector, FRotator ringPointLocalRotator = FRotator(0, 180, 0));
+    
+    //offset's values are all linear delta
+    //UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
+    //static void calcWorldOffsetAndDegreeFromWorldTransformForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, const FTransform& worldTransform, float &degree, FTransform& worldOffset, FVector ringPointLocalOffset = FVector::ZeroVector, FRotator ringPointLocalRotator = FRotator(0, 180, 0));
+
+    //round related calc API, end
+
+protected:
+    
+    //static void calcRingPointTransformAroundCenterPointZAxisWithFixedData(const FTransform& centerPointTransform, float radiusFixed, float radiansFixed, FTransform& ringPointTransform, float ringPointLocalZOffset, const FRotator& ringPointLocalRotator);
+
+    //return error code
+    static int32 fixRadiusAndRadiansForLocalOffsetOn2DCycle(float radius, float xOffset, float yOffset, float &radiusFixed, float &radiansDelta);
 };

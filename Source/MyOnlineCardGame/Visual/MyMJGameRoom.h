@@ -141,6 +141,9 @@ public:
         return m_pInRoomcfg;
     };
 
+    //slower but can be used for any uobject in the world
+    static const UMyMJGameInRoomVisualCfgType* helperGetVisualCfg(const UObject* WorldContextObject, bool verifyValid = true);
+
 protected:
 
     //return error code, 0 means ok
@@ -173,34 +176,6 @@ protected:
     //UPROPERTY(BlueprintSetter = setCfgCardModelAssetPath, BlueprintSetter = getCfgCardModelAssetPath, EditAnywhere, meta = (DisplayName = "cfg card model asset path"))
     //UPROPERTY(EditAnywhere, BlueprintSetter = setCfgCardModelAssetPath, BlueprintGetter = getCfgCardModelAssetPath, meta = (DisplayName = "cfg card model asset path"))
 
-};
-
-USTRUCT()
-struct FMyCardGameCameraDataCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-
-    FMyCardGameCameraDataCpp()
-    {
-        m_fFOV = 90;
-    };
-
-    virtual ~FMyCardGameCameraDataCpp()
-    {
-
-    };
-
-    inline void reset()
-    {
-        FTransform t;
-        m_cTransform = t;
-        m_fFOV = 90;
-    };
-
-    FTransform m_cTransform;
-    float m_fFOV;
 };
 
 //this is used for visual layer, no replication code goes in

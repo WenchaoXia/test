@@ -14,18 +14,28 @@
 UINTERFACE(Blueprintable)
 class UMyMJGameInRoomUIMainInterface : public UInterface
 {
-    GENERATED_BODY()
+    //GENERATED_BODY()
+    GENERATED_UINTERFACE_BODY()
 };
 
 class IMyMJGameInRoomUIMainInterface
 {
-    GENERATED_BODY()
+    //GENERATED_BODY()
+    GENERATED_IINTERFACE_BODY()
 
 public:
 
     //return error code, 0 means OK
-    UFUNCTION(BlueprintImplementableEvent, meta = (CallableWithoutWorldContext))
+    UFUNCTION(BlueprintImplementableEvent)
     int32 showWeave();
+
+    UFUNCTION(BlueprintImplementableEvent)
+    int32 changeViewPosition(int32 idxAttender);
+
+    //virtual void changeViewPosition_Implementation(int32 idxAttender)
+    //{
+    //
+    //};
 
 protected:
 
@@ -34,12 +44,12 @@ protected:
 UINTERFACE()
 class UMyPawnUIInterface : public UInterface
 {
-    GENERATED_BODY()
+    GENERATED_UINTERFACE_BODY()
 };
 
 class IMyPawnUIInterface
 {
-    GENERATED_BODY()
+    GENERATED_IINTERFACE_BODY()
 
 public:
 

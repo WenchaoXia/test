@@ -29,8 +29,10 @@ public:
 
     bool checkSettings() const;
 
-    UFUNCTION(BlueprintPure, Category = "My Room", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
-    static AMyMJGameRoomRootActorCpp* helperGetRoomRootActor(const UObject* WorldContextObject);
+    UFUNCTION(BlueprintPure, Category = "AMyMJGameRoomRootActorCpp", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
+    static AMyMJGameRoomRootActorCpp* helperGetRoomRootActor(const UObject* WorldContextObject, bool verifyValid = true);
+
+    static AMyMJGameRoomCpp* helperGetRoomActor(const UObject* WorldContextObject, bool verifyValid = true);
 
 protected:
 
@@ -68,6 +70,9 @@ public:
     };
 
     bool checkSettings() const;
+
+    UFUNCTION(BlueprintCallable, Category = "AMyMJGameRoomLevelScriptActorCpp", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
+    static AMyMJGameRoomLevelScriptActorCpp* helperGetLevel(const UObject* WorldContextObject, bool verifyValid = true);
 
 protected:
 

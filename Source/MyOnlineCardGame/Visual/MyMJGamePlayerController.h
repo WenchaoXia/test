@@ -238,6 +238,12 @@ public:
         return m_pUIManager;
     };
 
+
+    UFUNCTION(BlueprintCallable)
+    void resetCameraAndUI();
+
+    class AMyMJGameRoomViewerPawnBaseCpp* helperGetRoomViewerPawn(bool verify = true);
+
     //always succeed
     static AMyMJGamePlayerControllerCpp* helperGetLocalController(const UObject* WorldContextObject);
     static UMyMJGameInRoomUIMainWidgetBaseCpp* helperGetInRoomUIMain(const UObject* WorldContextObject, bool verify = true);
@@ -247,5 +253,7 @@ protected:
     friend class UMyMJGameUIManagerCpp;
 
     UMyMJGameUIManagerCpp* m_pUIManager;
+
+    int32 m_iViewRoleWhenNotAttend;
 
 };

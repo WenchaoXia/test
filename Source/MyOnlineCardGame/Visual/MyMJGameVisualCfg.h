@@ -12,6 +12,121 @@
 
 #include "MyMJGameVisualCfg.generated.h"
 
+USTRUCT(BlueprintType)
+struct FMyCardGameCameraStaticDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    
+    FMyCardGameCameraStaticDataCpp()
+    {
+        m_fMoveTime = 1;
+        m_pMoveCurve = NULL;
+    };
+
+    inline void reset()
+    {
+        FTransform t;
+        m_cCenterPoint = t;
+
+        m_fMoveTime = 1;
+        m_pMoveCurve = NULL;
+    };
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "center point"))
+    FTransform m_cCenterPoint;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "move time"))
+    float m_fMoveTime;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "move curve"))
+    UCurveVector* m_pMoveCurve;
+};
+
+
+USTRUCT(BlueprintType)
+struct FMyCardGameCameraDynamicDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyCardGameCameraDynamicDataCpp()
+    {
+        m_fFOV = 90;
+    };
+
+    inline void reset()
+    {
+        m_cMyTransformOfZRotation.reset();
+        m_fFOV = 90;
+    };
+
+    inline static void interp(const FMyCardGameCameraDynamicDataCpp& start, const FMyCardGameCameraDynamicDataCpp& end, float percent, FMyCardGameCameraDynamicDataCpp& result)
+    {
+        FMyTransformOfZRotationAroundPointCoordinateCpp::interp(start.m_cMyTransformOfZRotation, end.m_cMyTransformOfZRotation, percent, result.m_cMyTransformOfZRotation);
+        
+        float percentFixed = FMath::Clamp<float>(percent, 0, 1);
+        result.m_fFOV = start.m_fFOV + (end.m_fFOV - start.m_fFOV) * percentFixed;
+    };
+
+    inline static bool equals(const FMyCardGameCameraDynamicDataCpp& a, const FMyCardGameCameraDynamicDataCpp& b)
+    {
+        if (!FMyTransformOfZRotationAroundPointCoordinateCpp::equals(a.m_cMyTransformOfZRotation, b.m_cMyTransformOfZRotation, FTransformUpdateSequencDataCpp_Delta_Min))
+        {
+            return false;
+        }
+
+        if (!FMath::IsNearlyEqual(a.m_fFOV, b.m_fFOV, FTransformUpdateSequencDataCpp_Delta_Min))
+        {
+            return false;
+        }
+
+        return true;
+    };
+
+    inline FString ToString() const
+    {
+        return m_cMyTransformOfZRotation.ToString() + FString::Printf(TEXT(", fov %f"), m_fFOV);
+    };
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "My Transform of Z Rotation Around Point"))
+    FMyTransformOfZRotationAroundPointCoordinateCpp m_cMyTransformOfZRotation;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "field of view"))
+    float m_fFOV;
+};
+
+USTRUCT(BlueprintType)
+struct FMyCardGameCameraDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyCardGameCameraDataCpp()
+    {
+
+    };
+
+    virtual ~FMyCardGameCameraDataCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        m_cStaticData.reset();
+        m_cDynamicData.reset();
+    };
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "static data"))
+    FMyCardGameCameraStaticDataCpp m_cStaticData;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "dynamic data"))
+    FMyCardGameCameraDynamicDataCpp m_cDynamicData;
+};
 
 USTRUCT()
 struct FMyMJGameInGameAttenderAreaOnPlayerScreenCfgCpp
@@ -56,6 +171,38 @@ public:
 };
 
 USTRUCT()
+struct FMyMJGameCameraCfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameCameraCfgCpp()
+    {
+        m_fAttenderCameraFOV = 90;
+        m_fAttenderCameraMoveTime = 1;
+        m_pAttenderCameraMoveCurve = NULL;
+    };
+
+    bool checkSettings() const;
+    void fillDefaultData();
+
+    //the relative position to desk center, it will apply it's loc, then it's rotation according to attender idx, then desk center's transform, a typical value will be (-1250, 0, 1030), (0, -40, 0), (1, 1, 1) 
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "attender camera relative transform as attender 0"))
+    FTransform m_cAttenderCameraRelativeTransformAsAttender0;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "attender camera FOV"))
+    float m_fAttenderCameraFOV;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "attender camera move time"))
+    float m_fAttenderCameraMoveTime;
+
+    //if not specified, default linear one will be used
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "attender camera move curve"))
+    UCurveVector* m_pAttenderCameraMoveCurve;
+};
+
+USTRUCT()
 struct FMyMJGameInGamePlayerScreenCfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -66,8 +213,6 @@ public:
     {
         m_aAttenderAreas.Reset();
         m_aAttenderAreas.AddDefaulted(4);
-
-        m_fAttenderCameraFOV = 90;
     };
 
     virtual ~FMyMJGameInGamePlayerScreenCfgCpp()
@@ -89,13 +234,6 @@ public:
 
     UPROPERTY(EditAnywhere, EditFixedSize, meta = (DisplayName = "Attender Areas"))
     TArray<FMyMJGameInGameAttenderAreaOnPlayerScreenCfgCpp> m_aAttenderAreas;
-
-    //the relative position to desk center, it will apply it's loc, then it's rotation according to attender idx, then desk center's transform, a typical value will be (-1250, 0, 1030), (0, -40, 0), (1, 1, 1) 
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "attender camera relative transform"))
-    FTransform m_cAttenderCameraRelativeTransform;
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "attender camera FOV"))
-    float m_fAttenderCameraFOV;
 };
 
 //MyMJGameCoreRelatedEventMainTypeCpp
@@ -494,6 +632,9 @@ public:
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "Main actor class Cfg"))
     FMyMJGameInRoomMainActorClassCfgCpp m_cMainActorClassCfg;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "camera Cfg"))
+    FMyMJGameCameraCfgCpp m_cCameraCfg;
 
     //If set to 10, all data will reset to default
     UPROPERTY(EditAnywhere, meta = (DisplayName = "fake reset efault"))

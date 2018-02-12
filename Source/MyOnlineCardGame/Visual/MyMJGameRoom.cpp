@@ -2,6 +2,8 @@
 
 #include "MyMJGameRoom.h"
 
+#include "MyMJGameRoomLevelScriptActorCpp.h"
+
 #include "MJ/Utils/MyMJUtils.h"
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
@@ -198,6 +200,36 @@ int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModel
     UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("retrieveCfgCache, pCDO name %s, card box: %s."), *pCDO->GetName(), *cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.ToString());
 
     return 0;
+};
+
+const UMyMJGameInRoomVisualCfgType* UMyMJGameDeskResManagerCpp::helperGetVisualCfg(const UObject* WorldContextObject, bool verifyValid)
+{
+    const UMyMJGameInRoomVisualCfgType* ret = NULL;
+
+    while (1)
+    {
+        AMyMJGameRoomCpp* pRoomActor = AMyMJGameRoomRootActorCpp::helperGetRoomActor(WorldContextObject, verifyValid);
+
+        if (pRoomActor == NULL) {
+            break;
+        }
+
+        ret = pRoomActor->getResManagerVerified()->getVisualCfg(verifyValid);
+        if (!IsValid(ret)) {
+            ret = NULL;
+            break;
+        }
+
+        break;
+    }
+
+    if (verifyValid) {
+        if (!IsValid(ret)) {
+            MY_VERIFY(false);
+        }
+    }
+
+    return ret;
 };
 
 AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx)
@@ -401,30 +433,14 @@ void AMyMJGameRoomCpp::getCameraData(MyMJGameRoleTypeCpp roleType, FMyCardGameCa
         return;
     }
 
-    FRotator targetR = pVisualCfg->m_cPlayerScreenCfg.m_cAttenderCameraRelativeTransform.GetRotation().Rotator();
-    FVector targetL  = pVisualCfg->m_cPlayerScreenCfg.m_cAttenderCameraRelativeTransform.GetLocation();
-    
-    int32 idxAttender = (int32)roleType;
-    MY_VERIFY(idxAttender >= 0);
-    if (idxAttender < 4) {
-        targetR.Yaw -= idxAttender * 90;
-    }
-    else {
-        targetL.X = targetL.Y = 0;
+    cameraData.m_cStaticData.m_cCenterPoint = m_pDeskAreaActor->GetActorTransform();
+    cameraData.m_cStaticData.m_fMoveTime = pVisualCfg->m_cCameraCfg.m_fAttenderCameraMoveTime;
+    cameraData.m_cStaticData.m_pMoveCurve = pVisualCfg->m_cCameraCfg.m_pAttenderCameraMoveCurve;
 
-        targetR.Roll = 0;
-        targetR.Pitch = -90;
-        targetR.Yaw = 0;
-    }
+    UMyCommonUtilsLibrary::TransformWorldToMyTransformZRotation(FTransform(), pVisualCfg->m_cCameraCfg.m_cAttenderCameraRelativeTransformAsAttender0, cameraData.m_cDynamicData.m_cMyTransformOfZRotation);
+    cameraData.m_cDynamicData.m_cMyTransformOfZRotation.m_cLocation.m_fYawOnXYPlane = FRotator::ClampAxis(cameraData.m_cDynamicData.m_cMyTransformOfZRotation.m_cLocation.m_fYawOnXYPlane - 90 * (int32)roleType);
+    cameraData.m_cDynamicData.m_fFOV = pVisualCfg->m_cCameraCfg.m_fAttenderCameraFOV;
 
-    FTransform tempA, tempB;
-    tempA.SetLocation(targetL);
-    tempB.SetRotation(targetR.Quaternion());
-
-    FTransform tempC = tempA * tempB;
-
-    cameraData.m_cTransform = tempC * m_pDeskAreaActor->GetActorTransform();
-    cameraData.m_fFOV = pVisualCfg->m_cPlayerScreenCfg.m_fAttenderCameraFOV;
 };
 
 void AMyMJGameRoomCpp::startVisual()

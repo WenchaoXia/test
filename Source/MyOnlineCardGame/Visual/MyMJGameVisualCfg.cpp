@@ -4,20 +4,43 @@
 
 #define MyScreenAttender_13_AreaPointOverrideYPecent (0.1)
 
-bool FMyMJGameInGamePlayerScreenCfgCpp::checkSettings() const
+bool FMyMJGameCameraCfgCpp::checkSettings() const
 {
     if (m_fAttenderCameraFOV <= 0) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_fAttenderCameraFOV should not be negative, value now %f."), m_fAttenderCameraFOV);
         return false;
     }
 
-    FVector loc = m_cAttenderCameraRelativeTransform.GetLocation();
+    FVector loc = m_cAttenderCameraRelativeTransformAsAttender0.GetLocation();
     if (loc.IsNearlyZero())
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cAttenderCameraRelativeTransform's location is near zero, value now %s."), *loc.ToString());
         return false;
     }
 
+    if (m_fAttenderCameraMoveTime <= 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_fAttenderCameraMoveTime should not be negative, value now %f."), m_fAttenderCameraMoveTime);
+        return false;
+    }
+
+    return true;
+}
+
+void FMyMJGameCameraCfgCpp::fillDefaultData()
+{
+    m_cAttenderCameraRelativeTransformAsAttender0.SetLocation(FVector(-1250, 0, 1030));
+    m_cAttenderCameraRelativeTransformAsAttender0.SetRotation(FRotator(-40, 0, 0).Quaternion());
+    m_cAttenderCameraRelativeTransformAsAttender0.SetScale3D(FVector(1, 1, 1));
+
+    m_fAttenderCameraFOV = 30;
+
+    m_fAttenderCameraMoveTime = 1;
+
+    m_pAttenderCameraMoveCurve = NULL;
+}
+
+bool FMyMJGameInGamePlayerScreenCfgCpp::checkSettings() const
+{
     return true;
 };
 
@@ -46,11 +69,6 @@ void FMyMJGameInGamePlayerScreenCfgCpp::fillDefaultData()
         }
     }
 
-    m_cAttenderCameraRelativeTransform.SetLocation(FVector(-1250, 0, 1030));
-    m_cAttenderCameraRelativeTransform.SetRotation(FRotator(0, -40, 0).Quaternion());
-    m_cAttenderCameraRelativeTransform.SetScale3D(FVector(1, 1, 1));
-
-    m_fAttenderCameraFOV = 30;
 };
 
 void FMyMJGameEventPusherCfgCpp::fillDefaultData()
@@ -209,6 +227,8 @@ void UMyMJGameInRoomVisualCfgType::fillDefaultData()
 {
     m_cPlayerScreenCfg.fillDefaultData();
     m_cEventCfg.fillDefaultData();
+
+    m_cCameraCfg.fillDefaultData();
 }
 
 bool UMyMJGameInRoomVisualCfgType::checkSettings() const
@@ -227,6 +247,11 @@ bool UMyMJGameInRoomVisualCfgType::checkSettings() const
     {
         return false;
     }
+
+    if (!m_cCameraCfg.checkSettings())
+    {
+        return false;
+    };
 
     return true;
 }

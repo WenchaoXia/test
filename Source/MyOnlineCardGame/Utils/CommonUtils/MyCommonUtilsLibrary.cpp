@@ -133,6 +133,13 @@ int32 UMyTransformUpdateSequenceMovementComponent::addSeqToTail(const FTransform
         if (!m_cTimeLine.IsPlaying()) {
             tryStartNextSeq(TEXT("addSeqToTail trigger"));
         }
+
+        //debug
+        if (data.m_pExtraDataOnHeap) {
+            const FTransformUpdateSequencDataCpp* pLast = m_cDataCycleBuffer.peekLast();
+            MY_VERIFY(pLast->m_pExtraDataOnHeap);
+            MY_VERIFY(pLast->m_pExtraDataOnHeap != data.m_pExtraDataOnHeap);
+        }
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("addSeqToTail fail, ret %d."), ret0);
@@ -373,90 +380,98 @@ void UMyTransformUpdateSequenceMovementComponent::onTimeLineUpdated(FVector vect
 
     MY_VERIFY(IsValid(UpdatedComponent));
 
-    if (pData->m_bLocationEnabledCache || pData->m_bRotatorBasicEnabledCache || pData->m_bRotatorExtraEnabledCache) {
-        FVector MoveDelta = FVector::ZeroVector;
-        FQuat NewQuat = UpdatedComponent->GetComponentRotation().Quaternion();
-        FVector NewLocation = UpdatedComponent->GetComponentLocation();
-        if (pData->m_bLocationEnabledCache) {
-            NewLocation = UKismetMathLibrary::VLerp(pData->m_cStart.GetLocation(), pData->m_cEnd.GetLocation(), vector.X);
-            UpdatedComponent->SetWorldLocation(NewLocation);
-            //FVector CurrentLocation = UpdatedComponent->GetComponentLocation();
-            //if (NewLocation != CurrentLocation)
-            //{
-            //MoveDelta = NewLocation - CurrentLocation;
-            //}
+    if (pData->m_pExtraDataOnHeap && pData->m_pExtraDataOnHeap->m_bSkipBasicTransformUpdate) {
+    }
+    else {
+        if (pData->m_bLocationEnabledCache || pData->m_bRotatorBasicEnabledCache || pData->m_bRotatorExtraEnabledCache) {
+            FVector MoveDelta = FVector::ZeroVector;
+            FQuat NewQuat = UpdatedComponent->GetComponentRotation().Quaternion();
+            FVector NewLocation = UpdatedComponent->GetComponentLocation();
+            if (pData->m_bLocationEnabledCache) {
+                NewLocation = UKismetMathLibrary::VLerp(pData->m_cStart.GetLocation(), pData->m_cEnd.GetLocation(), vector.X);
+                UpdatedComponent->SetWorldLocation(NewLocation);
+                //FVector CurrentLocation = UpdatedComponent->GetComponentLocation();
+                //if (NewLocation != CurrentLocation)
+                //{
+                //MoveDelta = NewLocation - CurrentLocation;
+                //}
+            }
+
+            if (pData->m_bRotatorBasicEnabledCache) {
+
+                FRotator r = UKismetMathLibrary::RLerp(pData->m_cStart.GetRotation().Rotator(), pData->m_cEnd.GetRotation().Rotator(), vector.Y, true);
+                if (r.ContainsNaN())
+                {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
+                    return;
+                }
+
+                NewQuat = r.Quaternion();
+                if (NewQuat.ContainsNaN())
+                {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
+                    return;
+                }
+                //FQuat quatDelta = pData->m_cRotatorRelativeToStartDelta.Quaternion() * vector.Y;
+                //NewQuat = quatDelta * pData->m_cStart.GetRotation();
+                //quatDelta.
+                /*
+                FRotator rotDelta = pData->m_cRotatorRelativeToStartDelta * vector.Y;
+                if (rotDelta.ContainsNaN())
+                {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 0, %s."), *rotDelta.ToString());
+                return;
+                }
+                FQuat quatDelta = rotDelta.Quaternion();
+                if (quatDelta.ContainsNaN())
+                {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 1, %s."), *quatDelta.ToString());
+                return;
+                }
+                NewQuat = quatDelta * pData->m_cStart.GetRotation();
+                if (NewQuat.ContainsNaN())
+                {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 2, %s."), *NewQuat.ToString());
+                return;
+                }
+                */
+            }
+
+            if (pData->m_bRotatorExtraEnabledCache) {
+                FRotator r = UKismetMathLibrary::RLerp(FRotator::ZeroRotator, pData->m_cLocalRotatorExtra, vector.Y, false);
+                if (r.ContainsNaN())
+                {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
+                    return;
+                }
+
+                FQuat q = r.Quaternion();
+                if (q.ContainsNaN())
+                {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *q.ToString());
+                    return;
+                }
+
+                NewQuat = q * NewQuat;
+                if (NewQuat.ContainsNaN())
+                {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
+                    return;
+                }
+            }
+
+            UpdatedComponent->SetWorldRotation(NewQuat);
+            //MoveUpdatedComponent(MoveDelta, NewQuat, false);
         }
 
-        if (pData->m_bRotatorBasicEnabledCache) {
-
-            FRotator r = UKismetMathLibrary::RLerp(pData->m_cStart.GetRotation().Rotator(), pData->m_cEnd.GetRotation().Rotator(), vector.Y, true);
-            if (r.ContainsNaN())
-            {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
-                return;
-            }
-
-            NewQuat = r.Quaternion();
-            if (NewQuat.ContainsNaN())
-            {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
-                return;
-            }
-            //FQuat quatDelta = pData->m_cRotatorRelativeToStartDelta.Quaternion() * vector.Y;
-            //NewQuat = quatDelta * pData->m_cStart.GetRotation();
-            //quatDelta.
-            /*
-            FRotator rotDelta = pData->m_cRotatorRelativeToStartDelta * vector.Y;
-            if (rotDelta.ContainsNaN())
-            {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 0, %s."), *rotDelta.ToString());
-            return;
-            }
-            FQuat quatDelta = rotDelta.Quaternion();
-            if (quatDelta.ContainsNaN())
-            {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 1, %s."), *quatDelta.ToString());
-            return;
-            }
-            NewQuat = quatDelta * pData->m_cStart.GetRotation();
-            if (NewQuat.ContainsNaN())
-            {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 2, %s."), *NewQuat.ToString());
-            return;
-            }
-            */
+        if (pData->m_bScaleEnabledCache) {
+            FVector NewScale = UKismetMathLibrary::VLerp(pData->m_cStart.GetScale3D(), pData->m_cEnd.GetScale3D(), vector.Z);
+            UpdatedComponent->SetWorldScale3D(NewScale);
         }
-
-        if (pData->m_bRotatorExtraEnabledCache) {
-            FRotator r = UKismetMathLibrary::RLerp(FRotator::ZeroRotator, pData->m_cLocalRotatorExtra, vector.Y, false);
-            if (r.ContainsNaN())
-            {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
-                return;
-            }
-
-            FQuat q = r.Quaternion();
-            if (q.ContainsNaN())
-            {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *q.ToString());
-                return;
-            }
-
-            NewQuat = q * NewQuat;
-            if (NewQuat.ContainsNaN())
-            {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
-                return;
-            }
-        }
-
-        UpdatedComponent->SetWorldRotation(NewQuat);
-        //MoveUpdatedComponent(MoveDelta, NewQuat, false);
     }
 
-    if (pData->m_bScaleEnabledCache) {
-        FVector NewScale = UKismetMathLibrary::VLerp(pData->m_cStart.GetScale3D(), pData->m_cEnd.GetScale3D(), vector.Z);
-        UpdatedComponent->SetWorldScale3D(NewScale);
+    if (pData->m_pExtraDataOnHeap) {
+        pData->m_pExtraDataOnHeap->m_cUpdateDelegate.ExecuteIfBound(*pData, vector);
     }
 
 }
@@ -469,13 +484,23 @@ void UMyTransformUpdateSequenceMovementComponent::onTimeLineFinished()
         MY_VERIFY(false);
         return;
     }
+
+    bool bSkipBasicTransformUpdate = false;
+    if (pData->m_pExtraDataOnHeap) {
+        bSkipBasicTransformUpdate = pData->m_pExtraDataOnHeap->m_bSkipBasicTransformUpdate;
+    }
+
     FTransform cT = UpdatedComponent->GetComponentTransform();
-    if (!cT.Equals(pData->m_cEnd, 1.0f)) {
+    if (!bSkipBasicTransformUpdate && !cT.Equals(pData->m_cEnd, 1.0f)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time line finished but not equal: now %s. target %s."), *cT.ToString(), *pData->m_cEnd.ToString());
     }
 
     //fix up any defloat by direct set transform
-    UpdatedComponent->SetWorldTransform(pData->m_cEnd);
+    if (bSkipBasicTransformUpdate) {
+    }
+    else {
+        UpdatedComponent->SetWorldTransform(pData->m_cEnd);
+    }
 
     MY_VERIFY(IsValid(pCurve));
     MY_VERIFY(pData);
@@ -496,8 +521,13 @@ void UMyTransformUpdateSequenceMovementComponent::onTimeLineFinished()
     }
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onTimeLineFinished, time used %f, time range %f, %f, value range %f, %f."), s1 - m_dDebugTimeLineStartRealTime, minTime, maxTime, minValue, maxValue);
 
-    removeSeqFromHead(1);
     m_cTimeLine.Stop();
+
+    if (pData->m_pExtraDataOnHeap) {
+        pData->m_pExtraDataOnHeap->m_cFinishDeleget.ExecuteIfBound(*pData);
+    }
+
+    removeSeqFromHead(1);
     tryStartNextSeq(TEXT("pre timeline finish"));
 }
 
@@ -572,6 +602,27 @@ void UMyTransformUpdateSequenceMovementComponent::TickComponent(float DeltaTime,
 
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent out."));
 }
+
+UMyTransformUpdateSequenceInterface::UMyTransformUpdateSequenceInterface(const FObjectInitializer& ObjectInitializer)
+{
+
+};
+
+
+void FMyLocationOfZRotationAroundPointCoordinateCpp::interp(const FMyLocationOfZRotationAroundPointCoordinateCpp& start, const FMyLocationOfZRotationAroundPointCoordinateCpp& end, float percent, FMyLocationOfZRotationAroundPointCoordinateCpp& result)
+{
+    float percentFixed = FMath::Clamp<float>(percent, 0, 1);
+    result = start + (end - start) * percentFixed;
+}
+
+void FMyTransformOfZRotationAroundPointCoordinateCpp::interp(const FMyTransformOfZRotationAroundPointCoordinateCpp& start, const FMyTransformOfZRotationAroundPointCoordinateCpp& end, float percent, FMyTransformOfZRotationAroundPointCoordinateCpp& result)
+{
+    float percentFixed = FMath::Clamp<float>(percent, 0, 1);
+
+    FMyLocationOfZRotationAroundPointCoordinateCpp::interp(start.m_cLocation, end.m_cLocation, percentFixed, result.m_cLocation);
+    result.m_cRotatorOffsetFacingCenterPoint = start.m_cRotatorOffsetFacingCenterPoint + (end.m_cRotatorOffsetFacingCenterPoint - start.m_cRotatorOffsetFacingCenterPoint) * percentFixed;
+};
+
 
 int32 UMyCommonUtilsLibrary::getEngineNetMode(AActor *actor)
 {
@@ -1332,4 +1383,204 @@ void UMyCommonUtilsLibrary::helperAddWaitStep(float waitTime, FString debugStr, 
     }
 
     UMyCommonUtilsLibrary::helperAddWaitStep(waitTime, debugStr, actorComponentsSortedGroup);
+}
+
+void UMyCommonUtilsLibrary::calcPointTransformWithLocalOffset(const FTransform& pointTransform, FVector localOffset, FTransform& pointTransformFixed)
+{
+    FTransform offset;
+    offset.SetLocation(localOffset);
+
+    pointTransformFixed = offset * pointTransform;
+
+    //faster path that ignored scale
+    //if (FMath::IsNearlyEqual(localOffset.X, 0), MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT) {
+    //
+    //}
+}
+
+FString UMyCommonUtilsLibrary::Conv_MyTransformZRotationToString(const FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation)
+{
+    return myTransformZRotation.ToString();
+
+    return TEXT("[") + myTransformZRotation.m_cLocation.ToString() + TEXT("(") + myTransformZRotation.m_cRotatorOffsetFacingCenterPoint.ToString() + TEXT(")]");
+};
+
+void UMyCommonUtilsLibrary::MyTransformZRotationToTransformWorld(const FTransform& centerPointTransformWorld, const FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation, FTransform& transformWorld)
+{
+    //MY_VERIFY(transformZRotation.m_cLocation.m_fRadius >= 0);
+
+    float radiansYaw = FMath::DegreesToRadians(myTransformZRotation.m_cLocation.m_fYawOnXYPlane);
+    float s, c;
+    FMath::SinCos(&s, &c, radiansYaw);
+
+    FVector loc0;
+    loc0.X = c * myTransformZRotation.m_cLocation.m_fRadiusOnXYPlane;
+    loc0.Y = s * myTransformZRotation.m_cLocation.m_fRadiusOnXYPlane;
+    loc0.Z = myTransformZRotation.m_cLocation.m_fZoffset;
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("0 loc0: %s, s %f, r %f."), *loc0.ToString(), s, radiansYaw);
+
+    FQuat toCenter = FRotationMatrix::MakeFromX(-loc0).ToQuat();
+    //FQuat toCenter = UKismetMathLibrary::FindLookAtRotation(loc0, FVector::ZeroVector).Quaternion();
+
+    //FRotator UKismetMathLibrary::FindLookAtRotation(const FVector& Start, const FVector& Target)
+    //FRotator UKismetMathLibrary::MakeRotFromX(const FVector& X)
+
+    FQuat quat0 = toCenter * myTransformZRotation.m_cRotatorOffsetFacingCenterPoint.Quaternion();
+
+    //FRotator rot0 = UKismetMathLibrary::ComposeRotators(ringPointLocalRotator, FRotator(0, FMath::RadiansToDegrees(radiansFixed), 0));
+
+    FTransform T0;
+    T0.SetLocation(loc0);
+    T0.SetRotation(quat0);
+
+    transformWorld = T0 * centerPointTransformWorld;
+}
+
+void UMyCommonUtilsLibrary::TransformWorldToMyTransformZRotation(const FTransform& centerPointTransformWorld, const FTransform& transformWorld, FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation)
+{
+    FTransform T0;
+    T0 = transformWorld * centerPointTransformWorld.Inverse();
+
+    FVector loc0 = T0.GetLocation();
+    FQuat quat0 = T0.GetRotation();
+
+    myTransformZRotation.m_cLocation.m_fRadiusOnXYPlane = FMath::Sqrt(loc0.X * loc0.X + loc0.Y * loc0.Y);
+    float s = loc0.Y / myTransformZRotation.m_cLocation.m_fRadiusOnXYPlane;;
+    //float radiansYaw = FMath::Asin(s);
+    float radiansYaw = FMath::Atan2(loc0.Y, loc0.X); //ATan use UE4's X Y coordinate
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("1 loc0: %s, s %f, r %f."), *loc0.ToString(), s, radiansYaw);
+
+    myTransformZRotation.m_cLocation.m_fYawOnXYPlane = FRotator::ClampAxis(FMath::RadiansToDegrees(radiansYaw));
+    myTransformZRotation.m_cLocation.m_fZoffset = loc0.Z;
+
+    FQuat toCenter = FRotationMatrix::MakeFromX(-loc0).ToQuat();
+
+    myTransformZRotation.m_cRotatorOffsetFacingCenterPoint = (toCenter.Inverse() * quat0).Rotator();
+}
+
+/*
+void UMyCommonUtilsLibrary::calcRingPointTransformAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, float degree, FTransform& ringPointTransform, FVector ringPointLocalOffset, FRotator ringPointLocalRotator)
+{
+ */
+ /*
+    FTransform TA, TB;
+    FVector vA = ringPointLocalOffset;
+    vA.X += ringRadius;
+
+    TA.SetLocation(vA);
+    TA.SetRotation(ringPointLocalRotator.Quaternion());
+
+
+    FRotator rB = FRotator::ZeroRotator;
+    rB.Yaw = degree;
+
+    TB.SetRotation(rB.Quaternion());
+
+    FTransform T0 = TA * TB;
+
+    ringPointTransform = T0 * centerPointTransform;
+    */
+
+    //use 2d->3d translate style so we can map in two sides in one-one way
+
+    /*
+    float radiusFixed, radiansDelta;
+    if (0 != fixRadiusAndRadiansForLocalOffsetOn2DCycle(ringRadius, ringPointLocalOffset.X, ringPointLocalOffset.Y, radiusFixed, radiansDelta))
+    {
+        return;
+    }
+
+    float radiansFixed = FMath::DegreesToRadians(degree) + radiansDelta;
+
+    calcRingPointTransformAroundCenterPointZAxisWithFixedData(centerPointTransform, radiusFixed, radiansFixed, ringPointTransform, ringPointLocalOffset.Z, ringPointLocalRotator);
+}
+
+
+void UMyCommonUtilsLibrary::calcWorldTransformFromWorldOffsetAndDegreeForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, float degree, const FTransform& worldOffset, FTransform& worldTransform, FVector ringPointLocalOffset, FRotator ringPointLocalRotator)
+{
+    float radiusFixed, radiansDelta;
+    if (0 != fixRadiusAndRadiansForLocalOffsetOn2DCycle(ringRadius, ringPointLocalOffset.X, ringPointLocalOffset.Y, radiusFixed, radiansDelta))
+    {
+        return;
+    }
+
+    float radiansFixed = FMath::DegreesToRadians(degree) + radiansDelta;
+
+    FTransform ringPointTransform;
+    calcRingPointTransformAroundCenterPointZAxisWithFixedData(centerPointTransform, radiusFixed, radiansFixed, ringPointTransform, ringPointLocalOffset.Z, ringPointLocalRotator);
+
+    FQuat ringPointFRotator(0, 0, FMath::RadiansToDegrees(radiansFixed)).Quaternion() * centerPointTransform.GetRotation();
+
+    FVector locLocalOffsetTowardOuter;
+
+    worldTransform.SetLocation(worldOffset.GetLocation() + ringPointTransform.GetLocation());
+    worldTransform.SetRotation((worldOffset.GetRotation().Rotator() + ringPointTransform.GetRotation().Rotator()).Quaternion());
+    worldTransform.SetScale3D(FVector(1, 1, 1));
+}
+
+void UMyCommonUtilsLibrary::calcWorldOffsetAndDegreeFromWorldTransformForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, const FTransform& worldTransform, float &degree, FTransform& worldOffset, FVector ringPointLocalOffset, FRotator ringPointLocalRotator)
+{
+    float radiusFixed, radiansDelta;
+    if (0 != fixRadiusAndRadiansForLocalOffsetOn2DCycle(ringRadius, ringPointLocalOffset.X, ringPointLocalOffset.Y, radiusFixed, radiansDelta))
+    {
+        return;
+    }
+
+    FQuat centerPointQuat = centerPointTransform.GetRotation();
+    FVector worldPointRelativePosi = worldTransform.GetLocation() - centerPointTransform.GetLocation();
+
+    FVector posiMapped;
+    posiMapped.X = FVector::DotProduct(centerPointQuat.GetAxisX(), worldPointRelativePosi);
+    posiMapped.Y = FVector::DotProduct(centerPointQuat.GetAxisY(), worldPointRelativePosi);
+    float radiansMapped = posiMapped.HeadingAngle();
+
+    FTransform ringPointTransform;
+    calcRingPointTransformAroundCenterPointZAxisWithFixedData(centerPointTransform, radiusFixed, radiansMapped, ringPointTransform, ringPointLocalOffset.Z, ringPointLocalRotator);
+
+    degree = FMath::RadiansToDegrees(radiansMapped - radiansDelta);
+
+    worldOffset.SetLocation(worldTransform.GetLocation() - ringPointTransform.GetLocation());
+    worldOffset.SetRotation((worldTransform.GetRotation().Rotator() - ringPointTransform.GetRotation().Rotator()).Quaternion());
+    worldOffset.SetScale3D(FVector(1, 1, 1));
+}
+
+void UMyCommonUtilsLibrary::calcRingPointTransformAroundCenterPointZAxisWithFixedData(const FTransform& centerPointTransform, float radiusFixed, float radiansFixed, FTransform& ringPointTransform, float ringPointLocalZOffset, const FRotator& ringPointLocalRotator)
+{
+    float s, c;
+    FMath::SinCos(&s, &c, radiansFixed);
+
+    //enter 3d domain
+    FVector loc0;
+    loc0.X = c * radiusFixed;
+    loc0.Y = s * radiusFixed;
+    loc0.Z = ringPointLocalZOffset;
+
+    FRotator rot0 = UKismetMathLibrary::ComposeRotators(ringPointLocalRotator, FRotator(0, FMath::RadiansToDegrees(radiansFixed), 0));
+
+    FTransform T0;
+    T0.SetLocation(loc0);
+    T0.SetRotation(rot0.Quaternion());
+
+    ringPointTransform = T0 * centerPointTransform;
+}
+*/
+
+int32 UMyCommonUtilsLibrary::fixRadiusAndRadiansForLocalOffsetOn2DCycle(float radius, float xOffset, float yOffset, float &radiusFixed, float &radiansDelta)
+{
+    if (radius < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("radius is negative: %f."), radius);
+        return -1;
+    }
+
+    radiusFixed = FMath::Sqrt(radius * radius + yOffset * yOffset) + xOffset;
+
+    if (radiusFixed < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("radiusFixed is negative: %f, radius %f, xOffset %f."), radiusFixed, radius, xOffset);
+        return -2;
+    }
+
+    radiansDelta = FMath::Atan2(yOffset, radius);
+
+    return 0;
 }

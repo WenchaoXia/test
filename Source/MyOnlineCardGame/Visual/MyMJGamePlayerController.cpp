@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MyMJGamePlayerController.h"
+#include "MyMJGameRoomViewerPawnBase.h"
 
 #include "MyMJGameVisualInterfaces.h"
 
@@ -460,7 +461,7 @@ void UMyMJGameUIManagerCpp::changeUIMode(MyMJGameUIModeCpp UIMode)
 
         if (UIMode == MyMJGameUIModeCpp::InRoomPlay) {
             UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = getInRoomUIMain(true, false);
-            if (pUI) {
+            if (pUI && !pUI->GetIsVisible()) {
                 pUI->AddToPlayerScreen();
             }
         }
@@ -530,6 +531,7 @@ UMyMJGameInRoomUIMainWidgetBaseCpp* UMyMJGameUIManagerCpp::getInRoomUIMain(bool 
 AMyMJGamePlayerControllerCpp::AMyMJGamePlayerControllerCpp() : Super()
 {
     m_pUIManager = CreateDefaultSubobject<UMyMJGameUIManagerCpp>(TEXT("UI manager"));
+    m_iViewRoleWhenNotAttend = -1;
 };
 
 AMyMJGamePlayerControllerCpp::~AMyMJGamePlayerControllerCpp()
@@ -543,6 +545,48 @@ void AMyMJGamePlayerControllerCpp::clearInGame()
 
     m_pUIManager->reset();
 };
+
+void AMyMJGamePlayerControllerCpp::resetCameraAndUI()
+{
+    int32 viewRole = (int32)m_eDataRoleType;
+    if (viewRole < 0 || viewRole >= 4) {
+        if (m_iViewRoleWhenNotAttend >= 0 && m_iViewRoleWhenNotAttend < 4) {
+            viewRole = m_iViewRoleWhenNotAttend;
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_iViewRoleWhenNotAttend not valid and data role not attender, using default role now. m_eDataRoleType %d, "), (int32)m_eDataRoleType, m_iViewRoleWhenNotAttend);
+            viewRole = 0;
+        }
+    }
+
+    GetPawn();
+};
+
+AMyMJGameRoomViewerPawnBaseCpp* AMyMJGamePlayerControllerCpp::helperGetRoomViewerPawn(bool verify)
+{
+    AMyMJGameRoomViewerPawnBaseCpp* ret = NULL;
+    while (1) {
+        APawn *pPawn = GetPawn();
+        if (!IsValid(pPawn)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("possed pawn is invalid: %p."), pPawn);
+            break;
+        }
+
+        ret = Cast<AMyMJGameRoomViewerPawnBaseCpp>(pPawn);
+        if (!IsValid(ret)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("possed pawn is not a AMyMJGameRoomViewerPawnBaseCpp, class: %s."), *pPawn->GetClass()->GetName());
+            ret = NULL;
+            break;
+        }
+        break;
+    }
+
+    if (verify) {
+        MY_VERIFY(ret);
+    }
+
+    return NULL;
+}
 
 AMyMJGamePlayerControllerCpp* AMyMJGamePlayerControllerCpp::helperGetLocalController(const UObject* WorldContextObject)
 {
