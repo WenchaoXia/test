@@ -21,7 +21,9 @@ FMyMJGameEventTimeCfgCpp::FMyMJGameEventTimeCfgCpp()
 
     m_uiThrowDices = 500;
 
-    m_uiDistCardsDone = 0;
+    m_uiDistCards = 100;
+
+    m_uiDistCardsLast = 100;
 
     m_uiHuBornLocalCS = 1000;
 
@@ -49,7 +51,17 @@ uint32 FMyMJGameEventTimeCfgCpp::helperGetDeltaDur(MyMJGameRuleTypeCpp ruleType,
     uint32 ret = 0;
     MyMJGamePusherTypeCpp ePusherType = delta.getType();
 
-    if (ePusherType == MyMJGamePusherTypeCpp::ActionTakeCards) {
+    if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart) {
+        const FMyMJCoreDataDeltaCpp* pCD = delta.getCoreDataDeltaConst();
+        MY_VERIFY(pCD);
+        if (pCD->m_eGameState == MyMJGameStateCpp::CardsDistributed && pCD->m_bUpdateGameState) {
+            ret = m_uiDistCardsLast;
+        }
+        else {
+            ret = m_uiDistCards;
+        }
+    }
+    else if (ePusherType == MyMJGamePusherTypeCpp::ActionTakeCards) {
         ret = m_uiTakeCards;
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
@@ -361,7 +373,6 @@ uint32 UMyMJDataSequencePerRoleCpp::addPusherResult(const FMyMJGameEventTimeCfgC
 
     uint32 dur_ms = 0;
 
-    //only delta may have dur
     if (pPusherResult->m_aResultDelta.Num() > 0) {
         MY_VERIFY(pPusherResult->m_aResultDelta.Num() == 1);
 

@@ -33,6 +33,7 @@ AMyMoveWithSeqActorBaseCpp::~AMyMoveWithSeqActorBaseCpp()
 
 }
 
+//Todo:: verify its correctness when root scene scaled
 int32 AMyMoveWithSeqActorBaseCpp::getModelInfo(FMyActorModelInfoBoxCpp& modelInfo, bool verify) const
 {
     //ignore the root scene/actor's scale, but calc from the box
@@ -44,7 +45,17 @@ int32 AMyMoveWithSeqActorBaseCpp::getModelInfo(FMyActorModelInfoBoxCpp& modelInf
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("name %s, box scale %s."), *GetName(), *m_pMainBox->GetComponentScale().ToString());
     modelInfo.m_cCenterPointRelativeLocation = m_pMainBox->RelativeLocation;// * actorScale3D;
 
-    return 0;
+    int32 ret = 0;
+    if (modelInfo.m_cBoxExtend.Size() < 1) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("class %s: model size is too small: %s."), *this->GetClass()->GetName(), *modelInfo.m_cBoxExtend.ToString());
+        ret = -1;
+    }
+
+    if (verify) {
+        MY_VERIFY(ret == 0);
+    }
+
+    return ret;
 }
 
 UMyTransformUpdateSequenceMovementComponent* AMyMoveWithSeqActorBaseCpp::getTransformUpdateSequence(bool verify)
@@ -166,7 +177,7 @@ void AMyMoveWithSeqActorBaseCpp::helperTestAnimationStep(float time, FString deb
     meta.m_cModelBoxExtend = FVector(20, 30, 60);
 
     stepData.m_fTimePercent = 1;
-    stepData.m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::offsetFromPrevLocation;
+    stepData.m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::OffsetFromPrevLocation;
     stepData.m_cLocationOffsetPercent = FVector(0, 0, 1);
 
     TArray<UMyTransformUpdateSequenceMovementComponent *> actorComponentsSortedGroup;
@@ -568,6 +579,63 @@ void AMyMJGameCardBaseCpp::helperToSeqActors(const TArray<AMyMJGameCardBaseCpp*>
         MY_VERIFY(pI != NULL);
         aBase.Emplace(pI);
     }
+};
+
+
+
+struct FMyControlledRollExtraDataCpp : public FTransformUpdateSequencExtraDataBaseCpp
+{
+
+public:
+
+    FMyControlledRollExtraDataCpp() : FTransformUpdateSequencExtraDataBaseCpp()
+    {
+    };
+
+    virtual ~FMyControlledRollExtraDataCpp()
+    {
+    };
+
+    virtual FTransformUpdateSequencExtraDataBaseCpp* createOnHeap() override
+    {
+        FMyControlledRollExtraDataCpp* ret = new FMyControlledRollExtraDataCpp();
+        MY_VERIFY(ret);
+        return ret;
+    };
+
+    virtual void copyContentFrom(const FTransformUpdateSequencExtraDataBaseCpp& other) override
+    {
+        const FMyControlledRollExtraDataCpp *pOther = StaticCast<const FMyControlledRollExtraDataCpp *>(&other);
+        *this = *pOther;
+    };
+
+    float totalTime;
+    float g;
+    bool rollAxis; //whether x or y
+
+
+    FTransform start;
+    FTransform end;
+};
+
+AMyMJGameDiceBaseCpp::AMyMJGameDiceBaseCpp() : Super()
+{
+
+};
+
+AMyMJGameDiceBaseCpp::~AMyMJGameDiceBaseCpp()
+{
+
+};
+
+void AMyMJGameDiceBaseCpp::onTransformSeqUpdated(const struct FTransformUpdateSequencDataCpp& data, const FVector& vector)
+{
+
+};
+
+void AMyMJGameDiceBaseCpp::onTransformSeqFinished(const struct FTransformUpdateSequencDataCpp& data)
+{
+
 };
 
 

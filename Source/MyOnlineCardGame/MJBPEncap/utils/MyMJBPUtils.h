@@ -152,4 +152,7 @@ public:
 
     //return "Invalid" if have error
     static MyMJGameWeaveVisualTypeCpp helperGetWeaveVisualTypeFromWeave(MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave);
+
+    UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
+    static void helperGetDiceNumbersFromMask(int32 mask, int32 &number0, int32 &number1);
 };

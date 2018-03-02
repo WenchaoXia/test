@@ -4,6 +4,8 @@
 
 #include "MyMJGameRoomLevelScriptActorCpp.h"
 
+#include "MyMJGamePlayerController.h"
+
 #include "MJ/Utils/MyMJUtils.h"
 #include "MJBPEncap/utils/MyMJBPUtils.h"
 
@@ -23,6 +25,7 @@
 
 #define MY_MJ_GAME_ROOM_VISUAL_LOOP_TIME_MS (17)
 #define MY_CARD_ACTOR_MAX (1000)
+#define MY_DICE_ACTOR_MAX (10)
 
 int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp& cPointCfgCache) const
 {
@@ -70,8 +73,6 @@ int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp
 UMyMJGameDeskResManagerCpp::UMyMJGameDeskResManagerCpp() : Super()
 {
     m_pInRoomcfg = NULL;
-
-    m_pCardCDOInGame = NULL;
 };
 
 UMyMJGameDeskResManagerCpp::~UMyMJGameDeskResManagerCpp()
@@ -98,9 +99,15 @@ bool UMyMJGameDeskResManagerCpp::checkSettings(bool bCheckDataInGame) const
 
     if (bCheckDataInGame)
     {
-        if (!IsValid(getCardBaseCDOInGame()))
+        if (!IsValid(getCardActorByIdxConst(0)))
         {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card base CDO not exist, may be cfg not correct!"));
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card instance not exist, may be cfg not correct!"));
+            return false;
+        }
+
+        if (!IsValid(getDiceActorByIdxConst(0)))
+        {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("dice instance not exist, may be cfg not correct!"));
             return false;
         }
     }
@@ -110,11 +117,6 @@ bool UMyMJGameDeskResManagerCpp::checkSettings(bool bCheckDataInGame) const
 
 void UMyMJGameDeskResManagerCpp::reset()
 {
-    if (IsValid(m_pCardCDOInGame)) {
-        m_pCardCDOInGame->K2_DestroyActor();
-        m_pCardCDOInGame = NULL;
-    }
-
     for (int32 i = 0; i < m_aCardActors.Num(); i++)
     {
         AMyMJGameCardBaseCpp* pA = m_aCardActors[i];
@@ -123,6 +125,15 @@ void UMyMJGameDeskResManagerCpp::reset()
         }
     }
     m_aCardActors.Reset();
+
+    for (int32 i = 0; i < m_aDiceActors.Num(); i++)
+    {
+        AMyMJGameDiceBaseCpp* pA = m_aDiceActors[i];
+        if (IsValid(pA)) {
+            pA->K2_DestroyActor();
+        }
+    }
+    m_aDiceActors.Reset();
 
     for (int32 i = 0; i < m_aTrivalDancingActors.Num(); i++)
     {
@@ -138,34 +149,8 @@ bool UMyMJGameDeskResManagerCpp::OnBeginPlay()
 {
     reset();
 
-    if (!IsValid(m_pCardCDOInGame)) {
-
-        if (!checkSettings(false)) {
-            return false;
-        }
-
-        AActor *parent = Cast<AActor>(GetOuter());
-        MY_VERIFY(IsValid(parent));
-        UWorld *w = parent->GetWorld();
-        MY_VERIFY(IsValid(w));
-
-        FActorSpawnParameters SpawnParams;
-        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-        m_pCardCDOInGame = w->SpawnActor<AMyMJGameCardBaseCpp>(m_pInRoomcfg->m_cMainActorClassCfg.m_cCardClass, FVector(0, 0, 50), FRotator(0, 0, 0), SpawnParams);
-        
-        /*
-        if (!m_pCardCDOInGame->setResPathWithRet(m_cCfgCardResPath))
-        {
-            m_pCardCDOInGame->Destroy();
-            m_pCardCDOInGame = NULL;
-            return false;
-        }
-        */
-
-        MY_VERIFY(IsValid(m_pCardCDOInGame));
-        m_pCardCDOInGame->SetActorHiddenInGame(true);
-
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("card CDO in game created."));
+    if (!checkSettings(false)) {
+        return false;
     }
 
     return true;
@@ -173,31 +158,45 @@ bool UMyMJGameDeskResManagerCpp::OnBeginPlay()
 
 int32 UMyMJGameDeskResManagerCpp::prepareForVisual(int32 cardActorNum)
 {
-    //Test only
+    if (UMyCommonUtilsLibrary::helperPrepareActorsInArray<AMyMJGameCardBaseCpp>(this, cardActorNum, getVisualCfg()->m_cMainActorClassCfg.m_cCardClass, m_aCardActors, true) < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to prepare card actor."));
+        return -1;
+    }
 
-    return prepareCardActor(cardActorNum);
+    int32 diceActorNum = 2;
+    if (UMyCommonUtilsLibrary::helperPrepareActorsInArray<AMyMJGameDiceBaseCpp>(this, diceActorNum, getVisualCfg()->m_cMainActorClassCfg.m_cDiceClass, m_aDiceActors, true) < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to prepare dice actor."));
+        return -2;
+    }
+
+    return 0;
 };
 
 int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const
 {
     cModelInfoCache.clear();
 
-    const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDOInGame();
+    const AMyMJGameCardBaseCpp* pCDO = getCardActorByIdxConst(0);
     if (!IsValid(pCDO)) {
         return -1;
     }
 
-    int32 ret = pCDO->getModelInfo(cModelInfoCache.m_cCardModelInfo);
+    int32 ret = pCDO->getModelInfo(cModelInfoCache.m_cCardModelInfo, false);
     if (ret != 0) {
         return ret;
     }
 
-    if (cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.X < 1 || cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.Y < 1 || cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.Z < 1) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("mode size is too small: %s."), *cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.ToString());
+    const AMyMJGameDiceBaseCpp* pDice = getDiceActorByIdxConst(0);
+    if (!IsValid(pDice)) {
         return -1;
     }
 
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("retrieveCfgCache, pCDO name %s, card box: %s."), *pCDO->GetName(), *cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.ToString());
+    ret = pDice->getDiceModelInfo(cModelInfoCache.m_cDiceModelInfo, false);
+    if (ret != 0) {
+        return ret;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("retrieveCfgCache, pCDO name %s, card box: %s."), *pCDO->GetName(), *cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.ToString());
 
     return 0;
 };
@@ -232,19 +231,40 @@ const UMyMJGameInRoomVisualCfgType* UMyMJGameDeskResManagerCpp::helperGetVisualC
     return ret;
 };
 
-AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx)
+AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx, bool verifyValid)
 {
     MY_VERIFY(idx >= 0);
     MY_VERIFY(idx < MY_CARD_ACTOR_MAX); //we don't allow too much
     if (idx >= m_aCardActors.Num()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("requiring a card not prepared ahead, existing %d, required idx %d."), m_aCardActors.Num(), idx);
-        prepareCardActor(idx + 1);
+        UMyCommonUtilsLibrary::helperPrepareActorsInArray<AMyMJGameCardBaseCpp>(this, idx + 1, getVisualCfg()->m_cMainActorClassCfg.m_cCardClass, m_aCardActors, true);
+        //prepareCardActor(idx + 1);
     }
 
-    MY_VERIFY(idx < m_aCardActors.Num());
-    AMyMJGameCardBaseCpp* pRet = m_aCardActors[idx];
+    AMyMJGameCardBaseCpp* pRet = getCardActorByIdxConst(idx);
 
-    MY_VERIFY(IsValid(pRet));
+    if (verifyValid) {
+        MY_VERIFY(IsValid(pRet));
+    }
+
+    return pRet;
+}
+
+AMyMJGameDiceBaseCpp* UMyMJGameDeskResManagerCpp::getDiceActorByIdx(int32 idx, bool verifyValid)
+{
+    MY_VERIFY(idx >= 0);
+    MY_VERIFY(idx < MY_DICE_ACTOR_MAX); //we don't allow too much
+    if (idx >= m_aDiceActors.Num()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("requiring a dice not prepared ahead, existing %d, required idx %d."), m_aDiceActors.Num(), idx);
+        UMyCommonUtilsLibrary::helperPrepareActorsInArray<AMyMJGameDiceBaseCpp>(this, idx + 1, getVisualCfg()->m_cMainActorClassCfg.m_cDiceClass, m_aDiceActors, true);
+    }
+
+    AMyMJGameDiceBaseCpp* pRet = getDiceActorByIdxConst(idx);
+
+    if (verifyValid) {
+        MY_VERIFY(IsValid(pRet));
+    }
+
     return pRet;
 }
 
@@ -335,62 +355,6 @@ AMyMJGameTrivalDancingActorBaseCpp* UMyMJGameDeskResManagerCpp::getTrivalDancing
     return pNewActor;
 }
 
-
-int32 UMyMJGameDeskResManagerCpp::prepareCardActor(int32 count2reach)
-{
-    MY_VERIFY(count2reach >= 0);
-    MY_VERIFY(count2reach < MY_CARD_ACTOR_MAX); //we don't allow too much
-
-    const TSubclassOf<AMyMJGameCardBaseCpp>& cardClass = getVisualCfg()->m_cMainActorClassCfg.m_cCardClass;
-
-    double s0 = FPlatformTime::Seconds();
-
-    //const AMyMJGameCardBaseCpp* pCDO = getCardBaseCDOInGame();
-    //if (!IsValid(pCDO)) {
-        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pCDO is not valid %p, possible no card class specified."), pCDO);
-        //return -1;
-    //}
-
-    if (!IsValid(cardClass)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cCardClass is invalid: %p"), cardClass.Get());
-        return -1;
-    }
-
-    int32 l = m_aCardActors.Num();
-    for (int32 i = (l - 1); i >= count2reach; i--) {
-        AMyMJGameCardBaseCpp* pPoped = m_aCardActors.Pop();
-        pPoped->K2_DestroyActor();
-    }
-
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-    AActor *parent = Cast<AActor>(GetOuter());
-    MY_VERIFY(IsValid(parent));
-    UWorld *w = parent->GetWorld();
-    MY_VERIFY(IsValid(w));
-
-    l = m_aCardActors.Num();
-    int32 iDebugCOunt = 0;
-    for (int32 i = l; i < count2reach; i++) {
-        //AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(pCDO->StaticClass(), SpawnParams); //Warning: staticClass is not virtual class, so you can't get actual class
-        AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(cardClass, FVector(0, 0, 50), FRotator(0, 0, 0), SpawnParams);
-        //pNewCardActor->setResPathWithRet(m_cCfgCardResPath);
-
-        MY_VERIFY(IsValid(pNewCardActor));
-        pNewCardActor->SetActorHiddenInGame(true);
-        MY_VERIFY(m_aCardActors.Emplace(pNewCardActor) == i);
-        iDebugCOunt++;
-    }
-
-    double s1 = FPlatformTime::Seconds();
-
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("prepareCardActor %s, to %d, %d created, time used %f."), *cardClass->GetName(), count2reach, iDebugCOunt, s1 - s0);
-
-    return 0;
-    //GetWorld()->SpawnActor<AProjectile>(Location, Rotation, SpawnInfo);
-}
-
 AMyMJGameRoomCpp::AMyMJGameRoomCpp() : Super()
 {
     m_pDataSuit = CreateDefaultSubobject<UMyMJGameRoomDataSuite>(TEXT("desk suit"));
@@ -435,7 +399,7 @@ void AMyMJGameRoomCpp::getCameraData(MyMJGameRoleTypeCpp roleType, FMyCardGameCa
 
     cameraData.m_cStaticData.m_cCenterPoint = m_pDeskAreaActor->GetActorTransform();
     cameraData.m_cStaticData.m_fMoveTime = pVisualCfg->m_cCameraCfg.m_fAttenderCameraMoveTime;
-    cameraData.m_cStaticData.m_pMoveCurve = pVisualCfg->m_cCameraCfg.m_pAttenderCameraMoveCurve;
+    cameraData.m_cStaticData.m_pMoveCurve = UMyCommonUtilsLibrary::getCurveVectorFromSettings(pVisualCfg->m_cCameraCfg.m_cAttenderCameraMoveCurve);
 
     UMyCommonUtilsLibrary::TransformWorldToMyTransformZRotation(FTransform(), pVisualCfg->m_cCameraCfg.m_cAttenderCameraRelativeTransformAsAttender0, cameraData.m_cDynamicData.m_cMyTransformOfZRotation);
     cameraData.m_cDynamicData.m_cMyTransformOfZRotation.m_cLocation.m_fYawOnXYPlane = FRotator::ClampAxis(cameraData.m_cDynamicData.m_cMyTransformOfZRotation.m_cLocation.m_fYawOnXYPlane - 90 * (int32)roleType);
@@ -446,6 +410,12 @@ void AMyMJGameRoomCpp::getCameraData(MyMJGameRoleTypeCpp roleType, FMyCardGameCa
 void AMyMJGameRoomCpp::startVisual()
 {
     bool bStarted = false;
+
+    if (0 != m_pResManager->prepareForVisual((27 + 3 + 2) * 4))
+    {
+        return;
+    }
+
     if (checkSettings()) {
         FMyMJGameDeskVisualCfgCacheCpp cCfgCache;
         if (0 == retrieveCfg(cCfgCache)) {
@@ -474,8 +444,6 @@ void AMyMJGameRoomCpp::startVisual()
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
         MY_VERIFY(false);
     }
-
-    m_pResManager->prepareForVisual((27 + 3 + 2) * 4);
 };
 
 void AMyMJGameRoomCpp::stopVisual()
@@ -564,27 +532,36 @@ int32 AMyMJGameRoomCpp::retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache)
     return 0;
 };
 
+MyMJGameRuleTypeCpp AMyMJGameRoomCpp::helperGetRuleTypeNow() const
+{
+    return getRoomDataSuiteVerified()->getDeskDataObjVerified()->getVisualDataRefConst().getCoreDataRefConst().getCoreDataPublicRefConst().m_cGameCfg.m_eRuleType;
+};
 
 void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
                                         const FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
                                         const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
                                         const TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
                                         const TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices,
-                                        uint32 uiSuggestedDur_ms)
+                                        bool bIsFullBaseReset,
+                                        uint32 uiFullBaseResetDur_ms)
 {
     const TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mIdCardMap = mNewActorDataIdCards;
     //cCoreData.checkPrivateDataInExpect();
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("updateVisualData, mIdCardMap.Num() %d, role %d, pusherIdLast %d, uiSuggestedDur_ms %u."), mIdCardMap.Num(), (uint8)cCoreData.getRole(), cCoreData.getCoreDataPublicRefConst().m_iPusherIdLast, uiSuggestedDur_ms);
 
     float fDur;
-    if (uiSuggestedDur_ms > 0) {
-        fDur = (float)uiSuggestedDur_ms / 1000;
+    UCurveVector *pCurve = NULL;
+    if (bIsFullBaseReset) {
+        fDur = (float)uiFullBaseResetDur_ms / 1000;
+        pCurve = UMyCommonUtilsLibrary::getCurveVectorFromSettings(m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cClientCommonUpdate.m_cMoveCurve);
+        //Todo: can use different curve for base reset
     }
     else {
-        fDur = m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cResyncUnexpectedIngame.m_fTotalTime;
+        fDur = m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cClientCommonUpdate.m_fTotalTime;
+        pCurve = UMyCommonUtilsLibrary::getCurveVectorFromSettings(m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cClientCommonUpdate.m_cMoveCurve);
     }
 
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("updateVisualData, mIdCardMap.Num() %d, role %d, pusherIdLast %d, uiSuggestedDur_ms %u, fDur %f."), mIdCardMap.Num(), (uint8)cCoreData.getRole(), cCoreData.getCoreDataPublicRefConst().m_iPusherIdLast, uiSuggestedDur_ms, fDur);
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("updateVisualData, mIdCardMap.Num() %d, role %d, pusherIdLast %d, bIsFullBaseReset %d, uiFullBaseResetDur_ms %u."), mIdCardMap.Num(), (uint8)cCoreData.getRole(), cCoreData.getCoreDataPublicRefConst().m_iPusherIdLast, bIsFullBaseReset, uiFullBaseResetDur_ms);
 
     for (auto& Elem : mIdCardMap)
     {
@@ -603,7 +580,7 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
         FTransformUpdateSequencDataCpp data;
         data.helperSetDataBySrcAndDst(pCardActor->GetTransform(), cInfoAndResult.m_cVisualResult.m_cTransform, fDur);
         pSeq->clearSeq();
-        pSeq->addSeqToTail(data, UMyCommonUtilsLibrary::getCurveVectorDefaultLinear());
+        pSeq->addSeqToTail(data, pCurve);
 
         pCardActor->addTargetToGoHistory(cInfoAndResult);
         pSeq->setHelperTransformFinal(cInfoAndResult.m_cVisualResult.m_cTransform);
@@ -626,17 +603,25 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
     int32 checkValue = cCoreData.getRoleDataPrivateRefConst().m_cCardValuePack.getByIdx(checkId);
 
     FString eventStr = TEXT("other");
-    if (cEvent.getPusherResult(false) && cEvent.getPusherResult(false)->m_aResultDelta.Num() > 0) {
-        eventStr = cEvent.getPusherResult(false)->m_aResultDelta[0].genDebugString();
+    if (cEvent.getPusherResult(false)) {
+        if (cEvent.getPusherResult(false)->m_aResultDelta.Num() > 0) {
+            eventStr = cEvent.getPusherResult(false)->m_aResultDelta[0].genDebugString();
+        }
+        else {
+            eventStr = TEXT("full base update");
+        }
     }
 
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("tipEventApplied: %s, dur %u, role %d, checking [%d:%d]"), *eventStr, cEvent.getDuration_ms(), (uint8)cCoreData.getRole(), checkId, checkValue);
+    float dur = (float)cEvent.getDuration_ms() / 1000;
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("tipEventApplied: %s, dur %u, role %d, checking [%d:%d]"), *eventStr, cEvent.getDuration_ms(), (uint8)cCoreData.getRole(), checkId, checkValue);
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("tipEventApplied: %s, dur %f, maintype %d."), *eventStr, dur, (uint8)cEvent.getMainType());
 
     //let's sum what happend, and inform BP layer
     if (cEvent.getMainType() == MyMJGameCoreRelatedEventMainTypeCpp::CorePusherResult) {
         const FMyMJGamePusherResultCpp* pPusherResult = cEvent.getPusherResult(true);
         if (pPusherResult->m_aResultBase.Num() > 0) {
-            //do it later
+
         }
         else {
             MY_VERIFY(pPusherResult->m_aResultDelta.Num() > 0);
@@ -665,7 +650,8 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
                 }
 
                 if (bGotPointerCfgForAttender) {
-                    showVisualTakeCards((float)cEvent.getDuration_ms() / 1000, cVisualPointForAttender.m_cCenterPointWorldTransform, aCardActors);
+                    IMyMJGameInRoomDeskInterface::Execute_showAttenderTakeCards(this, dur, idxAttender, cVisualPointForAttender.m_cCenterPointWorldTransform,
+                                                                                aCardActors);
                 }
 
             }
@@ -694,8 +680,10 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
 
                 if (bGotPointerCfgForAttender) {
                     const FMyMJRoleDataAttenderPublicCpp& attenderDataPublic = cCoreData.getRoleDataAttenderPublicRefConst(idxAttender);
-                    showVisualGiveOutCards((float)cEvent.getDuration_ms() / 1000, cVisualPointForAttender.m_cCenterPointWorldTransform, attenderDataPublic.m_aIdHandCards.Num(), 
-                                           aCardActorsGiveOutForAttender, aCardActorsOtherForAttender);
+
+                    IMyMJGameInRoomDeskInterface::Execute_showAttenderGiveOutCards(this, dur, idxAttender, cVisualPointForAttender.m_cCenterPointWorldTransform,
+                                                                                    attenderDataPublic.m_aIdHandCards.Num(),
+                                                                                    aCardActorsGiveOutForAttender, aCardActorsOtherForAttender);
                 }
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionWeave) {
@@ -725,10 +713,26 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
 
                 }
 
+                MyMJGameRuleTypeCpp eRuleType = helperGetRuleTypeNow();
+                MyMJGameWeaveVisualTypeCpp eWeaveVisualType = UMyMJBPUtilsLibrary::helperGetWeaveVisualTypeFromWeave(eRuleType, cWeave);
+
+                //first the bone, then the skin
                 if (bGotPointerCfgForAttender) {
-                    MyMJGameRuleTypeCpp eRuleType = cCoreData.getCoreDataPublicRefConst().m_cGameCfg.m_eRuleType;
-                    showVisualWeave((float)cEvent.getDuration_ms() / 1000, cVisualPointForAttender.m_cCenterPointWorldTransform, eRuleType, cWeave, aCardActorsWeaved, aCardActorsOther);
+                    IMyMJGameInRoomDeskInterface::Execute_showAttenderWeave(this, dur, idxAttender, cVisualPointForAttender.m_cCenterPointWorldTransform,
+                                                                            eWeaveVisualType, cWeave,
+                                                                            aCardActorsWeaved, aCardActorsOther);
+                    //showVisualWeave((float)cEvent.getDuration_ms() / 1000, cVisualPointForAttender.m_cCenterPointWorldTransform, eRuleType, cWeave, aCardActorsWeaved, aCardActorsOther);
                 }
+
+                UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
+                if (IsValid(pUI)) {
+                    IMyMJGameInRoomUIMainInterface::Execute_showAttenderWeave(pUI, dur, idxAttender, eWeaveVisualType);
+                }
+                //if (pUI->GetClass()->ImplementsInterface(UMyMJGameInRoomUIMainInterface::StaticClass()))
+                //C++ already implemented it
+                //{
+                //    IMyMJGameInRoomUIMainInterface::Execute_changeViewPosition(pUI, pExtra->m_iIdxAttenderTarget);
+                //}
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionHu) {
 
@@ -740,13 +744,113 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
 
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionStateUpdate) {
+                const FMyMJCoreDataDeltaCpp* pCoreDataDelta = cDelta.getCoreDataDeltaConst();
+                MY_VERIFY(pCoreDataDelta);
 
+                UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
+                if (IsValid(pUI)) {
+                    IMyMJGameInRoomUIMainInterface::Execute_showImportantGameStateUpdated(pUI, dur, pCoreDataDelta->m_eGameState);
+                }
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionThrowDices) {
 
+                const FMyMJCoreDataDeltaCpp* pCoreDataDelta = cDelta.getCoreDataDeltaConst();
+                MY_VERIFY(pCoreDataDelta);
+
+                int32 diceNumerNowMaskUpdateReason = UMyMJUtilsLibrary::getIntValueFromBitMask(pCoreDataDelta->m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen);
+                MY_VERIFY(diceNumerNowMaskUpdateReason != FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_Invalid);
+
+                int32 number0, number1;
+                UMyMJBPUtilsLibrary::helperGetDiceNumbersFromMask(pCoreDataDelta->m_iDiceNumberNowMask, number0, number1);
+
+                TArray<AMyMJGameDiceBaseCpp *> aDices;
+                aDices.Emplace(m_pResManager->getDiceActorByIdx(0));
+                aDices.Emplace(m_pResManager->getDiceActorByIdx(1));
+
+                int32 iSeed = cCoreData.getCoreDataPublicRefConst().m_iSeed;
+                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("got seed as %d."), iSeed);
+                int32 uniqueId = iSeed + (cCoreData.getCoreDataPublicRefConst().m_iGameId << 9) + cCoreData.getCoreDataPublicRefConst().m_iPusherIdLast;
+
+                bool bGotPointerCfgForDice = false;
+                FMyMJGameDeskVisualPointCfgCpp diceVisualPointCfg;
+                if (0 == cCfgCache.m_cPointCfg.getTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp::Dice, 0, 0, diceVisualPointCfg)) {
+                    bGotPointerCfgForDice = true;
+                }
+                else {
+                    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("failed to get dice visual point cfg."));
+                }
+
+                //first the bone, then the skin
+                if (bGotPointerCfgForAttender && bGotPointerCfgForDice) {
+                    IMyMJGameInRoomDeskInterface::Execute_showAttenderThrowDices(this, dur, idxAttender, cVisualPointForAttender.m_cCenterPointWorldTransform,
+                                                                                 diceVisualPointCfg, cCfgCache.m_cModelInfo.m_cDiceModelInfo,
+                                                                                 number0, number1, iSeed, uniqueId, aDices);
+                }
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart) {
+                const FMyMJCoreDataDeltaCpp* pCoreDataDelta = cDelta.getCoreDataDeltaConst();
+                MY_VERIFY(pCoreDataDelta);
 
+                TArray<AMyMJGameCardBaseCpp*> aCardActorsDistributedForAttender, aCardActorsOtherForAttender;
+
+                for (auto& Elem : mIdCardChanged)
+                {
+                    int32 idCard = Elem.Key;
+                    const FMyMJGameCardVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
+
+                    if (cInfoAndResult.m_cVisualInfo.m_iIdxAttender != idxAttender)
+                    {
+                        continue;
+                    };
+
+                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(idCard);
+                    const FMyMJGameCardVisualInfoAndResultCpp* pPrevInfoAndResult = pCardActor->getTargetToGoHistory(1, false);
+                    if (pPrevInfoAndResult && pPrevInfoAndResult->m_cVisualInfo.m_eSlot == MyMJCardSlotTypeCpp::Untaken) {
+                        aCardActorsDistributedForAttender.Emplace(pCardActor);
+                    }
+                    else {
+                        aCardActorsOtherForAttender.Emplace(pCardActor);
+                    }
+                }
+
+                bool bIsLastDistribution = pCoreDataDelta->m_bUpdateGameState && pCoreDataDelta->m_eGameState == MyMJGameStateCpp::CardsDistributed;
+
+                if (bGotPointerCfgForAttender) {
+                    IMyMJGameInRoomDeskInterface::Execute_showAttenderCardsDistribute(this, dur, idxAttender, cVisualPointForAttender.m_cCenterPointWorldTransform,
+                                                                                      cCoreData.getRoleDataAttenderPublicRefConst(idxAttender).m_aIdHandCards, bIsLastDistribution,
+                                                                                      aCardActorsDistributedForAttender, aCardActorsOtherForAttender);
+                }
+                /*
+                if (pCoreDataDelta->m_bUpdateGameState && pCoreDataDelta->m_eGameState == MyMJGameStateCpp::CardsDistributed)
+                {
+                    FMyMJGameDeskVisualPointCfgCpp aVisualPointCfgs[4];
+                    TArray<AMyMJGameCardBaseCpp*> aCards[4];
+
+                    for (int32 tempIdxAttender = 0; tempIdxAttender < 4; tempIdxAttender++) {
+                        const FMyMJRoleDataAttenderPublicCpp& roleDataAttenderPublic = cCoreData.getRoleDataAttenderPublicRefConst(tempIdxAttender);
+                        
+                        for (int32 i = 0; i < roleDataAttenderPublic.m_aIdHandCards.Num(); i++)
+                        {
+                            int32 idCard = roleDataAttenderPublic.m_aIdHandCards[i];
+                            AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(idCard);
+                            aCards[tempIdxAttender].Emplace(pCardActor);
+                        }
+        
+                        if (0 != cCfgCache.m_cPointCfg.getAttenderVisualPointCfg(tempIdxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp::OnDeskLocation, aVisualPointCfgs[tempIdxAttender])) {
+                            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get visual point cfg for attender %d."), tempIdxAttender);
+                            aCards[tempIdxAttender].Reset();
+                        }
+
+                        if (aCards[tempIdxAttender].Num() > 0) {
+                            IMyMJGameInRoomDeskInterface::Execute_showCardsDistributed(this, dur, tempIdxAttender, aVisualPointCfgs[tempIdxAttender].m_cCenterPointWorldTransform,
+                                                                                        aCards[tempIdxAttender]);
+                        }
+                    }
+                }
+                else {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Dist card event unexpected, only final action should trigger. m_bUpdateGameState %d, %d."), pCoreDataDelta->m_bUpdateGameState, (uint8)pCoreDataDelta->m_eGameState);
+                }
+                */
             }
             else {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got a unhandled delta event with type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
@@ -764,11 +868,245 @@ void AMyMJGameRoomCpp::tipDataSkipped()
 };
 
 
-//static void helperSetupTransformUpdateAnimationSteps(const FMyTransformUpdateAnimationMetaCpp& meta,
-    //const TArray<FMyActorTransformUpdateAnimationStepCpp>& stepDatas,
-    //const TArray<UMyTransformUpdateSequenceMovementComponent *>& actorComponentsSortedGroup);
+int32 AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+                                                              const FMyMJGameDeskVisualPointCfgCpp& diceVisualPointCfg, const FMyMJDiceModelInfoBoxCpp& diceModelInfo,
+                                                              int32 number0, int32 number1, int32 seed, int32 uniqueId,
+                                                              const TArray<class AMyMJGameDiceBaseCpp *>& aDices)
+{
+    UMyCommonUtilsLibrary::invalidScreenDataCache();
 
-void AMyMJGameRoomCpp::showVisualTakeCards(float totalDur, const FTransform &visualPointTransformForAttender, const TArray<AMyMJGameCardBaseCpp*>& takenCardActors)
+    FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp attenderOnScreenMeta;
+    UMyCardGameUtilsLibrary::helperPointInWorldToPointAndCenterMetaOnPlayerScreenConstrained(this, visualPointTransformForAttender.GetLocation(), attenderOnScreenMeta);
+
+    const FMyMJGameInGameAttenderAreaOnPlayerScreenCfgCpp& areaCfg = m_pResManager->getVisualCfg()->m_cPlayerScreenCfg.m_aAttenderAreas[attenderOnScreenMeta.m_iIdxAttenderBelongTo];
+    if (areaCfg.m_bAttenderPointOnScreenOverride) {
+        UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrainedByPointPercent(attenderOnScreenMeta.m_iIdxAttenderBelongTo, attenderOnScreenMeta.m_cScreenCenterMapped, areaCfg.m_cAttenderPointOnScreenPercentOverride, attenderOnScreenMeta);
+    }
+
+    FRandomStream RS;
+    RS.Initialize(uniqueId);
+
+    float radiusMax = diceVisualPointCfg.m_cAreaBoxExtendFinal.Size2D();
+
+    float radius0 = RS.FRandRange(0.1, 0.9) * radiusMax, radius1 = RS.FRandRange(0.1, 0.9) * radiusMax;;
+    float degree0 = RS.FRandRange(0, 359);
+    float degree1 = RS.FRandRange(-120, 120) + degree0 + 180;
+
+    FVector localLoc0 = UKismetMathLibrary::RotateAngleAxis(FVector(radius0, 0, 0), degree0, FVector(0, 0, 1));
+    FVector localLoc1 = UKismetMathLibrary::RotateAngleAxis(FVector(radius1, 0, 0), degree1, FVector(0, 0, 1));
+
+    FRotator localRot0 = diceModelInfo.m_cExtra.getLocalRotatorForDiceValueRefConst(number0);
+    FRotator localRot1 = diceModelInfo.m_cExtra.getLocalRotatorForDiceValueRefConst(number1);
+
+    localRot0.Yaw = RS.FRandRange(0, 359);
+    localRot1.Yaw = RS.FRandRange(0, 359);
+
+    FTransform localT[2], finalT[2];
+    localT[0].SetLocation(localLoc0);
+    localT[0].SetRotation(localRot0.Quaternion());
+    localT[1].SetLocation(localLoc1);
+    localT[1].SetRotation(localRot1.Quaternion());
+
+    finalT[0] = localT[0] * diceVisualPointCfg.m_cCenterPointWorldTransform;
+    finalT[1] = localT[1] * diceVisualPointCfg.m_cCenterPointWorldTransform;
+
+    MY_VERIFY(aDices.Num() == 2);
+
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("dice visual point: %s"), *diceVisualPointCfg.m_cCenterPointWorldTransform.ToString());
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("radiusMax: %f, %s, localT[0]: %s, localT[1]: %s."), radiusMax, *diceVisualPointCfg.m_cAreaBoxExtendFinal.ToString(), *localT[0].ToString(), *localT[1].ToString());
+
+    TArray<IMyTransformUpdateSequenceInterface*> aBase;
+    for (int32 i = 0; i < 2; i++) {
+        aDices[i]->SetActorHiddenInGame(false);
+        UMyTransformUpdateSequenceMovementComponent* pSeq = aDices[i]->getTransformUpdateSequence();
+        pSeq->setHelperTransformFinal(finalT[i]);
+        aBase.Emplace(aDices[i]);
+
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("finalT: %s"), *finalT.ToString());
+    }
+
+    const FMyMJGameEventPusherThrowDicesVisualDataCpp& eventCfg = m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cThrowDices;
+    
+    //Modify it
+    TArray<FMyActorTransformUpdateAnimationStepCpp> aSteps = eventCfg.m_aDiceSteps;
+    FMyActorTransformUpdateAnimationStepCpp* pMoveOnScreenStep = NULL;
+    FMyActorTransformUpdateAnimationStepCpp* pRotateStep = NULL;
+    for (int32 i = 0; i < aSteps.Num(); i++) {
+        if (aSteps[i].m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::PointOnPlayerScreen) {
+            //first rotation to final, modify it
+
+            pMoveOnScreenStep = &aSteps[i];
+            break;
+        }
+    }
+    for (int32 i = 0; i < aSteps.Num(); i++) {
+        if (aSteps[i].m_eRotationUpdateType == MyActorTransformUpdateAnimationRotationType::FinalRotation) {
+            //first rotation to final, modify it
+
+            pRotateStep = &aSteps[i];
+            break;
+        }
+    }
+
+    for (int32 i = 0; i < 2; i++) {
+
+        if (pMoveOnScreenStep) {
+            FVector centerP = (finalT[1].GetLocation() + finalT[0].GetLocation()) / 2;
+            FVector offset = (finalT[i].GetLocation() - centerP);
+            offset.Normalize();
+            pMoveOnScreenStep->m_cLocationOffsetPercent = offset * 1; // o.m_cBasic.m_cBoxExtend;
+        }
+
+        if (pRotateStep) {
+            int32 extraCycle = RS.RandRange(1, 4);
+            int32 rollAxis = RS.RandRange(0, 2);
+            if (rollAxis == 0) {
+                pRotateStep->m_cRotationUpdateExtraCycles = FIntVector(extraCycle, 0, 0);
+            }
+            else if (rollAxis == 1) {
+                pRotateStep->m_cRotationUpdateExtraCycles = FIntVector(0, extraCycle, 0);
+            }
+            else {
+                pRotateStep->m_cRotationUpdateExtraCycles = FIntVector(0, 0, extraCycle);
+            }
+
+            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("extraCycle %d, rollAxis %d."), extraCycle, rollAxis);
+        }
+
+        aBase.Reset();
+        aBase.Emplace(aDices[i]);
+
+        //Todo: add location offset
+        UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, dur, attenderOnScreenMeta, areaCfg.m_cDiceShowPoint, aSteps, 0, aBase, TEXT("throw dices"), true);
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("showAttenderThrowDices_Implementation."));
+
+    return 0;
+}
+
+int32 AMyMJGameRoomCpp::showAttenderCardsDistribute_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+                                                                   const TArray<int32>& aIdsHandCards, bool isLastDistribution,
+                                                                   const TArray<class AMyMJGameCardBaseCpp*>& cardActorsDistributed,
+                                                                   const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving)
+{
+    UMyCommonUtilsLibrary::invalidScreenDataCache();
+
+    FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp attenderOnScreenMeta;
+    UMyCardGameUtilsLibrary::helperPointInWorldToPointAndCenterMetaOnPlayerScreenConstrained(this, visualPointTransformForAttender.GetLocation(), attenderOnScreenMeta);
+
+    const FMyMJGameInGameAttenderAreaOnPlayerScreenCfgCpp& areaCfg = m_pResManager->getVisualCfg()->m_cPlayerScreenCfg.m_aAttenderAreas[attenderOnScreenMeta.m_iIdxAttenderBelongTo];
+    if (areaCfg.m_bAttenderPointOnScreenOverride) {
+        UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrainedByPointPercent(attenderOnScreenMeta.m_iIdxAttenderBelongTo, attenderOnScreenMeta.m_cScreenCenterMapped, areaCfg.m_cAttenderPointOnScreenPercentOverride, attenderOnScreenMeta);
+    }
+
+    const FMyMJGameEventPusherDistCardsVisualDataCpp& eventCfg = m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cDistCards;
+
+    const TArray<FMyActorTransformUpdateAnimationStepCpp> *pSteps = NULL;
+
+    if (isLastDistribution)
+    {
+        pSteps = &eventCfg.m_aCardsFocusedStepsOverrideForLast;
+    }
+    else {
+        pSteps = &eventCfg.m_aCardsFocusedSteps;
+    }
+
+
+    //special code: OffsetFromGroupPoint support
+    bool bNeedGroupPoint = false;
+    for (int32 i = 0; i < pSteps->Num(); i++) {
+        if ((*pSteps)[i].m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::OffsetFromGroupPoint) {
+            bNeedGroupPoint = true;
+            break;
+        }
+    }
+
+    while (bNeedGroupPoint) {
+        
+        int32 cardDistributedBefore = aIdsHandCards.Num() - cardActorsDistributed.Num();
+        MY_VERIFY(cardDistributedBefore >= 0);
+
+        TArray<AMyMJGameCardBaseCpp *> aCardsTemp = cardActorsDistributed;
+
+        aCardsTemp.Sort([](AMyMJGameCardBaseCpp& cardA, AMyMJGameCardBaseCpp& cardB) {
+            const FMyMJGameCardVisualInfoAndResultCpp* pOldA = cardA.getTargetToGoHistory(1);
+            const FMyMJGameCardVisualInfoAndResultCpp* pOldB = cardB.getTargetToGoHistory(1);
+
+            if (pOldA && pOldB) {
+                int32 vA = pOldA->m_cVisualInfo.m_iIdxColInRow + (pOldA->m_cVisualInfo.m_iIdxStackInCol << 4);
+                int32 vB = pOldB->m_cVisualInfo.m_iIdxColInRow + (pOldB->m_cVisualInfo.m_iIdxStackInCol << 4);
+
+                return vA < vB;
+            }
+            else {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get TargetToGo old places: %p, %p."), pOldA, pOldB);
+                return false;
+            }
+        });
+
+        int32 debugGroupSetCount = 0;
+        for (int32 i = 0; i < aIdsHandCards.Num(); i++) {
+            AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(aIdsHandCards[i]);
+            const FMyMJGameCardVisualInfoAndResultCpp* pTargetToGo = pCardActor->getTargetToGoHistory(0, false);
+            if (pTargetToGo == NULL) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get TargetToGo for card with id %d."), aIdsHandCards[i]);
+                continue;
+            }
+
+            if (pTargetToGo->m_cVisualInfo.m_iIdxColInRow >= cardDistributedBefore) {
+                int32 idxTemp = pTargetToGo->m_cVisualInfo.m_iIdxColInRow - cardDistributedBefore;
+
+                if (idxTemp < aCardsTemp.Num()) {
+                    aCardsTemp[idxTemp]->getTransformUpdateSequence(true)->setHelperTransformGroupPoint(pTargetToGo->m_cVisualResult.m_cTransform);
+                    debugGroupSetCount++;
+                }
+                else {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("idxTemp out of range %d, id %d"), idxTemp, aIdsHandCards[i]);
+                }
+            }
+        }
+
+        if (debugGroupSetCount != aCardsTemp.Num()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("not enough of group point setted, only %d/%d setted."), debugGroupSetCount, aCardsTemp.Num());
+        }
+
+        break;
+    }
+
+
+
+    if (pSteps->Num() > 0) {
+        TArray<IMyTransformUpdateSequenceInterface*> aBase;
+        const TArray<AMyMJGameCardBaseCpp*>& aSub = cardActorsDistributed;
+        AMyMJGameCardBaseCpp::helperToSeqActors(aSub, true, aBase);
+
+        UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, dur, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSteps, 0, aBase, TEXT("cards distribute done focused"), true);
+    }
+
+    pSteps = &eventCfg.m_aCardsOtherSteps;
+    int32 l = cardActorsOtherMoving.Num();
+    if (l >= 1 && pSteps->Num() > 0) {
+        float totalDurUnfocused = dur;
+        if (eventCfg.m_fTotalTimeOverridedForCardsUnfocused >= MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT)
+        {
+            totalDurUnfocused = eventCfg.m_fTotalTimeOverridedForCardsUnfocused;
+        };
+        float waitDurUnfocused = eventCfg.m_fDelayTimeForCardsUnfocused;
+
+        TArray<IMyTransformUpdateSequenceInterface*> aBase;
+        const TArray<AMyMJGameCardBaseCpp*>& aSub = cardActorsOtherMoving;
+        AMyMJGameCardBaseCpp::helperToSeqActors(aSub, true, aBase);
+
+        UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDurUnfocused, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSteps, waitDurUnfocused, aBase, TEXT("weave cards other"), true);
+
+    }
+
+    return 0;
+}
+
+int32 AMyMJGameRoomCpp::showAttenderTakeCards_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+                                                             const TArray<AMyMJGameCardBaseCpp*>& cardActorsTaken)
 {
     UMyCommonUtilsLibrary::invalidScreenDataCache();
 
@@ -782,23 +1120,26 @@ void AMyMJGameRoomCpp::showVisualTakeCards(float totalDur, const FTransform &vis
         UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrainedByPointPercent(attenderOnScreenMeta.m_iIdxAttenderBelongTo, attenderOnScreenMeta.m_cScreenCenterMapped, areaCfg.m_cAttenderPointOnScreenPercentOverride, attenderOnScreenMeta);
     }
 
-    const TArray<FMyActorTransformUpdateAnimationStepCpp> *pSeq = &eventCfg.m_aCardsFocusedSteps;
+    const TArray<FMyActorTransformUpdateAnimationStepCpp> *pSteps = &eventCfg.m_aCardsFocusedSteps;
     if (attenderOnScreenMeta.m_iIdxAttenderBelongTo == 0 && eventCfg.m_bOverrideCardsFocusedStepsForAttenderAsViewer) {
-        pSeq = &eventCfg.m_aOverridedCardsFocusedStepsForAttenderAsViewer;
+        pSteps = &eventCfg.m_aOverridedCardsFocusedStepsForAttenderAsViewer;
     }
 
-    if (pSeq->Num() > 0) {
+    if (pSteps->Num() > 0) {
         TArray<IMyTransformUpdateSequenceInterface*> aBase;
-        const TArray<AMyMJGameCardBaseCpp*>& aSub = takenCardActors;
+        const TArray<AMyMJGameCardBaseCpp*>& aSub = cardActorsTaken;
         AMyMJGameCardBaseCpp::helperToSeqActors(aSub, true, aBase);
 
-        UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDur, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSeq, 0, aBase, TEXT("take cards focused"), true);
+        UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, dur, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSteps, 0, aBase, TEXT("take cards focused"), true);
     }
+
+    return 0;
 }
 
-void AMyMJGameRoomCpp::showVisualGiveOutCards(float totalDur, const FTransform &visualPointTransformForAttender, int32 handCardNum,
-                                                const TArray<AMyMJGameCardBaseCpp*>& cardActorsGiveOut,
-                                                const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving)
+int32 AMyMJGameRoomCpp::showAttenderGiveOutCards_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+                                                                int32 handCardsCount,
+                                                                const TArray<AMyMJGameCardBaseCpp*>& cardActorsGivenOut,
+                                                                const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving)
 {
     UMyCommonUtilsLibrary::invalidScreenDataCache();
 
@@ -812,14 +1153,14 @@ void AMyMJGameRoomCpp::showVisualGiveOutCards(float totalDur, const FTransform &
 
     const FMyMJGameEventPusherGiveOutCardsVisualDataCpp& eventCfg = m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cGiveOutCards;
 
-    const TArray<FMyActorTransformUpdateAnimationStepCpp> *pSeq = &eventCfg.m_aCardsFocusedSteps;
+    const TArray<FMyActorTransformUpdateAnimationStepCpp> *pSteps = &eventCfg.m_aCardsFocusedSteps;
 
-    if (pSeq->Num() > 0) {
+    if (pSteps->Num() > 0) {
         TArray<IMyTransformUpdateSequenceInterface*> aBase;
-        const TArray<AMyMJGameCardBaseCpp*>& aSub = cardActorsGiveOut;
+        const TArray<AMyMJGameCardBaseCpp*>& aSub = cardActorsGivenOut;
         AMyMJGameCardBaseCpp::helperToSeqActors(aSub, true, aBase);
 
-        UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDur, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSeq, 0, aBase, TEXT("give out cards focused"), true);
+        UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, dur, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSteps, 0, aBase, TEXT("give out cards focused"), true);
     }
 
 
@@ -830,17 +1171,17 @@ void AMyMJGameRoomCpp::showVisualGiveOutCards(float totalDur, const FTransform &
         TArray<AMyMJGameCardBaseCpp *> aActors0, aActors1;
         FVector rightVector = UKismetMathLibrary::GetRightVector(visualPointForAttender.m_cCenterPointWorldTransform.GetRotation().Rotator());
         for (int32 i = 0; i < l; i++) {
-            AMyMJGameCardBaseCpp* pCardActor = cardActorsOtherMoving[i];
-            FVector movingVector = pCardActor->getTransform2GoRefConst().GetLocation() - pCardActor->GetActorLocation();
-            float dotResult = FVector::DotProduct(rightVector, movingVector);
+        AMyMJGameCardBaseCpp* pCardActor = cardActorsOtherMoving[i];
+        FVector movingVector = pCardActor->getTransform2GoRefConst().GetLocation() - pCardActor->GetActorLocation();
+        float dotResult = FVector::DotProduct(rightVector, movingVector);
 
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("dot result %f."), dotResult);
-            if (dotResult >= 0) {
-                aActors0.Emplace(pCardActor);
-            }
-            else {
-                aActors1.Emplace(pCardActor);
-            }
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("dot result %f."), dotResult);
+        if (dotResult >= 0) {
+        aActors0.Emplace(pCardActor);
+        }
+        else {
+        aActors1.Emplace(pCardActor);
+        }
         }
         */
 
@@ -853,7 +1194,7 @@ void AMyMJGameRoomCpp::showVisualGiveOutCards(float totalDur, const FTransform &
             const FMyMJGameCardVisualInfoAndResultCpp* oldTarget = pCardActor->getTargetToGoHistory(1, false);
             if (oldTarget != NULL) {
                 if (oldTarget->m_cVisualInfo.m_eSlot == MyMJCardSlotTypeCpp::JustTaken &&
-                    pCardActor->getTargetToGoHistory(0)->m_cVisualInfo.m_iIdxColInRow < (handCardNum - 1))
+                    pCardActor->getTargetToGoHistory(0)->m_cVisualInfo.m_iIdxColInRow < (handCardsCount - 1))
                 {
                     aActorsInjecting.Emplace(pCardActor);
                     continue;
@@ -864,7 +1205,7 @@ void AMyMJGameRoomCpp::showVisualGiveOutCards(float totalDur, const FTransform &
             continue;
         }
 
-        float totalDurUnfocused = totalDur;
+        float totalDurUnfocused = dur;
         if (eventCfg.m_fTotalTimeOverridedForCardsUnfocused >= MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT)
         {
             totalDurUnfocused = eventCfg.m_fTotalTimeOverridedForCardsUnfocused;
@@ -873,37 +1214,39 @@ void AMyMJGameRoomCpp::showVisualGiveOutCards(float totalDur, const FTransform &
 
         //handle the injected ones
         if (eventCfg.m_aCardsInsertedToHandSlotSteps.Num() > 0) {
-            pSeq = &eventCfg.m_aCardsInsertedToHandSlotSteps;
+            pSteps = &eventCfg.m_aCardsInsertedToHandSlotSteps;
         }
         else
         {
-            pSeq = &eventCfg.m_aCardsOtherSteps;
+            pSteps = &eventCfg.m_aCardsOtherSteps;
         }
 
         const TArray<AMyMJGameCardBaseCpp*>* paSub = &aActorsInjecting;
-        if (pSeq->Num() > 0 && paSub->Num() > 0) {
+        if (pSteps->Num() > 0 && paSub->Num() > 0) {
             TArray<IMyTransformUpdateSequenceInterface*> aBase;
             AMyMJGameCardBaseCpp::helperToSeqActors(*paSub, true, aBase);
 
-            UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDurUnfocused, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSeq, waitDurUnfocused, aBase, TEXT("give out cards injecting"), true);
+            UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDurUnfocused, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSteps, waitDurUnfocused, aBase, TEXT("give out cards injecting"), true);
         }
 
         //handle the remain ones
-        pSeq = &eventCfg.m_aCardsOtherSteps;
+        pSteps = &eventCfg.m_aCardsOtherSteps;
 
         paSub = &aActorsOther;
-        if (pSeq->Num() > 0) {
+        if (pSteps->Num() > 0) {
             TArray<IMyTransformUpdateSequenceInterface*> aBase;
             AMyMJGameCardBaseCpp::helperToSeqActors(*paSub, true, aBase);
 
-            UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDurUnfocused, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSeq, waitDurUnfocused, aBase, TEXT("give out cards remains"), true);
+            UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDurUnfocused, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSteps, waitDurUnfocused, aBase, TEXT("give out cards remains"), true);
         }
     }
+
+    return 0;
 }
 
-void AMyMJGameRoomCpp::showVisualWeave(float totalDur, const FTransform &visualPointTransformForAttender, MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave,
-                                        const TArray<AMyMJGameCardBaseCpp*>& cardActorsWeaved,
-                                        const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving)
+int32 AMyMJGameRoomCpp::showAttenderWeave_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+                                                         MyMJGameWeaveVisualTypeCpp weaveVsualType, const struct FMyMJWeaveCpp& weave,
+                                                         const TArray<class AMyMJGameCardBaseCpp*>& cardActorsWeaved, const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving)
 {
     UMyCommonUtilsLibrary::invalidScreenDataCache();
 
@@ -915,8 +1258,10 @@ void AMyMJGameRoomCpp::showVisualWeave(float totalDur, const FTransform &visualP
         UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrainedByPointPercent(attenderOnScreenMeta.m_iIdxAttenderBelongTo, attenderOnScreenMeta.m_cScreenCenterMapped, areaCfg.m_cAttenderPointOnScreenPercentOverride, attenderOnScreenMeta);
     }
 
+    MyMJGameRuleTypeCpp eRuleType = helperGetRuleTypeNow();
+
     const FMyMJGameEventPusherWeaveVisualDataCpp* pEventCfg = NULL;
-    MyMJGameWeaveVisualTypeCpp eWeaveVisualType = UMyMJBPUtilsLibrary::helperGetWeaveVisualTypeFromWeave(ruleType, weave);
+    MyMJGameWeaveVisualTypeCpp eWeaveVisualType = UMyMJBPUtilsLibrary::helperGetWeaveVisualTypeFromWeave(eRuleType, weave);
     if (eWeaveVisualType == MyMJGameWeaveVisualTypeCpp::Chi) {
         pEventCfg = &m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cWeaveChi;
     }
@@ -930,34 +1275,42 @@ void AMyMJGameRoomCpp::showVisualWeave(float totalDur, const FTransform &visualP
         pEventCfg = &m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cWeaveBu;
     }
 
-    const TArray<FMyActorTransformUpdateAnimationStepCpp> *pSeq = &pEventCfg->m_aCardsFocusedSteps;
+    const TArray<FMyActorTransformUpdateAnimationStepCpp> *pSteps = &pEventCfg->m_aCardsFocusedSteps;
 
-    if (pSeq->Num() > 0) {
+    if (pSteps->Num() > 0) {
         TArray<IMyTransformUpdateSequenceInterface*> aBase;
         const TArray<AMyMJGameCardBaseCpp*>& aSub = cardActorsWeaved;
         AMyMJGameCardBaseCpp::helperToSeqActors(aSub, true, aBase);
 
-        UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDur, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSeq, 0, aBase, TEXT("weave cards focused"), true);
+        UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, dur, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSteps, 0, aBase, TEXT("weave cards focused"), true);
+
+        /*
+        for (int32 i = 0; i < aSub.Num(); i++) {
+            AMyMJGameCardBaseCpp* pA = aSub[i];
+            UMyTransformUpdateSequenceMovementComponent* pC = pA->getTransformUpdateSequence();
+
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("weaved card %s: %s."), *pA->GetName(), *pC->getHelperTransformFinalRefConst().ToString());
+        }
+        */
     }
 
     int32 l = cardActorsOtherMoving.Num();
-    if (l >= 1) {
-        float totalDurUnfocused = totalDur;
+    if (l >= 1 && pSteps->Num() > 0) {
+        float totalDurUnfocused = dur;
         if (pEventCfg->m_fTotalTimeOverridedForCardsUnfocused >= MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT)
         {
             totalDurUnfocused = pEventCfg->m_fTotalTimeOverridedForCardsUnfocused;
         };
         float waitDurUnfocused = pEventCfg->m_fDelayTimeForCardsUnfocused;
 
-        pSeq = &pEventCfg->m_aCardsOtherSteps;
+        pSteps = &pEventCfg->m_aCardsOtherSteps;
 
-        if (pSeq->Num() > 0) {
-            TArray<IMyTransformUpdateSequenceInterface*> aBase;
-            const TArray<AMyMJGameCardBaseCpp*>& aSub = cardActorsOtherMoving;
-            AMyMJGameCardBaseCpp::helperToSeqActors(aSub, true, aBase);
+        TArray<IMyTransformUpdateSequenceInterface*> aBase;
+        const TArray<AMyMJGameCardBaseCpp*>& aSub = cardActorsOtherMoving;
+        AMyMJGameCardBaseCpp::helperToSeqActors(aSub, true, aBase);
 
-            UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDurUnfocused, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSeq, waitDurUnfocused, aBase, TEXT("weave cards other"), true);
-        }
+        UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDurUnfocused, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSteps, waitDurUnfocused, aBase, TEXT("weave cards other"), true);
+
     }
 
     while (IsValid(pEventCfg->m_cDancingActor0Class))
@@ -967,8 +1320,8 @@ void AMyMJGameRoomCpp::showVisualWeave(float totalDur, const FTransform &visualP
             break;
         }
 
-        pSeq = &pEventCfg->m_aDancingActor0Steps;
-        if (pSeq->Num() > 0) {
+        pSteps = &pEventCfg->m_aDancingActor0Steps;
+        if (pSteps->Num() > 0) {
             AMyMJGameTrivalDancingActorBaseCpp* pDancing = m_pResManager->getTrivalDancingActorByClass(pEventCfg->m_cDancingActor0Class, true);
 
             pDancing->SetActorHiddenInGame(false);
@@ -976,10 +1329,11 @@ void AMyMJGameRoomCpp::showVisualWeave(float totalDur, const FTransform &visualP
             TArray<IMyTransformUpdateSequenceInterface*> aBase;
             aBase.Emplace(pDancing);
 
-            UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, totalDur, attenderOnScreenMeta, areaCfg.m_cCommonActionShowPoint, *pSeq, 0, aBase, TEXT("weave cards dancing actor 0"), true);
+            UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, dur, attenderOnScreenMeta, areaCfg.m_cCommonActionShowPoint, *pSteps, 0, aBase, TEXT("weave cards dancing actor 0"), true);
         }
 
         break;
     }
 
+    return 0;
 }

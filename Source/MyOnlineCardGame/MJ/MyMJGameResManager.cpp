@@ -6,5 +6,6 @@
 FMyMJGameResManager::FMyMJGameResManager(int32 seed)
 {
     m_cRandomStream.Initialize(seed);
+    m_iSeed = seed;
 };
 

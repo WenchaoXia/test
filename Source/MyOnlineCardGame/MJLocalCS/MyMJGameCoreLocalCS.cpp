@@ -266,7 +266,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         int32 idxBase = pRet->m_aResultBase.Emplace();
         FMyMJDataStructCpp &base = pRet->m_aResultBase[idxBase];
 
-        genBaseFromPusherResetGame(m_pResManager->getRandomStreamRef(), pusherReset, base);
+        genBaseFromPusherResetGame(*m_pResManager, pusherReset, base);
         
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherUpdateAttenderCardsAndState)
@@ -1194,8 +1194,10 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
 }
 
 
-void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(FRandomStream &RS, const FMyMJGamePusherResetGameCpp &pusherReset, FMyMJDataStructCpp &outBase)
+void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(FMyMJGameResManager& RM, const FMyMJGamePusherResetGameCpp &pusherReset, FMyMJDataStructCpp &outBase)
 {
+    FRandomStream &RS = RM.getRandomStreamRef();
+
     FMyMJDataStructCpp &base = outBase;
 
     //Stateless, never judge condition of previous state, just reset the whole core
@@ -1248,6 +1250,7 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(FRandomStream &RS, cons
     //let's fill in
     pD->m_cGameCfg = pusherReset.m_cGameCfg;
     pD->m_cGameRunData = pusherReset.m_cGameRunData;
+    pD->m_iSeed = RM.getSeed();
 
     int32 iCardNum = pusherReset.m_aShuffledValues.Num();
     pCardInfoPack->reset(iCardNum);

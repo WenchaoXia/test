@@ -65,7 +65,7 @@ enum class MyMJGameStateCpp : uint8
     CardsWaitingForDistribution = 11 UMETA(DisplayName = "CardsWaitingForDistribution"),
     CardsDistributed = 12 UMETA(DisplayName = "CardsDistributed"),
 
-    JustStarted = 15 UMETA(DisplayName = "JustStarted"), //Just started game in nornal process after card dist and special hu, zhuang attender need to take action, Note: for simple subclass core must use action update state to enter just started state
+    JustStarted = 15 UMETA(DisplayName = "JustStarted"), //Just started game in normal process after card dist and special hu, zhuang attender need to take action, Note: for simple subclass core must use action update state to enter just started state
     JustHu = 20      UMETA(DisplayName = "JustHu"),
 
     WaitingForTakeCard = 100 UMETA(DisplayName = "WaitingForTakeCard"), //normal take card, not in gang path

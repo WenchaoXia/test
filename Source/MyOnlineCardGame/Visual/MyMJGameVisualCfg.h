@@ -12,6 +12,13 @@
 
 #include "MyMJGameVisualCfg.generated.h"
 
+/* affairs:
+ * event: |--pusher(action is a subtype of pusher)
+ *        |--trival
+ *
+ * incident:
+ */
+
 USTRUCT(BlueprintType)
 struct FMyCardGameCameraStaticDataCpp
 {
@@ -147,6 +154,7 @@ public:
     inline void reset()
     {
         m_cCardShowPoint.reset();
+        m_cDiceShowPoint.reset();
         m_cCommonActionShowPoint.reset();
 
         m_bAttenderPointOnScreenOverride = false;
@@ -156,6 +164,9 @@ public:
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "card show point"))
     FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp m_cCardShowPoint;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "dice show point"))
+    FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp m_cDiceShowPoint;
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "action show point"))
     FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp m_cCommonActionShowPoint;
@@ -179,9 +190,16 @@ public:
 
     FMyMJGameCameraCfgCpp()
     {
+        reset();
+    };
+
+    inline void reset()
+    {
+        FTransform t;
+        m_cAttenderCameraRelativeTransformAsAttender0 = t;
         m_fAttenderCameraFOV = 90;
         m_fAttenderCameraMoveTime = 1;
-        m_pAttenderCameraMoveCurve = NULL;
+        m_cAttenderCameraMoveCurve.reset();
     };
 
     bool checkSettings() const;
@@ -197,9 +215,8 @@ public:
     UPROPERTY(EditAnywhere, meta = (DisplayName = "attender camera move time"))
     float m_fAttenderCameraMoveTime;
 
-    //if not specified, default linear one will be used
     UPROPERTY(EditAnywhere, meta = (DisplayName = "attender camera move curve"))
-    UCurveVector* m_pAttenderCameraMoveCurve;
+    FMyCurveVectorSettingsCpp m_cAttenderCameraMoveCurve;
 };
 
 USTRUCT()
@@ -256,7 +273,35 @@ public:
 };
 
 USTRUCT()
-struct FMyMJGameGameStartVisualDataCpp : public FMyGameEventVisualDataBaseCpp
+struct FMyGameClientCommonUpdateVisualDataCpp : public FMyGameEventVisualDataBaseCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    inline void reset()
+    {
+        m_cMoveCurve.reset();
+    };
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "move curve"))
+    FMyCurveVectorSettingsCpp m_cMoveCurve;
+};
+
+USTRUCT()
+struct FMyMJGameEventPusherFullBaseResetVisualDataBaseCpp : public FMyGameEventVisualDataBaseCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    inline void reset()
+    {
+    };
+};
+
+USTRUCT()
+struct FMyMJGameEventPusherGameStartVisualDataCpp : public FMyGameEventVisualDataBaseCpp
 {
     GENERATED_USTRUCT_BODY()
 
@@ -265,19 +310,20 @@ public:
 };
 
 USTRUCT()
-struct FMyMJGameThrowDicesVisualDataCpp : public FMyGameEventVisualDataBaseCpp
+struct FMyMJGameEventPusherThrowDicesVisualDataCpp : public FMyGameEventVisualDataBaseCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-};
 
-USTRUCT()
-struct FMyMJGameDistCardsDoneVisualDataCpp : public FMyGameEventVisualDataBaseCpp
-{
-    GENERATED_USTRUCT_BODY()
+    inline void reset()
+    {
+        m_fTotalTime = 1.f;
+        m_aDiceSteps.Reset();
+    }
 
-public:
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "dice steps"))
+    TArray<FMyActorTransformUpdateAnimationStepCpp> m_aDiceSteps;
 };
 
 USTRUCT()
@@ -316,6 +362,33 @@ public:
     //if it > 0.01, will override the total time set for this event, for cards unfocused
     UPROPERTY(EditAnywhere, meta = (DisplayName = "total time overrided for cards unfocused"))
     float m_fTotalTimeOverridedForCardsUnfocused;
+};
+
+USTRUCT()
+struct FMyMJGameEventPusherDistCardsVisualDataCpp : public FMyMJGameEventCardsRelatedVisualDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameEventPusherDistCardsVisualDataCpp() : Super()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        Super::reset();
+
+        m_fTotalTimeOverrideForLast = 1.f;
+        m_aCardsFocusedStepsOverrideForLast.Reset();
+    };
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "total time override for last"))
+    float m_fTotalTimeOverrideForLast;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "cards focused steps override for last"))
+    TArray<FMyActorTransformUpdateAnimationStepCpp> m_aCardsFocusedStepsOverrideForLast;
 };
 
 USTRUCT()
@@ -403,7 +476,7 @@ public:
 };
 
 USTRUCT()
-struct FMyMJGameEventHuVisualDataCpp : public FMyMJGameEventCardsRelatedVisualDataCpp
+struct FMyMJGameEventPusherHuVisualDataCpp : public FMyMJGameEventCardsRelatedVisualDataCpp
 {
     GENERATED_USTRUCT_BODY()
 
@@ -411,7 +484,7 @@ public:
 };
 
 USTRUCT()
-struct FMyMJGameGameEndVisualDataCpp : public FMyGameEventVisualDataBaseCpp
+struct FMyMJGameEventPusherGameEndVisualDataCpp : public FMyGameEventVisualDataBaseCpp
 {
     GENERATED_USTRUCT_BODY()
 
@@ -419,7 +492,7 @@ public:
 };
 
 USTRUCT()
-struct FMyMJGameEventLocalCSHuBornVisualDataCpp : public FMyMJGameEventCardsRelatedVisualDataCpp
+struct FMyMJGameEventPusherLocalCSHuBornVisualDataCpp : public FMyMJGameEventCardsRelatedVisualDataCpp
 {
     GENERATED_USTRUCT_BODY()
 
@@ -427,7 +500,7 @@ public:
 };
 
 USTRUCT()
-struct FMyMJGameEventLocalCSZhaNiaoVisualDataCpp : public FMyMJGameEventCardsRelatedVisualDataCpp
+struct FMyMJGameEventPusherLocalCSZhaNiaoVisualDataCpp : public FMyMJGameEventCardsRelatedVisualDataCpp
 {
     GENERATED_USTRUCT_BODY()
 
@@ -475,21 +548,21 @@ public:
         return true;
     };
 
-    //when resync unexpected, the elems animation time. Note it would not occupy time segment on server, so this should be small as a pure client animation time 
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "resync unexpected in game"))
-    FMyGameEventVisualDataBaseCpp m_cResyncUnexpectedIngame;
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "client common update"))
+    FMyGameClientCommonUpdateVisualDataCpp m_cClientCommonUpdate;
 
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "resync normal at start"))
-    FMyGameEventVisualDataBaseCpp m_cResyncNormalAtStart;
+    //unlike "resync unexpected in game", this event happen both on server and client
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "full base reset at start"))
+    FMyMJGameEventPusherFullBaseResetVisualDataBaseCpp m_cFullBaseResetAtStart;
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "game start"))
-    FMyMJGameGameStartVisualDataCpp m_cGameStart;
+    FMyMJGameEventPusherGameStartVisualDataCpp m_cGameStart;
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "throw dices"))
-    FMyMJGameThrowDicesVisualDataCpp m_cThrowDices;
+    FMyMJGameEventPusherThrowDicesVisualDataCpp m_cThrowDices;
 
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "dist cards done"))
-    FMyMJGameDistCardsDoneVisualDataCpp m_cDistCardsDone;
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "dist cards"))
+    FMyMJGameEventPusherDistCardsVisualDataCpp m_cDistCards;
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "take cards"))
     FMyMJGameEventPusherTakeCardsVisualDataCpp m_cTakeCards;
@@ -510,16 +583,16 @@ public:
     FMyMJGameEventPusherWeaveVisualDataCpp m_cWeaveBu;
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "hu"))
-    FMyMJGameEventHuVisualDataCpp m_cHu;
+    FMyMJGameEventPusherHuVisualDataCpp m_cHu;
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "game end"))
-    FMyMJGameGameEndVisualDataCpp m_cGameEnd;
+    FMyMJGameEventPusherGameEndVisualDataCpp m_cGameEnd;
 
     UPROPERTY(EditAnywhere, Category = "local cs", meta = (DisplayName = "local CS hu born"))
-    FMyMJGameEventLocalCSHuBornVisualDataCpp  m_cLocalCSHuBorn;
+    FMyMJGameEventPusherLocalCSHuBornVisualDataCpp  m_cLocalCSHuBorn;
 
     UPROPERTY(EditAnywhere, Category = "local cs", meta = (DisplayName = "local CS zha niao"))
-    FMyMJGameEventLocalCSZhaNiaoVisualDataCpp m_cLocalCSZhaNiao;
+    FMyMJGameEventPusherLocalCSZhaNiaoVisualDataCpp m_cLocalCSZhaNiao;
 };
 
 USTRUCT()
@@ -598,6 +671,9 @@ public:
     UPROPERTY(EditAnywhere, meta = (DisplayName = "card class"))
     TSubclassOf<AMyMJGameCardBaseCpp> m_cCardClass;
 
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "dice class"))
+    TSubclassOf<AMyMJGameDiceBaseCpp> m_cDiceClass;
+
     UPROPERTY(EditAnywhere, meta = (DisplayName = "in room ui main widget class"))
     TSubclassOf<UMyMJGameInRoomUIMainWidgetBaseCpp> m_cInRoomUIMainWidgetClass;
 };
@@ -637,6 +713,6 @@ public:
     FMyMJGameCameraCfgCpp m_cCameraCfg;
 
     //If set to 10, all data will reset to default
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "fake reset efault"))
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "fake reset default"))
     int32 m_iResetDefault;
 };

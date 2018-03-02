@@ -1,5 +1,4 @@
-map 网络序列化
-move out ue4's .h file include from game's .h files
+
 查看actor 动画 效果的变速
 
 preload asset
@@ -12,4 +11,7 @@ LoadObject（）后续call是否会触发i/o，应该是不会，里面是dict，但还没找到code
 idEvent, time_ms 溢出统一检查
 
 统一测试代码使能宏
-使用tick代替重要的timer
+
+
+1. dice visual
+2. distribution card animation improvement, simulate the hand

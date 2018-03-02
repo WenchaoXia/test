@@ -349,3 +349,9 @@ MyMJGameWeaveVisualTypeCpp UMyMJBPUtilsLibrary::helperGetWeaveVisualTypeFromWeav
         return MyMJGameWeaveVisualTypeCpp::Invalid;
     }
 };
+
+void UMyMJBPUtilsLibrary::helperGetDiceNumbersFromMask(int32 mask, int32 &number0, int32 &number1)
+{
+    number0 = UMyMJUtilsLibrary::getIntValueFromBitMask(mask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen);
+    number1 = UMyMJUtilsLibrary::getIntValueFromBitMask(mask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen);
+};

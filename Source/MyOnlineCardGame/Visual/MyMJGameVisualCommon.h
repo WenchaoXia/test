@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 
+#include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
+
 #include "Kismet/KismetStringLibrary.h"
 
 #include "MyMJGameVisualCommon.generated.h"
@@ -94,6 +96,7 @@ public:
         //m_iColInRowMaxNum = 0;
 
         m_fColInRowExtraMarginAbs = 0;
+        m_iRowMax = 0;
         m_iExtra0 = 0;
     };
 
@@ -127,7 +130,65 @@ public:
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col in row extra margin abs"))
         float m_fColInRowExtraMarginAbs;
 
+    //if row number exceed this, the actor should stack. If it is 0, means no limit
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row max"))
+    int32 m_iRowMax;
+
     //in case some unstandard cfg is needed, use this 
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "extra 0"))
     int32 m_iExtra0;
+};
+
+
+
+USTRUCT(BlueprintType)
+struct FMyMJDiceModelInfoExtraCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJDiceModelInfoExtraCpp()
+    {
+        m_aLocalRotatorForDiceValues.Reset();
+        for (int32 i = 0; i < 7; i++) {
+            m_aLocalRotatorForDiceValues.Emplace(FRotator::ZeroRotator);
+        }
+    };
+
+    //input is expected as in 1 to 6
+    inline const FRotator& getLocalRotatorForDiceValueRefConst(int32 value) const
+    {
+        MY_VERIFY(value > 0 && value < 7);
+        MY_VERIFY(value < m_aLocalRotatorForDiceValues.Num());
+        return m_aLocalRotatorForDiceValues[value];
+    };
+
+protected:
+
+    //the array's index means the value, and the array size is always 7
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, EditFixedSize, meta = (DisplayName = "local rotator for dice values"))
+        TArray<FRotator> m_aLocalRotatorForDiceValues;
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJDiceModelInfoBoxCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJDiceModelInfoBoxCpp()
+    {
+    };
+
+    inline void reset()
+    {
+        m_cBasic.reset();
+    };
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "basic"))
+    FMyActorModelInfoBoxCpp m_cBasic;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "extra"))
+    FMyMJDiceModelInfoExtraCpp m_cExtra;
+
 };

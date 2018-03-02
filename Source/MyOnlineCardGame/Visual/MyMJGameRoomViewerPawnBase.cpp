@@ -111,7 +111,8 @@ void AMyMJGameRoomViewerPawnBaseCpp::changeInRoomViewRole(MyMJGameRoleTypeCpp ro
     UMyCommonUtilsLibrary::MyTransformZRotationToTransformWorld(cameraData.m_cStaticData.m_cCenterPoint, dynDataEnd.m_cMyTransformOfZRotation, transformEnd);
 
     FMyCardGameCameraDynamicDataCpp dynDataStart;
-    UMyCommonUtilsLibrary::TransformWorldToMyTransformZRotation(cameraData.m_cStaticData.m_cCenterPoint, GetActorTransform(), dynDataStart.m_cMyTransformOfZRotation);
+    FTransform transformNow = GetActorTransform();
+    UMyCommonUtilsLibrary::TransformWorldToMyTransformZRotation(cameraData.m_cStaticData.m_cCenterPoint, transformNow, dynDataStart.m_cMyTransformOfZRotation);
     dynDataStart.m_fFOV = getCameraComponent()->FieldOfView;
 
     //use the shortest rotate path
@@ -139,9 +140,10 @@ void AMyMJGameRoomViewerPawnBaseCpp::changeInRoomViewRole(MyMJGameRoleTypeCpp ro
 
 
     UCurveVector* pCurve = cameraData.m_cStaticData.m_pMoveCurve;
-    if (pCurve == NULL) {
-        pCurve = UMyCommonUtilsLibrary::getCurveVectorDefaultLinear();
-    }
+    MY_VERIFY(pCurve);
+    //if (pCurve == NULL) {
+    //    pCurve = UMyCommonUtilsLibrary::getCurveVectorDefaultLinear();
+    //}
 
     UMyTransformUpdateSequenceMovementComponent* pSeqComp = getTransformUpdateSequence(true);
     pSeqComp->clearSeq();
@@ -152,6 +154,16 @@ void AMyMJGameRoomViewerPawnBaseCpp::changeInRoomViewRole(MyMJGameRoleTypeCpp ro
     pSeqComp->addSeqToTail(data, pCurve);
 
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("setted: start %s, end %s."), *pExtra->m_cDynamicDataStart.ToString(), *pExtra->m_cDynamicDataEnd.ToString());
+
+    UMyCommonUtilsLibrary::TransformWorldToMyTransformZRotation(cameraData.m_cStaticData.m_cCenterPoint, GetActorTransform(), dynDataStart.m_cMyTransformOfZRotation);
+    dynDataStart.m_fFOV = getCameraComponent()->FieldOfView;
+
+
+    //FTransform transformRecovered;
+    //UMyCommonUtilsLibrary::MyTransformZRotationToTransformWorld(cameraData.m_cStaticData.m_cCenterPoint, dynDataStart.m_cMyTransformOfZRotation, transformRecovered);
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("transformNow %s, transformRecovered %s."), *transformNow.ToString(), *transformRecovered.ToString());
+
 };
 
 
@@ -203,6 +215,7 @@ void AMyMJGameRoomViewerPawnBaseCpp::onTransformSeqUpdated(const struct FTransfo
         UMyCommonUtilsLibrary::MyTransformZRotationToTransformWorld(pExtra->m_cCenterPoint, dynNow.m_cMyTransformOfZRotation, transformNow);
 
         //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Updated: %s, %s, %s, %f. %s."), *dynNow.m_cMyTransformOfZRotation.ToString(), *pExtra->m_cDynamicDataStart.m_cMyTransformOfZRotation.ToString(), *pExtra->m_cDynamicDataEnd.m_cMyTransformOfZRotation.ToString(), vector.Y, *transformNow.ToString());
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Updated : %f, now %s, transform: %s."), vector.Y, *dynNow.m_cMyTransformOfZRotation.ToString(), *transformNow.ToString());
 
         if (!transformNow.Equals(GetActorTransform(), FTransformUpdateSequencDataCpp_Delta_Min)) {
             SetActorTransform(transformNow);

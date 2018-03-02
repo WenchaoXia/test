@@ -26,4 +26,26 @@ public:
     {
 
     };
+
+protected:
+
+    int32 showImportantGameStateUpdated_Implementation(float dur, MyMJGameStateCpp newGameState)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("showImportantGameStateUpdated_Implementation only implemented in C++."));
+        return 0;
+    };
+
+    virtual int32 showAttenderWeave_Implementation(float dur, int32 idxAttender, MyMJGameWeaveVisualTypeCpp weaveVsualType) override
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("showAttenderWeave_Implementation only implemented in C++."));
+        return 0;
+    };
+
+    virtual int32 changeViewPosition_Implementation(int32 idxAttender) override
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("changeViewPosition_Implementation only implemented in C++."));
+        return 0;
+    };
+
+    MyMJGameRuleTypeCpp m_eRuleType;
 };

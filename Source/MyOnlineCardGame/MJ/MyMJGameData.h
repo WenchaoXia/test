@@ -364,6 +364,7 @@ public:
         m_eGameState = MyMJGameStateCpp::Invalid;
 
         m_iDiceNumberNowMask = 0;
+        m_iSeed = 0;
 
         m_cUntakenSlotInfo.reset();
         m_cHelper.reset();
@@ -411,6 +412,9 @@ public:
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "DiceNumberNowMask"))
     int32 m_iDiceNumberNowMask;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Seed"))
+    int32 m_iSeed;
 
 };
 
@@ -883,6 +887,15 @@ public:
         }
 
         return ret;
+    };
+
+    inline const FMyMJCoreDataDeltaCpp* getCoreDataDeltaConst() const
+    {
+        if (m_aCoreData.Num() > 0) {
+            return &m_aCoreData[0];
+        }
+
+        return NULL;
     };
 
     //self must be syskeeper's role

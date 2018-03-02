@@ -82,7 +82,7 @@ public:
     };
 
     FMyActorModelInfoBoxCpp m_cCardModelInfo;
-    FMyActorModelInfoBoxCpp m_cDiceModelInfo;
+    FMyMJDiceModelInfoBoxCpp m_cDiceModelInfo;
 };
 
 USTRUCT(BlueprintType)
@@ -761,6 +761,10 @@ public:
     void stop();
     void loop(uint32 uiClientWorldTimeNow_ms);
 
+    inline const FMyMJGameDeskVisualDataCpp& getVisualDataRefConst() const
+    {
+        return m_cDeskVisualDataNow;
+    };
 
     uint32 updateCfgCache(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
 

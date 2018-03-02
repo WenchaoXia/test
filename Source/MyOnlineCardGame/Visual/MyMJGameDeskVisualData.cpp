@@ -983,10 +983,30 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 }
  
                 int32 iCol2Skip = 0;
-                int32 iColPerRowNow = iColPerRow - (2 * iCol2Skip);
-                int32 idxRowNow = 0;
+                int32 iColPerRowNow = 0;
+                int32 rowNumMax = cVisualPointCfg.m_iRowMax;
+
+                int32 idxRowNow = -1;
                 int32 idxColInRowNow = 0;
+                int32 idxStackNow = 0;
                 for (int32 i = 0; i < l; i++) {
+
+                    if (idxColInRowNow >= iColPerRowNow) {
+                        idxRowNow++;
+                        if (rowNumMax > 0 && idxRowNow >= rowNumMax) {
+                            idxStackNow++;
+                            idxRowNow = 0;
+                        }
+
+                        idxColInRowNow = 0;
+
+                        iCol2Skip = FMath::FloorToInt(idxRowNow * fCardNum2ReducePerRowHalf);
+                        iColPerRowNow = iColPerRow - (2 * iCol2Skip);
+                        if (iColPerRowNow < 2) {
+                            iColPerRowNow = 2;
+                        }
+                    }
+
                     int32 cardId = aIdGivenOutCards[i];
                     const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
                     int32 cardValue = ccardValuePack.getByIdx(cardId);
@@ -1004,21 +1024,13 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     pCardVisualInfo->m_iIdxRow = idxRowNow;
                     pCardVisualInfo->m_iIdxColInRow = idxColInRowNow;
                     pCardVisualInfo->m_iHelperIdxColInRowReal = idxColInRowNow + iCol2Skip;
-                    pCardVisualInfo->m_iIdxStackInCol = 0;
+                    pCardVisualInfo->m_iIdxStackInCol = idxStackNow;
 
                     pCardVisualInfo->m_iCardValue = cardValue;
 
+                    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("give out card info: %s."), *pCardVisualInfo->genDebugString());
+
                     idxColInRowNow++;
-                    if (idxColInRowNow >= iColPerRowNow) {
-                        idxRowNow++;
-                        idxColInRowNow = 0;
-                        
-                        iCol2Skip = FMath::FloorToInt(idxRowNow * fCardNum2ReducePerRowHalf);
-                        iColPerRowNow = iColPerRow - (2 * iCol2Skip);
-                        if (iColPerRowNow < 2) {
-                            iColPerRowNow = 2;
-                        }
-                    }
                 }
             }
             else if (eSlot == MyMJCardSlotTypeCpp::Weaved) {
@@ -2171,8 +2183,13 @@ void UMyMJGameDeskVisualDataObjCpp::playGameProgressTo(uint32 uiServerTime_ms, b
                 }
             }
 
+            uint32 uiBaseResetDur_ms = 0;
+            if (pEventApplied &&  pEventApplied->getPusherResult(false) && pEventApplied->getPusherResult(false)->m_aResultBase.Num() > 0) {
+                uiBaseResetDur_ms = pEventApplied->getDuration_ms();
+            }
+
             if (bDataUpdated) {
-                getRoomVerified()->updateVisualData(m_cDeskVisualDataNow.getCfgRefConst(), cDelta.m_apNewCoreData[0], cDelta.m_apNewCoreDataDirtyRecord[0], cDelta.m_mNewActorDataIdCards, cDelta.m_mNewActorDataIdDices, pEventApplied ? pEventApplied->getDuration_ms() : 0);
+                getRoomVerified()->updateVisualData(m_cDeskVisualDataNow.getCfgRefConst(), cDelta.m_apNewCoreData[0], cDelta.m_apNewCoreDataDirtyRecord[0], cDelta.m_mNewActorDataIdCards, cDelta.m_mNewActorDataIdDices, uiBaseResetDur_ms > 0, uiBaseResetDur_ms);
                 bDataUpdated = false;
             }
 

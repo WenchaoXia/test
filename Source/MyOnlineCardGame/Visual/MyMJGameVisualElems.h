@@ -179,7 +179,6 @@ public:
 
     virtual ~AMyMoveWithSeqActorBaseCpp();
 
-
     virtual int32 getModelInfo(FMyActorModelInfoBoxCpp& modelInfo, bool verify = true) const override;
     virtual UMyTransformUpdateSequenceMovementComponent* getTransformUpdateSequence(bool verify = true) override;
 
@@ -332,61 +331,51 @@ protected:
 };
 
 
-//all card related visual data is here, not touched to actor, to make it possible subthread handling 
-USTRUCT(BlueprintType)
-struct FMyMJCardVisualPackCpp
+UCLASS(Blueprintable, Abstract)
+class MYONLINECARDGAME_API AMyMJGameDiceBaseCpp : public AMyMoveWithSeqActorBaseCpp
 {
-    GENERATED_USTRUCT_BODY()
+    GENERATED_BODY()
 
 public:
-    FMyMJCardVisualPackCpp()
+
+    AMyMJGameDiceBaseCpp();
+
+    virtual ~AMyMJGameDiceBaseCpp();
+
+    //return errcode, 0 means no error
+    inline int32 getDiceModelInfo(FMyMJDiceModelInfoBoxCpp& diceModelInfo, bool verify = true) const
     {
-    };
-
-    virtual ~FMyMJCardVisualPackCpp()
-    {
-
-    };
-
-    inline int32 getCount() const
-    {
-        return m_aCards.Num();
-    }
-
-    void resize(int32 l)
-    {
-        int32 toAdd = l - m_aCards.Num();
-        if (toAdd > 0) {
-            m_aCards.AddDefaulted(toAdd); //Todo: use add zeroed for optimization
-        }
-        else if (toAdd < 0) {
-            m_aCards.RemoveAt(m_aCards.Num() + toAdd, -toAdd);
-        }
-    };
-
-    inline FMyMJGameCardVisualInfoAndResultCpp* getByIdx(int32 idx, bool bVerifyValid) {
-        MY_VERIFY(idx >= 0);
-        FMyMJGameCardVisualInfoAndResultCpp* ret = NULL;
-        if (idx < m_aCards.Num()) {
-            ret = &m_aCards[idx];
+        int32 ret = Super::getModelInfo(diceModelInfo.m_cBasic, verify);
+        if (0 != ret)
+        {
+            return ret;
         }
 
-        if (ret == NULL) {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("idx out of range: %d / %d."), idx, getCount());
-        }
-
-        if (bVerifyValid) {
-            MY_VERIFY(ret);
+        ret = getDiceModelInfoExtra(diceModelInfo.m_cExtra);
+        if (verify) {
+            MY_VERIFY(ret == 0);
         }
 
         return ret;
     };
 
+
 protected:
 
-    UPROPERTY(meta = (DisplayName = "cards"))
-    TArray<FMyMJGameCardVisualInfoAndResultCpp> m_aCards;
+    //return errcode, 0 means no error
+    UFUNCTION(BlueprintNativeEvent, BlueprintPure)
+    int32 getDiceModelInfoExtra(FMyMJDiceModelInfoExtraCpp& diceModelInfoExtra) const;
+
+    virtual int32 getDiceModelInfoExtra_Implementation(FMyMJDiceModelInfoExtraCpp& diceModelInfoExtra) const
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDiceBaseCpp::getDiceModelInfoExtra() must be overrided by blueprint subclass!"));
+        return -1;
+    };
+
+    void onTransformSeqUpdated(const struct FTransformUpdateSequencDataCpp& data, const FVector& vector);
+    void onTransformSeqFinished(const struct FTransformUpdateSequencDataCpp& data);
 };
+
 
 UCLASS(Blueprintable)
 class MYONLINECARDGAME_API AMyMJGameTrivalDancingActorBaseCpp : public AMyMoveWithSeqActorBaseCpp

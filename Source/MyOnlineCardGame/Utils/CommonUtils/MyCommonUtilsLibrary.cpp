@@ -512,7 +512,7 @@ void UMyTransformUpdateSequenceMovementComponent::onTimeLineFinished()
     if (IsValid(w)) {
         float fTimePassed = w->GetTimeSeconds() - m_fDebugTimeLineStartWorldTime;
         if (!UKismetMathLibrary::NearlyEqual_FloatFloat(pData->m_fTime, fTimePassed, 0.1)) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time line finished but time not quite equal: supposed %f, used %f."), pData->m_fTime, fTimePassed);
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("time line finished but time not quite equal: supposed %f, used %f."), pData->m_fTime, fTimePassed);
         }
 
     }
@@ -620,7 +620,15 @@ void FMyTransformOfZRotationAroundPointCoordinateCpp::interp(const FMyTransformO
     float percentFixed = FMath::Clamp<float>(percent, 0, 1);
 
     FMyLocationOfZRotationAroundPointCoordinateCpp::interp(start.m_cLocation, end.m_cLocation, percentFixed, result.m_cLocation);
-    result.m_cRotatorOffsetFacingCenterPoint = start.m_cRotatorOffsetFacingCenterPoint + (end.m_cRotatorOffsetFacingCenterPoint - start.m_cRotatorOffsetFacingCenterPoint) * percentFixed;
+
+    result.m_cRotatorOffsetFacingCenterPoint = UKismetMathLibrary::RLerp(start.m_cRotatorOffsetFacingCenterPoint, end.m_cRotatorOffsetFacingCenterPoint, percentFixed, true);
+
+    //result.m_cRotatorOffsetFacingCenterPoint = FMath::RInterpTo(start.m_cRotatorOffsetFacingCenterPoint, end.m_cRotatorOffsetFacingCenterPoint, percentFixed, 1);
+    
+    //FQuat QNow = FMath::Lerp(start.m_cRotatorOffsetFacingCenterPoint.Quaternion(), end.m_cRotatorOffsetFacingCenterPoint.Quaternion(), percentFixed);
+    //result.m_cRotatorOffsetFacingCenterPoint = QNow.Rotator();
+
+    //result.m_cRotatorOffsetFacingCenterPoint = start.m_cRotatorOffsetFacingCenterPoint + (end.m_cRotatorOffsetFacingCenterPoint - start.m_cRotatorOffsetFacingCenterPoint) * percentFixed;
 };
 
 
@@ -633,6 +641,32 @@ int32 UMyCommonUtilsLibrary::getEngineNetMode(AActor *actor)
     else {
         return -1;
     }
+};
+
+
+//Todo: check this function's math correctness
+FRotator UMyCommonUtilsLibrary::fixRotatorValuesIfGimbalLock(const FRotator& rotator, float PitchDeltaTolerance)
+{
+    float PitchNormalized = FRotator::NormalizeAxis(rotator.Pitch);
+
+    if (FMath::IsNearlyEqual(PitchNormalized, 90, PitchDeltaTolerance))
+    {
+        FRotator ret = rotator;
+        ret.Yaw = FRotator::NormalizeAxis(rotator.Yaw - rotator.Roll);
+        ret.Roll = 0;
+        return ret;
+    }
+    else if (FMath::IsNearlyEqual(PitchNormalized, -90, PitchDeltaTolerance))
+    {
+        FRotator ret = rotator;
+        ret.Yaw = FRotator::NormalizeAxis(rotator.Yaw + rotator.Roll);
+        ret.Roll = 0;
+        return ret;
+    }
+    else {
+        return rotator;
+    }
+
 };
 
 
@@ -1108,15 +1142,40 @@ void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByPercent
 #define MyArtDirNameCommon (TEXT("Common"))
 #define MyArtDirNameCurves (TEXT("Curves"))
 #define MyArtFileNameCurveVectorDefaultLinear (TEXT("CurveVectorDefaultLinear"))
+#define MyArtFileNameCurveVectorDefaultAccelerate0 (TEXT("CurveVectorDefaultAccelerate0"))
 
-UCurveVector* UMyCommonUtilsLibrary::getCurveVectorDefaultLinear()
+UCurveVector* UMyCommonUtilsLibrary::getCurveVectorByType(MyCurveAssetType curveType)
 {
-    FString fullName = FString(MyArtDirBase) + TEXT("/") + MyArtDirNameCommon + TEXT("/") + MyArtDirNameCurves + TEXT("/") + MyArtFileNameCurveVectorDefaultLinear;
+    FString fullName = FString(MyArtDirBase) + TEXT("/") + MyArtDirNameCommon + TEXT("/") + MyArtDirNameCurves + TEXT("/");
+
+    if (curveType == MyCurveAssetType::DefaultLinear)
+    {
+        fullName += MyArtFileNameCurveVectorDefaultLinear;
+    }
+    else if (curveType == MyCurveAssetType::DefaultAccelerate0)
+    {
+        fullName += MyArtFileNameCurveVectorDefaultAccelerate0;
+    }
 
     UCurveVector* pRet = UMyCommonUtilsLibrary::helperTryFindAndLoadAsset<UCurveVector>(NULL, fullName);
     MY_VERIFY(pRet);
 
     return pRet;
+};
+
+UCurveVector* UMyCommonUtilsLibrary::getCurveVectorFromSettings(const FMyCurveVectorSettingsCpp& settings)
+{
+    UCurveVector* ret = NULL;
+    if (settings.m_pCurveOverride) {
+        ret = settings.m_pCurveOverride;
+    }
+    else {
+        ret = getCurveVectorByType(settings.m_eCurveType);
+    }
+
+    MY_VERIFY(ret);
+
+    return ret;
 };
 
 void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp &meta,
@@ -1204,13 +1263,13 @@ void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStep(const FMyTra
             aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation());
         }
     }
-    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::offsetFromPrevLocation)
+    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::OffsetFromPrevLocation)
     {
         for (int32 i = 0; i < l; i++) {
             aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformPrevRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
         }
     }
-    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::offsetFromFinalLocation)
+    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::OffsetFromFinalLocation)
     {
         for (int32 i = 0; i < l; i++) {
             aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
@@ -1221,10 +1280,10 @@ void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStep(const FMyTra
         FVector location = pointTransform.GetLocation();
         for (int32 i = 0; i < l; i++) {
             if (i == idxCenter) {
-                aNextTransforms[i].SetLocation(location);
+                aNextTransforms[i].SetLocation(location + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
             }
             else {
-                aNextTransforms[i].SetLocation(location + actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() - componentCenter->getHelperTransformFinalRefConst().GetLocation());
+                aNextTransforms[i].SetLocation(location + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2 + actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() - componentCenter->getHelperTransformFinalRefConst().GetLocation());
             }
         }
     }
@@ -1233,11 +1292,17 @@ void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStep(const FMyTra
         FVector location = disappearTransform.GetLocation();
         for (int32 i = 0; i < l; i++) {
             if (i == idxCenter) {
-                aNextTransforms[i].SetLocation(location);
+                aNextTransforms[i].SetLocation(location + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
             }
             else {
-                aNextTransforms[i].SetLocation(location + actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() - componentCenter->getHelperTransformFinalRefConst().GetLocation());
+                aNextTransforms[i].SetLocation(location + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2 + actorComponentsSortedGroup[i]->getHelperTransformFinalRefConst().GetLocation() - componentCenter->getHelperTransformFinalRefConst().GetLocation());
             }
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::OffsetFromGroupPoint)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(actorComponentsSortedGroup[i]->getHelperTransformGroupPointRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
         }
     }
 
@@ -1281,13 +1346,14 @@ void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStep(const FMyTra
 
 
     float fDur = fTotalTime * cStepData.m_fTimePercent;
+    UCurveVector* pCurve = UMyCommonUtilsLibrary::getCurveVectorFromSettings(cStepData.m_cCurve);
     for (int32 i = 0; i < l; i++) {
 
         UMyTransformUpdateSequenceMovementComponent *pSeqComp = actorComponentsSortedGroup[i];
 
         FTransformUpdateSequencDataCpp data;
         data.helperSetDataBySrcAndDst(pSeqComp->getHelperTransformPrevRefConst(), aNextTransforms[i], fDur, cStepData.m_cRotationUpdateExtraCycles);
-        pSeqComp->addSeqToTail(data, cStepData.m_pCurve == NULL ? UMyCommonUtilsLibrary::getCurveVectorDefaultLinear() : cStepData.m_pCurve);
+        pSeqComp->addSeqToTail(data, pCurve);
     }
 };
 
@@ -1295,18 +1361,27 @@ void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationSteps(const FMyTr
                                                                         const TArray<FMyActorTransformUpdateAnimationStepCpp>& stepDatas,
                                                                         const TArray<UMyTransformUpdateSequenceMovementComponent *>& actorComponentsSortedGroup)
 {
+    int32 l = stepDatas.Num();
+
+    if (l <= 0) {
+        return;
+    }
+
     TArray<float> m_aTimePercents;
     float total = 0;
 
-    int32 l = stepDatas.Num();
+    bool bTimePecentTotalExpectedNot100Pecent = false;
+
     for (int32 i = 0; i < l; i++) {
         helperSetupTransformUpdateAnimationStep(meta, stepDatas[i], actorComponentsSortedGroup);
         float f = stepDatas[i].m_fTimePercent;
         m_aTimePercents.Emplace(f);
         total += f;
+
+        bTimePecentTotalExpectedNot100Pecent |= stepDatas[i].m_bTimePecentTotalExpectedNot100Pecent;
     }
 
-    if (l > 0 && !FMath::IsNearlyEqual(total, 1, MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT))
+    if ((!bTimePecentTotalExpectedNot100Pecent) && l > 0 && !FMath::IsNearlyEqual(total, 1, MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT))
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("total time is not 100%, str %s. now it is %f."), *meta.m_sDebugString, total);
     };
@@ -1405,6 +1480,8 @@ FString UMyCommonUtilsLibrary::Conv_MyTransformZRotationToString(const FMyTransf
     return TEXT("[") + myTransformZRotation.m_cLocation.ToString() + TEXT("(") + myTransformZRotation.m_cRotatorOffsetFacingCenterPoint.ToString() + TEXT(")]");
 };
 
+
+//Todo: if point is above center as YAW = 90D, the rotation compute is not stable when interp, fix it later
 void UMyCommonUtilsLibrary::MyTransformZRotationToTransformWorld(const FTransform& centerPointTransformWorld, const FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation, FTransform& transformWorld)
 {
     //MY_VERIFY(transformZRotation.m_cLocation.m_fRadius >= 0);
@@ -1420,7 +1497,12 @@ void UMyCommonUtilsLibrary::MyTransformZRotationToTransformWorld(const FTransfor
 
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("0 loc0: %s, s %f, r %f."), *loc0.ToString(), s, radiansYaw);
 
-    FQuat toCenter = FRotationMatrix::MakeFromX(-loc0).ToQuat();
+    //FQuat toCenter = FRotationMatrix::MakeFromX(-loc0).ToQuat();
+    FRotator toCenterR = FRotationMatrix::MakeFromX(-loc0).Rotator();
+    toCenterR.Roll = 0;
+    FQuat toCenter = toCenterR.Quaternion();
+    //FQuat toCenter = UKismetMathLibrary::FindLookAtRotation(loc0, FVector::ZeroVector).Quaternion();
+    //toCenter = fixRotatorValuesIfGimbalLock(toCenter.Rotator()).Quaternion();
     //FQuat toCenter = UKismetMathLibrary::FindLookAtRotation(loc0, FVector::ZeroVector).Quaternion();
 
     //FRotator UKismetMathLibrary::FindLookAtRotation(const FVector& Start, const FVector& Target)
@@ -1435,6 +1517,8 @@ void UMyCommonUtilsLibrary::MyTransformZRotationToTransformWorld(const FTransfor
     T0.SetRotation(quat0);
 
     transformWorld = T0 * centerPointTransformWorld;
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("debug: loc0 %s, toCenter %s %s, quat0 r %s, final %s."), *loc0.ToString(), *toCenter.ToString(), *toCenter.Rotator().ToString(), *quat0.Rotator().ToString(), *transformWorld.GetRotation().Rotator().ToString());
 }
 
 void UMyCommonUtilsLibrary::TransformWorldToMyTransformZRotation(const FTransform& centerPointTransformWorld, const FTransform& transformWorld, FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation)
@@ -1454,9 +1538,18 @@ void UMyCommonUtilsLibrary::TransformWorldToMyTransformZRotation(const FTransfor
     myTransformZRotation.m_cLocation.m_fYawOnXYPlane = FRotator::ClampAxis(FMath::RadiansToDegrees(radiansYaw));
     myTransformZRotation.m_cLocation.m_fZoffset = loc0.Z;
 
-    FQuat toCenter = FRotationMatrix::MakeFromX(-loc0).ToQuat();
+    //FQuat toCenter = FRotationMatrix::MakeFromX(-loc0).ToQuat();
+    
+    FRotator toCenterR = FRotationMatrix::MakeFromX(-loc0).Rotator();
+    toCenterR.Roll = 0;
+    FQuat toCenter = toCenterR.Quaternion();
 
-    myTransformZRotation.m_cRotatorOffsetFacingCenterPoint = (toCenter.Inverse() * quat0).Rotator();
+    //toCenter = fixRotatorValuesIfGimbalLock(toCenter.Rotator()).Quaternion();
+
+    //myTransformZRotation.m_cRotatorOffsetFacingCenterPoint = (toCenter.Inverse() * quat0).Rotator();
+    FRotator r0 = (toCenter.Inverse() * quat0).Rotator();
+
+    myTransformZRotation.m_cRotatorOffsetFacingCenterPoint = r0; // fixRotatorValuesIfGimbalLock(r0);
 }
 
 /*

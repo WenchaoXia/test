@@ -118,7 +118,7 @@ public:
     //return uint is ms, resolved
     uint32 helperGetDeltaDur(MyMJGameRuleTypeCpp ruleType, const FMyMJDataDeltaCpp& delta) const;
 
-    uint32 helperGetBaseResetAtStartDur() const
+    inline uint32 helperGetBaseResetAtStartDur() const
     {
         return m_uiBaseResetAtStart;
     };
@@ -129,7 +129,9 @@ public:
 
     uint32 m_uiThrowDices;
 
-    uint32 m_uiDistCardsDone;
+    uint32 m_uiDistCards;
+
+    uint32 m_uiDistCardsLast;
 
     uint32 m_uiHuBornLocalCS;
 

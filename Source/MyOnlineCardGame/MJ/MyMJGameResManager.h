@@ -26,7 +26,13 @@ public:
     };
 
 
+    inline int32 getSeed() const
+    {
+        return m_iSeed;
+    };
+
 protected:
 
     FRandomStream m_cRandomStream;
+    int32 m_iSeed;
 };

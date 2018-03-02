@@ -26,7 +26,7 @@ public:
     void clearInGame();
 
 
-    inline UMyMJGameDeskVisualDataObjCpp* getDeskDataObjVerified()
+    inline UMyMJGameDeskVisualDataObjCpp* getDeskDataObjVerified() const
     {
         if (!IsValid(m_pDeskDataObj)) {
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("m_pDeskDataObj invalid %p."), m_pDeskDataObj);

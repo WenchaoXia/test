@@ -9,6 +9,7 @@
 
 #include "MyCommonUtilsLibrary.generated.h"
 
+//#define MY_ROTATOR_MIN_TOLERANCE (0.01f)
 #define FTransformUpdateSequencDataCpp_Delta_Min (0.1f)
 #define MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT (0.01f)
 
@@ -224,6 +225,19 @@ public:
         m_cHelperTransformFinal = cHelperTransformFinal;
     };
 
+    inline
+        const FTransform& getHelperTransformGroupPointRefConst() const
+    {
+        return m_cHelperTransformGroupPoint;
+    };
+
+    inline
+        void setHelperTransformGroupPoint(const FTransform& cHelperTransformGroupPoint)
+    {
+        m_cHelperTransformGroupPoint = cHelperTransformGroupPoint;
+    };
+
+
     inline void setHideWhenInactived(bool bNew)
     {
         m_bHideWhenInactived = bNew;
@@ -276,6 +290,7 @@ protected:
 
     //Helper data when calculating the multiple animation steps, this is the final transform
     FTransform m_cHelperTransformFinal;
+    FTransform m_cHelperTransformGroupPoint;
 
     float m_fDebugTimeLineStartWorldTime;
     uint32 m_uDebugLastTickWorldTime_ms;
@@ -302,7 +317,7 @@ public:
 
     };
 
-    void reset()
+    inline void reset()
     {
         m_cCenterPointRelativeLocation = FVector(0);
     };
@@ -324,7 +339,7 @@ public:
         m_cBoxExtend = FVector(1);
     };
 
-    void reset()
+    inline void reset()
     {
         Super::reset();
 
@@ -333,7 +348,7 @@ public:
 
     //final size after all actor scale, component scale applied
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "box extend final"))
-        FVector m_cBoxExtend;
+    FVector m_cBoxExtend;
 
 };
 
@@ -377,10 +392,11 @@ enum class MyActorTransformUpdateAnimationLocationType : uint8
 {
     PrevLocation = 0, //equal no change, previous step's location
     FinalLocation = 1, //where it should go at the end of animation
-    offsetFromPrevLocation = 10,
-    offsetFromFinalLocation = 11,
+    OffsetFromPrevLocation = 10,
+    OffsetFromFinalLocation = 11,
     PointOnPlayerScreen = 50, //one point specified on player screen, multiple actors will have their relative location same as finals
     DisappearAtAttenderBorderOnPlayerScreen = 51, //follow the line from center to attender point, the position make it out of player's screen, multiple actors will have their relative location same as finals
+    OffsetFromGroupPoint = 100, //special one that goto the group point, and the actor should specify it in the component's data by calling its API, which means game visual code should arrange it
 };
 
 UENUM()
@@ -401,6 +417,38 @@ enum class MyActorTransformUpdateAnimationScaleType : uint8
     Specified = 50,
 };
 
+UENUM()
+enum class MyCurveAssetType : uint8
+{
+    DefaultLinear = 0,
+    DefaultAccelerate0 = 10,
+};
+
+USTRUCT(BlueprintType)
+struct FMyCurveVectorSettingsCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyCurveVectorSettingsCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_eCurveType = MyCurveAssetType::DefaultLinear;
+        m_pCurveOverride = NULL;
+    };
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "curve type"))
+    MyCurveAssetType m_eCurveType;
+
+    //if specified, it will be used instead of default one specified from "curve type"
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "curve override"))
+    UCurveVector* m_pCurveOverride;
+};
+
 USTRUCT()
 struct FMyActorTransformUpdateAnimationStepCpp
 {
@@ -416,6 +464,7 @@ public:
     inline void reset()
     {
         m_fTimePercent = 0;
+        m_bTimePecentTotalExpectedNot100Pecent = false;
 
         m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::PrevLocation;
         m_cLocationOffsetPercent = FVector::ZeroVector;
@@ -426,12 +475,17 @@ public:
         m_eScaleUpdateType = MyActorTransformUpdateAnimationScaleType::PrevScale;
         m_cScaleSpecified = FVector(1, 1, 1);
 
-        m_pCurve = NULL;
+        m_cCurve.reset();
+
     };
 
     //how many time used in total
     UPROPERTY(EditAnywhere, meta = (DisplayName = "time percent"))
-        float m_fTimePercent;
+    float m_fTimePercent;
+
+    //is the total number not expected to be 100%
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "time percent total expected not 100 percent"))
+    bool m_bTimePecentTotalExpectedNot100Pecent;
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "location update type"))
         MyActorTransformUpdateAnimationLocationType m_eLocationUpdateType;
@@ -454,9 +508,8 @@ public:
     UPROPERTY(EditAnywhere, meta = (DisplayName = "scale specified"))
         FVector m_cScaleSpecified;
 
-    //if not specified, default linear one will be used
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "curve to use"))
-        UCurveVector* m_pCurve;
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "curve"))
+    FMyCurveVectorSettingsCpp m_cCurve;
 };
 
 USTRUCT()
@@ -721,6 +774,60 @@ public:
         //return (T*)StaticFindObject(T::StaticClass(), Outer, Name, ExactClass);
     }
 
+    //return the number of actors created, return < 0 means fail
+    template< class T >
+    static int32 helperPrepareActorsInArray(const UObject* WorldContextObject, int32 count2reach, const TSubclassOf<T>& actorClass, TArray<T*>& managedActorArray, bool bDebugLog = false)
+    {
+        MY_VERIFY(count2reach >= 0);
+
+        if (!IsValid(actorClass)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("actorClass is invalid: %p, type name %s."), actorClass.Get(), *T::StaticClass()->GetName());
+            return -1;
+        }
+
+        double s0;
+        if (bDebugLog) {
+            s0 = FPlatformTime::Seconds();
+        }
+
+        int32 l = managedActorArray.Num();
+        for (int32 i = (l - 1); i >= count2reach; i--) {
+            T* pPoped = managedActorArray.Pop();
+            pPoped->K2_DestroyActor();
+        }
+
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+        UWorld *w = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+        MY_VERIFY(IsValid(w));
+
+        l = managedActorArray.Num();
+        int32 countCreated = 0;
+        for (int32 i = l; i < count2reach; i++) {
+            //AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(pCDO->StaticClass(), SpawnParams); //Warning: staticClass is not virtual class, so you can't get actual class
+            T *pNewActor = w->SpawnActor<T>(actorClass, FVector(0, 0, 0), FRotator(0, 0, 0), SpawnParams);
+            //pNewCardActor->setResPathWithRet(m_cCfgCardResPath);
+
+            MY_VERIFY(IsValid(pNewActor));
+            pNewActor->SetActorHiddenInGame(true);
+            MY_VERIFY(managedActorArray.Emplace(pNewActor) == i);
+            countCreated++;
+        }
+
+        MY_VERIFY(managedActorArray.Num() == count2reach);
+
+        if (bDebugLog) {
+            double s1 = FPlatformTime::Seconds();
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("prepare actors in array done: class %s,  %d created, total now %d, time used %f."), *actorClass->GetName(), countCreated, count2reach, s1 - s0);
+        }
+
+        MY_VERIFY(countCreated >= 0); //we don't allow interger spin over
+
+        return countCreated;
+    };
+
+
     UFUNCTION(BlueprintCallable)
     static int32 getEngineNetMode(AActor *actor);
 
@@ -730,6 +837,8 @@ public:
         return FString::Printf(TEXT("%u.%03u"), uiTime_ms / 1000, uiTime_ms % 1000);
     };
 
+    UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
+    static FRotator fixRotatorValuesIfGimbalLock(const FRotator& rotator, float PitchDeltaTolerance = 0.01);
 
     UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
     static void rotateOriginWithPivot(const FTransform& originCurrentWorldTransform, const FVector& pivot2OriginRelativeLocation, const FRotator& originTargetWorldRotator, FTransform& originResultWorldTransform);
@@ -784,7 +893,11 @@ public:
 
     //following is bond to project resource setup
     UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary", meta = (UnsafeDuringActorConstruction = "true"))
-    static UCurveVector* getCurveVectorDefaultLinear();
+    static UCurveVector* getCurveVectorByType(MyCurveAssetType curveType = MyCurveAssetType::DefaultLinear);
+
+    //always succeed. never return NULL
+    UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary", meta = (UnsafeDuringActorConstruction = "true"))
+    static UCurveVector* getCurveVectorFromSettings(const FMyCurveVectorSettingsCpp& settings);
 
     static void helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp &meta,
                                                                                             float targetPosiFromCenterToBorderOnScreenPercent,
