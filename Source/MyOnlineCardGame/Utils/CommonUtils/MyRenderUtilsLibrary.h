@@ -2,9 +2,174 @@
 
 #pragma once
 
+#include "MyCommonUtilsLibrary.h"
+
 #include "RenderUtils.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Runtime/UMG/Public/Components/Image.h"
 #include "MyRenderUtilsLibrary.generated.h"
+
+
+USTRUCT()
+struct FMyFlipImageElemCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyFlipImageElemCpp()
+    {
+        m_pTexture = NULL;
+        m_iFrameOccupy = 1;
+    };
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "texture"))
+    UTexture2D* m_pTexture;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "frame occupy", ClampMin = 1))
+    int32 m_iFrameOccupy;
+};
+
+USTRUCT()
+struct FMyFlipImageSettingsCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyFlipImageSettingsCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_aFlipImageElems.Reset();
+        m_fFlipTime = 1 / 30;
+        m_bMatchSize = false;
+        m_iLoopNum = 1;
+    };
+
+    inline int32 getTotalFrameNum() const
+    {
+        int32 ret = 0;
+        int32 l = m_aFlipImageElems.Num();
+        for (int32 i = 0; i < l; i++) {
+            ret += m_aFlipImageElems[i].m_iFrameOccupy;
+            MY_VERIFY(m_aFlipImageElems[i].m_iFrameOccupy > 0);
+            if (m_aFlipImageElems[i].m_pTexture == NULL) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("found a flip image elem with NULL texture, idx %d."), i);
+            }
+        }
+
+        return ret;
+    };
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "flip image elems"))
+    TArray<FMyFlipImageElemCpp> m_aFlipImageElems;
+
+    //the time one frame occupy
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "flip time"))
+        float m_fFlipTime;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "match size"))
+        bool m_bMatchSize;
+
+    //if <= 0, means loop for ever
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "loop num"))
+        int32 m_iLoopNum;
+};
+
+UCLASS(BlueprintType)
+class MYONLINECARDGAME_API UMyFlipImageSettingsAssetCpp : public UDataAsset
+{
+    GENERATED_BODY()
+
+public:
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "settings"))
+    FMyFlipImageSettingsCpp m_cSettings;
+};
+
+/**
+* We can use UE4's flipbook as data containor, but that would increase package size about 20kb per image, which is bad for mobile game.
+* So we use custom data struct.
+* * No Children
+*/
+UCLASS()
+class MYONLINECARDGAME_API UMyFlipImage : public UImage
+{
+    GENERATED_BODY()
+
+
+public:
+
+    UMyFlipImage() : Super()
+    {
+        m_pSettingsAsset = NULL;
+
+        m_iIdxOfImageShowing = -1;
+        m_iFrameOfImageShowing = 0;
+        m_iLoopShowing = 0;
+    };
+
+    //DECLARE_DYNAMIC_DELEGATE_RetVal(int32, FOnFlipEnd);
+    //@loopFinished means how many loops done, it should never <= 0 unless overspin
+    DECLARE_DYNAMIC_DELEGATE_TwoParams(FOnFlipEnd, int32, loopFinished, bool, isLastLoop);
+
+    //when calling, it will ensure a image will be set immedietlly if expected one is not set.
+    //if @time is 0, it will use preset interval, otherwise interval will be calculated to match it
+    //if @loopNum is 0, it means loop for ever
+    UFUNCTION(BlueprintCallable, meta = (UnsafeDuringActorConstruction = "true"))
+    void startImageFlip(float time, int32 loopNum = 1, bool matchSize = false);
+
+    UFUNCTION(BlueprintCallable, meta = (UnsafeDuringActorConstruction = "true"))
+    void stopImageFlip();
+
+    UFUNCTION(BlueprintPure, meta = (UnsafeDuringActorConstruction = "true"))
+    bool isImageFlipping() const;
+
+    UFUNCTION(BlueprintGetter)
+    UMyFlipImageSettingsAssetCpp* getSettingsAsset() const
+    {
+        return m_pSettingsAsset;
+    }
+
+    //return true if new path is OK
+    UFUNCTION(BlueprintSetter)
+    void setSettingsAsset(UMyFlipImageSettingsAssetCpp* pSettingsAsset)
+    {
+        m_pSettingsAsset = pSettingsAsset;
+    }
+
+    //return errcode, 0 means no errro. @size will return the first flip image's size, or zero if settings is empty or invalid
+    UFUNCTION(BlueprintCallable)
+    int32 getImageSize(FVector2D& size) const;
+
+    UPROPERTY(EditAnywhere, BlueprintSetter = setSettingsAsset, BlueprintGetter = getSettingsAsset, meta = (DisplayName = "settings Asset"))
+    UMyFlipImageSettingsAssetCpp* m_pSettingsAsset;
+
+    //return value is ignored
+    UPROPERTY(EditAnywhere, meta = (IsBindableEvent = "True", DisplayName = "on flip end"))
+    FOnFlipEnd OnFlipEnd;
+
+protected:
+
+#if WITH_EDITOR
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
+#endif
+
+    void BeginDestroy() override;
+
+    void loop();
+    void tryNextFrame(int32 idxOfImage, int32 frameOfImage);
+
+    FMyFlipImageSettingsCpp m_cSettingUsing; //copy of asset, allow modifying
+    int32 m_iIdxOfImageShowing;
+    int32 m_iFrameOfImageShowing;
+    int32 m_iLoopShowing;
+
+    FTimerHandle m_cLoopTimerHandle;
+};
 
 UCLASS(Blueprintable, HideCategories = (Collision, Rendering))
 class MYONLINECARDGAME_API AMyTextureGenSuitBaseCpp : public AActor

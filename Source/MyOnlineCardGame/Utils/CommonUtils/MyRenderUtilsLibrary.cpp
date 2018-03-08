@@ -25,6 +25,178 @@
 #include "PackageTools.h"
 #endif
 
+#if WITH_EDITOR
+
+void UMyFlipImage::PostEditChangeProperty(FPropertyChangedEvent& e)
+{
+    Super::PostEditChangeProperty(e);
+}
+
+#endif
+
+void UMyFlipImage::startImageFlip(float time, int32 loopNum, bool matchSize)
+{
+    if (m_pSettingsAsset == NULL) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("settings not specified!"));
+        return;
+    }
+
+    m_cSettingUsing = m_pSettingsAsset->m_cSettings;
+    m_iIdxOfImageShowing = -1;
+    m_iFrameOfImageShowing = 0;
+    m_iLoopShowing = 0;
+
+    int32 totalFrameNum = m_cSettingUsing.getTotalFrameNum();
+    if (totalFrameNum <= 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("not enough of frames specified: %d."), totalFrameNum);
+        return;
+    }
+
+    //the time interval model is same as UE4's 3d flipbook
+    if (FMath::IsNearlyEqual(time, MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT)) {
+    
+    }
+    else {
+        m_cSettingUsing.m_fFlipTime = time / totalFrameNum;
+    }
+
+    if (m_cSettingUsing.m_fFlipTime < MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT) {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("flip time is too small: %f!"), m_cSettingUsing.m_fFlipTime);
+    }
+
+    m_cSettingUsing.m_iLoopNum = loopNum;
+    m_cSettingUsing.m_bMatchSize = matchSize;
+
+    UWorld *world = GetWorld();
+    if (IsValid(world)) {
+        world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
+        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &UMyFlipImage::loop, m_cSettingUsing.m_fFlipTime, true);
+
+        tryNextFrame(0, 0);
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
+    }
+
+    //world->GetTimerManager().ClearTimer(m_cToCoreFullLoopTimerHandle);
+    //world->GetTimerManager().SetTimer(m_cToCoreFullLoopTimerHandle, this, &AMyMJGameCoreDataSourceCpp::loop, ((float)MY_MJ_GAME_CORE_FULL_MAIN_THREAD_LOOP_TIME_MS) / (float)1000, true);
+}
+
+void UMyFlipImage::stopImageFlip()
+{
+    UWorld *world = GetWorld();
+    if (IsValid(world)) {
+        world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
+    }
+}
+
+bool UMyFlipImage::isImageFlipping() const
+{
+    UWorld *world = GetWorld();
+    if (IsValid(world)) {
+        return world->GetTimerManager().IsTimerActive(m_cLoopTimerHandle);
+
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("world is invalid! Check settings!"));
+        return false;
+    }
+};
+
+int32 UMyFlipImage::getImageSize(FVector2D& size) const
+{
+    if (m_pSettingsAsset && m_pSettingsAsset->m_cSettings.m_aFlipImageElems.Num() > 0) {
+        UTexture2D* pT = m_pSettingsAsset->m_cSettings.m_aFlipImageElems[0].m_pTexture;
+        if (pT) {
+            size.X = pT->GetSizeX();
+            size.Y = pT->GetSizeY();
+            return 0;
+        }
+    }
+
+    size = FVector2D::ZeroVector;
+    return -1;
+}
+
+void UMyFlipImage::BeginDestroy()
+{
+    Super::BeginDestroy();
+
+    UWorld *world = GetWorld();
+    if (IsValid(world)) {
+        world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("BeginDestroy: debug, timer clear OK."));
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("BeginDestroy: world is invalid! Check settings!"));
+    }
+}
+
+void UMyFlipImage::loop()
+{
+    //just go to next frame
+    tryNextFrame(m_iIdxOfImageShowing, m_iFrameOfImageShowing + 1);
+}
+
+void UMyFlipImage::tryNextFrame(int32 idxOfImage, int32 frameOfImage)
+{
+    int32 elemL = m_cSettingUsing.m_aFlipImageElems.Num();
+    MY_VERIFY(elemL > 0);
+
+    const FMyFlipImageElemCpp* pElem = NULL;
+    while (1)
+    {
+        if (idxOfImage >= 0 && idxOfImage < elemL) {
+        }
+        else {
+            //out of range
+            m_iLoopShowing++;
+
+            bool isLastLoop = m_cSettingUsing.m_iLoopNum > 0 && m_iLoopShowing >= m_cSettingUsing.m_iLoopNum;
+            OnFlipEnd.Execute(m_iLoopShowing, isLastLoop);
+
+            if (isLastLoop) {
+                stopImageFlip();
+                return;
+            }
+
+            idxOfImage = 0;
+            frameOfImage = 0;
+        }
+
+        pElem = &m_cSettingUsing.m_aFlipImageElems[idxOfImage];
+        MY_VERIFY(pElem->m_iFrameOccupy > 0 || m_cSettingUsing.m_iLoopNum > 0); //avoid dead loop
+        if (frameOfImage >= pElem->m_iFrameOccupy) {
+            idxOfImage++;
+            frameOfImage = 0;
+            continue;
+        }
+
+        break;
+    }
+
+    MY_VERIFY(pElem);
+
+    if (frameOfImage == 0) {
+        //First frame
+        if (pElem->m_pTexture) {
+            SetBrushFromTexture(pElem->m_pTexture, m_cSettingUsing.m_bMatchSize);
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("found a flip image elem with NULL texture, idx %d."), idxOfImage);
+        }
+    }
+
+    m_iIdxOfImageShowing = idxOfImage;
+    m_iFrameOfImageShowing = frameOfImage;
+
+    //pElem->m_pTexture->GetSizeX();
+}
+
+
 bool AMyTextureGenSuitBaseCpp::checkSettings() const
 {
     if (!IsValid(m_pSceneCapture2D))

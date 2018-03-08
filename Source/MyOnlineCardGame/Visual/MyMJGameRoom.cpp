@@ -922,7 +922,7 @@ int32 AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 i
         pSeq->setHelperTransformFinal(finalT[i]);
         aBase.Emplace(aDices[i]);
 
-        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("finalT: %s"), *finalT.ToString());
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("finalT: %s"), *finalT[i].ToString());
     }
 
     const FMyMJGameEventPusherThrowDicesVisualDataCpp& eventCfg = m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cThrowDices;
