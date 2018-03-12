@@ -32,65 +32,6 @@ bool AMyMJGameRoomRootActorCpp::checkSettings() const
     return true;
 };
 
-
-AMyMJGameRoomRootActorCpp* AMyMJGameRoomRootActorCpp::helperGetRoomRootActor(const UObject* WorldContextObject, bool verifyValid)
-{
-    AMyMJGameRoomRootActorCpp* ret = NULL;
-    while (1) {
-        AMyMJGameRoomLevelScriptActorCpp* pLevel = AMyMJGameRoomLevelScriptActorCpp::helperGetLevel(WorldContextObject, verifyValid);
-        if (pLevel == NULL) {
-            break;
-        }
-
-        ret = pLevel->m_pRoomRootActor;
-        if (!IsValid(ret)) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pRoomRootActor invalid: %p."), ret);
-            ret = NULL;
-            break;
-        }
-
-        break;
-    }
-
-    if (verifyValid) {
-        if (!IsValid(ret)) {
-            MY_VERIFY(false);
-        }
-    }
-
-    return ret;
-};
-
-AMyMJGameRoomCpp* AMyMJGameRoomRootActorCpp::helperGetRoomActor(const UObject* WorldContextObject, bool verifyValid)
-{
-    AMyMJGameRoomCpp* ret = NULL;
-
-    while (1)
-    {
-        AMyMJGameRoomRootActorCpp* pR = AMyMJGameRoomRootActorCpp::helperGetRoomRootActor(WorldContextObject, verifyValid);
-        if (pR == NULL) {
-            break;
-        }
-
-        ret = pR->m_pRoomActor;
-        if (!IsValid(ret)) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pRoomActor invalid: %p."), ret);
-            ret = NULL;
-            break;
-        }
-
-        break;
-    }
-
-    if (verifyValid) {
-        if (!IsValid(ret)) {
-            MY_VERIFY(false);
-        }
-    }
-
-    return ret;
-}
-
 bool AMyMJGameRoomLevelScriptActorCpp::checkSettings() const
 {
     if (!IsValid(m_pRoomRootActor)) {
@@ -150,6 +91,131 @@ AMyMJGameRoomLevelScriptActorCpp* AMyMJGameRoomLevelScriptActorCpp::helperGetLev
     return ret;
 };
 
+
+AMyMJGameRoomRootActorCpp* AMyMJGameRoomLevelScriptActorCpp::helperGetRoomRootActor(const UObject* WorldContextObject, bool verifyValid)
+{
+    AMyMJGameRoomRootActorCpp* ret = NULL;
+    while (1) {
+        AMyMJGameRoomLevelScriptActorCpp* pLevel = AMyMJGameRoomLevelScriptActorCpp::helperGetLevel(WorldContextObject, verifyValid);
+        if (pLevel == NULL) {
+            break;
+        }
+
+        ret = pLevel->m_pRoomRootActor;
+        if (!IsValid(ret)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pRoomRootActor invalid: %p."), ret);
+            ret = NULL;
+            break;
+        }
+
+        break;
+    }
+
+    if (verifyValid) {
+        if (!IsValid(ret)) {
+            MY_VERIFY(false);
+        }
+    }
+
+    return ret;
+};
+
+AMyMJGameRoomCpp* AMyMJGameRoomLevelScriptActorCpp::helperGetRoomActor(const UObject* WorldContextObject, bool verifyValid)
+{
+    AMyMJGameRoomCpp* ret = NULL;
+
+    while (1)
+    {
+        AMyMJGameRoomRootActorCpp* pR = helperGetRoomRootActor(WorldContextObject, verifyValid);
+        if (pR == NULL) {
+            break;
+        }
+
+        ret = pR->m_pRoomActor;
+        if (!IsValid(ret)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pRoomActor invalid: %p."), ret);
+            ret = NULL;
+            break;
+        }
+
+        break;
+    }
+
+    if (verifyValid) {
+        if (!IsValid(ret)) {
+            MY_VERIFY(false);
+        }
+    }
+
+    return ret;
+}
+
+
+FMyMJGameTrivalDataCpp* AMyMJGameRoomLevelScriptActorCpp::helperGetMJGameTrivalData(const UObject* WorldContextObject, bool verifyValid)
+{
+
+    FMyMJGameTrivalDataCpp* ret = NULL;
+
+    while (1)
+    {
+        AMyMJGameRoomRootActorCpp* pR = helperGetRoomRootActor(WorldContextObject, verifyValid);
+        if (pR == NULL) {
+            break;
+        }
+
+        AMyMJGameTrivalDataSourceCpp *pS = pR->m_pTrivalDataSource;
+        if (!IsValid(pS)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pTrivalDataSource invalid: %p."), pS);
+            ret = NULL;
+            break;
+        }
+
+        ret = &pS->getDataRef();
+
+        break;
+    }
+
+    if (verifyValid) {
+        if (ret == NULL) {
+            MY_VERIFY(false);
+        }
+    }
+
+    return ret;
+};
+
+
+const UMyMJGameInRoomVisualCfgCpp* AMyMJGameRoomLevelScriptActorCpp::helperGetVisualCfg(const UObject* WorldContextObject, bool verifyValid)
+{
+    const UMyMJGameInRoomVisualCfgCpp* ret = NULL;
+
+    while (1)
+    {
+        AMyMJGameRoomCpp* pRoomActor = AMyMJGameRoomLevelScriptActorCpp::helperGetRoomActor(WorldContextObject, verifyValid);
+
+        if (pRoomActor == NULL) {
+            break;
+        }
+
+        ret = pRoomActor->getResManagerVerified()->getVisualCfg(verifyValid);
+        if (!IsValid(ret)) {
+            ret = NULL;
+            break;
+        }
+
+        break;
+    }
+
+    if (verifyValid) {
+        if (!IsValid(ret)) {
+            MY_VERIFY(false);
+        }
+    }
+
+    return ret;
+};
+
+
 void AMyMJGameRoomLevelScriptActorCpp::BeginPlay()
 {
     Super::BeginPlay();
@@ -162,10 +228,10 @@ void AMyMJGameRoomLevelScriptActorCpp::BeginPlay()
     bool bHaveLogic = UMyMJBPUtilsLibrary::haveServerLogicLayer(m_pRoomRootActor->m_pCoreDataSource);
 
     if (bHaveLogic) {
-        const UMyMJGameInRoomVisualCfgType* pCfgObj = m_pRoomRootActor->m_pRoomActor->getResManagerVerified()->getVisualCfg();
+        const UMyMJGameInRoomVisualCfgCpp* pCfgObj = m_pRoomRootActor->m_pRoomActor->getResManagerVerified()->getVisualCfg();
 
         FMyMJGameEventTimeCfgCpp& cfg = m_pRoomRootActor->m_pCoreDataSource->getMJDataAll()->getEventTimeCfgRef();
-        UMyMJGameInRoomVisualCfgType::helperMapToSimplifiedTimeCfg(pCfgObj->m_cEventCfg, cfg);
+        UMyMJGameInRoomVisualCfgCpp::helperMapToSimplifiedTimeCfg(pCfgObj->m_cEventCfg, cfg);
 
         m_pRoomRootActor->m_pCoreDataSource->setCoreFullPartEnabled(true);
     }

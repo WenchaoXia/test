@@ -56,11 +56,11 @@ void FMyMJGameInGamePlayerScreenCfgCpp::fillDefaultData()
         area.m_cDiceShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.2;
         area.m_cDiceShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.15;
 
-        area.m_cCommonActionShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.4;
-        area.m_cCommonActionShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.25;
+        area.m_cCommonActionActorShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.4;
+        area.m_cCommonActionActorShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.25;
 
         /*
-        FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp& pointCfg = area.m_cCommonActionShowPoint;
+        FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp& pointCfg = area.m_cCommonActionActorShowPoint;
         if (i == 1)
         {
             area.m_bAttenderPointOnScreenOverride = true;
@@ -292,55 +292,43 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
 
 bool FMyMJGameInRoomMainActorClassCfgCpp::checkSettings() const
 {
-    //FString debugStr;
-    const TSubclassOf<AMyMJGameCardBaseCpp> &cClass = m_cCardClass;
-    if (!IsValid(cClass)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card class not valid."));
+    if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<AMyMJGameCardBaseCpp>(m_cCardClass, TEXT("actor card class")))
+    {
         return false;
     }
 
-    if (cClass == AMyMJGameCardBaseCpp::StaticClass()) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card class must be a child class of AMyMJGameCardBaseCpp!"));
+    if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<AMyMJGameDiceBaseCpp>(m_cDiceClass, TEXT("actor dice class")))
+    {
         return false;
     }
-
-    if (!IsValid(m_cDiceClass)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("dice class not valid."));
-        return false;
-    }
-
-    if (m_cDiceClass == AMyMJGameDiceBaseCpp::StaticClass()) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card class must be a child class of AMyMJGameDiceBaseCpp!"));
-        return false;
-    }
-
-
-    if (!IsValid(m_cInRoomUIMainWidgetClass)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("in room ui main widget class not valid."));
-        return false;
-    }
-
-    if (m_cInRoomUIMainWidgetClass == UMyMJGameInRoomUIMainWidgetBaseCpp::StaticClass()) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("in room ui main widget class must be a child class of AMyMJGameCardBaseCpp!"));
-        return false;
-    }
-
-    //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card class is %s."), *cClass->GetName());
-    //TSubclassOf<UMyMJGameInRoomUIMainWidgetBaseCpp> m_cInRoomUIMainWidgetClass;
 
     return true;
 };
 
 
-void UMyMJGameInRoomVisualCfgType::fillDefaultData()
+void FMyMJGameUICfgCpp::fillDefaultData()
+{
+    for (int32 i = 0; i < 4; i++)
+    {
+        FMyMJGameInRoomUIScreenPositionCfgCpp& spCfg = m_aInRoomUIScreenPositionCfgs[i];
+
+        spCfg.m_cCommonEventShowPoint.reset();
+        spCfg.m_cCommonEventShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.7;
+
+    }
+};
+
+
+void UMyMJGameInRoomVisualCfgCpp::fillDefaultData()
 {
     m_cPlayerScreenCfg.fillDefaultData();
     m_cEventCfg.fillDefaultData();
 
     m_cCameraCfg.fillDefaultData();
+    m_cUICfg.fillDefaultData();
 }
 
-bool UMyMJGameInRoomVisualCfgType::checkSettings() const
+bool UMyMJGameInRoomVisualCfgCpp::checkSettings() const
 {
     if (!m_cPlayerScreenCfg.checkSettings())
     {
@@ -361,17 +349,22 @@ bool UMyMJGameInRoomVisualCfgType::checkSettings() const
     {
         return false;
     };
+    
+    if (!m_cUICfg.checkSettings())
+    {
+        return false;
+    };
 
     return true;
 }
 
 #if WITH_EDITOR
 
-void UMyMJGameInRoomVisualCfgType::PostEditChangeProperty(FPropertyChangedEvent& e)
+void UMyMJGameInRoomVisualCfgCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
     FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
 
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyMJGameInRoomVisualCfgType, m_iResetDefault))
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyMJGameInRoomVisualCfgCpp, m_iResetDefault))
     {
         if (m_iResetDefault == 10) {
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("filling default calue."));
@@ -388,7 +381,7 @@ void UMyMJGameInRoomVisualCfgType::PostEditChangeProperty(FPropertyChangedEvent&
 
 #endif
 
-void UMyMJGameInRoomVisualCfgType::helperMapToSimplifiedTimeCfg(const FMyMJGameInRoomEventCfgCpp& eventCfg, FMyMJGameEventTimeCfgCpp& outSimplifiedTimeCfg)
+void UMyMJGameInRoomVisualCfgCpp::helperMapToSimplifiedTimeCfg(const FMyMJGameInRoomEventCfgCpp& eventCfg, FMyMJGameEventTimeCfgCpp& outSimplifiedTimeCfg)
 {
     const FMyMJGameEventPusherCfgCpp &cPusherCfg = eventCfg.m_cPusherCfg;
     outSimplifiedTimeCfg.m_uiBaseResetAtStart = cPusherCfg.m_cFullBaseResetAtStart.m_fTotalTime * 1000;

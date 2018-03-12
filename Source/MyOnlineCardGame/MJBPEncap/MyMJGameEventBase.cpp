@@ -73,20 +73,20 @@ uint32 FMyMJGameEventTimeCfgCpp::helperGetDeltaDur(MyMJGameRuleTypeCpp ruleType,
         MY_VERIFY(delta.m_aRoleDataAttender[0].m_aDataPublic[0].m_aWeave2Add.Num() == 1);
         const FMyMJWeaveCpp& cWeave = delta.m_aRoleDataAttender[0].m_aDataPublic[0].m_aWeave2Add[0];
 
-        MyMJGameWeaveVisualTypeCpp eWeaveVisualType = UMyMJBPUtilsLibrary::helperGetWeaveVisualTypeFromWeave(ruleType, cWeave);
+        MyMJGameEventVisualTypeCpp eWeaveVisualType = UMyMJBPUtilsLibrary::helperGetEventVisualTypeFromWeave(ruleType, cWeave);
 
         //MyMJWeaveTypeCpp eWeaveType = cWeave.getType();
 
-        if (eWeaveVisualType == MyMJGameWeaveVisualTypeCpp::Chi) {
+        if (eWeaveVisualType == MyMJGameEventVisualTypeCpp::WeaveChi) {
             ret = m_uiWeaveChi;
         }
-        else if (eWeaveVisualType == MyMJGameWeaveVisualTypeCpp::Peng) {
+        else if (eWeaveVisualType == MyMJGameEventVisualTypeCpp::WeavePeng) {
             ret = m_uiWeavePeng;
         }
-        else if (eWeaveVisualType == MyMJGameWeaveVisualTypeCpp::Gang) {
+        else if (eWeaveVisualType == MyMJGameEventVisualTypeCpp::WeaveGang) {
             ret = m_uiWeaveGang;
         }
-        else if (eWeaveVisualType == MyMJGameWeaveVisualTypeCpp::Bu) {
+        else if (eWeaveVisualType == MyMJGameEventVisualTypeCpp::WeaveBu) {
             if (ruleType == MyMJGameRuleTypeCpp::LocalCS) {
                 ret = m_uiWeaveGangBuZhangLocalCS;
             }
@@ -96,7 +96,7 @@ uint32 FMyMJGameEventTimeCfgCpp::helperGetDeltaDur(MyMJGameRuleTypeCpp ruleType,
             }
         }
         else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid weave visual type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameWeaveVisualTypeCpp"), (uint8)eWeaveVisualType));
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid weave visual type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameEventVisualTypeCpp"), (uint8)eWeaveVisualType));
             MY_VERIFY(false);
         }
     }

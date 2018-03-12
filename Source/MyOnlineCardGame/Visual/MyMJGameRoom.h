@@ -157,7 +157,7 @@ public:
     UFUNCTION(BlueprintPure)
     int32 retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const;
 
-    inline const UMyMJGameInRoomVisualCfgType* getVisualCfg(bool verify = true) const
+    inline const UMyMJGameInRoomVisualCfgCpp* getVisualCfg(bool verify = true) const
     {
         if (m_pInRoomcfg == NULL && verify) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pInRoomcfg is invalid: %p"), m_pInRoomcfg);
@@ -166,13 +166,10 @@ public:
         return m_pInRoomcfg;
     };
 
-    //slower but can be used for any uobject in the world
-    static const UMyMJGameInRoomVisualCfgType* helperGetVisualCfg(const UObject* WorldContextObject, bool verifyValid = true);
-
 protected:
 
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "cfg object"))
-    UMyMJGameInRoomVisualCfgType* m_pInRoomcfg;
+    UMyMJGameInRoomVisualCfgCpp* m_pInRoomcfg;
 
     UPROPERTY(Transient, meta = (DisplayName = "card actors"))
     TArray<AMyMJGameCardBaseCpp*> m_aCardActors;
@@ -196,7 +193,7 @@ protected:
 //this is used for visual layer, no replication code goes in
 //note that we handle two type data here: one is time synced data like frame sync, one is not
 UCLASS(Blueprintable, HideCategories = (Collision, Rendering, "Utilities|Transformation"))
-class MYONLINECARDGAME_API AMyMJGameRoomCpp : public AActor, public IMyMJGameInRoomDeskInterface
+class MYONLINECARDGAME_API AMyMJGameRoomCpp : public AActor, public IMyMJGameInRoomDeskInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -206,7 +203,7 @@ public:
     virtual ~AMyMJGameRoomCpp();
 
     bool checkSettings() const;
-    void getCameraData(MyMJGameRoleTypeCpp roleType, FMyCardGameCameraDataCpp& cameraData) const;
+    void getCameraData(int32 idxDeskPosition, FMyCardGameCameraDataCpp& cameraData) const;
 
     void startVisual();
     void stopVisual();
@@ -267,7 +264,7 @@ protected:
                                                     const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving) override;
 
     int32 showAttenderWeave_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
-                                           MyMJGameWeaveVisualTypeCpp weaveVsualType, const struct FMyMJWeaveCpp& weave,
+                                           MyMJGameEventVisualTypeCpp weaveVsualType, const struct FMyMJWeaveCpp& weave,
                                            const TArray<class AMyMJGameCardBaseCpp*>& cardActorsWeaved, const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving) override;
 
     //return error code

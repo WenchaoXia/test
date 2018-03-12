@@ -14,7 +14,7 @@
 
 //Our player controller will help do replication work, and only replication help code goes here
 UCLASS()
-class MYONLINECARDGAME_API AMyMJGameRoomViewerPawnBaseCpp : public APawn, public IMyPawnUIInterface, public IMyTransformUpdateSequenceInterface
+class MYONLINECARDGAME_API AMyMJGameRoomViewerPawnBaseCpp : public APawn, public IMyPawnUIInterfaceCpp, public IMyTransformUpdaterInterfaceCpp
 {
 	GENERATED_BODY()
 
@@ -28,7 +28,7 @@ public:
         return m_pCamera;
     };
 
-    //IMyTransformUpdateSequenceInterface begin
+    //IMyTransformUpdaterInterfaceCpp begin
 
     virtual int32 getModelInfo(FMyActorModelInfoBoxCpp& modelInfo, bool verify = true) const override
     {
@@ -36,43 +36,38 @@ public:
         return -1;
     };
 
-    virtual UMyTransformUpdateSequenceMovementComponent* getTransformUpdateSequence(bool verify = true) override
+    virtual FMyWithCurveUpdaterTransformCpp& getMyWithCurveUpdaterTransformRef() override
     {
-        if (verify) {
-            MY_VERIFY(m_pTransformUpdateSequence);
-        }
 
-        return m_pTransformUpdateSequence;
+        MY_VERIFY(m_pMyTransformUpdaterComponent != NULL);
+
+        return m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRefRef();
     };
 
 
     UFUNCTION(BlueprintCallable)
-    void helperGetCameraData(int32 idxAttender, struct FMyCardGameCameraDataCpp& cameraData) const;
-    
-    UFUNCTION(BlueprintCallable)
-    void changeInRoomViewRole(MyMJGameRoleTypeCpp roleType);
+    void helperGetCameraData(int32 idxDeskPosition, struct FMyCardGameCameraDataCpp& cameraData) const;
 
+    //stand in which attender's postion, range is always [0, 4)
     UFUNCTION(BlueprintCallable)
-    void changeInRoomViewRole2(int32 idxAttender)
-    {
-        changeInRoomViewRole((MyMJGameRoleTypeCpp) idxAttender);
-    };
+    void changeInRoomDeskPosition(int32 idxDeskPosition);
 
-    //IMyTransformUpdateSequenceInterface end
+    //IMyTransformUpdaterInterfaceCpp end
 protected:
     
-    //IMyPawnUIInterface begin
+    //IMyPawnUIInterfaceCpp begin
 
     virtual void OnPossessedByLocalPlayerController(APlayerController* newController) override;
     virtual void OnUnPossessedByLocalPlayerController(APlayerController* oldController) override;
 
-    //IMyPawnUIInterface end
+    //IMyPawnUIInterfaceCpp end
 
     virtual void PossessedBy(AController* NewController) override;
     virtual void UnPossessed() override;
 
-    void onTransformSeqUpdated(const struct FTransformUpdateSequencDataCpp& data, const FVector& vector);
-    void onTransformSeqFinished(const struct FTransformUpdateSequencDataCpp& data);
+    void updaterOnStepUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector);
+    void updaterOnStepFinish(const FMyWithCurveUpdateStepDataBasicCpp& data);
+
 
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "root scene"))
     class USceneComponent *m_pRootScene;
@@ -80,7 +75,7 @@ protected:
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere, Instanced, meta = (DisplayName = "camera component"))
     UCameraComponent* m_pCamera;
 
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "transform update sequence"))
-    UMyTransformUpdateSequenceMovementComponent* m_pTransformUpdateSequence;
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "my transform updater component"))
+    UMyTransformUpdaterComponent* m_pMyTransformUpdaterComponent;
 
 };

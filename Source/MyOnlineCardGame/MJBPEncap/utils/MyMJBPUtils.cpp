@@ -318,35 +318,35 @@ bool UMyMJBPUtilsLibrary::testLoadAsset(UObject* outer, FString fullPathName)
 }
 
 
-MyMJGameWeaveVisualTypeCpp UMyMJBPUtilsLibrary::helperGetWeaveVisualTypeFromWeave(MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave)
+MyMJGameEventVisualTypeCpp UMyMJBPUtilsLibrary::helperGetEventVisualTypeFromWeave(MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave)
 {
     if (ruleType == MyMJGameRuleTypeCpp::LocalCS)
     {
         MyMJWeaveTypeCpp eWeaveType = weave.getType();
 
         if (eWeaveType == MyMJWeaveTypeCpp::ShunZiAn || eWeaveType == MyMJWeaveTypeCpp::ShunZiMing) {
-            return MyMJGameWeaveVisualTypeCpp::Chi;
+            return MyMJGameEventVisualTypeCpp::WeaveChi;
         }
         else if (eWeaveType == MyMJWeaveTypeCpp::KeZiAn || eWeaveType == MyMJWeaveTypeCpp::KeZiMing) {
-            return MyMJGameWeaveVisualTypeCpp::Peng;
+            return MyMJGameEventVisualTypeCpp::WeavePeng;
         }
         else if (eWeaveType == MyMJWeaveTypeCpp::GangAn || eWeaveType == MyMJWeaveTypeCpp::GangMing) {
             bool bIsBuZhang = weave.getGangBuZhangLocalCS();
             if (bIsBuZhang) {
-                return MyMJGameWeaveVisualTypeCpp::Bu;
+                return MyMJGameEventVisualTypeCpp::WeaveBu;
             }
             else {
-                return MyMJGameWeaveVisualTypeCpp::Gang;
+                return MyMJGameEventVisualTypeCpp::WeaveGang;
             }
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected weave type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)eWeaveType));
-            return MyMJGameWeaveVisualTypeCpp::Invalid;
+            return MyMJGameEventVisualTypeCpp::Invalid;
         }
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("meet unsupported rule type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)ruleType));
-        return MyMJGameWeaveVisualTypeCpp::Invalid;
+        return MyMJGameEventVisualTypeCpp::Invalid;
     }
 };
 

@@ -169,7 +169,7 @@ public:
 };
 
 UCLASS(Blueprintable)
-class MYONLINECARDGAME_API AMyMoveWithSeqActorBaseCpp : public AActor, public IMyTransformUpdateSequenceInterface
+class MYONLINECARDGAME_API AMyMoveWithSeqActorBaseCpp : public AActor, public IMyTransformUpdaterInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -180,7 +180,12 @@ public:
     virtual ~AMyMoveWithSeqActorBaseCpp();
 
     virtual int32 getModelInfo(FMyActorModelInfoBoxCpp& modelInfo, bool verify = true) const override;
-    virtual UMyTransformUpdateSequenceMovementComponent* getTransformUpdateSequence(bool verify = true) override;
+    virtual FMyWithCurveUpdaterTransformCpp& getMyWithCurveUpdaterTransformRef() override;
+
+    inline UMyTransformUpdaterComponent* getMyTransformUpdaterComponent() const
+    {
+        return m_pMyTransformUpdaterComponent;
+    };
 
     UFUNCTION(BlueprintCallable, meta = (UnsafeDuringActorConstruction = "true"))
     static void helperTestAnimationStep(float time, FString debugStr, const TArray<AMyMoveWithSeqActorBaseCpp*>& actors);
@@ -207,8 +212,8 @@ protected:
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "main static mesh"))
         class UStaticMeshComponent *m_pMainStaticMesh;
 
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "transform update sequence"))
-        UMyTransformUpdateSequenceMovementComponent* m_pTransformUpdateSequence;
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "my transform updater component"))
+    UMyTransformUpdaterComponent* m_pMyTransformUpdaterComponent;
 
     UPROPERTY(EditDefaultsOnly, Category = "My Helper", meta = (DisplayName = "fake button to update settings"))
     bool m_bFakeUpdateSettings;
@@ -277,7 +282,7 @@ public:
         return ret;
     };
 
-    static void helperToSeqActors(const TArray<AMyMJGameCardBaseCpp*>& aSub, bool bSort, TArray<IMyTransformUpdateSequenceInterface*> &aBase);
+    static void helperMyMJCardsToMyTransformUpdaters(const TArray<AMyMJGameCardBaseCpp*>& aSub, bool bSort, TArray<IMyTransformUpdaterInterfaceCpp*> &aBase);
 
 protected:
 
@@ -371,9 +376,6 @@ protected:
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDiceBaseCpp::getDiceModelInfoExtra() must be overrided by blueprint subclass!"));
         return -1;
     };
-
-    void onTransformSeqUpdated(const struct FTransformUpdateSequencDataCpp& data, const FVector& vector);
-    void onTransformSeqFinished(const struct FTransformUpdateSequencDataCpp& data);
 };
 
 

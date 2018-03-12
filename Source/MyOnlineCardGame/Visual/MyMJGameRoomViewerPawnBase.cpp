@@ -13,40 +13,57 @@
 
 #define JudgePawnAlreadyInRoomCoOfRadius (1.2f)
 
-struct FMyMJGameRoomViewerPawnExtraDataCpp : public FTransformUpdateSequencExtraDataBaseCpp
+
+//a step data support controlled roll
+struct FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp : public FMyWithCurveUpdateStepDataTransformCpp
 {
 
 public:
 
-    FMyMJGameRoomViewerPawnExtraDataCpp() : FTransformUpdateSequencExtraDataBaseCpp()
+    FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp() : FMyWithCurveUpdateStepDataTransformCpp()
     {
-        m_iIdxAttenderTarget = 0;
+        m_sClassName = TEXT("FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp");
+        reset(true);
     };
 
-    virtual ~FMyMJGameRoomViewerPawnExtraDataCpp()
+    virtual ~FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp()
     {
     };
 
-    virtual FTransformUpdateSequencExtraDataBaseCpp* createOnHeap() override
+    inline void reset(bool resetSubClassDataonly = false)
     {
-        FMyMJGameRoomViewerPawnExtraDataCpp* ret = new FMyMJGameRoomViewerPawnExtraDataCpp();
-        MY_VERIFY(ret);
-        return ret;
+        if (!resetSubClassDataonly) {
+            FMyWithCurveUpdateStepDataTransformCpp::reset();
+        }
+
+        m_iIdxDeskPositionTarget = 0;
+
+        FTransform t;
+        m_cCenterPoint = t;
+
+        m_cDynamicDataStart.reset();
+        m_cDynamicDataEnd.reset();
     };
 
-    virtual void copyContentFrom(const FTransformUpdateSequencExtraDataBaseCpp& other) override
+    virtual FMyWithCurveUpdateStepDataBasicCpp* createOnHeap() override
     {
-        const FMyMJGameRoomViewerPawnExtraDataCpp *pOther = StaticCast<const FMyMJGameRoomViewerPawnExtraDataCpp *>(&other);
+        return new FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp();
+    };
+
+    virtual void copyContentFrom(const FMyWithCurveUpdateStepDataBasicCpp& other) override
+    {
+        const FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp* pOther = StaticCast<const FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp *>(&other);
         *this = *pOther;
     };
 
-    int32 m_iIdxAttenderTarget;
+    int32 m_iIdxDeskPositionTarget;
 
     FTransform m_cCenterPoint;
 
     FMyCardGameCameraDynamicDataCpp m_cDynamicDataStart;
     FMyCardGameCameraDynamicDataCpp m_cDynamicDataEnd;
 };
+
 
 AMyMJGameRoomViewerPawnBaseCpp::AMyMJGameRoomViewerPawnBaseCpp() : Super()
 {
@@ -68,7 +85,7 @@ AMyMJGameRoomViewerPawnBaseCpp::AMyMJGameRoomViewerPawnBaseCpp() : Super()
     bCollideWhenPlacing = false;
     SpawnCollisionHandlingMethod = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    m_pTransformUpdateSequence = CreateDefaultSubobject<UMyTransformUpdateSequenceMovementComponent>(TEXT("transform update sequence movement component"));
+    m_pMyTransformUpdaterComponent = CreateDefaultSubobject<UMyTransformUpdaterComponent>(TEXT("my transform updater component"));
 
     USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
     MY_VERIFY(IsValid(pRootSceneComponent));
@@ -89,21 +106,21 @@ AMyMJGameRoomViewerPawnBaseCpp::~AMyMJGameRoomViewerPawnBaseCpp()
 };
 
 
-void AMyMJGameRoomViewerPawnBaseCpp::helperGetCameraData(int32 idxAttender, FMyCardGameCameraDataCpp& cameraData) const
+void AMyMJGameRoomViewerPawnBaseCpp::helperGetCameraData(int32 idxDeskPosition, FMyCardGameCameraDataCpp& cameraData) const
 {
-    AMyMJGameRoomCpp* pRoom = AMyMJGameRoomRootActorCpp::helperGetRoomActor(this, false);
+    AMyMJGameRoomCpp* pRoom = AMyMJGameRoomLevelScriptActorCpp::helperGetRoomActor(this, false);
     if (pRoom == NULL) {
         return;
     }
 
-    pRoom->getCameraData((MyMJGameRoleTypeCpp)idxAttender, cameraData);
+    pRoom->getCameraData(idxDeskPosition, cameraData);
 };
 
-void AMyMJGameRoomViewerPawnBaseCpp::changeInRoomViewRole(MyMJGameRoleTypeCpp roleType)
+void AMyMJGameRoomViewerPawnBaseCpp::changeInRoomDeskPosition(int32 idxDeskPosition)
 {
-    int32 idxAttenderTarget = ((uint8)roleType) % 4;
+    idxDeskPosition = idxDeskPosition % 4;
     FMyCardGameCameraDataCpp cameraData;
-    AMyMJGameRoomViewerPawnBaseCpp::helperGetCameraData(idxAttenderTarget, cameraData);
+    AMyMJGameRoomViewerPawnBaseCpp::helperGetCameraData(idxDeskPosition, cameraData);
 
     FMyCardGameCameraDynamicDataCpp& dynDataEnd = cameraData.m_cDynamicData;
 
@@ -121,43 +138,43 @@ void AMyMJGameRoomViewerPawnBaseCpp::changeInRoomViewRole(MyMJGameRoleTypeCpp ro
 
     bool bAlreadyInRoom = dynDataStart.m_cMyTransformOfZRotation.m_cLocation.m_fRadiusOnXYPlane < (dynDataEnd.m_cMyTransformOfZRotation.m_cLocation.m_fRadiusOnXYPlane * JudgePawnAlreadyInRoomCoOfRadius);
 
-    FMyMJGameRoomViewerPawnExtraDataCpp* pExtra = new FMyMJGameRoomViewerPawnExtraDataCpp();
-    pExtra->m_iIdxAttenderTarget = idxAttenderTarget;
 
-    pExtra->m_cCenterPoint = cameraData.m_cStaticData.m_cCenterPoint;
-    pExtra->m_cDynamicDataStart = dynDataStart;
-    pExtra->m_cDynamicDataEnd = dynDataEnd;
+    FMyWithCurveUpdaterTransformCpp* pUpdater = &getMyWithCurveUpdaterTransformRef();
+    pUpdater->clearSteps();
+    pUpdater->setHelperTransformOrigin(GetActorTransform());
+
+    UCurveVector* pCurve = cameraData.m_cStaticData.m_pMoveCurve;
+    MY_VERIFY(pCurve);
+
+    FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp stepData, *pStepData = &stepData;
+    pStepData->helperSetDataBySrcAndDst(cameraData.m_cStaticData.m_fMoveTime, pCurve, pUpdater->getHelperTransformPrevRefConst(), transformEnd);
+
+    pStepData->m_iIdxDeskPositionTarget = idxDeskPosition;
+
+    pStepData->m_cCenterPoint = cameraData.m_cStaticData.m_cCenterPoint;
+    pStepData->m_cDynamicDataStart = dynDataStart;
+    pStepData->m_cDynamicDataEnd = dynDataEnd;
 
     //bAlreadyInRoom = false; //test
     if (bAlreadyInRoom) {
-        pExtra->m_bSkipBasicTransformUpdate = true;
+        pStepData->m_bSkipCommonUpdateDelegate = true;
+        pStepData->m_bSkipCommonFinishDelegate = true;
     }
     else {
     }
 
-    pExtra->m_cUpdateDelegate.BindUObject(this, &AMyMJGameRoomViewerPawnBaseCpp::onTransformSeqUpdated);
-    pExtra->m_cFinishDeleget.BindUObject(this, &AMyMJGameRoomViewerPawnBaseCpp::onTransformSeqFinished);
+    pStepData->m_cStepUpdateDelegate.BindUObject(this, &AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepUpdate);
+    pStepData->m_cStepFinishDelegete.BindUObject(this, &AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepFinish);
+
+    pUpdater->addStepToTail(*pStepData);
 
 
-    UCurveVector* pCurve = cameraData.m_cStaticData.m_pMoveCurve;
-    MY_VERIFY(pCurve);
-    //if (pCurve == NULL) {
-    //    pCurve = UMyCommonUtilsLibrary::getCurveVectorDefaultLinear();
-    //}
-
-    UMyTransformUpdateSequenceMovementComponent* pSeqComp = getTransformUpdateSequence(true);
-    pSeqComp->clearSeq();
-
-    FTransformUpdateSequencDataCpp data;
-    data.helperSetDataBySrcAndDst(pSeqComp->getHelperTransformPrevRefConst(), transformEnd, cameraData.m_cStaticData.m_fMoveTime);
-    data.m_pExtraDataOnHeap = pExtra;
-    pSeqComp->addSeqToTail(data, pCurve);
+    //Debug:
 
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("setted: start %s, end %s."), *pExtra->m_cDynamicDataStart.ToString(), *pExtra->m_cDynamicDataEnd.ToString());
 
-    UMyCommonUtilsLibrary::TransformWorldToMyTransformZRotation(cameraData.m_cStaticData.m_cCenterPoint, GetActorTransform(), dynDataStart.m_cMyTransformOfZRotation);
-    dynDataStart.m_fFOV = getCameraComponent()->FieldOfView;
-
+    //UMyCommonUtilsLibrary::TransformWorldToMyTransformZRotation(cameraData.m_cStaticData.m_cCenterPoint, GetActorTransform(), dynDataStart.m_cMyTransformOfZRotation);
+    //dynDataStart.m_fFOV = getCameraComponent()->FieldOfView;
 
     //FTransform transformRecovered;
     //UMyCommonUtilsLibrary::MyTransformZRotationToTransformWorld(cameraData.m_cStaticData.m_cCenterPoint, dynDataStart.m_cMyTransformOfZRotation, transformRecovered);
@@ -194,30 +211,30 @@ void AMyMJGameRoomViewerPawnBaseCpp::UnPossessed()
     Super::UnPossessed();
 };
 
-void AMyMJGameRoomViewerPawnBaseCpp::onTransformSeqUpdated(const struct FTransformUpdateSequencDataCpp& data, const FVector& vector)
+
+void AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
 {
-    const FMyMJGameRoomViewerPawnExtraDataCpp* pExtra = StaticCast<FMyMJGameRoomViewerPawnExtraDataCpp*>(data.m_pExtraDataOnHeap);
-    MY_VERIFY(pExtra);
+    const FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp *>(&data);
 
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("setted: start %s, end %s."), *pExtra->m_cDynamicDataStart.ToString(), *pExtra->m_cDynamicDataEnd.ToString());
 
     FMyCardGameCameraDynamicDataCpp dynNow;
-    FMyCardGameCameraDynamicDataCpp::interp(pExtra->m_cDynamicDataStart, pExtra->m_cDynamicDataEnd, vector.Y, dynNow);
+    FMyCardGameCameraDynamicDataCpp::interp(pData->m_cDynamicDataStart, pData->m_cDynamicDataEnd, vector.Y, dynNow);
 
-    if (!FMath::IsNearlyEqual(getCameraComponent()->FieldOfView, dynNow.m_fFOV, FTransformUpdateSequencDataCpp_Delta_Min))
+    if (!FMath::IsNearlyEqual(getCameraComponent()->FieldOfView, dynNow.m_fFOV, FMyWithCurveUpdateStepDataTransformCpp_Delta_Min))
     {
         getCameraComponent()->SetFieldOfView(dynNow.m_fFOV);
     }
 
-    if (pExtra->m_bSkipBasicTransformUpdate) {
+    if (pData->m_bSkipCommonUpdateDelegate) {
         //use custom move
         FTransform transformNow;
-        UMyCommonUtilsLibrary::MyTransformZRotationToTransformWorld(pExtra->m_cCenterPoint, dynNow.m_cMyTransformOfZRotation, transformNow);
+        UMyCommonUtilsLibrary::MyTransformZRotationToTransformWorld(pData->m_cCenterPoint, dynNow.m_cMyTransformOfZRotation, transformNow);
 
         //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Updated: %s, %s, %s, %f. %s."), *dynNow.m_cMyTransformOfZRotation.ToString(), *pExtra->m_cDynamicDataStart.m_cMyTransformOfZRotation.ToString(), *pExtra->m_cDynamicDataEnd.m_cMyTransformOfZRotation.ToString(), vector.Y, *transformNow.ToString());
         //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Updated : %f, now %s, transform: %s."), vector.Y, *dynNow.m_cMyTransformOfZRotation.ToString(), *transformNow.ToString());
 
-        if (!transformNow.Equals(GetActorTransform(), FTransformUpdateSequencDataCpp_Delta_Min)) {
+        if (!transformNow.Equals(GetActorTransform(), FMyWithCurveUpdateStepDataTransformCpp_Delta_Min)) {
             SetActorTransform(transformNow);
         }
 
@@ -225,21 +242,20 @@ void AMyMJGameRoomViewerPawnBaseCpp::onTransformSeqUpdated(const struct FTransfo
 
 };
 
-void AMyMJGameRoomViewerPawnBaseCpp::onTransformSeqFinished(const struct FTransformUpdateSequencDataCpp& data)
+void AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
 {
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("onTransformSeqFinished."));
 
-    const FMyMJGameRoomViewerPawnExtraDataCpp* pExtra = StaticCast<FMyMJGameRoomViewerPawnExtraDataCpp*>(data.m_pExtraDataOnHeap);
-    MY_VERIFY(pExtra);
+    const FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp *>(&data);
 
-    if (!FMath::IsNearlyEqual(getCameraComponent()->FieldOfView, pExtra->m_cDynamicDataEnd.m_fFOV, FTransformUpdateSequencDataCpp_Delta_Min))
+    if (!FMath::IsNearlyEqual(getCameraComponent()->FieldOfView, pData->m_cDynamicDataEnd.m_fFOV, FMyWithCurveUpdateStepDataTransformCpp_Delta_Min))
     {
-        getCameraComponent()->SetFieldOfView(pExtra->m_cDynamicDataEnd.m_fFOV);
+        getCameraComponent()->SetFieldOfView(pData->m_cDynamicDataEnd.m_fFOV);
     }
 
-    if (pExtra->m_bSkipBasicTransformUpdate) {
+    if (pData->m_bSkipCommonFinishDelegate) {
         //let's do what we should, if skipped before
-        SetActorTransform(data.m_cEnd);
+        SetActorTransform(pData->m_cEnd);
         //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("actor transform end: %s."), *data.m_cEnd.ToString());
         //data.m_cEnd.AddTranslations
     }
@@ -258,21 +274,19 @@ void AMyMJGameRoomViewerPawnBaseCpp::onTransformSeqFinished(const struct FTransf
     UMyMJGameUIManagerCpp* pUIManager = pC->getUIManagerVerified();
     pUIManager->changeUIMode(MyMJGameUIModeCpp::InRoomPlay);
 
-    UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = pUIManager->getInRoomUIMain(true, true);
+    UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = pUIManager->getInRoomUIMain(true, false);
 
-    if (pUI->GetClass()->ImplementsInterface(UMyMJGameInRoomUIMainInterface::StaticClass()))
-    {
-        IMyMJGameInRoomUIMainInterface::Execute_changeViewPosition(pUI, pExtra->m_iIdxAttenderTarget);
+    if (pUI) {
+        if (pUI->GetClass()->ImplementsInterface(UMyMJGameInRoomUIMainInterfaceCpp::StaticClass()))
+        {
+            pUI->changeDeskPositionOfIdxScreenPosition0(pData->m_iIdxDeskPositionTarget);
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("pUI not implemented interface UMyPawnUIInterfaceCpp."));
+        }
     }
-
-    /*
-    if (pUI->GetClass()->ImplementsInterface(UMyPawnUIInterface::StaticClass()))
-    {
-        pUI->Execute_changeViewPosition(this, pExtra->m_iIdxAttenderTarget);
-    }
-    */
     else {
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("pUI not implemented interface UMyPawnUIInterface."));
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pUI is NULL, check your settings, maybe forgot set it."));
     }
 }
 

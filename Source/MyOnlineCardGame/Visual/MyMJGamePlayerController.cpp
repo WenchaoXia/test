@@ -147,7 +147,7 @@ void AMyMJGamePlayerControllerCommunicationCpp::onPawnChanged(APawn* oldPawn, AP
         /*
         if (OldPawnMy->Controller == this)
         {
-        IMyPawnUIInterface* pI = Cast<IMyPawnUIInterface>(OldPawnMy.Get());
+        IMyPawnUIInterfaceCpp* pI = Cast<IMyPawnUIInterfaceCpp>(OldPawnMy.Get());
         if (pI) {
         pI->OnUnPossessedByLocalPlayerController(this);
         }
@@ -157,7 +157,7 @@ void AMyMJGamePlayerControllerCommunicationCpp::onPawnChanged(APawn* oldPawn, AP
         }
         */
 
-        IMyPawnUIInterface* pI = Cast<IMyPawnUIInterface>(oldPawn);
+        IMyPawnUIInterfaceCpp* pI = Cast<IMyPawnUIInterfaceCpp>(oldPawn);
         if (pI) {
             pI->OnUnPossessedByLocalPlayerController(this);
         }
@@ -165,7 +165,7 @@ void AMyMJGamePlayerControllerCommunicationCpp::onPawnChanged(APawn* oldPawn, AP
 
     if (IsValid(newPawn))
     {
-        IMyPawnUIInterface* pI = Cast<IMyPawnUIInterface>(newPawn);
+        IMyPawnUIInterfaceCpp* pI = Cast<IMyPawnUIInterfaceCpp>(newPawn);
         if (pI) {
             pI->OnPossessedByLocalPlayerController(this);
         }
@@ -176,7 +176,7 @@ bool AMyMJGamePlayerControllerCommunicationCpp::resetupWithViewRoleAndAuth(MyMJG
 {
     MY_VERIFY(HasAuthority());
 
-    AMyMJGameRoomRootActorCpp *pRS = AMyMJGameRoomRootActorCpp::helperGetRoomRootActor(this);
+    AMyMJGameRoomRootActorCpp *pRS = AMyMJGameRoomLevelScriptActorCpp::helperGetRoomRootActor(this);
 
     /*
     UWorld *world = GetWorld();
@@ -499,7 +499,7 @@ UMyMJGameInRoomUIMainWidgetBaseCpp* UMyMJGameUIManagerCpp::getInRoomUIMain(bool 
             break;
         }
 
-        const UMyMJGameInRoomVisualCfgType* pCfg = pPC->m_pExtRoomActor->getResManagerVerified()->getVisualCfg(false);
+        const UMyMJGameInRoomVisualCfgCpp* pCfg = pPC->m_pExtRoomActor->getResManagerVerified()->getVisualCfg(false);
         if (pCfg == NULL) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cfg object is not specified."));
             break;
@@ -508,7 +508,7 @@ UMyMJGameInRoomUIMainWidgetBaseCpp* UMyMJGameUIManagerCpp::getInRoomUIMain(bool 
         //getVisualCfg()->m_cMainActorClassCfg.checkSettings();
         if (pCfg->m_cMainActorClassCfg.checkSettings())
         {
-            const TSubclassOf<UMyMJGameInRoomUIMainWidgetBaseCpp>& widgetClass = pCfg->m_cMainActorClassCfg.m_cInRoomUIMainWidgetClass;
+            const TSubclassOf<UMyMJGameInRoomUIMainWidgetBaseCpp>& widgetClass = pCfg->m_cUICfg.m_cInRoomUIMainWidgetClass;
             m_pInRoomUIMain = Cast<UMyMJGameInRoomUIMainWidgetBaseCpp>(UWidgetBlueprintLibrary::Create(this, widgetClass, pPC)); //no player controller owns it but let this class manage it
             MY_VERIFY(IsValid(m_pInRoomUIMain));
         }

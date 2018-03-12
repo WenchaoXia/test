@@ -91,13 +91,15 @@ public:
 };
 
 UENUM()
-enum class MyMJGameWeaveVisualTypeCpp : uint8
+enum class MyMJGameEventVisualTypeCpp : uint8
 {
     Invalid = 0     UMETA(DisplayName = "Invalid"),
-    Chi = 1     UMETA(DisplayName = "Chi"),
-    Peng = 2    UMETA(DisplayName = "Peng"),
-    Gang = 3    UMETA(DisplayName = "Gang"),
-    Bu = 4      UMETA(DisplayName = "Bu"),
+    WeaveChi = 1     UMETA(DisplayName = "WeaveChi"),
+    WeavePeng = 2    UMETA(DisplayName = "WeavePeng"),
+    WeaveGang = 3    UMETA(DisplayName = "WeaveGang"),
+    WeaveBu = 4      UMETA(DisplayName = "WeaveBu"),
+
+    ActionHu = 10      UMETA(DisplayName = "WeaveBu"),
 };
 
 UCLASS()
@@ -151,7 +153,7 @@ public:
     static bool testLoadAsset(UObject* outer, FString fullPathName);
 
     //return "Invalid" if have error
-    static MyMJGameWeaveVisualTypeCpp helperGetWeaveVisualTypeFromWeave(MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave);
+    static MyMJGameEventVisualTypeCpp helperGetEventVisualTypeFromWeave(MyMJGameRuleTypeCpp ruleType, const FMyMJWeaveCpp& weave);
 
     UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
     static void helperGetDiceNumbersFromMask(int32 mask, int32 &number0, int32 &number1);

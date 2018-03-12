@@ -2157,15 +2157,6 @@ public:
     int32 m_iWeaveCount;
 };
 
-
-#define GetKey_KeyAnd4IdxsMap(idx0, idx1, idx2, idx3) (((idx0 & 0xff) << 24) | ((idx1 & 0xff) << 16) | ((idx2 & 0xff) << 8) | ((idx3 & 0xff)))
-#define GetIdx0_KeyAnd4IdxsMap(key) ((key >> 24) & 0xff)
-#define GetIdx1_KeyAnd4IdxsMap(key) ((key >> 16) & 0xff)
-#define GetIdx2_KeyAnd4IdxsMap(key) ((key >> 8) & 0xff)
-#define GetIdx3_KeyAnd4IdxsMap(key) ((key) & 0xff)
-
-#define CalcKey_Macro_KeyAnd4IdxsMap(outkey, idx0, idx1, idx2, idx3) {MY_VERIFY((idx0 & (~0xff)) == 0); MY_VERIFY((idx1 & (~0xff)) == 0); MY_VERIFY((idx2 & (~0xff)) == 0); MY_VERIFY((idx3 & (~0xff)) == 0); outkey = GetKey_KeyAnd4IdxsMap(idx0, idx1, idx2, idx3);}
-
 USTRUCT()
 struct FMyDirtyRecordWithKeyAnd4IdxsMapCpp
 {

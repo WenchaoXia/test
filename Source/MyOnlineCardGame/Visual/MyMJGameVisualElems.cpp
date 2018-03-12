@@ -58,15 +58,11 @@ int32 AMyMoveWithSeqActorBaseCpp::getModelInfo(FMyActorModelInfoBoxCpp& modelInf
     return ret;
 }
 
-UMyTransformUpdateSequenceMovementComponent* AMyMoveWithSeqActorBaseCpp::getTransformUpdateSequence(bool verify)
+FMyWithCurveUpdaterTransformCpp& AMyMoveWithSeqActorBaseCpp::getMyWithCurveUpdaterTransformRef()
 {
-    UMyTransformUpdateSequenceMovementComponent* pRet = m_pTransformUpdateSequence;
+    MY_VERIFY(IsValid(m_pMyTransformUpdaterComponent));
 
-    if (verify)
-    {
-        MY_VERIFY(IsValid(pRet));
-    }
-    return pRet;
+    return m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRefRef();
 }
 
 void AMyMoveWithSeqActorBaseCpp::createComponentsForCDO()
@@ -92,7 +88,7 @@ void AMyMoveWithSeqActorBaseCpp::createComponentsForCDO()
     pStaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     m_pMainStaticMesh = pStaticMeshComponent;
 
-    m_pTransformUpdateSequence = CreateDefaultSubobject<UMyTransformUpdateSequenceMovementComponent>(TEXT("transform update sequence movement component"));
+    m_pMyTransformUpdaterComponent = CreateDefaultSubobject<UMyTransformUpdaterComponent>(TEXT("transform updater component"));
 
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_pMainBox created as 0x%p, this 0x%p."), m_pMainBox, this);
 
@@ -180,18 +176,19 @@ void AMyMoveWithSeqActorBaseCpp::helperTestAnimationStep(float time, FString deb
     stepData.m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::OffsetFromPrevLocation;
     stepData.m_cLocationOffsetPercent = FVector(0, 0, 1);
 
-    TArray<UMyTransformUpdateSequenceMovementComponent *> actorComponentsSortedGroup;
+    TArray<FMyWithCurveUpdaterTransformCpp *> updaterSortedGroup;
 
     for (int32 i = 0; i < actors.Num(); i++)
     {
-        UMyTransformUpdateSequenceMovementComponent* pComp = actors[i]->getTransformUpdateSequence();
+        FMyWithCurveUpdaterTransformCpp* pUpdater = &actors[i]->getMyWithCurveUpdaterTransformRef();
         FTransform targetT;
         targetT.SetLocation(FVector(0, 0, 100));
-        pComp->setHelperTransformFinal(targetT);
-        actorComponentsSortedGroup.Emplace(pComp);
+        pUpdater->setHelperTransformOrigin(actors[i]->GetActorTransform());
+        pUpdater->setHelperTransformFinal(targetT);
+        updaterSortedGroup.Emplace(pUpdater);
     }
 
-    UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStep(meta, stepData, actorComponentsSortedGroup);
+    UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStep(meta, stepData, updaterSortedGroup);
 }
 
 /*
@@ -555,7 +552,7 @@ bool AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, c
     return bRet;
 };
 
-void AMyMJGameCardBaseCpp::helperToSeqActors(const TArray<AMyMJGameCardBaseCpp*>& aSub, bool bSort, TArray<IMyTransformUpdateSequenceInterface*> &aBase)
+void AMyMJGameCardBaseCpp::helperMyMJCardsToMyTransformUpdaters(const TArray<AMyMJGameCardBaseCpp*>& aSub, bool bSort, TArray<IMyTransformUpdaterInterfaceCpp*> &aBase)
 {
     TArray<AMyMJGameCardBaseCpp*> aTemp;
 
@@ -575,37 +572,52 @@ void AMyMJGameCardBaseCpp::helperToSeqActors(const TArray<AMyMJGameCardBaseCpp*>
     for (int32 i = 0; i < l; i++)
     {
         AMyMJGameCardBaseCpp* pA = (*pSrc)[i];
-        IMyTransformUpdateSequenceInterface* pI = Cast<IMyTransformUpdateSequenceInterface>(pA);
+        IMyTransformUpdaterInterfaceCpp* pI = Cast<IMyTransformUpdaterInterfaceCpp>(pA);
         MY_VERIFY(pI != NULL);
         aBase.Emplace(pI);
     }
 };
 
 
-
-struct FMyControlledRollExtraDataCpp : public FTransformUpdateSequencExtraDataBaseCpp
+/*
+//a step data support controlled roll
+struct FMyWithCurveUpdateStepDataTransformAndRollCpp : public FMyWithCurveUpdateStepDataTransformCpp
 {
 
 public:
 
-    FMyControlledRollExtraDataCpp() : FTransformUpdateSequencExtraDataBaseCpp()
+    FMyWithCurveUpdateStepDataTransformAndRollCpp() : FMyWithCurveUpdateStepDataTransformCpp()
+    {
+        m_sClassName = TEXT("FMyWithCurveUpdateStepDataTransformAndRollCpp");
+        reset(true);
+    };
+
+    virtual ~FMyWithCurveUpdateStepDataTransformAndRollCpp()
     {
     };
 
-    virtual ~FMyControlledRollExtraDataCpp()
+    inline void reset(bool resetSubClassDataonly = false)
     {
+        if (!resetSubClassDataonly) {
+            FMyWithCurveUpdateStepDataTransformCpp::reset();
+        }
+
+        totalTime = 1;
+        g = 0.98;
+        rollAxis = false; //whether x or y
+
+        FTransform t;
+        start = end = t;
     };
 
-    virtual FTransformUpdateSequencExtraDataBaseCpp* createOnHeap() override
+    virtual FMyWithCurveUpdateStepDataBasicCpp* createOnHeap() override
     {
-        FMyControlledRollExtraDataCpp* ret = new FMyControlledRollExtraDataCpp();
-        MY_VERIFY(ret);
-        return ret;
+        return new FMyWithCurveUpdateStepDataTransformAndRollCpp();
     };
 
-    virtual void copyContentFrom(const FTransformUpdateSequencExtraDataBaseCpp& other) override
+    virtual void copyContentFrom(const FMyWithCurveUpdateStepDataBasicCpp& other) override
     {
-        const FMyControlledRollExtraDataCpp *pOther = StaticCast<const FMyControlledRollExtraDataCpp *>(&other);
+        const FMyWithCurveUpdateStepDataTransformAndRollCpp* pOther = StaticCast<const FMyWithCurveUpdateStepDataTransformAndRollCpp *>(&other);
         *this = *pOther;
     };
 
@@ -617,6 +629,7 @@ public:
     FTransform start;
     FTransform end;
 };
+*/
 
 AMyMJGameDiceBaseCpp::AMyMJGameDiceBaseCpp() : Super()
 {
@@ -624,16 +637,6 @@ AMyMJGameDiceBaseCpp::AMyMJGameDiceBaseCpp() : Super()
 };
 
 AMyMJGameDiceBaseCpp::~AMyMJGameDiceBaseCpp()
-{
-
-};
-
-void AMyMJGameDiceBaseCpp::onTransformSeqUpdated(const struct FTransformUpdateSequencDataCpp& data, const FVector& vector)
-{
-
-};
-
-void AMyMJGameDiceBaseCpp::onTransformSeqFinished(const struct FTransformUpdateSequencDataCpp& data)
 {
 
 };

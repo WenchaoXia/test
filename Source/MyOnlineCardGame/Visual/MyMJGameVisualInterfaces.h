@@ -17,14 +17,14 @@
 //It seems UE4 have a bug that all function must have return value to let blueprint implement it
 //All API here return error code, and 0 is returned if OK, if implementable by blueprint
 
-UINTERFACE(Blueprintable)
-class UMyMJGameInRoomDeskInterface : public UInterface
+UINTERFACE()
+class UMyMJGameInRoomDeskInterfaceCpp : public UInterface
 {
     GENERATED_BODY()
 };
 
 //by default, the API's card actors param passed in, are attender related, except those have tipped not only attender's 
-class IMyMJGameInRoomDeskInterface
+class IMyMJGameInRoomDeskInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -59,18 +59,18 @@ public:
     //All card actors passed in, are attender related
     UFUNCTION(BlueprintNativeEvent)
     int32 showAttenderWeave(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
-                            MyMJGameWeaveVisualTypeCpp weaveVsualType, const struct FMyMJWeaveCpp& weave,
+                            MyMJGameEventVisualTypeCpp weaveVisualType, const struct FMyMJWeaveCpp& weave,
                             const TArray<class AMyMJGameCardBaseCpp*>& cardActorsWeaved, const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving);
 };
 
-UINTERFACE(Blueprintable)
-class UMyMJGameInRoomUIMainInterface : public UInterface
+UINTERFACE(NotBlueprintable)
+class UMyMJGameInRoomUIMainInterfaceCpp : public UInterface
 {
     //GENERATED_BODY()
     GENERATED_UINTERFACE_BODY()
 };
 
-class IMyMJGameInRoomUIMainInterface
+class IMyMJGameInRoomUIMainInterfaceCpp
 {
     //GENERATED_BODY()
     GENERATED_IINTERFACE_BODY()
@@ -83,22 +83,30 @@ public:
 
     //return error code, 0 means OK
     UFUNCTION(BlueprintNativeEvent)
-    int32 showAttenderWeave(float dur, int32 idxAttender, MyMJGameWeaveVisualTypeCpp weaveVsualType);
+    int32 showAttenderWeave(float dur, int32 idxAttender, MyMJGameEventVisualTypeCpp weaveVisualType);
 
-    UFUNCTION(BlueprintNativeEvent)
-    int32 changeViewPosition(int32 idxAttender);
+    //max is always 4
+    virtual int32 changeDeskPositionOfIdxScreenPosition0(int32 idxDeskPositionOfIdxScreenPosition0)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("changeDeskPositionOfIdxScreenPosition0 must be override!"));
+        MY_VERIFY(false);
+        return 0;
+    };
 
 protected:
 
+    UFUNCTION(BlueprintNativeEvent)
+    class UMyMJGameInRoomPlayerInfoWidgetBaseCpp* getInRoomPlayerInfoWidgetByScreenPosition(int32 idxScreenPosition);
 };
 
+
 UINTERFACE()
-class UMyPawnUIInterface : public UInterface
+class UMyPawnUIInterfaceCpp : public UInterface
 {
     GENERATED_UINTERFACE_BODY()
 };
 
-class IMyPawnUIInterface
+class IMyPawnUIInterfaceCpp
 {
     GENERATED_IINTERFACE_BODY()
 

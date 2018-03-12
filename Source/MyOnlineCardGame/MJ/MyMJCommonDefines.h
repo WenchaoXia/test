@@ -295,7 +295,7 @@ struct FMyMJGameCfgCpp
 public:
     FMyMJGameCfgCpp()
     {
-        m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
+        reset();
     };
 
     virtual ~FMyMJGameCfgCpp()
@@ -303,9 +303,11 @@ public:
 
     };
 
-    void reset()
+    inline void reset()
     {
         m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
+        m_iAttenderNumber = 4;
+
         m_cCardPackCfg.reset();
         m_cTrivialCfg.reset();
         m_cHuCfg.reset();
@@ -340,6 +342,10 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "rule type"))
     MyMJGameRuleTypeCpp m_eRuleType;
 
+    //we can support 2 - 4 players for one rule type
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "attender number"))
+    int32 m_iAttenderNumber;
+
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card pack cfg"))
     FMyMJGameCardPackCfgCpp m_cCardPackCfg;
 
@@ -373,6 +379,9 @@ public:
         m_iIdxAttenderQuanFeng = 0;
         m_iIdxAttenderMenFeng = 0;
         m_bZhuangTrue = false;
+
+        m_iGameRoundCompletedBefore = 0;
+        m_iGameRoundMax = 1;
     };
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "idx attender quan feng"))
@@ -384,4 +393,10 @@ public:
     //if true, use as socre calc, else only used in game logic such as card distribution sequence
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "zhuang true"))
     bool m_bZhuangTrue;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "game round completed before"))
+    int32 m_iGameRoundCompletedBefore;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "game round max"))
+    int32 m_iGameRoundMax;
 };

@@ -7,20 +7,20 @@
 #include "Utils/CommonUtils/MyCommonUtils.h"
 
 
-UMyMJGameInRoomUIMainInterface::UMyMJGameInRoomUIMainInterface(const FObjectInitializer& ObjectInitializer)
+UMyMJGameInRoomUIMainInterfaceCpp::UMyMJGameInRoomUIMainInterfaceCpp(const FObjectInitializer& ObjectInitializer)
 {
     //asd
 };
 
 /*
-int32 IMyMJGameInRoomUIMainInterface::changeViewPosition_Implementation(int32 idxAttender)
+int32 IMyMJGameInRoomUIMainInterfaceCpp::changeViewPosition_Implementation(int32 idxAttender)
 {
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("changeViewPosition_Implementation basic."));
     return 0;
 };
 */
 
-UMyPawnUIInterface::UMyPawnUIInterface(const FObjectInitializer& ObjectInitializer)
+UMyPawnUIInterfaceCpp::UMyPawnUIInterfaceCpp(const FObjectInitializer& ObjectInitializer)
 {
 
 };

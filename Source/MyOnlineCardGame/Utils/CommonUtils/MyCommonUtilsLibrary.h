@@ -3,6 +3,8 @@
 #pragma once
 
 #include "MyCommonUtils.h"
+#include "MyCommonInterface.h"
+
 #include "Components/TimelineComponent.h"
 #include "GameFramework/MovementComponent.h"
 #include "Components/TimelineComponent.h"
@@ -10,7 +12,7 @@
 #include "MyCommonUtilsLibrary.generated.h"
 
 //#define MY_ROTATOR_MIN_TOLERANCE (0.01f)
-#define FTransformUpdateSequencDataCpp_Delta_Min (0.1f)
+#define FMyWithCurveUpdateStepDataTransformCpp_Delta_Min (0.1f)
 #define MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT (0.01f)
 
 UENUM()
@@ -24,103 +26,335 @@ enum class MyLogVerbosity : uint8
 
 };
 
-DECLARE_DELEGATE_TwoParams(FTransformUpdateSequencUpdateDelegate, const struct FTransformUpdateSequencDataCpp&, const FVector&);
-DECLARE_DELEGATE_OneParam(FTransformUpdateSequencFinishDelegate, const struct FTransformUpdateSequencDataCpp&);
 
-USTRUCT()
-struct FTransformUpdateSequencExtraDataBaseCpp
+
+//Two ways to store * data in containor: allocator or virtual function.
+//I don't have time to write a clear allocator, so for simple just use virtual functions now.
+
+DECLARE_DELEGATE_TwoParams(FMyWithCurveUpdaterUpdateDelegate, const struct FMyWithCurveUpdateStepDataBasicCpp&, const FVector&);
+DECLARE_DELEGATE_OneParam (FMyWithCurveUpdaterFinishDelegate, const struct FMyWithCurveUpdateStepDataBasicCpp&);
+
+
+USTRUCT(BlueprintType)
+struct FMyWithCurveUpdateStepDataBasicCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FTransformUpdateSequencExtraDataBaseCpp()
+    FMyWithCurveUpdateStepDataBasicCpp()
     {
-        m_bSkipBasicTransformUpdate = false;
+        m_sClassName = TEXT("FMyWithCurveUpdateStepDataBasicCpp");
+        reset();
     };
 
-    virtual ~FTransformUpdateSequencExtraDataBaseCpp()
+    virtual ~FMyWithCurveUpdateStepDataBasicCpp()
     {
-        reset();
+
     };
 
     inline void reset()
     {
-        m_cUpdateDelegate.Unbind();
-        m_cFinishDeleget.Unbind();
-        m_bSkipBasicTransformUpdate = false;
+        m_fTime = 0;
+        m_pCurve = NULL;
+
+        m_cStepUpdateDelegate.Unbind();
+        m_cStepFinishDelegete.Unbind();
+
+        m_bSkipCommonUpdateDelegate = false;
+        m_bSkipCommonFinishDelegate = false;
     };
+
+    virtual bool checkValid() const
+    {
+        if (m_fTime <= 0) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("step time is too small: %f."), m_fTime);
+            return false;
+        }
+        if (m_pCurve == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("curve not specifed."));
+            return false;
+        }
+
+        return true;
+    };
+
+    //virtual function MUST be implemented by subclass start:
 
     //always succeed, better use compile time skill, but now use virtual function
-    virtual FTransformUpdateSequencExtraDataBaseCpp* createOnHeap()
+    virtual FMyWithCurveUpdateStepDataBasicCpp* createOnHeap()
     {
-        return new FTransformUpdateSequencExtraDataBaseCpp();
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("createOnHeap not implemented!"));
+        return new FMyWithCurveUpdateStepDataBasicCpp();
     };
 
-    virtual void copyContentFrom(const FTransformUpdateSequencExtraDataBaseCpp& other)
+    virtual void copyContentFrom(const FMyWithCurveUpdateStepDataBasicCpp& other)
     {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("copyContentFrom not implemented!"));
         *this = other;
     };
 
-    FTransformUpdateSequencUpdateDelegate m_cUpdateDelegate;
-    FTransformUpdateSequencFinishDelegate m_cFinishDeleget;
+    //end
 
-    //Whether we skip basic transform update from start to end
-    bool m_bSkipBasicTransformUpdate;
+    inline bool isSameClass(const FMyWithCurveUpdateStepDataBasicCpp& other) const
+    {
+        if (m_sClassName == TEXT("FMyWithCurveUpdateStepDataBasicCpp")) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("isSameClass() is supposed to be called on child class instance and class name not changed!"));
+        }
+        return m_sClassName == other.m_sClassName;
+    };
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "time"))
+    float m_fTime;
+
+    //Warning:: we assume curve value from 0 - 1. if value out of range, that means final interp out of range, maybe desired in some case
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "curve"))
+    UCurveVector* m_pCurve;
+
+    //per-step delegate
+    FMyWithCurveUpdaterUpdateDelegate m_cStepUpdateDelegate;
+    FMyWithCurveUpdaterFinishDelegate m_cStepFinishDelegete;
+
+    //common for any steps flag
+    bool m_bSkipCommonUpdateDelegate;
+    bool m_bSkipCommonFinishDelegate;
+
+
+protected:
+
+    //we don't have Runtime class info for struct, so manually implements one, MUST be changed for every subclass type
+    FName m_sClassName;
 };
 
-USTRUCT(BlueprintType)
-struct FTransformUpdateSequencDataCpp
+USTRUCT()
+struct FMyWithCurveUpdateStepDataItemCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FTransformUpdateSequencDataCpp()
+    FMyWithCurveUpdateStepDataItemCpp(FMyWithCurveUpdateStepDataBasicCpp* pDataExternal = NULL)
     {
-        m_pExtraDataOnHeap = NULL;
-        reset();
-    };
-
-    virtual ~FTransformUpdateSequencDataCpp()
-    {
-        if (m_pExtraDataOnHeap) {
-            delete(m_pExtraDataOnHeap);
-            m_pExtraDataOnHeap = NULL;
+        if (pDataExternal) {
+            m_pData = pDataExternal;
+            m_bOwnData = false;
+        }
+        else {
+            m_pData = NULL;
+            m_bOwnData = true;
         }
     };
 
-    FTransformUpdateSequencDataCpp& operator=(const FTransformUpdateSequencDataCpp& rhs)
+    virtual ~FMyWithCurveUpdateStepDataItemCpp()
+    {
+        clear();
+    };
+
+    inline void clear()
+    {
+        if (m_bOwnData && m_pData) {
+            delete(m_pData);
+        }
+
+        m_bOwnData = true;
+        m_pData = NULL;
+    };
+
+    inline FMyWithCurveUpdateStepDataBasicCpp* getData()
+    {
+        return m_pData;
+    };
+
+    inline const FMyWithCurveUpdateStepDataBasicCpp* getDataConst() const
+    {
+        return m_pData;
+    };
+
+    FMyWithCurveUpdateStepDataItemCpp& operator=(const FMyWithCurveUpdateStepDataItemCpp& rhs)
     {
         if (this == &rhs) {
             return *this;
         }
 
-        m_cStart = rhs.m_cStart;
-        m_cEnd = rhs.m_cEnd;
-        m_cLocalRotatorExtra = rhs.m_cLocalRotatorExtra;
-        m_bLocationEnabledCache = rhs.m_bLocationEnabledCache;
-        m_bRotatorBasicEnabledCache = rhs.m_bRotatorBasicEnabledCache;
-        m_bRotatorExtraEnabledCache = rhs.m_bRotatorExtraEnabledCache;
-        m_bScaleEnabledCache = rhs.m_bScaleEnabledCache;
-        m_fTime = rhs.m_fTime;
+        if (rhs.m_pData) {
+            if (m_bOwnData && m_pData && m_pData->isSameClass(*rhs.m_pData)) {
+                //already allocated and same class, skip reallicate
+            }
+            else {
+                clear();
+                m_pData = rhs.m_pData->createOnHeap();
+            }
 
-        if (m_pExtraDataOnHeap) {
-            delete(m_pExtraDataOnHeap);
-            m_pExtraDataOnHeap = NULL;
+            m_pData->copyContentFrom(*rhs.m_pData);
         }
-
-        if (rhs.m_pExtraDataOnHeap) {
-            this->m_pExtraDataOnHeap = rhs.m_pExtraDataOnHeap->createOnHeap();
-            MY_VERIFY(this->m_pExtraDataOnHeap);
-            this->m_pExtraDataOnHeap->copyContentFrom(*rhs.m_pExtraDataOnHeap);
-            //*this->m_pExtraDataOnHeap = *rhs.m_pExtraDataOnHeap;
+        else {
+            clear();
         }
 
         return *this;
     };
 
-    void reset()
+    //don't support comparation now
+    /*
+    bool operator==(const FMyWithCurveUpdateStepDataItemCpp& rhs) const
     {
+        if (this == &rhs) {
+            return true;
+        }
+
+        if (m_pDataOnHeap == rhs.m_pDataOnHeap) {
+            return true;
+        }
+        else if (m_pDataOnHeap && rhs.m_pDataOnHeap) {
+            return (*m_pDataOnHeap) == (*rhs.m_pDataOnHeap);
+        }
+        else {
+            return false;
+        }
+    }
+    */
+
+protected:
+
+    FMyWithCurveUpdateStepDataBasicCpp* m_pData;
+    bool m_bOwnData; //if true, this object manage the data and it is allocated on heap only
+};
+
+
+DECLARE_DELEGATE_TwoParams(FMyWithCurveUpdaterActivateTickDelegate, bool, FString);
+
+USTRUCT()
+struct FMyWithCurveUpdaterBasicCpp
+{
+    GENERATED_USTRUCT_BODY()
+public:
+    
+    FMyWithCurveUpdaterBasicCpp();
+    virtual ~FMyWithCurveUpdaterBasicCpp();
+
+    inline void reset()
+    {
+        clearSteps();
+    };
+
+    void tick(float deltaTime);
+
+    //return the internal idx new added, < 0 means fail, do NOT use it as peek idx, use getSeqCount() or getSeqLast() to ref the last added one
+    //curve's value range is supposed to 0 - 1, out of that is also allowed, 0 means start, 1 means dest, time range is 0 - N. 
+    int32 addStepToTail(const FMyWithCurveUpdateStepDataBasicCpp& data);
+
+    //return the number removed
+    int32 removeStepsFromHead(int32 iCount);
+
+    //return the internal idx, < 0 means not exist, not it is slower since have struct data copy step
+    int32 peekStepAt(int32 idxFromHead, const FMyWithCurveUpdateStepDataBasicCpp*& poutData) const;
+
+    int32 peekStepLast(const FMyWithCurveUpdateStepDataBasicCpp*& poutData) const;
+
+    int32 getStepsCount() const;
+
+    void clearSteps();
+
+    FMyWithCurveUpdaterUpdateDelegate m_cCommonUpdateDelegate;
+    FMyWithCurveUpdaterFinishDelegate m_cCommonFinishDelegete;
+
+    FMyWithCurveUpdaterActivateTickDelegate m_cActivateTickDelegate;
+
+protected:
+
+private:
+    //return true if new play started
+    bool tryStartNextStep(FString sDebugReason);
+
+    void onTimeLineUpdated(FVector vector);
+    void onTimeLineFinished();
+
+    void finishOneStep(const FMyWithCurveUpdateStepDataBasicCpp& stepData);
+
+    FTimeline m_cTimeLine;
+
+    FOnTimelineVectorStatic m_cTimeLineVectorDelegate;
+    FOnTimelineEventStatic  m_cTimeLineFinishEventDelegate;
+
+    //we don't need external storage, since template can't be used as USTRUCT, so can't directly serialize
+    //TArray<FMyWithCurveUpdateStepDataItemCpp> m_aStepDataItemsStorage;
+    //FMyCycleBufferMetaDataCpp m_cStepDataItemsMeta;
+
+    //this is the manager, but using @m_aStepDataItemsStorage and @m_cStepDataItemsMeta as storage to allow UProperty work properly, allow serialization
+    FMyCycleBuffer<FMyWithCurveUpdateStepDataItemCpp> m_cStepDataItemsCycleBuffer;
+
+    float m_fDebugTimePassedForOneStep;
+};
+
+template <typename T>
+struct FMyWithCurveUpdaterTemplateCpp : public FMyWithCurveUpdaterBasicCpp
+{
+    static_assert(std::is_base_of_v<FMyWithCurveUpdateStepDataBasicCpp, T>, "type must be subclass of FMyWithCurveUpdateStepDataBasicCpp.");
+
+public:
+
+    FMyWithCurveUpdaterTemplateCpp() : FMyWithCurveUpdaterBasicCpp()
+    {
+
+    };
+
+    virtual ~FMyWithCurveUpdaterTemplateCpp()
+    {
+
+    };
+
+    //return the internal idx, < 0 means not exist, not it is slower since have struct data copy step
+    inline int32 peekStepAt(int32 idxFromHead, const T*& poutData) const
+    {
+        const FMyWithCurveUpdateStepDataBasicCpp* pD = NULL;
+        int32 ret = FMyWithCurveUpdaterBasicCpp::peekStepAt(idxFromHead, pD);
+
+        if (pD) {
+            poutData = StaticCast<const T*>(pD);
+        }
+        else {
+            poutData = NULL;
+        }
+        return ret;
+    };
+
+    int32 peekStepLast(const T*& poutData) const
+    {
+        const FMyWithCurveUpdateStepDataBasicCpp* pD = NULL;
+        int32 ret = FMyWithCurveUpdaterBasicCpp::peekStepLast(pD);
+
+        if (pD) {
+            poutData = StaticCast<const T*>(pD);
+        }
+        else {
+            poutData = NULL;
+        }
+        return ret;
+    };
+};
+
+
+USTRUCT(BlueprintType)
+struct FMyWithCurveUpdateStepDataTransformCpp : public FMyWithCurveUpdateStepDataBasicCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyWithCurveUpdateStepDataTransformCpp() : Super()
+    {
+        m_sClassName = TEXT("FMyWithCurveUpdateStepDataTransformCpp");
+        reset(true);
+    };
+
+    virtual ~FMyWithCurveUpdateStepDataTransformCpp()
+    {
+    };
+
+    inline void reset(bool resetSubClassDataonly = false)
+    {
+        if (!resetSubClassDataonly) {
+            Super::reset();
+        }
+
         FTransform tempT;
         m_cStart = m_cEnd = tempT;
         m_cLocalRotatorExtra = FRotator::ZeroRotator;
@@ -129,16 +363,22 @@ public:
         m_bRotatorBasicEnabledCache = false;
         m_bRotatorExtraEnabledCache = false;
         m_bScaleEnabledCache = false;
-
-        m_fTime = 0;
-
-        if (m_pExtraDataOnHeap) {
-            delete(m_pExtraDataOnHeap);
-            m_pExtraDataOnHeap = NULL;
-        }
     };
 
-    void helperSetDataBySrcAndDst(const FTransform& cStart, const FTransform& cEnd, float fTime, FIntVector extraRotateCycle = FIntVector::ZeroValue);
+
+    virtual FMyWithCurveUpdateStepDataBasicCpp* createOnHeap() override
+    {
+        return new FMyWithCurveUpdateStepDataTransformCpp();
+    };
+
+    virtual void copyContentFrom(const FMyWithCurveUpdateStepDataBasicCpp& other) override
+    {
+        const FMyWithCurveUpdateStepDataTransformCpp* pOther = StaticCast<const FMyWithCurveUpdateStepDataTransformCpp *>(&other);
+        *this = *pOther;
+    };
+
+
+    void helperSetDataBySrcAndDst(float fTime, UCurveVector* pCurve, const FTransform& cStart, const FTransform& cEnd, FIntVector extraRotateCycle = FIntVector::ZeroValue);
 
     //Warning:: because Rotator pitch in UE4, can't exceed +- 90D any where, so we can't store rotaion delta, but indirectly store the start and end
     FTransform m_cStart;
@@ -151,67 +391,52 @@ public:
     bool m_bRotatorBasicEnabledCache;
     bool m_bRotatorExtraEnabledCache;
     bool m_bScaleEnabledCache;
-
-    float m_fTime;
-
-    //user must allocate it on heap if want to use
-    FTransformUpdateSequencExtraDataBaseCpp* m_pExtraDataOnHeap;
 };
 
-DECLARE_MULTICAST_DELEGATE(FMyMJDataSeqReplicatedDelegate);
 
-//UCLASS(ClassGroup = Movement, meta = (BlueprintSpawnableComponent), HideCategories = Velocity)
-//class ENGINE_API UInterpToMovementComponent : public UMovementComponent
 
-/**
-* make the actor move accroding to preset sequences
-*
-*/
-UCLASS(ClassGroup = Movement, meta = (BlueprintSpawnableComponent))
-class MYONLINECARDGAME_API UMyTransformUpdateSequenceMovementComponent : public UMovementComponent
+struct FMyWithCurveUpdaterTransformCpp : public FMyWithCurveUpdaterTemplateCpp<FMyWithCurveUpdateStepDataTransformCpp>
 {
-    //GENERATED_UCLASS_BODY()
-    GENERATED_BODY()
 
 public:
-    UMyTransformUpdateSequenceMovementComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
-    //UMyCurveSeqMovementComponent();
-
-    //return the internal idx new added, < 0 means fail, do NOT use it as peek idx, use getSeqCount() or getSeqLast() to ref the last added one
-    //curve's value range is supposed to 0 - 1, out of that is also allowed, 0 means start, 1 means dest, time range is 0 - N. 
-    UFUNCTION(BlueprintCallable)
-        int32 addSeqToTail(const FTransformUpdateSequencDataCpp& data, UCurveVector* curve);
-
-    //return the number removed
-    UFUNCTION(BlueprintCallable)
-        int32 removeSeqFromHead(int32 iCount);
-
-    //return the internal idx, < 0 means not exist, not it is slower since have struct data copy step
-    UFUNCTION(BlueprintCallable)
-        int32 peekSeqAt(int32 idxFromHead, FTransformUpdateSequencDataCpp& outData, UCurveVector*& outCurve) const;
-
-    int32 peekSeqAtCpp(int32 idxFromHead, const FTransformUpdateSequencDataCpp*& poutData, UCurveVector*& outCurve) const;
-
-    //UFUNCTION(BlueprintCallable)
-    //const UCurveVector* peekSeqAt2(int32 idxFromHead, FTransformUpdateSequencDataCpp& outData) const;
-
-    UFUNCTION(BlueprintCallable)
-        int32 peekSeqLast(FTransformUpdateSequencDataCpp& outData, UCurveVector*& outCurve) const;
-
-    UFUNCTION(BlueprintCallable)
-        int32 getSeqCount() const;
-
-    UFUNCTION(BlueprintCallable)
-        void clearSeq();
-
-    UFUNCTION(BlueprintCallable)
-        static void helperSetDataBySrcAndDst(FTransformUpdateSequencDataCpp& data, const FTransform& cStart, const FTransform& cEnd, float fTime, FIntVector extraRotateCycle)
+    FMyWithCurveUpdaterTransformCpp() : FMyWithCurveUpdaterTemplateCpp<FMyWithCurveUpdateStepDataTransformCpp>()
     {
-        data.helperSetDataBySrcAndDst(cStart, cEnd, fTime, extraRotateCycle);
+
     };
 
-    //return the last sequence's transform, if not return the updated component's transform
-    const FTransform& getHelperTransformPrevRefConst() const;
+    virtual ~FMyWithCurveUpdaterTransformCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        FMyWithCurveUpdaterBasicCpp::reset();
+
+        FTransform t;
+        m_cHelperTransformOrigin = m_cHelperTransformFinal = m_cHelperTransformGroupPoint = t;
+    };
+
+    //return the last sequence's transform, if not return the origin(start point, for example actor's transform in the beginning)
+    inline
+    const FTransform& getHelperTransformPrevRefConst() const
+    {
+        int32 l = getStepsCount();
+        if (l > 0) {
+            const FMyWithCurveUpdateStepDataTransformCpp *pLast = NULL;
+            peekStepLast(pLast);
+            MY_VERIFY(pLast);
+            return pLast->m_cEnd;
+        }
+
+        return m_cHelperTransformOrigin;
+    }
+
+    inline
+        void setHelperTransformOrigin(const FTransform& cHelperTransformOrigin)
+    {
+        m_cHelperTransformOrigin = cHelperTransformOrigin;
+    };
 
     inline
         const FTransform& getHelperTransformFinalRefConst() const
@@ -238,65 +463,91 @@ public:
     };
 
 
-    inline void setHideWhenInactived(bool bNew)
+protected:
+
+    //Helper data when calculating the multiple animation steps
+    FTransform m_cHelperTransformOrigin;
+    FTransform m_cHelperTransformFinal;
+    FTransform m_cHelperTransformGroupPoint;
+};
+
+//UCLASS(ClassGroup = Movement, meta = (BlueprintSpawnableComponent), HideCategories = Velocity)
+//class ENGINE_API UInterpToMovementComponent : public UMovementComponent
+
+/**
+* make the actor move accroding to preset sequences
+*
+*/
+UCLASS(ClassGroup = Movement, meta = (BlueprintSpawnableComponent))
+class MYONLINECARDGAME_API UMyTransformUpdaterComponent : public UMovementComponent
+{
+    GENERATED_BODY()
+
+public:
+    UMyTransformUpdaterComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
+    //following blueprint functions mainly used for test
+    UFUNCTION(BlueprintCallable)
+    static void helperSetUpdateStepDataTransformBySrcAndDst(FMyWithCurveUpdateStepDataTransformCpp& data, float time, UCurveVector* curve, const FTransform& start, const FTransform& end, FIntVector extraRotateCycle)
     {
-        m_bHideWhenInactived = bNew;
+        data.helperSetDataBySrcAndDst(time, curve, start, end, extraRotateCycle);
     };
 
-    inline void setShowWhenActived(bool bNew)
+    UFUNCTION(BlueprintCallable)
+    int32 updaterAddStepToTail(const FMyWithCurveUpdateStepDataTransformCpp& data)
     {
-        m_bShowWhenActivated = bNew;
+        return m_cUpdater.addStepToTail(data);
+    };
+
+    UFUNCTION(BlueprintCallable)
+    void updaterClearSteps()
+    {
+        m_cUpdater.clearSteps();
+    }
+
+
+    inline FMyWithCurveUpdaterTransformCpp& getMyWithCurveUpdaterTransformRefRef()
+    {
+        return m_cUpdater;
+    };
+
+    inline bool getShowWhenActivated() const
+    {
+        return m_bShowWhenActivated;
+    };
+
+    void setShowWhenActivated(bool bShowWhenActivated)
+    {
+        m_bShowWhenActivated = bShowWhenActivated;
+    };
+
+    inline bool getHideWhenInactivated() const
+    {
+        return m_bHideWhenInactivated;
+    };
+
+    void setHideWhenInactivated(bool bHideWhenInactivated)
+    {
+        m_bHideWhenInactivated = bHideWhenInactivated;
     };
 
 protected:
 
     //Begin UActorComponent Interface
     //virtual void BeginPlay() override;
+    //virtual void ApplyWorldOffset(const FVector& InOffset, bool bWorldShift) override;
     virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
-    virtual void ApplyWorldOffset(const FVector& InOffset, bool bWorldShift) override;
     //End UActorComponent Interface
 
-    //mainly used for debug and allow switch the implement quickly
-    void setActivatedMyEncapped(bool bNew, FString reason = TEXT("none"));
 
+    void updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector);
+    void updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data);
+    void updaterActivateTick(bool activate, FString debugString);
 
-    //return true if new play started
-    bool tryStartNextSeq(FString sDebugReason);
-
-    void onTimeLineUpdated(FVector vector);
-    void onTimeLineFinished();
-
-    UPROPERTY()
-        FTimeline m_cTimeLine;
-
-    FOnTimelineVectorStatic m_cTimeLineVectorDelegate;
-    FOnTimelineEventStatic  m_cTimeLineFinishEventDelegate;
-
-    UPROPERTY()
-        TArray<FTransformUpdateSequencDataCpp> m_aDataItems;
-
-    UPROPERTY()
-        FMyCycleBufferMetaDataCpp m_cDataMeta;
-
-    //Warning:: we assume curve value from 0 - 1. if value out of range, that means final interp out of range, maybe desired in some case
-    UPROPERTY()
-        TArray<UCurveVector *> m_aCurveItems;
-
-    UPROPERTY()
-        FMyCycleBufferMetaDataCpp m_cCurveMeta;
-
-    FMyCycleBuffer<FTransformUpdateSequencDataCpp> m_cDataCycleBuffer;
-    FMyCycleBuffer<UCurveVector*> m_cCurveCycleBuffer;
-
-    //Helper data when calculating the multiple animation steps, this is the final transform
-    FTransform m_cHelperTransformFinal;
-    FTransform m_cHelperTransformGroupPoint;
-
-    float m_fDebugTimeLineStartWorldTime;
-    uint32 m_uDebugLastTickWorldTime_ms;
+    FMyWithCurveUpdaterTransformCpp m_cUpdater;
 
     bool m_bShowWhenActivated;
-    bool m_bHideWhenInactived;
+    bool m_bHideWhenInactivated;
 };
 
 
@@ -349,41 +600,6 @@ public:
     //final size after all actor scale, component scale applied
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "box extend final"))
     FVector m_cBoxExtend;
-
-};
-
-UINTERFACE(Blueprintable)
-class UMyTransformUpdateSequenceInterface : public UInterface
-{
-    //GENERATED_BODY()
-    GENERATED_UINTERFACE_BODY()
-};
-
-class IMyTransformUpdateSequenceInterface
-{
-    //GENERATED_BODY()
-    GENERATED_IINTERFACE_BODY()
-
-public:
-
-    //return error code, 0 means OK
-    UFUNCTION(meta = (CallableWithoutWorldContext))
-    virtual int32 getModelInfo(FMyActorModelInfoBoxCpp& modelInfo, bool verify = true) const
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getModelInfo() must be implemented!"));
-        MY_VERIFY(false);
-        return -1;
-    };
-
-    UFUNCTION(meta = (CallableWithoutWorldContext))
-    virtual UMyTransformUpdateSequenceMovementComponent* getTransformUpdateSequence(bool verify = true)
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getTransformUpdateSequence() must be implemented!"));
-        MY_VERIFY(false);
-        return NULL;
-    };
-
-protected:
 
 };
 
@@ -573,29 +789,49 @@ public:
         reset();
     };
 
-    virtual ~FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp()
-    {
-
-    };
 
     inline void reset()
     {
         m_fShowPosiFromCenterToBorderPercent = 0;
         m_cExtraOffsetScreenPercent = FVector2D::ZeroVector;
-        m_fTargetVLengthOnScreenScreenPercent = 0.1;
     };
 
     //position to show on player screen, unit is percent of distance from center to border
     UPROPERTY(EditAnywhere, meta = (DisplayName = "position from center to border percent"))
-        float m_fShowPosiFromCenterToBorderPercent;
+    float m_fShowPosiFromCenterToBorderPercent;
 
     //extra postion offset on player screen, unit is percent of player screen's width and height
     UPROPERTY(EditAnywhere, meta = (DisplayName = "extra offset percent"))
-        FVector2D m_cExtraOffsetScreenPercent;
+    FVector2D m_cExtraOffsetScreenPercent;
+};
+
+USTRUCT()
+struct FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp : public FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp() : Super()
+    {
+        reset(true);
+    };
+
+    virtual ~FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp()
+    {
+
+    };
+
+    inline void reset(bool bResetSubclassDataOnly = false)
+    {
+        if (!bResetSubclassDataOnly) {
+            Super::reset();
+        }
+        m_fTargetVLengthOnScreenScreenPercent = 0.1;
+    };
 
     //the length to display on player screen, unit is percent of player screen's height
     UPROPERTY(EditAnywhere, meta = (DisplayName = "target height percent"))
-        float m_fTargetVLengthOnScreenScreenPercent;
+    float m_fTargetVLengthOnScreenScreenPercent;
 };
 
 
@@ -827,6 +1063,23 @@ public:
         return countCreated;
     };
 
+    template< class T >
+    static inline bool isSubClassValidAndChild(const TSubclassOf<T> cClass, FString debugStr)
+    {
+        static_assert(std::is_base_of_v<UObject, T>, "type must be subclass of UObject.");
+
+        if (!IsValid(cClass)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: sub class is not valid."), *debugStr);
+            return false;
+        }
+
+        if (cClass == T::StaticClass()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: sub class must be a child class, but the inputted one is parent itself."), *debugStr);
+            return false;
+        }
+
+        return true;
+    }
 
     UFUNCTION(BlueprintCallable)
     static int32 getEngineNetMode(AActor *actor);
@@ -910,28 +1163,27 @@ public:
 
     static void helperSetupTransformUpdateAnimationStep(const FMyTransformUpdateAnimationMetaCpp& meta,
                                                         const FMyActorTransformUpdateAnimationStepCpp& stepData,
-                                                        const TArray<UMyTransformUpdateSequenceMovementComponent *>& actorComponentsSortedGroup);
+                                                        const TArray<FMyWithCurveUpdaterTransformCpp *>& updatersSorted);
 
     static void helperSetupTransformUpdateAnimationSteps(const FMyTransformUpdateAnimationMetaCpp& meta,
                                                         const TArray<FMyActorTransformUpdateAnimationStepCpp>& stepDatas,
-                                                        const TArray<UMyTransformUpdateSequenceMovementComponent *>& actorComponentsSortedGroup);
+                                                        const TArray<FMyWithCurveUpdaterTransformCpp *>& updatersSorted);
 
 
 
-    //Todo:: use interface
-    //
     static void helperSetupTransformUpdateAnimationStepsForPoint(const UObject* WorldContextObject,
                                                                 float totalDur,
                                                                 const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp& pointAndCenterMeta,
-                                                                const FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp& pointInfo,
+                                                                const FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp& pointInfo,
                                                                 const TArray<FMyActorTransformUpdateAnimationStepCpp>& stepDatas,
                                                                 float extraDelayDur,
-                                                                const TArray<IMyTransformUpdateSequenceInterface*>& actorsInterfaces,
+                                                                const TArray<IMyTransformUpdaterInterfaceCpp *>& updaterInterfaces,
                                                                 FString debugName,
-                                                                bool clearSeq);
+                                                                bool clearPrevSteps);
 
-    static void helperAddWaitStep(float waitTime, FString debugStr, const TArray<UMyTransformUpdateSequenceMovementComponent*>& comps);
-    static void helperAddWaitStep(float waitTime, FString debugStr, const TArray<IMyTransformUpdateSequenceInterface*>& interfaces);
+    //a step take 100% of time @waitTime, will be added
+    static void helperAddWaitStep(float waitTime, FString debugStr, const TArray<FMyWithCurveUpdaterTransformCpp *>& updaters);
+    static void helperAddWaitStep(float waitTime, FString debugStr, const TArray<IMyTransformUpdaterInterfaceCpp*>& updaterInterfaces);
 
     UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
     static void calcPointTransformWithLocalOffset(const FTransform& pointTransform, FVector localOffset, FTransform& pointTransformFixed);

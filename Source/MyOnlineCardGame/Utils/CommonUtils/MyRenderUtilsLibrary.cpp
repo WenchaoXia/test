@@ -15,6 +15,8 @@
 #include "Kismet/KismetStringLibrary.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Kismet/KismetMaterialLibrary.h"
+#include "Runtime/UMG/Public/Blueprint/WidgetLayoutLibrary.h"
+#include "Runtime/UMG/Public/Components/CanvasPanelSlot.h"
 //#include "Classes/PaperSprite.h"
 
 #if WITH_EDITOR
@@ -29,12 +31,37 @@
 
 void UMyFlipImage::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty, %s"), *m_cResPath.Path);
+    FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
+
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyFlipImage, m_pSettingsAsset))
+    {
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty 1, this %p."), this);
+
+        UTexture2D* pTexture = NULL;
+        if (m_pSettingsAsset) {
+            if (m_pSettingsAsset->m_cSettings.m_aFlipImageElems.Num() > 0) {
+                pTexture = m_pSettingsAsset->m_cSettings.m_aFlipImageElems[0].m_pTexture;
+                if (pTexture == NULL) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_aFlipImageElems[0].m_pTexture is NULL."));
+                }
+            }
+            else {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT(".m_aFlipImageElems.Num() is 0."));
+            }
+        }
+        else {
+        }
+
+        this->SetBrushFromTexture(pTexture);
+    }
+
     Super::PostEditChangeProperty(e);
 }
 
 #endif
 
-void UMyFlipImage::startImageFlip(float time, int32 loopNum, bool matchSize)
+void UMyFlipImage::startImageFlip(float loopTime, int32 loopNum, bool matchSize)
 {
     if (m_pSettingsAsset == NULL) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("settings not specified!"));
@@ -53,11 +80,11 @@ void UMyFlipImage::startImageFlip(float time, int32 loopNum, bool matchSize)
     }
 
     //the time interval model is same as UE4's 3d flipbook
-    if (FMath::IsNearlyEqual(time, MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT)) {
+    if (FMath::IsNearlyEqual(loopTime, MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT)) {
     
     }
     else {
-        m_cSettingUsing.m_fFlipTime = time / totalFrameNum;
+        m_cSettingUsing.m_fFlipTime = loopTime / totalFrameNum;
     }
 
     if (m_cSettingUsing.m_fFlipTime < MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT) {
@@ -128,10 +155,12 @@ void UMyFlipImage::BeginDestroy()
     UWorld *world = GetWorld();
     if (IsValid(world)) {
         world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("BeginDestroy: debug, timer clear OK."));
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("BeginDestroy: debug, timer clear OK."));
     }
     else {
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("BeginDestroy: world is invalid! Check settings!"));
+        if (this != GetClass()->GetDefaultObject()) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("BeginDestroy: world is invalid and object is not CDO! Check settings!"));
+        }
     }
 }
 
@@ -156,10 +185,13 @@ void UMyFlipImage::tryNextFrame(int32 idxOfImage, int32 frameOfImage)
             m_iLoopShowing++;
 
             bool isLastLoop = m_cSettingUsing.m_iLoopNum > 0 && m_iLoopShowing >= m_cSettingUsing.m_iLoopNum;
-            OnFlipEnd.Execute(m_iLoopShowing, isLastLoop);
+            OnFlipEnd.ExecuteIfBound(m_iLoopShowing, isLastLoop);
 
             if (isLastLoop) {
                 stopImageFlip();
+                if (m_bHideWhenFlipAllOver) {
+                    this->SetVisibility(ESlateVisibility::Hidden);
+                }
                 return;
             }
 
@@ -188,6 +220,10 @@ void UMyFlipImage::tryNextFrame(int32 idxOfImage, int32 frameOfImage)
         else {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("found a flip image elem with NULL texture, idx %d."), idxOfImage);
         }
+
+        if (m_bShowWhenFlipStart) {
+            this->SetVisibility(ESlateVisibility::Visible);
+        }
     }
 
     m_iIdxOfImageShowing = idxOfImage;
@@ -195,6 +231,58 @@ void UMyFlipImage::tryNextFrame(int32 idxOfImage, int32 frameOfImage)
 
     //pElem->m_pTexture->GetSizeX();
 }
+
+
+
+void UMyUserWidgetWithCurveUpdaterCpp::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    if (m_bUpdaterNeedTick) {
+        m_cUpdater.tick(InDeltaTime);
+    }
+}
+
+void UMyUserWidgetWithCurveUpdaterCpp::updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
+{
+    const FMyWithCurveUpdateStepDataWidgetBasicCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWidgetBasicCpp*>(&data);
+    MY_VERIFY(pData);
+
+    FWidgetTransform wtNow;
+    wtNow.Translation = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Translation, pData->m_cWidgetTransformEnd.Translation, vector.X, 1);
+    
+    wtNow.Angle = FMath::FInterpTo(pData->m_cWidgetTransformStart.Angle, pData->m_cWidgetTransformEnd.Angle, vector.Y, 1);
+    wtNow.Shear = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Shear, pData->m_cWidgetTransformEnd.Shear, vector.Y, 1);
+
+    wtNow.Scale = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Scale, pData->m_cWidgetTransformEnd.Scale, vector.Z, 1);
+
+    SetRenderTransform(wtNow);
+}
+
+void UMyUserWidgetWithCurveUpdaterCpp::updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
+{
+    const FMyWithCurveUpdateStepDataWidgetBasicCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWidgetBasicCpp*>(&data);
+    MY_VERIFY(pData);
+
+    SetRenderTransform(pData->m_cWidgetTransformEnd);
+}
+
+void UMyUserWidgetWithCurveUpdaterCpp::updaterActivateTick(bool activate, FString debugString)
+{
+    m_bUpdaterNeedTick = activate;
+
+    if (activate) {
+        if (m_bShowWhenActivated) {
+            this->SetVisibility(ESlateVisibility::Visible);
+        }
+    }
+    else {
+        if (m_bHideWhenInactivated) {
+            this->SetVisibility(ESlateVisibility::Hidden);
+        }
+    }
+}
+
 
 
 bool AMyTextureGenSuitBaseCpp::checkSettings() const
@@ -562,4 +650,39 @@ UTexture2D* UMyRenderUtilsLibrary::RenderTargetCreateStaticTexture2DTryBest(UTex
 
 #endif
 
+}
+
+
+int32 UMyRenderUtilsLibrary::getCenterPointPositionForWidgetInCanvasWithPointAnchor(const FVector2D& canvasSize, const UWidget* widgetUnderCanvas, FVector2D& positionInCanvas)
+{
+    const UCanvasPanelSlot* pSlot = NULL;
+    if (widgetUnderCanvas)
+    {
+        pSlot = Cast<const UCanvasPanelSlot>(widgetUnderCanvas->Slot);
+        if (pSlot == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("widget is not under canvas, slot class name: %s."), *widgetUnderCanvas->Slot->GetClass()->GetName());
+            return -10;
+        }
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("widgetUnderCanvas is NULL."), widgetUnderCanvas);
+        return -1;
+    }
+
+    FAnchorData layoutData = pSlot->GetLayout();
+
+    bool bIsAnchorPoint = (!layoutData.Anchors.IsStretchedHorizontal()) && (!layoutData.Anchors.IsStretchedVertical());
+    if (!bIsAnchorPoint) {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("widget is not anchored one point: min %s, max %s."), *layoutData.Anchors.Minimum.ToString(), *layoutData.Anchors.Maximum.ToString());
+        return -20;
+    }
+
+    FVector2D anchorEndPosi = canvasSize * layoutData.Anchors.Minimum;
+    FVector2D anchorStartPosi = anchorEndPosi + FVector2D(layoutData.Offsets.Left, layoutData.Offsets.Top);
+    FVector2D widgetSize = FVector2D(layoutData.Offsets.Right, layoutData.Offsets.Bottom);
+    FVector2D widgetCenterOffsetFromAnchorStartPosi = (FVector2D(0.5, 0.5) - layoutData.Alignment) * widgetSize;
+
+    positionInCanvas = anchorStartPosi + widgetCenterOffsetFromAnchorStartPosi;
+
+    return 0;
 }

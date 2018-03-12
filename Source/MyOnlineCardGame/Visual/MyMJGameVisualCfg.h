@@ -80,12 +80,12 @@ public:
 
     inline static bool equals(const FMyCardGameCameraDynamicDataCpp& a, const FMyCardGameCameraDynamicDataCpp& b)
     {
-        if (!FMyTransformOfZRotationAroundPointCoordinateCpp::equals(a.m_cMyTransformOfZRotation, b.m_cMyTransformOfZRotation, FTransformUpdateSequencDataCpp_Delta_Min))
+        if (!FMyTransformOfZRotationAroundPointCoordinateCpp::equals(a.m_cMyTransformOfZRotation, b.m_cMyTransformOfZRotation, FMyWithCurveUpdateStepDataTransformCpp_Delta_Min))
         {
             return false;
         }
 
-        if (!FMath::IsNearlyEqual(a.m_fFOV, b.m_fFOV, FTransformUpdateSequencDataCpp_Delta_Min))
+        if (!FMath::IsNearlyEqual(a.m_fFOV, b.m_fFOV, FMyWithCurveUpdateStepDataTransformCpp_Delta_Min))
         {
             return false;
         }
@@ -155,7 +155,7 @@ public:
     {
         m_cCardShowPoint.reset();
         m_cDiceShowPoint.reset();
-        m_cCommonActionShowPoint.reset();
+        m_cCommonActionActorShowPoint.reset();
 
         m_bAttenderPointOnScreenOverride = false;
         m_cAttenderPointOnScreenPercentOverride = FVector2D::ZeroVector;
@@ -163,13 +163,13 @@ public:
     };
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "card show point"))
-    FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp m_cCardShowPoint;
+    FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp m_cCardShowPoint;
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "dice show point"))
-    FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp m_cDiceShowPoint;
+    FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp m_cDiceShowPoint;
 
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "action show point"))
-    FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp m_cCommonActionShowPoint;
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "common action actor show point"))
+    FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp m_cCommonActionActorShowPoint;
 
     //By default, attender point on screen is calculated at runtime by project desktop point on player screen. If enabled, it will use overrided value directly to helper combine umg
     UPROPERTY(EditAnywhere, meta = (DisplayName = "attender point on screen override"))
@@ -249,6 +249,7 @@ public:
     //mainly for test
     void fillDefaultData();
 
+    //actually it is based on view position on player screen, idx is 0-3, meaning is same with idxScreenPosition
     UPROPERTY(EditAnywhere, EditFixedSize, meta = (DisplayName = "Attender Areas"))
     TArray<FMyMJGameInGameAttenderAreaOnPlayerScreenCfgCpp> m_aAttenderAreas;
 };
@@ -673,14 +674,66 @@ public:
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "dice class"))
     TSubclassOf<AMyMJGameDiceBaseCpp> m_cDiceClass;
+};
+
+USTRUCT()
+struct FMyMJGameInRoomUIScreenPositionCfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGameInRoomUIScreenPositionCfgCpp()
+    {
+
+    };
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "common event show point"))
+    FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp m_cCommonEventShowPoint;
+};
+
+USTRUCT()
+struct FMyMJGameUICfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameUICfgCpp()
+    {
+        m_cInRoomUIMainWidgetClass = NULL;
+        m_aInRoomUIScreenPositionCfgs.AddDefaulted(4);
+    };
+
+    void fillDefaultData();
+
+    inline bool checkSettings() const
+    {
+
+        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyMJGameInRoomUIMainWidgetBaseCpp>(m_cInRoomUIMainWidgetClass, TEXT("in room ui main widget")))
+        {
+            return false;
+        }
+
+        if (!m_cDefaultInRoomViewRoleStyle.checkSettings()) {
+            return false;
+        }
+
+        return true;
+    };
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "in room ui main widget class"))
     TSubclassOf<UMyMJGameInRoomUIMainWidgetBaseCpp> m_cInRoomUIMainWidgetClass;
+
+    UPROPERTY(EditAnywhere, EditFixedSize, meta = (DisplayName = "in room ui screen position cfgs"))
+    TArray<FMyMJGameInRoomUIScreenPositionCfgCpp> m_aInRoomUIScreenPositionCfgs;
+
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "default In Room View Role Style"))
+    FMyInRoomViewRoleStyleSettingsCpp m_cDefaultInRoomViewRoleStyle;
 };
 
-
 UCLASS()
-class MYONLINECARDGAME_API UMyMJGameInRoomVisualCfgType : public UDataAsset
+class MYONLINECARDGAME_API UMyMJGameInRoomVisualCfgCpp : public UDataAsset
 {
     GENERATED_BODY()
 
@@ -711,6 +764,9 @@ public:
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "camera Cfg"))
     FMyMJGameCameraCfgCpp m_cCameraCfg;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "UI Cfg"))
+    FMyMJGameUICfgCpp m_cUICfg;
 
     //If set to 10, all data will reset to default
     UPROPERTY(EditAnywhere, meta = (DisplayName = "fake reset default"))

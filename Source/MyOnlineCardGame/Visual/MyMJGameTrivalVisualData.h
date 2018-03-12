@@ -5,8 +5,32 @@
 #include "CoreMinimal.h"
 
 #include "MJBPEncap/MyMJGameCoreBP.h"
+#include "MyMJGameRoomUI.h"
 
 #include "MyMJGameTrivalVisualData.generated.h"
+
+USTRUCT()
+struct FMyMJGameTrivalDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameTrivalDataCpp()
+    {
+        m_aAttenderDatas.AddDefaulted(4);
+    };
+
+    UPROPERTY( meta = (DisplayName = "Game Cfg"))
+    FMyMJGameCfgCpp m_cGameCfg;
+
+    UPROPERTY( meta = (DisplayName = "Game RunData"))
+    FMyMJGameRunDataCpp m_cGameRunData;
+
+    //always 4
+    UPROPERTY( meta = (DisplayName = "attender datas"))
+    TArray<FMyMJGamePlayerDataCpp> m_aAttenderDatas;
+};
 
 /*
 USTRUCT(BlueprintType)
@@ -45,6 +69,8 @@ public:
 };
 */
 
+DECLARE_MULTICAST_DELEGATE(FMyStructContentDelegate);
+
 UCLASS()
 class MYONLINECARDGAME_API AMyMJGameTrivalDataSourceCpp : public AActor
 {
@@ -64,10 +90,25 @@ public:
 
     };
 
+    inline FMyMJGameTrivalDataCpp& getDataRef()
+    {
+        return m_cData;
+    };
+
+    FMyStructContentDelegate m_cReplicateDelegate;
+
 protected:
 
     virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
 
+    UFUNCTION()
+    void OnRep_Data()
+    {
+        m_cReplicateDelegate.Broadcast();
+    };
+
+    UPROPERTY(ReplicatedUsing = OnRep_Data, meta = (DisplayName = "data"))
+    FMyMJGameTrivalDataCpp m_cData;
 };
 
 UCLASS(Blueprintable, NotBlueprintType)

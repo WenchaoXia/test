@@ -29,11 +29,6 @@ public:
 
     bool checkSettings() const;
 
-    UFUNCTION(BlueprintPure, Category = "AMyMJGameRoomRootActorCpp", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
-    static AMyMJGameRoomRootActorCpp* helperGetRoomRootActor(const UObject* WorldContextObject, bool verifyValid = true);
-
-    static AMyMJGameRoomCpp* helperGetRoomActor(const UObject* WorldContextObject, bool verifyValid = true);
-
 protected:
 
     friend class AMyMJGamePlayerControllerCommunicationCpp;
@@ -74,6 +69,17 @@ public:
     UFUNCTION(BlueprintCallable, Category = "AMyMJGameRoomLevelScriptActorCpp", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
     static AMyMJGameRoomLevelScriptActorCpp* helperGetLevel(const UObject* WorldContextObject, bool verifyValid = true);
 
+    UFUNCTION(BlueprintPure, Category = "AMyMJGameRoomLevelScriptActorCpp", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
+    static AMyMJGameRoomRootActorCpp* helperGetRoomRootActor(const UObject* WorldContextObject, bool verifyValid = true);
+
+    UFUNCTION(BlueprintPure, Category = "AMyMJGameRoomLevelScriptActorCpp", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
+    static AMyMJGameRoomCpp* helperGetRoomActor(const UObject* WorldContextObject, bool verifyValid);
+
+    static FMyMJGameTrivalDataCpp* helperGetMJGameTrivalData(const UObject* WorldContextObject, bool verifyValid);
+
+    //slower but can be used for any uobject in the world
+    static const UMyMJGameInRoomVisualCfgCpp* helperGetVisualCfg(const UObject* WorldContextObject, bool verifyValid = true);
+
 protected:
 
     friend class AMyMJGameRoomRootActorCpp;
@@ -81,5 +87,5 @@ protected:
     virtual void BeginPlay() override;
 
     UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Cfg", meta = (DisplayName = "room root actor"))
-        AMyMJGameRoomRootActorCpp* m_pRoomRootActor;
+    AMyMJGameRoomRootActorCpp* m_pRoomRootActor;
 };

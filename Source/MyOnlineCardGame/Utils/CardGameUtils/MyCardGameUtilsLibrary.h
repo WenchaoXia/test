@@ -2,9 +2,65 @@
 
 #pragma once
 
-#include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
+#include "MyCardGameInterface.h"
 
 #include "MyCardGameUtilsLibrary.generated.h"
+
+//3 layer of idx:
+//
+//idxAttender
+//idxDeskPosition
+//idxScreenPosition
+//
+//idxDeskPosition:
+// ---------------
+// |      2      |
+// |3           1|
+// |      0      |
+// ---------------
+//or
+// ---------------
+// |             |
+// |2           1|
+// |      0      |
+// ---------------
+//or
+// ---------------
+// |      1      |
+// |             |
+// |      0      |
+// ---------------
+//
+//idxScreenPosition:
+// ---------------
+// |      2      |
+// |3           1|
+// |      0      |
+// ---------------
+
+//a widget support per-viewer animation
+UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
+class MYONLINECARDGAME_API UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp : public UMyUserWidgetWithCurveUpdaterCpp, public IMyCardGameScreenPositionRelatedWidgetInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+    UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    {
+    };
+
+    virtual ~UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp()
+    {
+
+    };
+
+    int32 restartMainAnimation_Implementation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter) override
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: restartMainAnimation_Implementation only implemented in C++."), *GetClass()->GetName());
+        return 0;
+    };
+};
+
 
 USTRUCT()
 struct FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp : public FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp
@@ -26,14 +82,11 @@ public:
     {
         Super::reset();
 
-        m_iIdxAttenderBelongTo = 0;
+        m_iIdxScreenPositionBelongTo = 0;
 
     };
 
-    //    2
-    // 3 [ ] 1
-    //    0
-    int32 m_iIdxAttenderBelongTo;
+    int32 m_iIdxScreenPositionBelongTo;
 };
 
 //Warn: we don't support multiple player screen in one client now!
@@ -45,12 +98,12 @@ class UMyCardGameUtilsLibrary :
 
 public:
 
-    static void helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(int32 iIdxAttenderBelongTo,
+    static void helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(int32 idxViewPositionBelongTo,
                                                                        FVector centerMapped,
                                                                        FVector PointMapped,
                                                                        FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp &outMeta);
 
-    static void helperUpdatePointAndCenterMetaOnPlayerScreenConstrainedByPointPercent(int32 iIdxAttenderBelongTo,
+    static void helperUpdatePointAndCenterMetaOnPlayerScreenConstrainedByPointPercent(int32 idxViewPositionBelongTo,
                                                                                         FVector centerMapped,
                                                                                         const FVector2D& pointPercent,
                                                                                         FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp& outMeta);
@@ -58,4 +111,9 @@ public:
     static void helperPointInWorldToPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FVector& pointInWorld, FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp &outMeta);
 
 
+    static int32 idxAttenderToIdxDeskPosition(int32 idxAttender, int32 attenderNum);
+    static int32 idxDeskPositionToIdxAttender(int32 idxDeskPosition, int32 attenderNum);
+
+    static int32 idxDeskPositionToIdxScreenPosition(int32 idxDeskPosition, int32 idxDeskPositionOfIdxScreenPosition0);
+    static int32 IdxScreenPositionToIdxDeskPosition(int32 IdxScreenPosition, int32 idxDeskPositionOfIdxScreenPosition0);
 };

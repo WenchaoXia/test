@@ -125,23 +125,24 @@ protected:
 
         //trick is that, onRep only happen on client, and in that case only one instance need to be notified
         m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.Clear();
-        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGamePlayerControllerCommunicationCpp::tryFeedDataToConsumerWithFilter);
+        m_pExtRoomCoreDataSourceSeq->m_cReplicateDelegate.AddUObject(this, &AMyMJGamePlayerControllerCommunicationCpp::OnRep_ExtRoomCoreDataSourceSeqContent);
     };
 
-    UFUNCTION()
-    void OnRep_ExtRoomCoreDataSourceSeqContent()
+    inline void OnRep_ExtRoomCoreDataSourceSeqContent()
     {
         tryFeedDataToConsumerWithFilter();
     };
 
     UFUNCTION()
-    void OnRep_ExtRoomTrivalDataSourceSeqPointer()
+    void OnRep_ExtRoomTrivalDataSourcePointer()
     {
+        m_pExtRoomTrivalDataSource->m_cReplicateDelegate.Clear();
+        m_pExtRoomTrivalDataSource->m_cReplicateDelegate.AddUObject(this, &AMyMJGamePlayerControllerCommunicationCpp::OnRep_ExtRoomTrivalDataSourceContent);
     };
 
-    UFUNCTION()
-    void OnRep_ExtRoomTrivalDataSourceSeqContent()
+    inline void OnRep_ExtRoomTrivalDataSourceContent()
     {
+        //Todo:
     };
 
     void tryFeedDataToConsumerWithFilter();
@@ -158,7 +159,7 @@ protected:
     UPROPERTY(ReplicatedUsing = OnRep_ExtRoomCoreDataSourceSeqPointer)
     UMyMJDataSequencePerRoleCpp* m_pExtRoomCoreDataSourceSeq;
 
-    UPROPERTY(ReplicatedUsing = OnRep_ExtRoomTrivalDataSourceSeqPointer)
+    UPROPERTY(ReplicatedUsing = OnRep_ExtRoomTrivalDataSourcePointer)
     AMyMJGameTrivalDataSourceCpp *m_pExtRoomTrivalDataSource;
 
     uint32 m_fHelperFilterLastRepClientRealtTime;
@@ -244,9 +245,12 @@ public:
 
     class AMyMJGameRoomViewerPawnBaseCpp* helperGetRoomViewerPawn(bool verify = true);
 
-    //always succeed
+    //always succeed, or coredump
     static AMyMJGamePlayerControllerCpp* helperGetLocalController(const UObject* WorldContextObject);
+
+    //may fail
     static UMyMJGameInRoomUIMainWidgetBaseCpp* helperGetInRoomUIMain(const UObject* WorldContextObject, bool verify = true);
+
 
 protected:
 
