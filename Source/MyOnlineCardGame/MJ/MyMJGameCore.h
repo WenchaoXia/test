@@ -159,15 +159,20 @@ public:
         }
     };
 
+    inline
+    const FMyMJCoreDataLogicOnlyCpp& getDataLogicRefConst() const
+    {
+        return m_cDataLogic;
+    };
+
     inline const FMyMJDataAccessorCpp& getDataAccessorRefConst() const
     {
         return m_cDataAccessor;
     };
 
-    inline
-    const FMyMJCoreDataLogicOnlyCpp& getDataLogicRefConst() const
+    inline const FMyMJDataStructCpp& getCoreDataRefConst() const
     {
-        return m_cDataLogic;
+        return *m_cDataAccessor.getDataConst();
     };
 
     inline

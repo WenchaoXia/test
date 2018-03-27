@@ -340,3 +340,6 @@ FString FMyValueIdMapCpp::dump() const
 }
 
 FThreadSafeCounter FMyRunnableBaseCpp::s_iThreadCount = 0;
+
+
+FMyIntVector2D const FMyIntVector2D::UnitValue = FMyIntVector2D(1, 1);

@@ -306,6 +306,8 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
             int32 diceNumerValue1 = UMyMJUtilsLibrary::getIntValueFromBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen);
             int32 idxAttender = delta.getIdxAttenderActionInitiator();
 
+            MY_VERIFY(idxAttender == UMyMJUtilsLibrary::getIntValueFromBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_LastThrowAttender_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_LastThrowAttender_BitLen));
+
             if (diceNumerNowMaskUpdateReason == FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_GameStart) {
 
                 //just updat the untaken info
@@ -326,8 +328,16 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
                 MY_VERIFY(false);
             }
 
+            /*
             UMyMJUtilsLibrary::setIntValueToBitMask(coreDataSelf.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen, diceNumerValue0);
             UMyMJUtilsLibrary::setIntValueToBitMask(coreDataSelf.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen, diceNumerValue1);
+
+            UMyMJUtilsLibrary::setIntValueToBitMask(coreDataSelf.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_LastThrowAttender_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_LastThrowAttender_BitLen, idxAttender);
+            UMyMJUtilsLibrary::setIntValueToBitMask(coreDataSelf.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen, diceNumerNowMaskUpdateReason);
+            */
+
+            coreDataSelf.m_iDiceNumberNowMask = coreDataDelta.m_iDiceNumberNowMask;
+            coreDataSelf.m_iDiceVisualStateKey = coreDataDelta.m_iDiceVisualStateKey;
 
             if (pDirtyRecord) {
                 pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Dice, 0, 0, true);

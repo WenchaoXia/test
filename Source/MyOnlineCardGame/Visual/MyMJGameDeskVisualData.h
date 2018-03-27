@@ -36,13 +36,15 @@ public:
     };
 
 
-    //to make it easy to use, list every maintype's api to tip the parameter meanings
+    //return errocode. to make it easy to use, list every maintype's api to tip the parameter meanings
     int32 getCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
     void  setCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, const FMyMJGameDeskVisualPointCfgCpp &visualPoint);
 
+    //return errocode.
     int32 getAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
     void  setAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, const FMyMJGameDeskVisualPointCfgCpp &visualPoint);
 
+    //return errocode.
     int32 getTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
     void  setTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, const FMyMJGameDeskVisualPointCfgCpp &visualPoint);
 
@@ -663,13 +665,14 @@ protected:
                                                const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cNextCoreDataDirtyRecordSincePrev,
                                                const FMyMJGameDeskVisualActorDatasCpp& cPrevActorData,
                                                TMap<int32, FMyMJGameCardVisualInfoCpp>& mOutIdCardVisualInfoAccumulatedChanges,
-                                               TMap<int32, int32>& mOutIdDiceValueAccumulatedChanges);
+                                               bool& bDicesAccumulatedChanges);
 
     //Todo: resolve dices
     //@mIdCardVisualInfoAccumulatedChanges, @mIdDiceValueAccumulatedChanges may be sorted inside, the out will be cleaned inside and only contain data correspond to input 
     static void helperResolveVisualResultChanges(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
+                                                 const FMyMJDataStructWithTimeStampBaseCpp& cNextCoreData,
                                                  TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoAccumulatedChanges,
-                                                 TMap<int32, int32>& mIdDiceValueAccumulatedChanges,
+                                                 bool bDicesAccumulatedChanges,
                                                  TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultChanges,
                                                  TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mOutIdDiceVisualInfoAndResultChanges);
 

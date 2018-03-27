@@ -40,7 +40,7 @@ public:
         reset();
     };
 
-    void reset()
+    inline void reset()
     {
         m_eFlipState = MyMJCardFlipStateCpp::Invalid;
 
@@ -151,6 +151,31 @@ public:
     FMyMJGameActorVisualResultBaseCpp m_cVisualResult;
 };
 
+/*
+USTRUCT(BlueprintType)
+struct FMyMJGameDiceVisualInfoCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGameDiceVisualInfoCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_eFlipState = MyMJCardFlipStateCpp::Invalid;
+    }
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "dice visual state key"))
+    int32 m_iDiceVisualStateKey = 0;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "dice value"))
+        int32 m_iDiceValue;
+}£»
+*/
+
 USTRUCT(BlueprintType)
 struct FMyMJGameDiceVisualInfoAndResultCpp
 
@@ -168,6 +193,8 @@ public:
     FMyMJGameActorVisualResultBaseCpp m_cVisualResult;
 };
 
+
+//most functions are implemented in C++, so fast and free to call
 UCLASS(Blueprintable)
 class MYONLINECARDGAME_API AMyMoveWithSeqActorBaseCpp : public AActor, public IMyTransformUpdaterInterfaceCpp
 {
@@ -223,7 +250,7 @@ private:
 };
 
 UCLASS(Blueprintable)
-class MYONLINECARDGAME_API AMyMJGameCardBaseCpp : public AMyMoveWithSeqActorBaseCpp
+class MYONLINECARDGAME_API AMyMJGameCardBaseCpp : public AMyMoveWithSeqActorBaseCpp, public IMyIdInterfaceCpp, public IMyCardGameValueRelatedObjectInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -234,19 +261,24 @@ public:
     virtual ~AMyMJGameCardBaseCpp();
 
     UFUNCTION(BlueprintSetter)
-    void setValueShowing(int32 newValue);
+    void setValueShowing(int32 newValue)
+    {
+        updateValueShowing(newValue, 0);
+    };
+
+    virtual void updateValueShowing(int32 newValue, int32 animationTimeMs) override;
 
     UFUNCTION(BlueprintGetter)
-    int32 getValueShowing() const;
+    virtual int32 getValueShowing() const override;
+
+    UFUNCTION(BlueprintSetter)
+    virtual void setResPath(const FDirectoryPath& newResPath) override;
+
+    UFUNCTION(BlueprintGetter)
+    virtual const FDirectoryPath& getResPath() const override;
 
     //return true if new path is OK
-    UFUNCTION(BlueprintSetter)
-    void setResPath(const FDirectoryPath& newResPath);
-
     bool setResPathWithRet(const FDirectoryPath& newResPath);
-
-    UFUNCTION(BlueprintGetter)
-    const FDirectoryPath& getResPath() const;
 
     //Todo: incomplete yet
     inline void reset()
@@ -280,6 +312,16 @@ public:
         }
 
         return ret;
+    };
+
+    virtual int32 getMyId() const override
+    {
+        return m_iMyId;
+    };
+
+    virtual void setMyId(int32 myId) override
+    {
+        m_iMyId = myId;
     };
 
     static void helperMyMJCardsToMyTransformUpdaters(const TArray<AMyMJGameCardBaseCpp*>& aSub, bool bSort, TArray<IMyTransformUpdaterInterfaceCpp*> &aBase);
@@ -333,11 +375,14 @@ protected:
     //where this card should go, but allow it not be there now(should move smoothly there)
     FMyCycleBuffer<FMyMJGameCardVisualInfoAndResultCpp> m_cTargetToGoHistory;
 
+    int32 m_iMyId;
+
 };
 
 
+//dice doesn't support set value directly, they must be calculated by dice visual point
 UCLASS(Blueprintable, Abstract)
-class MYONLINECARDGAME_API AMyMJGameDiceBaseCpp : public AMyMoveWithSeqActorBaseCpp
+class MYONLINECARDGAME_API AMyMJGameDiceBaseCpp : public AMyMoveWithSeqActorBaseCpp, public IMyIdInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -347,25 +392,124 @@ public:
 
     virtual ~AMyMJGameDiceBaseCpp();
 
-    //return errcode, 0 means no error
-    inline int32 getDiceModelInfo(FMyMJDiceModelInfoBoxCpp& diceModelInfo, bool verify = true) const
+    //Todo: incomplete yet
+    inline void reset()
     {
-        int32 ret = Super::getModelInfo(diceModelInfo.m_cBasic, verify);
-        if (0 != ret)
-        {
-            return ret;
+        //m_cTargetToGoHistory.clearInGame();
+    };
+
+    //return errcode, 0 means no error
+    inline int32 getDiceModelInfo(FMyMJDiceModelInfoBoxCpp& data, bool verifyValid = true) const
+    {
+        int32 ret = -1;
+        while (1) {
+
+            ret = Super::getModelInfo(data.m_cBasic, verifyValid);
+            if (ret != 0) {
+                break;
+            }
+
+            ret = getDiceModelInfoExtra(data.m_cExtra);
+            if (ret != 0) {
+                break;
+            }
+
+            break;
         }
 
-        ret = getDiceModelInfoExtra(diceModelInfo.m_cExtra);
-        if (verify) {
+        if (verifyValid) {
             MY_VERIFY(ret == 0);
         }
 
         return ret;
     };
 
+    //always success, otherwise core dump
+    inline const FMyMJDiceModelInfoBoxCpp& getDiceModelInfoRefConstFromCache()
+    {
+
+        if (!m_cModelInfoCache.m_bValid) {
+            getDiceModelInfo(m_cModelInfoCache.m_cData, true);
+            m_cModelInfoCache.m_bValid = true;
+        }
+
+        return m_cModelInfoCache.m_cData;
+    };
+
+    inline void invalidModelInfoCache()
+    {
+        m_cModelInfoCache.m_bValid = false;
+    };
+
+    /*
+    inline void addTargetToGoHistory(const FMyMJGameDiceVisualInfoAndResultCpp& cTargetToGo)
+    {
+        if (m_cTargetToGoHistory.isFull()) {
+            m_cTargetToGoHistory.removeFromHead(1);
+        };
+
+        m_cTargetToGoHistory.addToTail(&cTargetToGo, NULL);
+    };
+
+    inline const FMyMJGameDiceVisualInfoAndResultCpp* getTargetToGoHistory(int32 idxFromLast, bool bVerifyValid = true) const
+    {
+        const FMyMJGameDiceVisualInfoAndResultCpp* ret;
+        int32 idx = m_cTargetToGoHistory.getCount() - 1 - idxFromLast;
+        if (idx < m_cTargetToGoHistory.getCount()) {
+            ret = m_cTargetToGoHistory.peekAt(idx);
+        }
+        else {
+            ret = NULL;
+        }
+
+        if (bVerifyValid)
+        {
+            MY_VERIFY(ret != NULL);
+        }
+
+        return ret;
+    };
+    */
+
+    virtual int32 getMyId() const override
+    {
+        return m_iMyId;
+    };
+
+    virtual void setMyId(int32 myId) override
+    {
+        m_iMyId = myId;
+    };
+
+    //@idxOfDiceRandomArranged is the randome arranged sequece idx, and it may NOT equal to idxOfDice, acctually the shuffered idx in dices array. it must <= diceTotalNum
+    static FTransform helperCalcFinalTransform(const FMyMJDiceModelInfoBoxCpp& diceModelInfo, const FMyMJGameDeskVisualPointCfgCpp& diceVisualPointCfg, int32 diceVisualStateKey, int32 idxOfDiceRandomArranged, int32 diceTotalNum, int32 value);
 
 protected:
+
+    struct FMyMJDiceModelInfoBoxCachedCpp
+    {
+
+    public:
+
+        FMyMJDiceModelInfoBoxCachedCpp()
+        {
+            reset();
+        };
+
+        virtual ~FMyMJDiceModelInfoBoxCachedCpp()
+        {
+
+        };
+
+        inline void reset()
+        {
+            m_bValid = false;
+            m_cData.reset();
+        };
+
+        bool m_bValid;
+        FMyMJDiceModelInfoBoxCpp m_cData;
+    };
 
     //return errcode, 0 means no error
     UFUNCTION(BlueprintNativeEvent, BlueprintPure)
@@ -376,6 +520,12 @@ protected:
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDiceBaseCpp::getDiceModelInfoExtra() must be overrided by blueprint subclass!"));
         return -1;
     };
+
+    FMyMJDiceModelInfoBoxCachedCpp m_cModelInfoCache;
+
+    //FMyCycleBuffer<FMyMJGameDiceVisualInfoAndResultCpp> m_cTargetToGoHistory;
+
+    int32 m_iMyId;
 };
 
 

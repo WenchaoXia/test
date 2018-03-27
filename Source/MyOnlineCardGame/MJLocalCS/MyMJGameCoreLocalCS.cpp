@@ -266,7 +266,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         int32 idxBase = pRet->m_aResultBase.Emplace();
         FMyMJDataStructCpp &base = pRet->m_aResultBase[idxBase];
 
-        genBaseFromPusherResetGame(*m_pResManager, pusherReset, base);
+        genBaseFromPusherResetGame(*m_pResManager, pusherReset, getCoreDataRefConst(), base);
         
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherUpdateAttenderCardsAndState)
@@ -397,6 +397,8 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         int32 iDiceNumberNow0, iDiceNumberNow1;
         actionThrowDice.getDiceNumbers(&iDiceNumberNow0, &iDiceNumberNow1);
 
+        int32 inGameDiceThrowCount = UMyMJUtilsLibrary::getIntValueFromBitMask(coreDataSelf.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_InGameDiceThrowCount_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_InGameDiceThrowCount_BitLen);
+
         UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen, iDiceNumberNow0);
         UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen, iDiceNumberNow1);
 
@@ -419,6 +421,11 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             MY_VERIFY(false);
         }
 
+        UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_LastThrowAttender_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_LastThrowAttender_BitLen, idxAttender);
+        UMyMJUtilsLibrary::setIntValueToBitMask(coreDataDelta.m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_InGameDiceThrowCount_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_InGameDiceThrowCount_BitLen, inGameDiceThrowCount + 1);
+
+        FRandomStream &RS = m_pResManager->getRandomStreamRef();
+        coreDataDelta.m_iDiceVisualStateKey = RS.RandRange(INT32_MIN, INT32_MAX);
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart)
     {
@@ -1194,7 +1201,7 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
 }
 
 
-void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(FMyMJGameResManager& RM, const FMyMJGamePusherResetGameCpp &pusherReset, FMyMJDataStructCpp &outBase)
+void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(FMyMJGameResManager& RM, const FMyMJGamePusherResetGameCpp &pusherReset, const FMyMJDataStructCpp &BaseBefore, FMyMJDataStructCpp &outBase)
 {
     FRandomStream &RS = RM.getRandomStreamRef();
 
@@ -1202,6 +1209,7 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(FMyMJGameResManager& RM
 
     //Stateless, never judge condition of previous state, just reset the whole core
     FMyMJCoreDataPublicCpp *pD = const_cast<FMyMJCoreDataPublicCpp *> (&base.getCoreDataPublicRefConst());
+    pD->reset();
 
     //pD->reinit(pPusher->m_cGameCfg.m_eRuleType);
 
@@ -1245,6 +1253,30 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(FMyMJGameResManager& RM
     pD->m_eGameState = MyMJGameStateCpp::GameReseted;
 
     pD->m_iDiceNumberNowMask = 0;
+
+    int32 m_iDiceNumberNowMaskBefore = BaseBefore.getCoreDataPublicRefConst().m_iDiceNumberNowMask;
+    int32 diceValue0 = UMyMJUtilsLibrary::getIntValueFromBitMask(m_iDiceNumberNowMaskBefore, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen);
+    int32 diceValue1 = UMyMJUtilsLibrary::getIntValueFromBitMask(m_iDiceNumberNowMaskBefore, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen);
+
+    if (diceValue0 < 1 || diceValue0 > 6 || diceValue1 < 1 || diceValue1 > 6) {
+        //regenerate one
+        FRandomStream RSTemp;
+        RSTemp.Initialize(RM.getSeed());
+
+        diceValue0 = RSTemp.RandRange(1, 6);
+        diceValue1 = RSTemp.RandRange(1, 6);
+    }
+
+    UMyMJUtilsLibrary::setIntValueToBitMask(pD->m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen, diceValue0);
+    UMyMJUtilsLibrary::setIntValueToBitMask(pD->m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen, diceValue1);
+    
+    UMyMJUtilsLibrary::setIntValueToBitMask(pD->m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_Invalid);
+    UMyMJUtilsLibrary::setIntValueToBitMask(pD->m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_LastThrowAttender_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_LastThrowAttender_BitLen, 6);
+    UMyMJUtilsLibrary::setIntValueToBitMask(pD->m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_InGameDiceThrowCount_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_InGameDiceThrowCount_BitLen, 0);
+   
+    pD->m_iDiceVisualStateKey = BaseBefore.getCoreDataPublicRefConst().m_iDiceVisualStateKey;
+
+
     pD->m_cUntakenSlotInfo.reset();
 
     //let's fill in

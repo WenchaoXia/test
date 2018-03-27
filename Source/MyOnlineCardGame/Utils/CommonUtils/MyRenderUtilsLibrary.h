@@ -8,6 +8,7 @@
 #include "RenderUtils.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Runtime/UMG/Public/Components/Image.h"
+#include "Runtime/UMG/Public/Components/Button.h"
 #include "Blueprint/UserWidget.h"
 
 #include "MyRenderUtilsLibrary.generated.h"
@@ -182,6 +183,72 @@ protected:
     int32 m_iLoopShowing;
 
     FTimerHandle m_cLoopTimerHandle;
+};
+
+//support auto scale when pressed, which saves one image texture
+UCLASS()
+class MYONLINECARDGAME_API UMyButton : public UButton
+{
+    GENERATED_BODY()
+
+public:
+
+    UMyButton(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+    virtual ~UMyButton() {};
+
+    /** Called when the button is pressed */
+    //UPROPERTY(BlueprintAssignable, Category = "Button|MyEvent")
+    //FOnButtonPressedEvent OnPressedOverride;
+
+    /** Called when the button is released */
+    //UPROPERTY(BlueprintAssignable, Category = "Button|MyEvent")
+    //FOnButtonReleasedEvent OnReleasedOverride;
+
+protected:
+
+#if WITH_EDITOR
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
+#endif
+
+    TSharedRef<SWidget> RebuildWidget() override;
+
+    inline FReply SlateHandleClickedMy()
+    {
+        return SlateHandleClicked();
+    };
+
+    void SlateHandlePressedMy();
+    void SlateHandleReleasedMy();
+
+    inline void SlateHandleHoveredMy()
+    {
+        SlateHandleHovered();
+    };
+
+    inline void SlateHandleUnhoveredMy()
+    {
+        SlateHandleUnhovered();
+    }
+
+    //virtual void SynchronizeProperties() override;
+
+    //UFUNCTION()
+    //void HideFunction();
+
+    //void onPressedInner();
+    //void onReleasedInner();
+
+    //Todo: use setter to update the state when modify in BP
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "render transform normal"))
+    FWidgetTransform m_cWidgetTransformNormal;
+
+    //If true, that transform will be applied when pressed
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "enable render transform pressed"))
+    bool m_bEnableWidgetTransformPressed;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = m_bEnableWidgetTransformPressed, DisplayName = "render transform pressed"))
+    FWidgetTransform m_cWidgetTransformPressed;
 };
 
 
@@ -374,6 +441,111 @@ public:
 };
 
 
+USTRUCT(BlueprintType)
+struct FMyMargin3D : public FMargin
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMargin3D(float UniformMargin = 0) : Super(0)
+    {
+        ZPositive = ZNegative = UniformMargin;
+    };
+
+    FMyMargin3D(float InLeft, float InTop, float InRight, float InBottom, float InZPositive, float InZNegative)
+        : Super(InLeft, InTop, InRight, InBottom)
+        , ZPositive(InZPositive)
+        , ZNegative(InZNegative)
+    { };
+
+    inline void reset()
+    {
+        Left = Top = Right = Bottom = ZPositive = ZNegative = 0;
+    };
+
+    FMyMargin3D operator*(float Scale) const
+    {
+        return FMyMargin3D(Left * Scale, Top * Scale, Right * Scale, Bottom * Scale, ZPositive * Scale, ZNegative * Scale);
+    }
+
+    FMyMargin3D operator*(const FMyMargin3D& InScale) const
+    {
+        return FMyMargin3D(Left * InScale.Left, Top * InScale.Top, Right * InScale.Right, Bottom * InScale.Bottom, ZPositive * InScale.ZPositive, ZNegative * InScale.ZNegative);
+    }
+
+    FMyMargin3D operator+(const FMyMargin3D& InDelta) const
+    {
+        return FMyMargin3D(Left + InDelta.Left, Top + InDelta.Top, Right + InDelta.Right, Bottom + InDelta.Bottom, ZPositive + InDelta.ZPositive, ZNegative + InDelta.ZNegative);
+    }
+
+    FMyMargin3D operator-(const FMyMargin3D& Other) const
+    {
+        return FMyMargin3D(Left - Other.Left, Top - Other.Top, Right - Other.Right, Bottom - Other.Bottom, ZPositive - Other.ZPositive, ZNegative - Other.ZNegative);
+    }
+
+    bool operator==(const FMyMargin3D& Other) const
+    {
+        return (Left == Other.Left) && (Right == Other.Right) && (Top == Other.Top) && (Bottom == Other.Bottom) && (ZPositive == Other.ZPositive) && (ZNegative == Other.ZNegative);
+    }
+
+    bool operator!=(const FMyMargin3D& Other) const
+    {
+        return Left != Other.Left || Right != Other.Right || Top != Other.Top || Bottom != Other.Bottom || ZPositive != Other.ZPositive || ZNegative != Other.ZNegative;
+    }
+
+
+    inline FVector GetDesiredSize3D() const
+    {
+        return FVector(GetDesiredSize(), ZPositive + ZNegative);
+    }
+
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Appearance)
+    float ZPositive;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Appearance)
+    float ZNegative;
+};
+
+//elemSize based, percent means elemSize's percent
+USTRUCT(BlueprintType)
+struct FMyElemAndGroupDynamicArrangeMetaCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    
+    FMyElemAndGroupDynamicArrangeMetaCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_cElemSize = FVector::ZeroVector;
+
+        m_cPaddingPercent.reset();
+
+        m_cElemSpacingPercent = FVector::ZeroVector;
+        m_cGroupSpacingPercent = FVector::ZeroVector;
+    };
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "elem size"))
+    FVector m_cElemSize;
+
+    //the padding to elem that will be arranged, unit is elem size's precent
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "padding percent"))
+    FMyMargin3D m_cPaddingPercent;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "elem spacing percent"))
+    FVector m_cElemSpacingPercent;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "group spacing percent"))
+    FVector m_cGroupSpacingPercent;
+};
+
+
 //Warn: we don't support multiple player screen in one client now!
 UCLASS()
 class UMyRenderUtilsLibrary :
@@ -401,4 +573,29 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UMyRenderUtilsLibrary")
     static int32 getCenterPointPositionForWidgetInCanvasWithPointAnchor(const FVector2D& canvasSize, const UWidget* widgetUnderCanvas, FVector2D& positionInCanvas);
 
+
+
+    UFUNCTION(BlueprintCallable, Category = "UMyRenderUtilsLibrary")
+    static void myElemAndGroupDynamicArrangeCalcTotalSize(const FMyElemAndGroupDynamicArrangeMetaCpp& meta, const FIntVector& groupCount, const FIntVector& elemCount, FVector& totalSize);
+
+    //@arrangeDirectionNegative means whether it arrange negtive, if its X !=0, it means arrange from max to min, like right to left in 2D screen case
+    //UFUNCTION(BlueprintCallable, Category = "UMyRenderUtilsLibrary")
+    //static void myElemAndGroupDynamicArrangeGetElemCenterPositionArrangeDirectionAllPositive(const FMyElemAndGroupDynamicArrangeMetaCpp& meta, FIntVector idxGroup, FIntVector idxElem, FVector totalSize, FIntVector arrangeDirectionNegative, FVector& centerPosition);
+
+    //@idxElem is idx of total elem, not idx in group
+    //@centerPosition the coordinate is always start from 0
+    UFUNCTION(BlueprintCallable, Category = "UMyRenderUtilsLibrary")
+    static void myElemAndGroupDynamicArrangeGetElemCenterPositionArrangeDirectionAllPositive(const FMyElemAndGroupDynamicArrangeMetaCpp& meta, const FIntVector& idxGroup, const FIntVector& idxElem, FVector& centerPosition);
+
+    UFUNCTION(BlueprintCallable, Category = "UMyRenderUtilsLibrary")
+    static void myElemAndGroupCalcDelimiterNumber(const FIntVector &groupWalked, const FIntVector &elemWalked, FIntVector &groupDelimiterNumber, FIntVector &elemDelimiterNumber);
+
+
+protected:
+
+    // -------------
+    // | E   EE   E
+    // | E   E*
+    //calc the * coordinate, ignore * self's occupization and margin
+    static void myElemAndGroupDynamicArrangeCalcDistanceWalkedBeforeIgnorePadding(const FMyElemAndGroupDynamicArrangeMetaCpp& meta, const FIntVector& groupWalked, const FIntVector& elemWalked, FVector& distanceIgnorePadding);
 };

@@ -22,3 +22,20 @@ FMyWithCurveUpdaterTransformCpp& IMyTransformUpdaterInterfaceCpp::getMyWithCurve
     MY_VERIFY(false);
     return *((FMyWithCurveUpdaterTransformCpp *)NULL);
 };
+
+
+UMyIdInterfaceCpp::UMyIdInterfaceCpp(const FObjectInitializer& ObjectInitializer)
+{
+
+};
+
+int32 IMyIdInterfaceCpp::getMyId() const
+{
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyId() not overrided by subclass."));
+    return -1;
+};
+
+void IMyIdInterfaceCpp::setMyId(int32 myId)
+{
+    return;
+};

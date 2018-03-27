@@ -31,3 +31,29 @@ public:
 protected:
 
 };
+
+
+//application level id
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
+class UMyIdInterfaceCpp : public UInterface
+{
+    //GENERATED_BODY()
+    GENERATED_UINTERFACE_BODY()
+};
+
+class IMyIdInterfaceCpp
+{
+    //GENERATED_BODY()
+    GENERATED_IINTERFACE_BODY()
+
+public:
+
+    //if return < 0, it means incorrect set or not used, check it carefully!
+    UFUNCTION(BlueprintCallable)
+    virtual int32 getMyId() const;
+
+    virtual void setMyId(int32 myId);
+
+protected:
+
+};

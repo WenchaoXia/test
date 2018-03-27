@@ -1013,3 +1013,46 @@ Same = false
 };
 };
 */
+
+
+USTRUCT(BlueprintType)
+struct FMyIntVector2D
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyIntVector2D(int32 iX = 0, int32 iY = 0)
+    {
+        X = iX;
+        Y = iY;
+    };
+
+    inline void reset()
+    {
+        X = Y = 0;
+    };
+
+    inline FString ToString() const
+    {
+        return FString::Printf(TEXT("X=%d Y=%d"), X, Y);
+    };
+
+    inline FVector2D ToVector2D() const
+    {
+        return FVector2D(X, Y);
+    };
+
+    inline FIntVector toIntVector() const
+    {
+        return FIntVector(X, Y, 0);
+    };
+
+    MYONLINECARDGAME_API static const FMyIntVector2D UnitValue;
+
+    UPROPERTY()
+    int32 X;
+
+    UPROPERTY()
+    int32 Y;
+};

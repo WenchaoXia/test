@@ -4,6 +4,8 @@
 #include "MyMJGameData.h"
 #include "MyMJGameCore.h"
 
+#include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
+
 void
 FMyMJGamePusherPointersCpp::copyDeep(const FMyMJGamePusherPointersCpp *pOther)
 {
@@ -772,6 +774,9 @@ FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream &RS, FMyMJGameCfg
     }
 
     //let's shuffle
+    UMyCommonUtilsLibrary::shuffleArrayWithRandomStream<int32>(RS, outValues);
+
+    /*
     int32 remainingCards = outValues.Num();
 
     while (remainingCards > 2) {
@@ -783,6 +788,7 @@ FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream &RS, FMyMJGameCfg
 
         remainingCards--;
     }
+    */
 
     m_aShuffledValues = outValues;
 

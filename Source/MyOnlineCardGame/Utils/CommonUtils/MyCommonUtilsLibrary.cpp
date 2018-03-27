@@ -1151,18 +1151,25 @@ void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStep(const FMyTra
         return;
     };
 
+    FVector finalLocationCenter = FVector::ZeroVector;
     for (int32 i = 0; i < l; i++) {
         if (updatersSorted[i] == NULL)
         {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("actorComponentsSortedGroup[%d] == NULL."), i);
             return;
         }
+        FVector finalLocation = updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation();
+        finalLocationCenter += finalLocation;
+
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("finalLocation: %s"), *finalLocation.ToString());
     }
 
+    finalLocationCenter /= l;
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("l %d, finalLocationCenter: %s"), l, *finalLocationCenter.ToString());
     //find the middle one
-    int32 idxCenter = l / 2;
-    FMyWithCurveUpdaterTransformCpp* updaterCenter = updatersSorted[idxCenter];
-    FTransform& nextTransformCenter = aNextTransforms[idxCenter];
+    //int32 idxCenter = l / 2;
+    //FMyWithCurveUpdaterTransformCpp* updaterCenter = updatersSorted[idxCenter];
+    //FTransform& nextTransformCenter = aNextTransforms[idxCenter];
 
 
     if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::PrevLocation)
@@ -1180,43 +1187,35 @@ void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStep(const FMyTra
     else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::OffsetFromPrevLocation)
     {
         for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformPrevRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
+            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformPrevRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend.Size() * 2);
         }
     }
     else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::OffsetFromFinalLocation)
     {
         for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
+            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend.Size() * 2);
         }
     }
     else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::PointOnPlayerScreen)
     {
         FVector location = pointTransform.GetLocation();
         for (int32 i = 0; i < l; i++) {
-            if (i == idxCenter) {
-                aNextTransforms[i].SetLocation(location + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
-            }
-            else {
-                aNextTransforms[i].SetLocation(location + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2 + updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation() - updaterCenter->getHelperTransformFinalRefConst().GetLocation());
-            }
+            FVector locationForScreen = location + cStepData.m_cLocationOffsetPercent * modelBoxExtend.Size() * 2 + updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation() - finalLocationCenter;
+            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("locationForScreen: %s"), *locationForScreen.ToString());
+            aNextTransforms[i].SetLocation(locationForScreen);
         }
     }
     else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::DisappearAtAttenderBorderOnPlayerScreen)
     {
         FVector location = disappearTransform.GetLocation();
         for (int32 i = 0; i < l; i++) {
-            if (i == idxCenter) {
-                aNextTransforms[i].SetLocation(location + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
-            }
-            else {
-                aNextTransforms[i].SetLocation(location + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2 + updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation() - updaterCenter->getHelperTransformFinalRefConst().GetLocation());
-            }
+            aNextTransforms[i].SetLocation(location + cStepData.m_cLocationOffsetPercent * modelBoxExtend.Size() * 2 + updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation() - finalLocationCenter);
         }
     }
     else if (cStepData.m_eLocationUpdateType == MyActorTransformUpdateAnimationLocationType::OffsetFromGroupPoint)
     {
         for (int32 i = 0; i < l; i++) {
-            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformGroupPointRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend * 2);
+            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformGroupPointRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend.Size() * 2);
         }
     }
 
@@ -1324,8 +1323,8 @@ void UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(con
     updaterInterfaces[0]->getModelInfo(modelInfo);
     pMeta->m_cModelBoxExtend = modelInfo.m_cBoxExtend;
 
-    helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, pointInfo.m_fShowPosiFromCenterToBorderPercent, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelBoxExtend.Z * 2, pMeta->m_cPointTransform);
-    helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, 1.2, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelBoxExtend.Z * 2, pMeta->m_cDisappearTransform);
+    helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, pointInfo.m_fShowPosiFromCenterToBorderPercent, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelBoxExtend.Size() * 2, pMeta->m_cPointTransform);
+    helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, 1.2, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelBoxExtend.Size() * 2, pMeta->m_cDisappearTransform);
 
     bool bDelay = extraDelayDur >= MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT;
 

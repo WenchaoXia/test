@@ -53,7 +53,7 @@ void FMyMJGameInGamePlayerScreenCfgCpp::fillDefaultData()
         area.m_cCardShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.3;
         area.m_cCardShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.35;
 
-        area.m_cDiceShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.2;
+        area.m_cDiceShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.4;
         area.m_cDiceShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.15;
 
         area.m_cCommonActionActorShowPoint.m_fTargetVLengthOnScreenScreenPercent = 0.4;

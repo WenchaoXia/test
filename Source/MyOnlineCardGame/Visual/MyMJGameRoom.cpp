@@ -23,9 +23,6 @@
 
 #include "Curves/CurveVector.h"
 
-#define MY_MJ_GAME_ROOM_VISUAL_LOOP_TIME_MS (17)
-#define MY_CARD_ACTOR_MAX (1000)
-#define MY_DICE_ACTOR_MAX (10)
 
 int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp& cPointCfgCache) const
 {
@@ -158,16 +155,11 @@ bool UMyMJGameDeskResManagerCpp::OnBeginPlay()
 
 int32 UMyMJGameDeskResManagerCpp::prepareForVisual(int32 cardActorNum)
 {
-    if (UMyCommonUtilsLibrary::helperPrepareActorsInArray<AMyMJGameCardBaseCpp>(this, cardActorNum, getVisualCfg()->m_cMainActorClassCfg.m_cCardClass, m_aCardActors, true) < 0) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to prepare card actor."));
-        return -1;
-    }
+    MY_VERIFY(cardActorNum > 0);
+    getCardActorByIdxEnsured(cardActorNum - 1);
 
     int32 diceActorNum = 2;
-    if (UMyCommonUtilsLibrary::helperPrepareActorsInArray<AMyMJGameDiceBaseCpp>(this, diceActorNum, getVisualCfg()->m_cMainActorClassCfg.m_cDiceClass, m_aDiceActors, true) < 0) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to prepare dice actor."));
-        return -2;
-    }
+    getDiceActorByIdxEnsured(diceActorNum - 1);
 
     return 0;
 };
@@ -200,44 +192,6 @@ int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModel
 
     return 0;
 };
-
-
-AMyMJGameCardBaseCpp* UMyMJGameDeskResManagerCpp::getCardActorByIdx(int32 idx, bool verifyValid)
-{
-    MY_VERIFY(idx >= 0);
-    MY_VERIFY(idx < MY_CARD_ACTOR_MAX); //we don't allow too much
-    if (idx >= m_aCardActors.Num()) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("requiring a card not prepared ahead, existing %d, required idx %d."), m_aCardActors.Num(), idx);
-        UMyCommonUtilsLibrary::helperPrepareActorsInArray<AMyMJGameCardBaseCpp>(this, idx + 1, getVisualCfg()->m_cMainActorClassCfg.m_cCardClass, m_aCardActors, true);
-        //prepareCardActor(idx + 1);
-    }
-
-    AMyMJGameCardBaseCpp* pRet = getCardActorByIdxConst(idx);
-
-    if (verifyValid) {
-        MY_VERIFY(IsValid(pRet));
-    }
-
-    return pRet;
-}
-
-AMyMJGameDiceBaseCpp* UMyMJGameDeskResManagerCpp::getDiceActorByIdx(int32 idx, bool verifyValid)
-{
-    MY_VERIFY(idx >= 0);
-    MY_VERIFY(idx < MY_DICE_ACTOR_MAX); //we don't allow too much
-    if (idx >= m_aDiceActors.Num()) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("requiring a dice not prepared ahead, existing %d, required idx %d."), m_aDiceActors.Num(), idx);
-        UMyCommonUtilsLibrary::helperPrepareActorsInArray<AMyMJGameDiceBaseCpp>(this, idx + 1, getVisualCfg()->m_cMainActorClassCfg.m_cDiceClass, m_aDiceActors, true);
-    }
-
-    AMyMJGameDiceBaseCpp* pRet = getDiceActorByIdxConst(idx);
-
-    if (verifyValid) {
-        MY_VERIFY(IsValid(pRet));
-    }
-
-    return pRet;
-}
 
 AMyMJGameTrivalDancingActorBaseCpp* UMyMJGameDeskResManagerCpp::getTrivalDancingActorByClass(TSubclassOf<AMyMJGameTrivalDancingActorBaseCpp> classType, bool freeActorOnly)
 {
@@ -408,7 +362,7 @@ void AMyMJGameRoomCpp::startVisual()
     UWorld *world = GetWorld();
     if (IsValid(world)) {
         world->GetTimerManager().ClearTimer(m_cLoopTimerHandle);
-        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &AMyMJGameRoomCpp::loopVisual, ((float)MY_MJ_GAME_ROOM_VISUAL_LOOP_TIME_MS) / (float)1000, true);
+        world->GetTimerManager().SetTimer(m_cLoopTimerHandle, this, &AMyMJGameRoomCpp::loopVisual, ((float)AMyMJGameRoomVisualLoopTimeMs) / (float)1000, true);
         UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("startVisual() OK, and visual loop timer started."));
     }
     else {
@@ -539,7 +493,7 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
         int32 idCard = Elem.Key;
         const FMyMJGameCardVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
 
-        AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(idCard);
+        AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdxEnsured(idCard);
 
         pCardActor->setValueShowing(cInfoAndResult.m_cVisualInfo.m_iCardValue);
         pCardActor->SetActorHiddenInGame(false);
@@ -561,6 +515,27 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
     }
 
     //Todo: handle other dirty data
+    for (auto& Elem : mNewActorDataIdDices)
+    {
+        int32 idDice = Elem.Key;
+        const FMyMJGameDiceVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
+
+        AMyMJGameDiceBaseCpp* pDiceActor = m_pResManager->getDiceActorByIdxEnsured(idDice);
+        pDiceActor->SetActorHiddenInGame(false);
+
+        FMyWithCurveUpdaterTransformCpp* pUpdater = &pDiceActor->getMyWithCurveUpdaterTransformRef();
+        pUpdater->setHelperTransformOrigin(pDiceActor->GetTransform());
+        pUpdater->setHelperTransformFinal(cInfoAndResult.m_cVisualResult.m_cTransform);
+
+        FMyWithCurveUpdateStepDataTransformCpp data;
+        data.helperSetDataBySrcAndDst(fDur, pCurve, pDiceActor->GetTransform(), cInfoAndResult.m_cVisualResult.m_cTransform);
+        pUpdater->clearSteps();
+        pUpdater->addStepToTail(data);
+
+        //pDiceActor->addTargetToGoHistory(cInfoAndResult);
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("dice %d update transform to: %s."), idDice, *cInfoAndResult.m_cVisualResult.m_cTransform.ToString());
+    }
 };
 
 void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
@@ -617,7 +592,7 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
                     if (cardInfo.m_cPosi.m_eSlot != MyMJCardSlotTypeCpp::JustTaken) {
                         continue;
                     }
-                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(cardInfo.m_iId);
+                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdxEnsured(cardInfo.m_iId);
                     aCardActors.Emplace(pCardActor);
                 }
 
@@ -635,7 +610,7 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
                 {
                     int32 idCard = Elem.Key;
                     const FMyMJGameCardVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
-                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(idCard);
+                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdxEnsured(idCard);
 
                     if (cInfoAndResult.m_cVisualInfo.m_iIdxAttender != idxAttender)
                     {
@@ -673,7 +648,7 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
                 {
                     int32 idCard = Elem.Key;
                     const FMyMJGameCardVisualInfoAndResultCpp& cInfoAndResult = Elem.Value;
-                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(idCard);
+                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdxEnsured(idCard);
 
                     if (aIds.Find(idCard) == INDEX_NONE)
                     {
@@ -698,12 +673,12 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
 
                 UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
                 if (IsValid(pUI)) {
-                    IMyMJGameInRoomUIMainInterfaceCpp::Execute_showAttenderWeave(pUI, dur, idxAttender, eWeaveVisualType);
+                    IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_showAttenderWeave(pUI, dur, idxAttender, eWeaveVisualType);
                 }
-                //if (pUI->GetClass()->ImplementsInterface(UMyMJGameInRoomUIMainInterfaceCpp::StaticClass()))
+                //if (pUI->GetClass()->ImplementsInterface(UMyMJGameInRoomUIMainWidgetInterfaceCpp::StaticClass()))
                 //C++ already implemented it
                 //{
-                //    IMyMJGameInRoomUIMainInterfaceCpp::Execute_changeViewPosition(pUI, pExtra->m_iIdxAttenderTarget);
+                //    IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_changeViewPosition(pUI, pExtra->m_iIdxAttenderTarget);
                 //}
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionHu) {
@@ -721,7 +696,7 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
 
                 UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
                 if (IsValid(pUI)) {
-                    IMyMJGameInRoomUIMainInterfaceCpp::Execute_showImportantGameStateUpdated(pUI, dur, pCoreDataDelta->m_eGameState);
+                    IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_showImportantGameStateUpdated(pUI, dur, pCoreDataDelta->m_eGameState);
                 }
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionThrowDices) {
@@ -729,34 +704,16 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
                 const FMyMJCoreDataDeltaCpp* pCoreDataDelta = cDelta.getCoreDataDeltaConst();
                 MY_VERIFY(pCoreDataDelta);
 
-                int32 diceNumerNowMaskUpdateReason = UMyMJUtilsLibrary::getIntValueFromBitMask(pCoreDataDelta->m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_BitLen);
-                MY_VERIFY(diceNumerNowMaskUpdateReason != FMyMJCoreDataPublicDirectDiceNumberNowMask_UpdateReason_Invalid);
-
-                int32 number0, number1;
-                UMyMJBPUtilsLibrary::helperGetDiceNumbersFromMask(pCoreDataDelta->m_iDiceNumberNowMask, number0, number1);
-
                 TArray<AMyMJGameDiceBaseCpp *> aDices;
-                aDices.Emplace(m_pResManager->getDiceActorByIdx(0));
-                aDices.Emplace(m_pResManager->getDiceActorByIdx(1));
+                aDices.Emplace(m_pResManager->getDiceActorByIdxEnsured(0));
+                aDices.Emplace(m_pResManager->getDiceActorByIdxEnsured(1));
 
-                int32 iSeed = cCoreData.getCoreDataPublicRefConst().m_iSeed;
-                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("got seed as %d."), iSeed);
-                int32 uniqueId = iSeed + (cCoreData.getCoreDataPublicRefConst().m_iGameId << 9) + cCoreData.getCoreDataPublicRefConst().m_iPusherIdLast;
-
-                bool bGotPointerCfgForDice = false;
-                FMyMJGameDeskVisualPointCfgCpp diceVisualPointCfg;
-                if (0 == cCfgCache.m_cPointCfg.getTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp::Dice, 0, 0, diceVisualPointCfg)) {
-                    bGotPointerCfgForDice = true;
-                }
-                else {
-                    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("failed to get dice visual point cfg."));
-                }
-
-                //first the bone, then the skin
-                if (bGotPointerCfgForAttender && bGotPointerCfgForDice) {
+                int32 iDiceVisualStateKey = cCoreData.getCoreDataPublicRefConst().m_iDiceVisualStateKey;
+                MY_VERIFY(iDiceVisualStateKey == pCoreDataDelta->m_iDiceVisualStateKey)
+                if (bGotPointerCfgForAttender) {
                     IMyMJGameInRoomDeskInterfaceCpp::Execute_showAttenderThrowDices(this, dur, idxAttender, cVisualPointForAttender.m_cCenterPointWorldTransform,
-                                                                                 diceVisualPointCfg, cCfgCache.m_cModelInfo.m_cDiceModelInfo,
-                                                                                 number0, number1, iSeed, uniqueId, aDices);
+                                                                                    iDiceVisualStateKey,
+                                                                                    aDices);
                 }
             }
             else if (ePusherType == MyMJGamePusherTypeCpp::ActionDistCardsAtStart) {
@@ -775,7 +732,7 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
                         continue;
                     };
 
-                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(idCard);
+                    AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdxEnsured(idCard);
                     const FMyMJGameCardVisualInfoAndResultCpp* pPrevInfoAndResult = pCardActor->getTargetToGoHistory(1, false);
                     if (pPrevInfoAndResult && pPrevInfoAndResult->m_cVisualInfo.m_eSlot == MyMJCardSlotTypeCpp::Untaken) {
                         aCardActorsDistributedForAttender.Emplace(pCardActor);
@@ -841,10 +798,11 @@ void AMyMJGameRoomCpp::tipDataSkipped()
 
 
 int32 AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
-                                                              const FMyMJGameDeskVisualPointCfgCpp& diceVisualPointCfg, const FMyMJDiceModelInfoBoxCpp& diceModelInfo,
-                                                              int32 number0, int32 number1, int32 seed, int32 uniqueId,
+                                                              int32 diceVisualStateKey,
                                                               const TArray<class AMyMJGameDiceBaseCpp *>& aDices)
 {
+    MY_VERIFY(aDices.Num() == 2);
+
     UMyCommonUtilsLibrary::invalidScreenDataCache();
 
     FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp attenderOnScreenMeta;
@@ -855,6 +813,10 @@ int32 AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 i
         UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrainedByPointPercent(attenderOnScreenMeta.m_iIdxScreenPositionBelongTo, attenderOnScreenMeta.m_cScreenCenterMapped, areaCfg.m_cAttenderPointOnScreenPercentOverride, attenderOnScreenMeta);
     }
 
+    FRandomStream RS;
+    RS.Initialize(diceVisualStateKey);
+
+    /*
     FRandomStream RS;
     RS.Initialize(uniqueId);
 
@@ -882,20 +844,24 @@ int32 AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 i
     finalT[0] = localT[0] * diceVisualPointCfg.m_cCenterPointWorldTransform;
     finalT[1] = localT[1] * diceVisualPointCfg.m_cCenterPointWorldTransform;
 
-    MY_VERIFY(aDices.Num() == 2);
-
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("dur %f, dice visual point: %s"), dur, *diceVisualPointCfg.m_cCenterPointWorldTransform.ToString());
     UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("radiusMax: %f, %s, localT[0]: %s, localT[1]: %s."), radiusMax, *diceVisualPointCfg.m_cAreaBoxExtendFinal.ToString(), *localT[0].ToString(), *localT[1].ToString());
+    */
 
+    TArray<const FTransform*> finalT;
     TArray<IMyTransformUpdaterInterfaceCpp*> aBase;
+    FVector finalLocationCenter(0, 0, 0);
     for (int32 i = 0; i < 2; i++) {
-        aDices[i]->SetActorHiddenInGame(false);
-        FMyWithCurveUpdaterTransformCpp* pUpdater = &aDices[i]->getMyWithCurveUpdaterTransformRef();
-        pUpdater->setHelperTransformFinal(finalT[i]);
-        aBase.Emplace(aDices[i]);
-
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("finalT: %s"), *finalT[i].ToString());
+        finalT.Emplace(&aDices[i]->getMyWithCurveUpdaterTransformRef().getHelperTransformFinalRefConst());
+        finalLocationCenter += finalT[i]->GetLocation();
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("dice final T: %s"), *finalT[i]->ToString());
     }
+    finalLocationCenter /= 2;
+
+    FMyActorModelInfoBoxCpp diceModelInfo;
+    aDices[0]->getModelInfo(diceModelInfo, true);
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("debugCenterLocation: %s"), *debugCenterLocation.ToString());
 
     const FMyMJGameEventPusherThrowDicesVisualDataCpp& eventCfg = m_pResManager->getVisualCfg()->m_cEventCfg.m_cPusherCfg.m_cThrowDices;
     
@@ -911,6 +877,7 @@ int32 AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 i
             break;
         }
     }
+
     for (int32 i = 0; i < aSteps.Num(); i++) {
         if (aSteps[i].m_eRotationUpdateType == MyActorTransformUpdateAnimationRotationType::FinalRotation) {
             //first rotation to final, modify it
@@ -920,21 +887,21 @@ int32 AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 i
         }
     }
 
+    //since we want different rotation for two dices, so can't setup them at one call
     for (int32 i = 0; i < 2; i++) {
-
+        
         if (pMoveOnScreenStep) {
-            //set the offset on player screeen
-            FVector centerP = (finalT[1].GetLocation() + finalT[0].GetLocation()) / 2;
-            FVector offset = (finalT[i].GetLocation() - centerP);
-            offset.Normalize();
-            pMoveOnScreenStep->m_cLocationOffsetPercent = offset * 1; // o.m_cBasic.m_cBoxExtend;
+            //set the offset on player screeen, since we are not setup in one group
+            FVector offset = (finalT[i]->GetLocation() - finalLocationCenter);
+            //offset.Normalize();
+            pMoveOnScreenStep->m_cLocationOffsetPercent = offset / diceModelInfo.m_cBoxExtend.Size(); // o.m_cBasic.m_cBoxExtend;
         }
         else {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("dice move step not found."));
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("dice move on screen step not found."));
         }
 
         if (pRotateStep) {
-            int32 extraCycle = RS.RandRange(1, 4);
+            int32 extraCycle = RS.RandRange(1, 5);
             int32 rollAxis = RS.RandRange(0, 2);
             if (rollAxis == 0) {
                 pRotateStep->m_cRotationUpdateExtraCycles = FIntVector(extraCycle, 0, 0);
@@ -1026,7 +993,7 @@ int32 AMyMJGameRoomCpp::showAttenderCardsDistribute_Implementation(float dur, in
 
         int32 debugGroupSetCount = 0;
         for (int32 i = 0; i < aIdsHandCards.Num(); i++) {
-            AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdx(aIdsHandCards[i]);
+            AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdxEnsured(aIdsHandCards[i]);
             const FMyMJGameCardVisualInfoAndResultCpp* pTargetToGo = pCardActor->getTargetToGoHistory(0, false);
             if (pTargetToGo == NULL) {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get TargetToGo for card with id %d."), aIdsHandCards[i]);

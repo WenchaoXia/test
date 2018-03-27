@@ -13,7 +13,10 @@
 #include "MyMJGameRoom.generated.h"
 
 
-#define AMyMJGameRoomVisualLoopTimeMs (50)
+#define AMyMJGameRoomVisualLoopTimeMs (17)
+
+#define MY_CARD_ACTOR_NUM_MAX (200)
+#define MY_DICE_ACTOR_NUM_MAX (10)
 
 UCLASS(Blueprintable, Abstract)
 class MYONLINECARDGAME_API AMyMJGameDeskAreaCpp : public AActor
@@ -120,32 +123,30 @@ public:
     //return error code, 0 means ok
     int32 prepareForVisual(int32 cardActorNum);
 
+    //never fail
     UFUNCTION(BlueprintCallable)
-    AMyMJGameCardBaseCpp* getCardActorByIdx(int32 idx, bool verifyValid = true);
+    AMyMJGameCardBaseCpp* getCardActorByIdxEnsured(int32 idx)
+    {
+        return UMyCommonUtilsLibrary::helperGetActorInArrayEnsured<AMyMJGameCardBaseCpp>(this, getVisualCfg()->m_cMainActorClassCfg.m_cCardClass, m_aCardActors, idx, MY_CARD_ACTOR_NUM_MAX, TEXT("Card Actors"), true);
+    };
 
     //may fail
     inline AMyMJGameCardBaseCpp* getCardActorByIdxConst(int32 idx) const
     {
-        if (idx < m_aCardActors.Num()) {
-            return m_aCardActors[idx];
-        }
-        else {
-            return NULL;
-        }
+        return UMyCommonUtilsLibrary::helperGetActorInArray<AMyMJGameCardBaseCpp>(m_aCardActors, idx);
     };
 
+    //never fail
     UFUNCTION(BlueprintCallable)
-    AMyMJGameDiceBaseCpp* getDiceActorByIdx(int32 idx, bool verifyValid = true);
+    AMyMJGameDiceBaseCpp* getDiceActorByIdxEnsured(int32 idx)
+    {
+        return UMyCommonUtilsLibrary::helperGetActorInArrayEnsured<AMyMJGameDiceBaseCpp>(this, getVisualCfg()->m_cMainActorClassCfg.m_cDiceClass, m_aDiceActors, idx, MY_DICE_ACTOR_NUM_MAX, TEXT("Dice Actors"), true);
+    };
 
     //may fail
     inline AMyMJGameDiceBaseCpp* getDiceActorByIdxConst(int32 idx) const
     {
-        if (idx < m_aDiceActors.Num()) {
-            return m_aDiceActors[idx];
-        }
-        else {
-            return NULL;
-        }
+        return UMyCommonUtilsLibrary::helperGetActorInArray<AMyMJGameDiceBaseCpp>(m_aDiceActors, idx);
     };
 
 
@@ -246,8 +247,7 @@ protected:
 
 
     int32 showAttenderThrowDices_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
-                                                const FMyMJGameDeskVisualPointCfgCpp& diceVisualPointCfg, const FMyMJDiceModelInfoBoxCpp& diceModelInfo,
-                                                int32 number0, int32 number1, int32 seed, int32 uniqueId,
+                                                int32 diceVisualStateKey,
                                                 const TArray<class AMyMJGameDiceBaseCpp *>& aDices) override;
 
     int32 showAttenderCardsDistribute_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,

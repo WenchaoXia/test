@@ -130,7 +130,7 @@ void UMyMJGameInRoomUIMainWidgetBaseCpp::refillCachedData(int32 idxDeskPositionO
 
     m_cCachedData.m_aPlayerInfoWidgetsOnScreen.Reset();
     for (int32 i = 0; i < 4; i++) {
-        UMyMJGameInRoomPlayerInfoWidgetBaseCpp* pW = IMyMJGameInRoomUIMainInterfaceCpp::Execute_getInRoomPlayerInfoWidgetByScreenPosition(this, i);
+        UMyMJGameInRoomPlayerInfoWidgetBaseCpp* pW = IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_getInRoomPlayerInfoWidgetByScreenPosition(this, i);
         if (!IsValid(pW)) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get player info widget, screen position %d, result %p."), i, pW);
             MY_VERIFY(false);
@@ -173,4 +173,5 @@ void UMyMJGameInRoomUIMainWidgetBaseCpp::refillCachedData(int32 idxDeskPositionO
     }
 
     m_cCachedData.m_bValid = true;
+
 }

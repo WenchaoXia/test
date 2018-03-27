@@ -277,7 +277,7 @@ void AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepFinish(const FMyWithCurveUpdat
     UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = pUIManager->getInRoomUIMain(true, false);
 
     if (pUI) {
-        if (pUI->GetClass()->ImplementsInterface(UMyMJGameInRoomUIMainInterfaceCpp::StaticClass()))
+        if (pUI->GetClass()->ImplementsInterface(UMyMJGameInRoomUIMainWidgetInterfaceCpp::StaticClass()))
         {
             pUI->changeDeskPositionOfIdxScreenPosition0(pData->m_iIdxDeskPositionTarget);
         }

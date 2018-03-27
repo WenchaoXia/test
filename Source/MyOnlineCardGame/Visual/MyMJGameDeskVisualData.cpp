@@ -667,15 +667,15 @@ int32 FMyMJGameDeskProcessorRunnableCpp::subThreadTryGenOutput(FMyMJEventWithTim
 
         
         TMap<int32, FMyMJGameCardVisualInfoCpp> mIdCardVisualInfoAccumulatedChanges;
-        TMap<int32, int32> mIdDiceValueAccumulatedChanges;
+        bool bDicesAccumulatedChanges = false;
 
         helperResolveVisualInfoChanges(m_pSubThreadData->getCfgRefConst(), m_pSubThreadData->getCoreDataRefConst(), *m_pSubThreadDataCoreDataDirtyRecordSincePrevSent, m_pSubThreadSentLabel->m_cVisualData.getActorDataRefConst(),
-                                       mIdCardVisualInfoAccumulatedChanges, mIdDiceValueAccumulatedChanges);
+                                       mIdCardVisualInfoAccumulatedChanges, bDicesAccumulatedChanges);
 
         //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("delta gen in progress, dirty %d, idCard map num %d, %d, idDice map num %d, %d."), !pOutDataDelta->m_apNewCoreDataDirtyRecord[0].isEmpty(),
                  //mIdCardVisualInfoAccumulatedChanges.Num(), pOutDataDelta->m_mNewActorDataIdCards.Num(), mIdDiceValueAccumulatedChanges.Num(), pOutDataDelta->m_mNewActorDataIdDices.Num());
 
-        helperResolveVisualResultChanges(m_pSubThreadData->getCfgRefConst(), mIdCardVisualInfoAccumulatedChanges, mIdDiceValueAccumulatedChanges, pOutDataDelta->m_mNewActorDataIdCards, pOutDataDelta->m_mNewActorDataIdDices);
+        helperResolveVisualResultChanges(m_pSubThreadData->getCfgRefConst(), m_pSubThreadData->getCoreDataRefConst(), mIdCardVisualInfoAccumulatedChanges, bDicesAccumulatedChanges, pOutDataDelta->m_mNewActorDataIdCards, pOutDataDelta->m_mNewActorDataIdDices);
 
         if (pEventJustApplied) {
             MY_VERIFY(!m_bSubThreadHelperSkippedEventBefore);
@@ -751,7 +751,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                                                                         const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cNextCoreDataDirtyRecordSincePrev,
                                                                         const FMyMJGameDeskVisualActorDatasCpp& cPrevActorData,
                                                                         TMap<int32, FMyMJGameCardVisualInfoCpp>& mOutIdCardVisualInfoAccumulatedChanges,
-                                                                        TMap<int32, int32>& mOutIdDiceValueAccumulatedChanges)
+                                                                        bool& bDicesAccumulatedChanges)
 {
     const FMyMJGameDeskVisualCfgCacheCpp& cInVisualCfgCache = cCfgCache;
     const FMyMJDataStructWithTimeStampBaseCpp& cInBase = cNextCoreData;
@@ -772,7 +772,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
     }
 
     TMap<int32, FMyMJGameCardVisualInfoCpp> mIdCardVisualInfoTemp;
-    TMap<int32, int32> mIdDiceValueTemp;
+    //TMap<int32, int32> mIdDiceValueTemp;
 
     const TSet<int32>& sD = cInBaseDirtyRecord.getRecordSet();
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("sd Num %d, in empty %d."), sD.Num(), cNextCoreDataDirtyRecordSincePrev.isEmpty());
@@ -1183,11 +1183,15 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
         }
         else if (eMainType == MyMJGameCoreDataDirtyMainTypeCpp::Dice) {
  
+            /*
             int32 diceNumerValue0 = UMyMJUtilsLibrary::getIntValueFromBitMask(cInBase.getCoreDataPublicRefConst().m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value0_BitLen);
             int32 diceNumerValue1 = UMyMJUtilsLibrary::getIntValueFromBitMask(cInBase.getCoreDataPublicRefConst().m_iDiceNumberNowMask, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitPosiStart, FMyMJCoreDataPublicDirectDiceNumberNowMask_Value1_BitLen);
 
             mIdDiceValueTemp.FindOrAdd(0) = diceNumerValue0;
             mIdDiceValueTemp.FindOrAdd(1) = diceNumerValue1;
+            */
+
+            bDicesAccumulatedChanges |= true;
         }
         else {
 
@@ -1229,6 +1233,8 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
         mOutIdCardVisualInfoAccumulatedChanges.FindOrAdd(idCard) = cInfoNew;
     }
 
+    //don't use dice value to detect change, since throw action can result same output
+    /*
     const TArray<FMyMJGameDiceVisualInfoAndResultCpp> &aDices = cPrevActorData.m_aDices;
     lPrev = aDices.Num();
     for (auto& Elem : mIdDiceValueTemp)
@@ -1258,6 +1264,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
 
         mOutIdDiceValueAccumulatedChanges.FindOrAdd(id) = iValueNew;
     }
+    */
 };
 
 #define GetKey_CardVisualInfo(info) (((info.m_iIdxAttender & 0xff) << 8) | (((uint8)info.m_eSlot & 0xff) << 0))
@@ -1265,10 +1272,11 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
 #define GetESlot_CardVisualInfoKey(key)       ((MyMJCardSlotTypeCpp)((key >> 0) & 0xff))
 
 void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
-                                                                            TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoAccumulatedChanges,
-                                                                            TMap<int32, int32>& mIdDiceValueAccumulatedChanges,
-                                                                            TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultChanges,
-                                                                            TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mOutIdDiceVisualInfoAndResultChanges)
+                                                                         const FMyMJDataStructWithTimeStampBaseCpp& cNextCoreData,
+                                                                         TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoAccumulatedChanges,
+                                                                         bool bDicesUpdated,
+                                                                         TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultChanges,
+                                                                         TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mOutIdDiceVisualInfoAndResultChanges)
 {
     mOutIdCardVisualInfoAndResultChanges.Reset();
     mOutIdDiceVisualInfoAndResultChanges.Reset();
@@ -1279,6 +1287,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const F
         return keyA < keyB; // sort strings by length
     });
 
+    //batch handle, calculate one slot of one attender at one time
     TMap<int32, FMyMJGameCardVisualInfoCpp> mWorkingIdCardVisualInfo;
     int32 iWorkingIdCardVisualInfoKey = -1;
 
@@ -1326,6 +1335,40 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const F
 
         mWorkingIdCardVisualInfo.Reset();
         iWorkingIdCardVisualInfoKey = -1;
+    }
+
+
+    //handle dices, for MJGame, it is always two intances
+    while (bDicesUpdated) {
+
+        //if dice update, update them all, like in real world
+
+        MyMJGameDeskVisualElemTypeCpp elemType = MyMJGameDeskVisualElemTypeCpp::Dice;
+        FMyMJGameDeskVisualPointCfgCpp cDiceVisualPoint;
+        MY_VERIFY(cCfgCache.m_cPointCfg.getTrivalVisualPointCfgByIdxAttenderAndSlot(elemType, 0, 0, cDiceVisualPoint) == 0);
+
+        int32 iDiceVisualStateKey = cNextCoreData.getCoreDataPublicRefConst().m_iDiceVisualStateKey;
+        cNextCoreData.getCoreDataPublicRefConst().m_iDiceNumberNowMask;
+        FRandomStream rs;
+        rs.Initialize(iDiceVisualStateKey);
+
+        TArray<int32> aDiceSeqs, aDiceValues;
+        for (int32 i = 0; i < 2; i++) {
+            aDiceSeqs.Emplace(i);
+            aDiceValues.Emplace(i);
+        }
+        UMyCommonUtilsLibrary::shuffleArrayWithRandomStream<int32>(rs, aDiceSeqs);
+
+        UMyMJBPUtilsLibrary::helperGetDiceNumbersFromMask(cNextCoreData.getCoreDataPublicRefConst().m_iDiceNumberNowMask, aDiceValues[0], aDiceValues[1]);
+
+        for (int32 i = 0; i < 2; i++) {
+            FMyMJGameDiceVisualInfoAndResultCpp& diceResult = mOutIdDiceVisualInfoAndResultChanges.Add(i);
+            diceResult.m_iVisualInfoValue = aDiceValues[i];
+            diceResult.m_cVisualResult.m_bVisible = true;
+            diceResult.m_cVisualResult.m_cTransform = AMyMJGameDiceBaseCpp::helperCalcFinalTransform(cCfgCache.m_cModelInfo.m_cDiceModelInfo, cDiceVisualPoint, iDiceVisualStateKey, aDiceSeqs[i], 2, aDiceValues[i]);
+        }
+
+        break;
     }
 };
 

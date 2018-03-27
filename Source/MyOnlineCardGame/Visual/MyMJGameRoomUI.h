@@ -14,6 +14,18 @@
 #include "MyMJGameRoomUI.generated.h"
 
 
+UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
+class MYONLINECARDGAME_API UMyMJGameCardWidgetBaseCpp : public UUserWidget, public IMyWidgetBasicOperationInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+protected:
+
+    IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject();
+};
+
 USTRUCT()
 struct FMyInRoomViewRoleEventStyleSettingsCpp
 {
@@ -226,6 +238,7 @@ struct FMyPlayerInfoWidgetRuntimeMetaCpp
 
 };
 
+
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
 class MYONLINECARDGAME_API UMyMJGameInRoomPlayerInfoWidgetBaseCpp : public UUserWidget, public IMyWidgetBasicOperationInterfaceCpp
 {
@@ -252,23 +265,7 @@ public:
 
 protected:
 
-    int32 canvasAddChild_Implementation(UWidget *childWidget) override
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: canvasAddChild_Implementation only implemented in C++."), *GetClass()->GetName());
-        return 0;
-    };
-
-    int32 canvasSetChildPosi_Implementation(UWidget *childWidget, FVector2D centerPosiInParentPecent) override
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: canvasSetChildPosi_Implementation only implemented in C++."), *GetClass()->GetName());
-        return 0;
-    };
-
-    int32 getLocalSize_Implementation(FVector2D &) override
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize_Implementation only implemented in C++."), *GetClass()->GetName());
-        return 0;
-    };
+    IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject();
 
     //if @createIfNotExist, always exist
     UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp * getManagedWidget(int32 key, TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>& widgetClass, bool createIfNotExist = true);
@@ -332,7 +329,7 @@ public:
 
 
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyMJGameInRoomUIMainWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomUIMainInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
+class MYONLINECARDGAME_API UMyMJGameInRoomUIMainWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomUIMainWidgetInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -387,26 +384,7 @@ public:
 
 protected:
 
-
-    int32 canvasAddChild_Implementation(UWidget *childWidget) override
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: canvasAddChild_Implementation only implemented in C++."), *GetClass()->GetName());
-        return 0;
-    };
-
-    int32 canvasSetChildPosi_Implementation(UWidget *childWidget, FVector2D centerPosiInParentPecent) override
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: canvasSetChildPosi_Implementation only implemented in C++."), *GetClass()->GetName());
-        return 0;
-    };
-
-    int32 getLocalSize_Implementation(FVector2D &) override
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize_Implementation only implemented in C++."), *GetClass()->GetName());
-        return 0;
-    };
-
-
+    IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject()
 
     int32 showImportantGameStateUpdated_Implementation(float dur, MyMJGameStateCpp newGameState)
     {

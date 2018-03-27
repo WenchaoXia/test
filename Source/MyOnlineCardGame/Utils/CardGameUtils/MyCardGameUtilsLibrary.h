@@ -45,6 +45,7 @@ class MYONLINECARDGAME_API UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRe
     GENERATED_BODY()
 
 public:
+
     UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
     {
     };
@@ -54,11 +55,18 @@ public:
 
     };
 
-    int32 restartMainAnimation_Implementation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter) override
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: restartMainAnimation_Implementation only implemented in C++."), *GetClass()->GetName());
-        return 0;
+    //int32 restartMainAnimation_Implementation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter) override { return 0; };
+
+    IMyCardGameScreenPositionRelatedWidgetInterfaceCpp_DefaultEmptyImplementationForUObject();
+    //int32 restartMainAnimation_Implementation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter) { return 0; }
+
+    /*
+    int32 restartMainAnimation_Implementation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter) override 
+    { 
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: restartMainAnimation only implemented in C++."), *GetClass()->GetName()); 
+        return 0; 
     };
+    */
 };
 
 

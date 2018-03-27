@@ -6,3 +6,8 @@ UMyCardGameScreenPositionRelatedWidgetInterfaceCpp::UMyCardGameScreenPositionRel
 {
     //asd
 };
+
+UMyCardGameValueRelatedObjectInterfaceCpp::UMyCardGameValueRelatedObjectInterfaceCpp(const FObjectInitializer& ObjectInitializer)
+{
+    //asd
+};

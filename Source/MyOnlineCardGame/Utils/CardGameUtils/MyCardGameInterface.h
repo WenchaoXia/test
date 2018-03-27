@@ -25,3 +25,51 @@ public:
     UFUNCTION(BlueprintNativeEvent)
     int32 restartMainAnimation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter);
 };
+
+#define IMyCardGameScreenPositionRelatedWidgetInterfaceCpp_DefaultEmptyImplementationForUObject() \
+int32 restartMainAnimation_Implementation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: restartMainAnimation only implemented in C++."), *GetClass()->GetName()); \
+    return 0; \
+};
+
+//like MJ card actor and widget, they can be set with values
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
+class UMyCardGameValueRelatedObjectInterfaceCpp : public UInterface
+{
+    GENERATED_UINTERFACE_BODY()
+};
+
+class IMyCardGameValueRelatedObjectInterfaceCpp
+{
+    GENERATED_IINTERFACE_BODY()
+
+public:
+
+    //@animationTimeMs if < 0, value should be updated at instance instead of animation, otherwise value will be updated by animation if possible
+    UFUNCTION(BlueprintCallable)
+    virtual void updateValueShowing(int32 newValue, int32 animationTimeMs)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("updateValueShowing() must be override by subclass."));
+    };
+
+    UFUNCTION(BlueprintCallable)
+    virtual int32 getValueShowing() const
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getValueShowing() must be override by subclass."));
+        return 0;
+    };
+
+    UFUNCTION(BlueprintCallable)
+    virtual void setResPath(const FDirectoryPath& newResPath)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("setResPath() must be override by subclass."));
+    };
+
+    UFUNCTION(BlueprintCallable)
+    virtual const FDirectoryPath& getResPath() const
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getResPath() must be override by subclass."));
+        return *(FDirectoryPath*)NULL;
+    };
+};

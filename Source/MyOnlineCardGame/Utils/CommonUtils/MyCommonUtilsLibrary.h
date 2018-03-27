@@ -706,7 +706,7 @@ public:
     UPROPERTY(EditAnywhere, meta = (DisplayName = "location update type"))
         MyActorTransformUpdateAnimationLocationType m_eLocationUpdateType;
 
-    //By default the offset is in world space
+    //By default the offset is in world space, unit is percent of model size, like FVector::Size()
     UPROPERTY(EditAnywhere, meta = (DisplayName = "location offset percent"))
         FVector m_cLocationOffsetPercent;
 
@@ -977,6 +977,8 @@ public:
     FRotator m_cRotatorOffsetFacingCenterPoint;
 };
 
+#define MyActorsInArrayNumMax (4096)
+
 //Warn: we don't support multiple player screen in one client now!
 UCLASS()
 class UMyCommonUtilsLibrary :
@@ -1012,17 +1014,20 @@ public:
 
     //return the number of actors created, return < 0 means fail
     template< class T >
-    static int32 helperPrepareActorsInArray(const UObject* WorldContextObject, int32 count2reach, const TSubclassOf<T>& actorClass, TArray<T*>& managedActorArray, bool bDebugLog = false)
+    static int32 helperPrepareActorsInArray(const UObject* WorldContextObject, const TSubclassOf<T>& actorClass, TArray<T*>& managedActorArray, int32 count2reach, bool debugLog = false)
     {
-        MY_VERIFY(count2reach >= 0);
+        static_assert(std::is_base_of_v<AActor, T>, "type must be subclass of AActor.");
+        static_assert(std::is_base_of_v<IMyIdInterfaceCpp, T>, "type must be subclass of IMyIdInterfaceCpp.");
 
+        MY_VERIFY(count2reach >= 0);
+        MY_VERIFY(count2reach < MyActorsInArrayNumMax);
         if (!IsValid(actorClass)) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("actorClass is invalid: %p, type name %s."), actorClass.Get(), *T::StaticClass()->GetName());
             return -1;
         }
 
         double s0;
-        if (bDebugLog) {
+        if (debugLog) {
             s0 = FPlatformTime::Seconds();
         }
 
@@ -1043,6 +1048,7 @@ public:
         for (int32 i = l; i < count2reach; i++) {
             //AMyMJGameCardBaseCpp *pNewCardActor = w->SpawnActor<AMyMJGameCardBaseCpp>(pCDO->StaticClass(), SpawnParams); //Warning: staticClass is not virtual class, so you can't get actual class
             T *pNewActor = w->SpawnActor<T>(actorClass, FVector(0, 0, 0), FRotator(0, 0, 0), SpawnParams);
+            pNewActor->setMyId(i);
             //pNewCardActor->setResPathWithRet(m_cCfgCardResPath);
 
             MY_VERIFY(IsValid(pNewActor));
@@ -1053,7 +1059,7 @@ public:
 
         MY_VERIFY(managedActorArray.Num() == count2reach);
 
-        if (bDebugLog) {
+        if (debugLog) {
             double s1 = FPlatformTime::Seconds();
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("prepare actors in array done: class %s,  %d created, total now %d, time used %f."), *actorClass->GetName(), countCreated, count2reach, s1 - s0);
         }
@@ -1062,6 +1068,49 @@ public:
 
         return countCreated;
     };
+
+    //may return NULL
+    template< class T >
+    static T* helperGetActorInArray(const TArray<T*>& managedActorArray, int32 idx)
+    {
+        static_assert(std::is_base_of_v<AActor, T>, "type must be subclass of AActor.");
+        static_assert(std::is_base_of_v<IMyIdInterfaceCpp, T>, "type must be subclass of IMyIdInterfaceCpp.");
+
+        MY_VERIFY(idx >= 0);
+
+        if (idx < managedActorArray.Num()) {
+            T* pRet = managedActorArray[idx];
+            MY_VERIFY(pRet);
+            MY_VERIFY(idx == pRet->getMyId())
+            return pRet;
+        }
+        else {
+            return NULL;
+        }
+    };
+
+    //never fail, core dump in that case. It will prepare the actor if idx out of range
+    template< class T >
+    static T* helperGetActorInArrayEnsured(const UObject* WorldContextObject, const TSubclassOf<T>& actorClass, TArray<T*>& managedActorArray, int32 idx, int32 maxCount = MyActorsInArrayNumMax, FString debugStr = TEXT(""), bool debugLog = false)
+    {
+        static_assert(std::is_base_of_v<AActor, T>, "type must be subclass of AActor.");
+        static_assert(std::is_base_of_v<IMyIdInterfaceCpp, T>, "type must be subclass of IMyIdInterfaceCpp.");
+
+        MY_VERIFY(idx >= 0);
+        MY_VERIFY(idx < maxCount);
+
+        if (idx >= managedActorArray.Num()) {
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("'%s': requiring instance not prepared before, existing %d, required idx %d, preparing them now."), *debugStr, managedActorArray.Num(), idx);
+            helperPrepareActorsInArray<T>(WorldContextObject, actorClass, managedActorArray, idx + 1, debugLog);
+        }
+
+        T* pRet = helperGetActorInArray(managedActorArray, idx);
+
+        MY_VERIFY(IsValid(pRet));
+
+        return pRet;
+    };
+
 
     template< class T >
     static inline bool isSubClassValidAndChild(const TSubclassOf<T> cClass, FString debugStr)
@@ -1080,6 +1129,26 @@ public:
 
         return true;
     }
+
+    //@RS must be inited before calling, you can init it with same seed to acheive same shuffer result before calling
+    template< class T >
+    static void shuffleArrayWithRandomStream(FRandomStream& RS, TArray<T>& targetArray)
+    {
+        int32 remainingCount = targetArray.Num();
+
+        while (remainingCount > 1) {
+            int32 idxSetting = remainingCount - 1;
+            int32 idxPicked = RS.RandRange(0, idxSetting);
+
+            if (idxSetting != idxPicked) {
+                T pickedValue = targetArray[idxPicked];
+                targetArray[idxPicked] = targetArray[idxSetting];
+                targetArray[idxSetting] = pickedValue;
+            }
+
+            remainingCount--;
+        }
+    };
 
     UFUNCTION(BlueprintCallable)
     static int32 getEngineNetMode(AActor *actor);

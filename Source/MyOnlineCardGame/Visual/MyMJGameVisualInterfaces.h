@@ -17,6 +17,7 @@
 //It seems UE4 have a bug that all function must have return value to let blueprint implement it
 //All API here return error code, and 0 is returned if OK, if implementable by blueprint
 
+
 UINTERFACE()
 class UMyMJGameInRoomDeskInterfaceCpp : public UInterface
 {
@@ -31,10 +32,9 @@ class IMyMJGameInRoomDeskInterfaceCpp
 public:
 
     UFUNCTION(BlueprintNativeEvent)
-    int32 showAttenderThrowDices(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
-                                 const FMyMJGameDeskVisualPointCfgCpp& diceVisualPointCfg, const FMyMJDiceModelInfoBoxCpp& diceModelInfo,
-                                 int32 number0, int32 number1, int32 seed, int32 uniqueId,
-                                 const TArray<class AMyMJGameDiceBaseCpp *>& aDices);
+        int32 showAttenderThrowDices(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+                                     int32 diceVisualStateKey,
+                                     const TArray<class AMyMJGameDiceBaseCpp *>& aDices);
 
 
     UFUNCTION(BlueprintNativeEvent)
@@ -64,13 +64,13 @@ public:
 };
 
 UINTERFACE(NotBlueprintable)
-class UMyMJGameInRoomUIMainInterfaceCpp : public UInterface
+class UMyMJGameInRoomUIMainWidgetInterfaceCpp : public UInterface
 {
     //GENERATED_BODY()
     GENERATED_UINTERFACE_BODY()
 };
 
-class IMyMJGameInRoomUIMainInterfaceCpp
+class IMyMJGameInRoomUIMainWidgetInterfaceCpp
 {
     //GENERATED_BODY()
     GENERATED_IINTERFACE_BODY()

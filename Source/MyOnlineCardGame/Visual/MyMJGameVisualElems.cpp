@@ -212,6 +212,8 @@ AMyMJGameCardBaseCpp::AMyMJGameCardBaseCpp() : Super(), m_cTargetToGoHistory(TEX
     m_cResPath.Path.Reset();
     m_pResMesh = NULL;
     m_pResMI = NULL;
+
+    m_iMyId = -1;
 }
 
 AMyMJGameCardBaseCpp::~AMyMJGameCardBaseCpp()
@@ -481,9 +483,11 @@ int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBase
     }
 };
 
-void AMyMJGameCardBaseCpp::setValueShowing(int32 newValue)
+void AMyMJGameCardBaseCpp::updateValueShowing(int32 newValue, int32 animationTimeMs)
 {
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("setValueShowing %d."), newValue);
+
+    //always set immediately
 
     if (m_iValueShowing == newValue) {
         return;
@@ -633,12 +637,50 @@ public:
 
 AMyMJGameDiceBaseCpp::AMyMJGameDiceBaseCpp() : Super()
 {
-
+    m_iMyId = -1;
 };
 
 AMyMJGameDiceBaseCpp::~AMyMJGameDiceBaseCpp()
 {
 
+};
+
+FTransform AMyMJGameDiceBaseCpp::helperCalcFinalTransform(const FMyMJDiceModelInfoBoxCpp& diceModelInfo, const FMyMJGameDeskVisualPointCfgCpp& diceVisualPointCfg, int32 diceVisualStateKey, int32 idxOfDiceRandomArranged, int32 diceTotalNum, int32 value)
+{
+    MY_VERIFY(idxOfDiceRandomArranged >= 0);
+    MY_VERIFY(idxOfDiceRandomArranged < diceTotalNum);
+
+    if (value < 1 || value > 6) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("dice value is out of range: %d."), value);
+        int32 key = diceVisualStateKey >= 0 ? diceVisualStateKey : -diceVisualStateKey;
+        value = key % 6 + 1;
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("value overwrited as: %d."), value);
+    }
+
+    FRandomStream RS;
+    RS.Initialize(diceVisualStateKey + idxOfDiceRandomArranged);
+
+    float radiusMax = diceVisualPointCfg.m_cAreaBoxExtendFinal.Size2D();
+
+    float radius = RS.FRandRange(0.1, 0.9) * radiusMax;
+    float perDiceDegree = 360 / diceTotalNum;
+    float perDiceDegreeHalfRandRange = perDiceDegree / 2 * 0.7;
+
+    float degree = perDiceDegree * idxOfDiceRandomArranged + RS.FRandRange(-perDiceDegreeHalfRandRange, perDiceDegreeHalfRandRange);
+
+    FVector localLoc = UKismetMathLibrary::RotateAngleAxis(FVector(radius, 0, 0), degree, FVector(0, 0, 1));
+    FRotator localRot = diceModelInfo.m_cExtra.getLocalRotatorForDiceValueRefConst(value);
+
+    localRot.Yaw = RS.FRandRange(0, 359);
+    localRot.Yaw = RS.FRandRange(0, 359);
+
+    FTransform localT, finalT;
+    localT.SetLocation(localLoc);
+    localT.SetRotation(localRot.Quaternion());
+
+    finalT = localT * diceVisualPointCfg.m_cCenterPointWorldTransform;
+
+    return finalT;
 };
 
 

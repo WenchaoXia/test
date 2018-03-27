@@ -16,7 +16,11 @@
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Runtime/UMG/Public/Blueprint/WidgetLayoutLibrary.h"
+
 #include "Runtime/UMG/Public/Components/CanvasPanelSlot.h"
+#include "Widgets/Input/SButton.h"
+#include "Components/ButtonSlot.h"
+
 //#include "Classes/PaperSprite.h"
 
 #if WITH_EDITOR
@@ -232,6 +236,116 @@ void UMyFlipImage::tryNextFrame(int32 idxOfImage, int32 frameOfImage)
     //pElem->m_pTexture->GetSizeX();
 }
 
+
+UMyButton::UMyButton(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
+{
+    m_bEnableWidgetTransformPressed = false;
+    m_cWidgetTransformPressed.Scale.X = m_cWidgetTransformPressed.Scale.Y = 0.8;
+}
+
+void UMyButton::PostEditChangeProperty(FPropertyChangedEvent& e)
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty, %s"), *m_cResPath.Path);
+
+    FName PropertyName = (e.MemberProperty != NULL) ? e.MemberProperty->GetFName() : NAME_None;
+
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyButton, RenderTransform))
+    {
+        m_cWidgetTransformNormal = RenderTransform;
+    }
+    else if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyButton, m_cWidgetTransformNormal))
+    {
+        RenderTransform = m_cWidgetTransformNormal;
+    }
+    else if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyButton, WidgetStyle))
+    {
+        if (WidgetStyle.Normal.HasUObject()) {
+            //helper set unused styles
+            if (!WidgetStyle.Pressed.HasUObject()) {
+                WidgetStyle.Pressed = WidgetStyle.Normal;
+            }
+            if (!WidgetStyle.Hovered.HasUObject()) {
+                WidgetStyle.Hovered = WidgetStyle.Normal;
+            }
+            if (!WidgetStyle.Disabled.HasUObject()) {
+                WidgetStyle.Disabled = WidgetStyle.Normal;
+                WidgetStyle.Disabled.SetResourceObject(NULL);
+            }
+        }
+        RenderTransform = m_cWidgetTransformNormal;
+    }
+
+
+    Super::PostEditChangeProperty(e);
+}
+
+
+//Warn:: check the code is accomplish with parent's function when UE4 upgrade
+TSharedRef<SWidget> UMyButton::RebuildWidget()
+{
+    MyButton = SNew(SButton)
+        .OnClicked(BIND_UOBJECT_DELEGATE(FOnClicked, SlateHandleClickedMy))
+        .OnPressed(BIND_UOBJECT_DELEGATE(FSimpleDelegate, SlateHandlePressedMy))
+        .OnReleased(BIND_UOBJECT_DELEGATE(FSimpleDelegate, SlateHandleReleasedMy))
+        .OnHovered_UObject(this, &ThisClass::SlateHandleHoveredMy)
+        .OnUnhovered_UObject(this, &ThisClass::SlateHandleUnhoveredMy)
+        .ButtonStyle(&WidgetStyle)
+        .ClickMethod(ClickMethod)
+        .TouchMethod(TouchMethod)
+        .IsFocusable(IsFocusable)
+        ;
+
+    if (GetChildrenCount() > 0)
+    {
+        Cast<UButtonSlot>(GetContentSlot())->BuildSlot(MyButton.ToSharedRef());
+    }
+
+    return MyButton.ToSharedRef();
+}
+
+void UMyButton::SlateHandlePressedMy()
+{
+    if (m_bEnableWidgetTransformPressed) {
+        SetRenderTransform(m_cWidgetTransformPressed);
+    }
+
+    SlateHandlePressed();
+}
+
+void UMyButton::SlateHandleReleasedMy()
+{
+    if (m_bEnableWidgetTransformPressed) {
+        SetRenderTransform(m_cWidgetTransformNormal);
+    }
+
+    SlateHandleReleased();
+}
+
+/*
+void UMyButton::SynchronizeProperties()
+{
+    Super::SynchronizeProperties();
+
+    OnPressed.Clear();
+    OnPressed.AddDynamic(this, &UMyButton::onPressedInner);
+
+    OnReleased.Clear();
+    OnReleased.AddDynamic(this, &UMyButton::onReleasedInner);
+}
+
+void UMyButton::onPressedInner()
+{
+    SetRenderTransform(m_cWidgetTransformPressed);
+    OnPressedOverride.Broadcast();
+}
+
+void UMyButton::onReleasedInner()
+{
+    SetRenderTransform(m_cWidgetTransformNormal);
+    OnReleased.Broadcast();
+}
+*/
 
 
 void UMyUserWidgetWithCurveUpdaterCpp::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -686,3 +800,76 @@ int32 UMyRenderUtilsLibrary::getCenterPointPositionForWidgetInCanvasWithPointAnc
 
     return 0;
 }
+
+
+void UMyRenderUtilsLibrary::myElemAndGroupDynamicArrangeCalcTotalSize(const FMyElemAndGroupDynamicArrangeMetaCpp& meta, const FIntVector& groupCount, const FIntVector& elemCount, FVector& totalSize)
+{
+    FVector distanceIgnorePadding;
+    myElemAndGroupDynamicArrangeCalcDistanceWalkedBeforeIgnorePadding(meta, groupCount, elemCount, distanceIgnorePadding);
+
+    totalSize = meta.m_cPaddingPercent.GetDesiredSize3D() * meta.m_cElemSize + distanceIgnorePadding;
+}
+
+void UMyRenderUtilsLibrary::myElemAndGroupDynamicArrangeGetElemCenterPositionArrangeDirectionAllPositive(const FMyElemAndGroupDynamicArrangeMetaCpp& meta, const FIntVector& idxGroup, const FIntVector& idxElem, FVector& centerPosition)
+{
+    FVector distanceIgnorePadding;
+    myElemAndGroupDynamicArrangeCalcDistanceWalkedBeforeIgnorePadding(meta, idxGroup, idxElem, distanceIgnorePadding);
+
+    FVector distanceCenterIgnorePadding = distanceIgnorePadding + meta.m_cElemSize / 2;
+
+    //direction is from negtive to positve
+    FVector sourcePaddingPecent(meta.m_cPaddingPercent.Left, meta.m_cPaddingPercent.Top, meta.m_cPaddingPercent.ZNegative);
+
+    centerPosition = distanceCenterIgnorePadding + sourcePaddingPecent * meta.m_cElemSize;
+}
+
+void UMyRenderUtilsLibrary::myElemAndGroupCalcDelimiterNumber(const FIntVector &groupWalked, const FIntVector &elemWalked, FIntVector &groupDelimiterNumber, FIntVector &elemDelimiterNumber)
+{
+    MY_VERIFY(groupWalked.X >= 0 && groupWalked.Y >= 0 && groupWalked.Z >= 0);
+    MY_VERIFY(elemWalked.X >= 0 && elemWalked.Y >= 0 && elemWalked.Z >= 0);
+
+    groupDelimiterNumber.X = groupWalked.X > 1 ? groupWalked.X - 1 : 0;
+    groupDelimiterNumber.Y = groupWalked.Y > 1 ? groupWalked.Y - 1 : 0;
+    groupDelimiterNumber.Z = groupWalked.Z > 1 ? groupWalked.Z - 1 : 0;
+
+    elemDelimiterNumber.X = elemWalked.X - 1 - groupDelimiterNumber.X;
+    if (elemDelimiterNumber.X < 0) elemDelimiterNumber.X = 0;
+
+    elemDelimiterNumber.Y = elemWalked.Y - 1 - groupDelimiterNumber.Y;
+    if (elemDelimiterNumber.Y < 0) elemDelimiterNumber.Y = 0;
+
+    elemDelimiterNumber.Z = elemWalked.Z - 1 - groupDelimiterNumber.Z;
+    if (elemDelimiterNumber.Z < 0) elemDelimiterNumber.Z = 0;
+}
+
+void UMyRenderUtilsLibrary::myElemAndGroupDynamicArrangeCalcDistanceWalkedBeforeIgnorePadding(const FMyElemAndGroupDynamicArrangeMetaCpp& meta, const FIntVector& groupWalked, const FIntVector& elemWalked, FVector& distanceIgnorePadding)
+{
+    FIntVector groupDelimiterNumber, elemDelimiterNumber;
+    myElemAndGroupCalcDelimiterNumber(groupWalked, elemWalked, groupDelimiterNumber, elemDelimiterNumber);
+
+    distanceIgnorePadding = 
+        FVector(groupDelimiterNumber) * meta.m_cGroupSpacingPercent * meta.m_cElemSize +
+        FVector(elemDelimiterNumber)  * meta.m_cElemSpacingPercent * meta.m_cElemSize +
+        FVector(elemWalked) * meta.m_cElemSize;
+}
+
+/*
+void UMyRenderUtilsLibrary::myElem2DDynamicArrangeCalcTotalSize(const FMyElem2DDynamicArrangeMetaCpp& meta, FMyIntVector2D groupCount, FMyIntVector2D elemCount, FVector2D& totalSize)
+{
+
+
+    FMyIntVector2D groupDelim, elemDelim;
+
+
+
+    totalSize = 
+    meta.m_cPaddingPercent.GetDesiredSize() * meta.m_cElemSize +
+        groupDelim.ToVector2D() * meta.m_cGroupSpacingPercent * meta.m_cElemSize +
+        elemDelim.ToVector2D()  * meta.m_cElemSpacingPercent * meta.m_cElemSize +
+        elemCount.ToVector2D() * meta.m_cElemSize;
+}
+
+void UMyRenderUtilsLibrary::myElem2DDynamicArrangeGetElemCenterPosition(const FMyElem2DDynamicArrangeMetaCpp& meta, FMyIntVector2D idxGroup, FMyIntVector2D idxElem, FMyIntVector2D coordinateNegativeFlag, FVector2D& centerPosition)
+{
+}
+*/
