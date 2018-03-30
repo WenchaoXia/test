@@ -110,7 +110,7 @@ bool FMyMJGameCoreCpp::actionLoop()
     const FMyMJCoreDataPublicCpp *pD = &getCoreDataPublicRefConst();
 
     bool bRet = false;
-    int64 iMsLast = UMyMJUtilsLibrary::nowAsMsFromTick();
+    int64 iMsLast = UMyCommonUtilsLibrary::nowAsMsFromTick();
     int64 iTimePassedMs64 = iMsLast - m_cDataLogic.m_iMsLast;
     if (iTimePassedMs64 < 0) {
         iTimePassedMs64 = 0;
@@ -182,22 +182,22 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
 
         if ((m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskShowPusherLog) > 0) {
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("core full [%s:%d:%d]: Applying: %s"),
-                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()), pD->m_iActionGroupId, iPusherIdLast,
-                *pPusher->genDebugString());
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()), pD->m_iActionGroupId, iPusherIdLast,
+                *pPusher->ToString());
         }
 
         FMyMJGamePusherResultCpp* pusherResult = genPusherResultAsSysKeeper(*pPusher.Get());
         if (pusherResult == NULL) {
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("core full [%s]: pusher %s generated NULL result."),
-                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()),
-                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pPusher->getType()));
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()),
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pPusher->getType()));
             MY_VERIFY(false);
         }
 
         if (!pusherResult->checkHaveValidResult()) {
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("core full [%s]: pusher %s generated an invalid result."),
-                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()),
-                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pPusher->getType()));
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()),
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pPusher->getType()));
             MY_VERIFY(false);
         }
 
@@ -233,8 +233,8 @@ bool FMyMJGameCoreCpp::findAndApplyPushers()
 
         if (!(pD->m_iPusherIdLast == pPusher->getId())) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("core full [%s:%d:%d], pusher [%s] id not equal: %d, %d."),
-                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()), pD->m_iActionGroupId, iPusherIdLast,
-                *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pPusher->getType()), pD->m_iPusherIdLast, pPusher->getId());
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)getRuleType()), pD->m_iActionGroupId, iPusherIdLast,
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pPusher->getType()), pD->m_iPusherIdLast, pPusher->getId());
             MY_VERIFY(false);
         }
 
@@ -303,7 +303,7 @@ void FMyMJGameCoreCpp::resetForNewActionLoop()
 {
     if (!m_cActionLoopHelperData.getHaveSetupDataConst()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("full core have not setup loop helper data, m_eState: %s."),
-                            *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)getCoreDataPublicRefConst().m_eGameState));
+                            *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)getCoreDataPublicRefConst().m_eGameState));
         MY_VERIFY(false);
     }
 

@@ -75,9 +75,9 @@ public:
 
 
     inline
-    FString genDebugString() const
+    FString ToString() const
     {
-        return FString::Printf(TEXT("[value %d, flip %s, posi %d:%s, vidxs %d:%d:%d:%d]"), m_iCardValue, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eFlipState), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardSlotTypeCpp"), (uint8)m_eSlot),
+        return FString::Printf(TEXT("[value %d, flip %s, posi %d:%s, vidxs %d:%d:%d:%d]"), m_iCardValue, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eFlipState), m_iIdxAttender, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJCardSlotTypeCpp"), (uint8)m_eSlot),
                                 m_iIdxRow, m_iIdxColInRow, m_iIdxStackInCol, m_iHelperIdxColInRowReal);
     };
 
@@ -139,9 +139,9 @@ public:
     };
 
     inline
-    FString genDebugString() const
+    FString ToString() const
     {
-        return m_cVisualInfo.genDebugString() + m_cVisualResult.genDebugString();
+        return m_cVisualInfo.ToString() + m_cVisualResult.ToString();
     };
 
     UPROPERTY(BlueprintReadOnly)
@@ -206,8 +206,8 @@ public:
 
     virtual ~AMyMoveWithSeqActorBaseCpp();
 
-    virtual int32 getModelInfo(FMyActorModelInfoBoxCpp& modelInfo, bool verify = true) const override;
-    virtual FMyWithCurveUpdaterTransformCpp& getMyWithCurveUpdaterTransformRef() override;
+    virtual MyErrorCodeCommonPartCpp getModelInfo(struct FMyActorModelInfoBoxCpp& modelInfo, bool verify = true) const override;
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterTransformCpp*& outUpdater) override;
 
     inline UMyTransformUpdaterComponent* getMyTransformUpdaterComponent() const
     {
@@ -226,7 +226,7 @@ protected:
 #endif
 
     //return errcode if got wrong, 0 if OK, here it just adjust boxExtend to cover the mesh exactly
-    virtual int32 updateSettings();
+    virtual MyErrorCodeCommonPartCpp updateSettings();
 
     //components
     //root scene
@@ -260,30 +260,58 @@ public:
 
     virtual ~AMyMJGameCardBaseCpp();
 
-    UFUNCTION(BlueprintSetter)
-    void setValueShowing(int32 newValue)
-    {
-        updateValueShowing(newValue, 0);
-    };
-
-    virtual void updateValueShowing(int32 newValue, int32 animationTimeMs) override;
-
-    UFUNCTION(BlueprintGetter)
-    virtual int32 getValueShowing() const override;
-
-    UFUNCTION(BlueprintSetter)
-    virtual void setResPath(const FDirectoryPath& newResPath) override;
-
-    UFUNCTION(BlueprintGetter)
-    virtual const FDirectoryPath& getResPath() const override;
-
-    //return true if new path is OK
-    bool setResPathWithRet(const FDirectoryPath& newResPath);
-
     //Todo: incomplete yet
     inline void reset()
     {
         m_cTargetToGoHistory.clearInGame();
+    };
+
+
+    virtual MyErrorCodeCommonPartCpp updateValueShowing(int32 newValueShowing, int32 animationTimeMs) override;
+    virtual MyErrorCodeCommonPartCpp getValueShowing(int32& valueShowing) const override;
+    virtual MyErrorCodeCommonPartCpp setResPath(const FDirectoryPath& newResPath) override;
+    virtual MyErrorCodeCommonPartCpp getResPath(FDirectoryPath& resPath) const override;
+
+    virtual MyErrorCodeCommonPartCpp getMyId(int32& outMyId) const override
+    {
+        outMyId = m_iMyId;
+        return MyErrorCodeCommonPartCpp();
+    };
+
+    virtual MyErrorCodeCommonPartCpp setMyId(int32 myId) override
+    {
+        m_iMyId = myId;
+        return MyErrorCodeCommonPartCpp();
+    };
+
+
+    UFUNCTION(BlueprintSetter)
+    void setValueShowing2(int32 newValue)
+    {
+        updateValueShowing(newValue, 0);
+    };
+
+    UFUNCTION(BlueprintGetter)
+    int32 getValueShowing2() const
+    {
+        int32 ret = -1;
+        getValueShowing(ret);
+        return ret;
+    };
+
+    UFUNCTION(BlueprintSetter)
+    void setResPath2(const FDirectoryPath& newResPath)
+    {
+        setResPath(newResPath);
+    };
+
+    UFUNCTION(BlueprintGetter)
+    const FDirectoryPath getResPath2() const
+    {
+        FDirectoryPath ret;
+        getResPath(ret);
+
+        return ret;
     };
 
     inline void addTargetToGoHistory(const FMyMJGameCardVisualInfoAndResultCpp& cTargetToGo)
@@ -314,16 +342,6 @@ public:
         return ret;
     };
 
-    virtual int32 getMyId() const override
-    {
-        return m_iMyId;
-    };
-
-    virtual void setMyId(int32 myId) override
-    {
-        m_iMyId = myId;
-    };
-
     static void helperMyMJCardsToMyTransformUpdaters(const TArray<AMyMJGameCardBaseCpp*>& aSub, bool bSort, TArray<IMyTransformUpdaterInterfaceCpp*> &aBase);
 
 protected:
@@ -336,26 +354,26 @@ protected:
     virtual void PostInitializeComponents() override;
 
     //it make box aligh the bottom end point
-    virtual int32 updateSettings() override;
+    virtual MyErrorCodeCommonPartCpp updateSettings() override;
 
-    int32 checkAndLoadCardBasicResources(const FString &inPath);
+    MyErrorCodeCommonPartCpp checkAndLoadCardBasicResources(const FString &inPath);
 
     //the update rule is: always update if new settings arrive, and always reflect it even fail, never revert values
-    int32 updateVisual();
-    int32 updateWithCardBasicResources();
-    int32 updateWithValue();
+    MyErrorCodeCommonPartCpp updateVisual(bool bForce);
+    MyErrorCodeCommonPartCpp updateWithCardBasicResources();
+    MyErrorCodeCommonPartCpp updateWithValue(bool bForce);
 
-    int32 updateCardStaticMeshMIDParams(class UTexture* InBaseColor);
+    MyErrorCodeCommonPartCpp updateCardStaticMeshMIDParams(class UTexture* InBaseColor);
 
-    //return true if all res loaded
-    bool helperTryLoadCardRes(const FString &modelAssetPath, const FString &valuePrefix, class UTexture** ppOutBaseColorTexture);
+    MyErrorCodeCommonPartCpp helperTryLoadCardRes(const FString &modelAssetPath, const FString &valuePrefix, class UTexture** ppOutBaseColorTexture);
 
 
     //important values:
     //value showing now
-    UPROPERTY(EditAnywhere, BlueprintSetter = setValueShowing, BlueprintGetter = getValueShowing, meta = (DisplayName = "value showing"))
+    UPROPERTY(EditAnywhere, BlueprintSetter = setValueShowing2, BlueprintGetter = getValueShowing2, meta = (DisplayName = "value showing"))
     int32 m_iValueShowing;
 
+    //shadow value to avoid duplicated update
     int32 m_iValueUpdatedBefore;
 
     //resouce settings, the child calss should specify them
@@ -363,7 +381,7 @@ protected:
     //UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, meta = (DisplayName = "card static mesh", ContentDir = "true", RelativeToGameContentDir = "true"))
 
     //where the card resource is, have special requirement such as mesh, material, texture, etc. example: /Game/Art/Models/MJCard/Type0
-    UPROPERTY(EditDefaultsOnly, BlueprintSetter = setResPath, BlueprintGetter = getResPath, meta = (DisplayName = "resource path", ContentDir = "true"))
+    UPROPERTY(EditDefaultsOnly, BlueprintSetter = setResPath2, BlueprintGetter = getResPath2, meta = (DisplayName = "resource path", ContentDir = "true"))
     FDirectoryPath m_cResPath;
 
     UPROPERTY(BlueprintReadOnly)
@@ -372,11 +390,10 @@ protected:
     UPROPERTY(BlueprintReadOnly)
     class UMaterialInstance *m_pResMI;
 
-    //where this card should go, but allow it not be there now(should move smoothly there)
-    FMyCycleBuffer<FMyMJGameCardVisualInfoAndResultCpp> m_cTargetToGoHistory;
-
     int32 m_iMyId;
 
+    //where this card should go, but allow it not be there now(should move smoothly there)
+    FMyCycleBuffer<FMyMJGameCardVisualInfoAndResultCpp> m_cTargetToGoHistory;
 };
 
 
@@ -398,19 +415,30 @@ public:
         //m_cTargetToGoHistory.clearInGame();
     };
 
-    //return errcode, 0 means no error
-    inline int32 getDiceModelInfo(FMyMJDiceModelInfoBoxCpp& data, bool verifyValid = true) const
+    virtual MyErrorCodeCommonPartCpp getMyId(int32& outMyId) const override
     {
-        int32 ret = -1;
+        outMyId = m_iMyId;
+        return MyErrorCodeCommonPartCpp();
+    };
+
+    virtual MyErrorCodeCommonPartCpp setMyId(int32 myId) override
+    {
+        m_iMyId = myId;
+        return MyErrorCodeCommonPartCpp();
+    };
+
+    inline FMyErrorCodeMJGameCpp getDiceModelInfo(FMyMJDiceModelInfoBoxCpp& data, bool verifyValid = true) const
+    {
+        FMyErrorCodeMJGameCpp ret;
         while (1) {
 
-            ret = Super::getModelInfo(data.m_cBasic, verifyValid);
-            if (ret != 0) {
+            ret.m_eCommonPart = Super::getModelInfo(data.m_cBasic, verifyValid);
+            if (ret.hasError()) {
                 break;
             }
 
             ret = getDiceModelInfoExtra(data.m_cExtra);
-            if (ret != 0) {
+            if (ret.hasError()) {
                 break;
             }
 
@@ -418,7 +446,7 @@ public:
         }
 
         if (verifyValid) {
-            MY_VERIFY(ret == 0);
+            MY_VERIFY(!ret.hasError());
         }
 
         return ret;
@@ -471,16 +499,6 @@ public:
     };
     */
 
-    virtual int32 getMyId() const override
-    {
-        return m_iMyId;
-    };
-
-    virtual void setMyId(int32 myId) override
-    {
-        m_iMyId = myId;
-    };
-
     //@idxOfDiceRandomArranged is the randome arranged sequece idx, and it may NOT equal to idxOfDice, acctually the shuffered idx in dices array. it must <= diceTotalNum
     static FTransform helperCalcFinalTransform(const FMyMJDiceModelInfoBoxCpp& diceModelInfo, const FMyMJGameDeskVisualPointCfgCpp& diceVisualPointCfg, int32 diceVisualStateKey, int32 idxOfDiceRandomArranged, int32 diceTotalNum, int32 value);
 
@@ -513,12 +531,12 @@ protected:
 
     //return errcode, 0 means no error
     UFUNCTION(BlueprintNativeEvent, BlueprintPure)
-    int32 getDiceModelInfoExtra(FMyMJDiceModelInfoExtraCpp& diceModelInfoExtra) const;
+    FMyErrorCodeMJGameCpp getDiceModelInfoExtra(FMyMJDiceModelInfoExtraCpp& diceModelInfoExtra) const;
 
-    virtual int32 getDiceModelInfoExtra_Implementation(FMyMJDiceModelInfoExtraCpp& diceModelInfoExtra) const
+    virtual FMyErrorCodeMJGameCpp getDiceModelInfoExtra_Implementation(FMyMJDiceModelInfoExtraCpp& diceModelInfoExtra) const
     {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDiceBaseCpp::getDiceModelInfoExtra() must be overrided by blueprint subclass!"));
-        return -1;
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDiceBaseCpp::getDiceModelInfoExtra() must be overrided by blueprint child class!"));
+        return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
     };
 
     FMyMJDiceModelInfoBoxCachedCpp m_cModelInfoCache;

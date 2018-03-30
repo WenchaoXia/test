@@ -546,6 +546,99 @@ void FMyTransformOfZRotationAroundPointCoordinateCpp::interp(const FMyTransformO
 };
 
 
+
+
+FString
+UMyCommonUtilsLibrary::getStringFromEnum(const TCHAR *enumName, uint8 value)
+{
+    //const UEnum* enumPtr = FindObject<UEnum>(ANY_PACKAGE, *Name, true);
+    const UEnum* enumPtr = FindObject<UEnum>(ANY_PACKAGE, enumName, true);
+    if (!enumPtr)
+    {
+        return FString("Invalid Enum type");
+    }
+
+    //return FString::Printf(TEXT("%s(%d)"), *enumPtr->GetEnumNameStringByValue(value), value);
+    //return enumPtr->GetEnumNameStringByValue(value);
+    return FString::Printf(TEXT("%s(%d)"), *enumPtr->GetNameStringByValue(value), value);
+    //GetNameStringByValue
+}
+
+int64
+UMyCommonUtilsLibrary::nowAsMsFromTick()
+{
+    return UKismetMathLibrary::Now().GetTicks() / (ETimespan::TicksPerSecond / 1000);
+}
+
+FString UMyCommonUtilsLibrary::formatStrIds(const TArray<int32> &aIds)
+{
+    FString str;
+    int32 l = aIds.Num();
+
+    for (int32 i = 0; i < l; i++) {
+        str += FString::Printf(TEXT("(%d), "), aIds[i]);
+    }
+
+    return str;
+}
+
+FString
+UMyCommonUtilsLibrary::formatStrIdsValues(const TArray<int32> &aIds, const TArray<int32> &aValues)
+{
+    FString str;
+    int32 l = aIds.Num();
+    MY_VERIFY(l == aValues.Num());
+    for (int32 i = 0; i < l; i++) {
+        str += FString::Printf(TEXT("(%d, %d), "), aIds[i], aValues[i]);
+    }
+
+    return str;
+}
+
+FString
+UMyCommonUtilsLibrary::formatStrIdValuePairs(const TArray<FMyIdValuePair> &aIdValues)
+{
+    FString str;
+    int32 l = aIdValues.Num();
+    for (int32 i = 0; i < l; i++) {
+        str += aIdValues[i].genDebugStr() + TEXT(",");
+        //str += FString::Printf(TEXT("(%d, %d), "), aIdValues[i].m_iId, aIdValues[i].m_iValue);
+    }
+
+    return str;
+}
+
+
+FString
+UMyCommonUtilsLibrary::formatMaskString(int32 iMask, uint32 uBitsCount)
+{
+    FString str = FString::Printf(TEXT("%d(bin: "), iMask);
+
+    if (uBitsCount > 32) {
+        uBitsCount = 32;
+    }
+
+    while (uBitsCount > 0) {
+        uBitsCount--;
+        str += FString::Printf(TEXT("%d"), (iMask >> uBitsCount) & 1);
+    }
+
+    str += TEXT(")");
+
+    return str;
+
+}
+
+void UMyCommonUtilsLibrary::convertIdValuePairs2Ids(const TArray<FMyIdValuePair> &aIdValues, TArray<int32> &outaValues)
+{
+    outaValues.Reset();
+
+    int32 l = aIdValues.Num();
+    for (int32 i = 0; i < l; i++) {
+        outaValues.Emplace(aIdValues[i].m_iId);
+    }
+}
+
 int32 UMyCommonUtilsLibrary::getEngineNetMode(AActor *actor)
 {
     UWorld *world = actor->GetWorld();
@@ -1385,7 +1478,7 @@ void UMyCommonUtilsLibrary::calcPointTransformWithLocalOffset(const FTransform& 
     //}
 }
 
-FString UMyCommonUtilsLibrary::Conv_MyTransformZRotationToString(const FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation)
+FString UMyCommonUtilsLibrary::Conv_MyTransformZRotation_String(const FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation)
 {
     return myTransformZRotation.ToString();
 

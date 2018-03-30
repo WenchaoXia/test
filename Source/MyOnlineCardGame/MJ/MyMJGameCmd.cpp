@@ -66,14 +66,14 @@ bool FMyMJGameCmdPointersCpp::trySerializeWithTag(FArchive &Ar)
             }
         }
         else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unsupported type found in cmd serialization, bIsLoading: %d, type: %s."), bIsLoading, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCmdType"), (uint8)eType));
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unsupported type found in cmd serialization, bIsLoading: %d, type: %s."), bIsLoading, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCmdType"), (uint8)eType));
             return false;
         }
 
         pS->SerializeTaggedProperties(Ar, reinterpret_cast<uint8*>(pCmdBase), pS, NULL);
         if (bIsLoading) {
             if (!pCmdBase) {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("program error, data not set,  bIsLoading: %d, type: %s."), bIsLoading, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCmdType"), (uint8)eType));
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("program error, data not set,  bIsLoading: %d, type: %s."), bIsLoading, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCmdType"), (uint8)eType));
                 MY_VERIFY(false);
             }
             giveInLocalThread(pCmdBase);

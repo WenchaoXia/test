@@ -105,7 +105,7 @@ public:
         return NULL;
     };
 
-    virtual FString genDebugString() const
+    virtual FString ToString() const
     {
         //const UEnum* enumPtr = FindObject<UEnum>(ANY_PACKAGE, *Name, true);
         /*
@@ -117,7 +117,7 @@ public:
 
         return enumPtr->GetEnumNameStringByValue((uint8)m_eType) + ". ";
         */
-        return FString::Printf(TEXT("%s, %d."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)m_eType), m_iId);
+        return FString::Printf(TEXT("%s, %d."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)m_eType), m_iId);
     };
 
     virtual void onReachedConsumeThread()
@@ -332,12 +332,12 @@ public:
         return m_aPushersSharedPtr[idx].Get();
     };
 
-    FString genDebugString() const
+    FString ToString() const
     {
         int32 l = getCount();
         FString str = FString::Printf(TEXT("count: %d, %d."), l, m_iTestCount);
         for (int32 i = 0; i < l; i++) {
-            str += FString::Printf(TEXT(" idx %d: "), i) + peekAt(i)->genDebugString();
+            str += FString::Printf(TEXT(" idx %d: "), i) + peekAt(i)->ToString();
         }
 
         return str;
@@ -431,11 +431,11 @@ public:
 
     virtual FMyMJGamePusherBaseCpp* cloneDeep() const override;
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         str += FString::Printf(TEXT(" m_iActionGroupId: %d, m_iIdxAttender: %d."), m_iActionGroupId, m_iIdxAttender);
-        str += m_cActionChoices.genDebugString();
+        str += m_cActionChoices.ToString();
 
         return str;
     };
@@ -502,9 +502,9 @@ public:
 
     virtual FMyMJGamePusherBaseCpp* cloneDeep() const override;
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         str += FString::Printf(TEXT(" m_iActionGroupId: %d, m_iIdxAttender: %d, m_iSelection %d, m_aSubSelections.Num() %d."), m_iActionGroupId, m_iIdxAttender, m_iSelection, m_aSubSelections.Num());
         return str;
     };
@@ -577,9 +577,9 @@ public:
         return pRet;
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         str += FString::Printf(TEXT(" m_bActionGroupIncrease: %d."), m_bActionGroupIncrease);
         return str;
     };
@@ -613,10 +613,10 @@ public:
     virtual FMyMJGamePusherBaseCpp* cloneDeep() const override;
 
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_iGameId: %d, ruleType: %s."), m_iGameId, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)m_cGameCfg.m_eRuleType));
+        FString str = Super::ToString();
+        str += FString::Printf(TEXT(" m_iGameId: %d, ruleType: %s."), m_iGameId, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)m_cGameCfg.m_eRuleType));
         return str;
     };
 
@@ -676,10 +676,10 @@ public:
         return pRet;
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_iIdxAttender: %d, any->%s, mask 0x%x"), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eTargetState), m_iMask0);
+        FString str = Super::ToString();
+        str += FString::Printf(TEXT(" m_iIdxAttender: %d, any->%s, mask 0x%x"), m_iIdxAttender, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eTargetState), m_iMask0);
         int32 l = m_aIdValues.Num();
         for (int32 i = 0; i < l; i++) {
             str += m_aIdValues[i].genDebugStr();
@@ -740,10 +740,10 @@ public:
 
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_iIdxAttender: %d. %s"), m_iIdxAttender, *m_cTingGroup.genDebugString());
+        FString str = Super::ToString();
+        str += FString::Printf(TEXT(" m_iIdxAttender: %d. %s"), m_iIdxAttender, *m_cTingGroup.ToString());
         return str;
     };
 
@@ -782,9 +782,9 @@ public:
     {};
 
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         str += FString::Printf(TEXT(" m_iIdxAttender: %d, m_iPriority %d, m_iTimeLeft2AutoChoose %d."), m_iIdxAttender, m_iPriority, m_iTimeLeft2AutoChooseMs); //PRIu64 can't be used now since I didn't find a proper way to include the defines
         return str;
     };
@@ -959,12 +959,12 @@ public:
         return pRet;
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
 
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         str += FString::Printf(TEXT(" m_eStateNext: %s, m_iAttenderMaskNext: %s, m_eReason: %s."),
-               *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)m_eStateNext), *(UMyMJUtilsLibrary::formatMaskString(m_iAttenderMaskNext, 4)), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateUpdateReasonCpp"), (uint8)m_eReason));
+               *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)m_eStateNext), *(UMyCommonUtilsLibrary::formatMaskString(m_iAttenderMaskNext, 4)), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateUpdateReasonCpp"), (uint8)m_eReason));
 
         return str;
     };
@@ -1023,10 +1023,10 @@ public:
         return pRet;
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
 
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         str += FString::Printf(TEXT(" m_iMask0: %d."), m_iMask0);
         return str;
     };
@@ -1076,9 +1076,9 @@ public:
 
     virtual FMyMJGamePusherBaseCpp* cloneDeep() const override;
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         int32 iDiceNumber0, iDiceNumber1, iReason;
         getDiceNumbers(&iDiceNumber0, &iDiceNumber1);
         iReason = getDiceReason();
@@ -1142,12 +1142,12 @@ public:
 
     virtual FMyMJGamePusherBaseCpp* cloneDeep() const override;
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         str += FString::Printf(TEXT(" m_bLastCard: %d. cards: "), m_bLastCard);
 
-        str += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aIdValuePairs);
+        str += UMyCommonUtilsLibrary::formatStrIdValuePairs(m_aIdValuePairs);
 
         return str;
     };
@@ -1204,11 +1204,11 @@ public:
         return pRet;
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         str += FString::Printf(TEXT(" m_bIsGang: %d, m_eTakenOrder %d."), m_bIsGang, (uint8)m_eTakenOrder);
-        str += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aIdValuePairs);
+        str += UMyCommonUtilsLibrary::formatStrIdValuePairs(m_aIdValuePairs);
 
         return str;
     };
@@ -1271,10 +1271,10 @@ public:
         return pRet;
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_bRestrict2SelectCardsJustTaken %d, getRealCountOfSelection()t: %d. selected: %s."), m_bRestrict2SelectCardsJustTaken, getRealCountOfSelection(), *UMyMJUtilsLibrary::formatStrIdValuePairs(m_aIdValuePairsSelected));
+        FString str = Super::ToString();
+        str += FString::Printf(TEXT(" m_bRestrict2SelectCardsJustTaken %d, getRealCountOfSelection()t: %d. selected: %s."), m_bRestrict2SelectCardsJustTaken, getRealCountOfSelection(), *UMyCommonUtilsLibrary::formatStrIdValuePairs(m_aIdValuePairsSelected));
 
         return str;
     };
@@ -1382,12 +1382,12 @@ public:
         return pRet;
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
-        str += FString::Printf(TEXT(" m_eTargetFlipState: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eTargetFlipState));
-        str += m_cWeave.genDebugString();
-        str += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aCardValuesRelated);
+        FString str = Super::ToString();
+        str += FString::Printf(TEXT(" m_eTargetFlipState: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eTargetFlipState));
+        str += m_cWeave.ToString();
+        str += UMyCommonUtilsLibrary::formatStrIdValuePairs(m_aCardValuesRelated);
 
         return str;
     };
@@ -1480,10 +1480,10 @@ public:
         return pRet;
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
-        str += m_cHuScoreResultFinalGroup.genDebugString();
+        FString str = Super::ToString();
+        str += m_cHuScoreResultFinalGroup.ToString();
 
         return str;
     };
@@ -1549,14 +1549,14 @@ public:
         return pRet;
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         str += TEXT(" cards: ");
-        str += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aShowOutIdValues);
+        str += UMyCommonUtilsLibrary::formatStrIdValuePairs(m_aShowOutIdValues);
 
         str += TEXT(" hu : ");
-        str += m_cHuScoreResultFinalGroup.genDebugString();
+        str += m_cHuScoreResultFinalGroup.ToString();
 
 
         return str;
@@ -1610,11 +1610,11 @@ public:
         return pRet;
     };
 
-    virtual FString genDebugString() const override
+    virtual FString ToString() const override
     {
-        FString str = Super::genDebugString();
+        FString str = Super::ToString();
         str += TEXT(" cards: ");
-        str += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aPickedIdValues);
+        str += UMyCommonUtilsLibrary::formatStrIdValuePairs(m_aPickedIdValues);
 
         return str;
     };

@@ -19,8 +19,3 @@ int32 IMyMJGameInRoomUIMainWidgetInterfaceCpp::changeViewPosition_Implementation
     return 0;
 };
 */
-
-UMyPawnUIInterfaceCpp::UMyPawnUIInterfaceCpp(const FObjectInitializer& ObjectInitializer)
-{
-
-};

@@ -410,7 +410,7 @@ int32 FMyMJGameDeskProcessorRunnableCpp::mainThreadTryFeedEvents(UMyMJDataSequen
                 const FMyMJDataDeltaCpp& delta = pPusherResult->m_aResultDelta[0];
                 if (delta.m_aRoleDataPrivate.Num() > 0) {
                     UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("debug: giveing delta event with revealing values, event %s, %s."), *event.genDebugMsg(),
-                    *UMyMJUtilsLibrary::formatStrIdValuePairs(delta.m_aRoleDataPrivate[0].m_aIdValuePairs2Reveal));
+                    *UMyCommonUtilsLibrary::formatStrIdValuePairs(delta.m_aRoleDataPrivate[0].m_aIdValuePairs2Reveal));
                 }
             }
         }
@@ -916,7 +916,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     //    if (cardValue != debugValue) {
                     //        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("got error!"), debugCheckingIdx, cardValue);
                     //        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_cSortCards: %s."), *m_cSortCards.dump());
-                    //        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("aPairs: %s."), *UMyMJUtilsLibrary::formatStrIdValuePairs(aPairs));
+                    //        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("aPairs: %s."), *UMyCommonUtilsLibrary::formatStrIdValuePairs(aPairs));
                     //    }
                     //}
 
@@ -1028,7 +1028,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
 
                     pCardVisualInfo->m_iCardValue = cardValue;
 
-                    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("give out card info: %s."), *pCardVisualInfo->genDebugString());
+                    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("give out card info: %s."), *pCardVisualInfo->ToString());
 
                     idxColInRowNow++;
                 }

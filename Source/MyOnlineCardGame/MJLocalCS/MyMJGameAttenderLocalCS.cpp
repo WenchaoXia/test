@@ -120,7 +120,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
             pAction->initWithIdValuePairsInited(getIdx(), false, MyMJGameCardTakenOrderCpp::Head);
 
             //debug
-            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("gen taken cards: %s"), *UMyMJUtilsLibrary::formatStrIdValuePairs(pAction->m_aIdValuePairs));
+            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("gen taken cards: %s"), *UMyCommonUtilsLibrary::formatStrIdValuePairs(pAction->m_aIdValuePairs));
 
             //pFillInPusher->m_cActionChoices.give(pAction);
             pPusherIO->GivePusher(pAction, (void **)&pAction);

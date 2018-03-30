@@ -23,14 +23,14 @@ public:
 
     //when calling this, offset = 0 always means the widget is at viewRole's point
     UFUNCTION(BlueprintNativeEvent)
-    int32 restartMainAnimation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter);
+    MyErrorCodeCommonPartCpp restartMainAnimation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter);
 };
 
 #define IMyCardGameScreenPositionRelatedWidgetInterfaceCpp_DefaultEmptyImplementationForUObject() \
-int32 restartMainAnimation_Implementation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter) override \
+MyErrorCodeCommonPartCpp restartMainAnimation_Implementation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter) override \
 { \
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: restartMainAnimation only implemented in C++."), *GetClass()->GetName()); \
-    return 0; \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
 };
 
 //like MJ card actor and widget, they can be set with values
@@ -48,28 +48,31 @@ public:
 
     //@animationTimeMs if < 0, value should be updated at instance instead of animation, otherwise value will be updated by animation if possible
     UFUNCTION(BlueprintCallable)
-    virtual void updateValueShowing(int32 newValue, int32 animationTimeMs)
+    virtual MyErrorCodeCommonPartCpp updateValueShowing(int32 newValueShowing, int32 animationTimeMs)
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("updateValueShowing() must be override by subclass."));
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
     };
 
     UFUNCTION(BlueprintCallable)
-    virtual int32 getValueShowing() const
+    virtual MyErrorCodeCommonPartCpp getValueShowing(int32& valueShowing) const
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getValueShowing() must be override by subclass."));
-        return 0;
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
     };
 
     UFUNCTION(BlueprintCallable)
-    virtual void setResPath(const FDirectoryPath& newResPath)
+    virtual MyErrorCodeCommonPartCpp setResPath(const FDirectoryPath& newResPath)
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("setResPath() must be override by subclass."));
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
     };
 
     UFUNCTION(BlueprintCallable)
-    virtual const FDirectoryPath& getResPath() const
+    virtual MyErrorCodeCommonPartCpp getResPath(FDirectoryPath& resPath) const
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getResPath() must be override by subclass."));
-        return *(FDirectoryPath*)NULL;
+        resPath.Path.Reset();
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
     };
 };

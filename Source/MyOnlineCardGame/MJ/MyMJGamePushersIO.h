@@ -95,7 +95,7 @@ public:
 
         //pNew->m_pPusher = pusher.cloneDeep();
         //if (pNew->m_pPusher == NULL) {
-            //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone pusher, pusher type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()));
+            //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone pusher, pusher type %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()));
             //MY_VERIFY(false);
         //}
 
@@ -108,7 +108,7 @@ public:
          //       m_pQueueRemote->Enqueue(pResultNew);
          //   }
          //   else {
-         //       UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone pusher result, pusher type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()));
+         //       UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to clone pusher result, pusher type %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)pusher.getType()));
          //       MY_VERIFY(false);
          //   }
         //}
@@ -256,37 +256,37 @@ public:
 
     //called only in "full" core
     inline
-    MyMJGameErrorCodeCpp makeSelection(int32 iSelection)
+    FMyErrorCodeMJGameCpp makeSelection(int32 iSelection)
     {
         TArray<int32> t;
         return makeSelection(iSelection, t);
     };
 
     //called only in "full" core, don't call dump in the code path in case of reject invalid request
-    MyMJGameErrorCodeCpp makeSelection(int32 iSelection, TArray<int32> &subSelections)
+    FMyErrorCodeMJGameCpp makeSelection(int32 iSelection, TArray<int32> &subSelections)
     {
         //if (m_iActionGroupId != iActionGroupId) {
-            //return MyMJGameErrorCodeCpp::pusherIdNotEqual;
+            //return MyErrorCodeSubPartMJGameCpp::pusherIdNotEqual;
         //}
 
         if (m_pSelected.Get() != NULL) {
-            return MyMJGameErrorCodeCpp::choiceAlreadyMade;
+            return FMyErrorCodeMJGameCpp(MyErrorCodeSubPartMJGameCpp::choiceAlreadyMade);
         }
 
         int l = m_aActionChoices.Num();
         if (l <= 0) {
-            return MyMJGameErrorCodeCpp::choicesEmpty;
+            return FMyErrorCodeMJGameCpp(MyErrorCodeSubPartMJGameCpp::choicesEmpty);
         }
 
         if (!(iSelection >= 0 && iSelection < l)) {
-            return MyMJGameErrorCodeCpp::choiceOutOfRange;
+            return FMyErrorCodeMJGameCpp(MyErrorCodeSubPartMJGameCpp::choiceOutOfRange);
         }
 
         TSharedPtr<FMyMJGameActionBaseCpp> &sel = m_aActionChoices[iSelection];
         if (sel->getRealCountOfSelection() > 1) {
             //only call it when need decision
             if (0 != sel->makeSubSelection(subSelections)) {
-                return MyMJGameErrorCodeCpp::choiceSubSelectInvalid;
+                return FMyErrorCodeMJGameCpp(MyErrorCodeSubPartMJGameCpp::choiceSubSelectInvalid);
             }
         }
 
@@ -294,7 +294,7 @@ public:
         m_aSubSelectionsInputed = subSelections;
 
         m_pSelected = sel;
-        return MyMJGameErrorCodeCpp::None;
+        return FMyErrorCodeMJGameCpp();
     };
 
     void makeRandomSelection(FRandomStream &RS);

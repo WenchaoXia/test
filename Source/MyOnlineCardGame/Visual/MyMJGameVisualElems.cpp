@@ -33,8 +33,9 @@ AMyMoveWithSeqActorBaseCpp::~AMyMoveWithSeqActorBaseCpp()
 
 }
 
+
 //Todo:: verify its correctness when root scene scaled
-int32 AMyMoveWithSeqActorBaseCpp::getModelInfo(FMyActorModelInfoBoxCpp& modelInfo, bool verify) const
+MyErrorCodeCommonPartCpp AMyMoveWithSeqActorBaseCpp::getModelInfo(struct FMyActorModelInfoBoxCpp& modelInfo, bool verify) const
 {
     //ignore the root scene/actor's scale, but calc from the box
 
@@ -45,24 +46,26 @@ int32 AMyMoveWithSeqActorBaseCpp::getModelInfo(FMyActorModelInfoBoxCpp& modelInf
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("name %s, box scale %s."), *GetName(), *m_pMainBox->GetComponentScale().ToString());
     modelInfo.m_cCenterPointRelativeLocation = m_pMainBox->RelativeLocation;// * actorScale3D;
 
-    int32 ret = 0;
+    MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
     if (modelInfo.m_cBoxExtend.Size() < 1) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("class %s: model size is too small: %s."), *this->GetClass()->GetName(), *modelInfo.m_cBoxExtend.ToString());
-        ret = -1;
+        ret = MyErrorCodeCommonPartCpp::ModelSizeIncorrect;
     }
 
     if (verify) {
-        MY_VERIFY(ret == 0);
+        MY_VERIFY(ret == MyErrorCodeCommonPartCpp::NoError);
     }
 
     return ret;
 }
 
-FMyWithCurveUpdaterTransformCpp& AMyMoveWithSeqActorBaseCpp::getMyWithCurveUpdaterTransformRef()
+MyErrorCodeCommonPartCpp AMyMoveWithSeqActorBaseCpp::getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterTransformCpp*& outUpdater)
 {
     MY_VERIFY(IsValid(m_pMyTransformUpdaterComponent));
 
-    return m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRefRef();
+    outUpdater = &m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRef();
+
+    return MyErrorCodeCommonPartCpp::NoError;
 }
 
 void AMyMoveWithSeqActorBaseCpp::createComponentsForCDO()
@@ -116,7 +119,7 @@ void AMyMoveWithSeqActorBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e
 #endif
 
 
-int32 AMyMoveWithSeqActorBaseCpp::updateSettings()
+MyErrorCodeCommonPartCpp AMyMoveWithSeqActorBaseCpp::updateSettings()
 {
     if (!IsValid(m_pMainBox)) {
         UClass* uc = this->GetClass();
@@ -159,7 +162,7 @@ int32 AMyMoveWithSeqActorBaseCpp::updateSettings()
 
     m_pMainStaticMesh->SetRelativeLocation(-meshOrigin);
 
-    return 0;
+    return MyErrorCodeCommonPartCpp::NoError;
 }
 
 
@@ -239,7 +242,7 @@ void AMyMJGameCardBaseCpp::OnConstruction(const FTransform& Transform)
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnConstruction, this %p, cdo %p."), this, CDO);
     Super::OnConstruction(Transform);
 
-    updateVisual();
+    updateVisual(true);
 }
 
 void AMyMJGameCardBaseCpp::PostInitializeComponents()
@@ -247,7 +250,7 @@ void AMyMJGameCardBaseCpp::PostInitializeComponents()
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostInitializeComponents, this %p, %s, %p, %p, compo: %p."), this, *m_cResPath.Path, m_pResMesh, m_pResMI, m_pMainStaticMesh);
     Super::PostInitializeComponents();
 
-    updateVisual();
+    updateVisual(true);
 }
 
 #if WITH_EDITOR
@@ -265,7 +268,7 @@ void AMyMJGameCardBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
 
         //this may invlove CDO, so update all, since CDO may have not executed onContruct() nor PostInitializeComponents() before
 
-        updateVisual();
+        updateVisual(false);
         //updateWithValue(m_iValueShowing);
     } 
     else {
@@ -274,12 +277,12 @@ void AMyMJGameCardBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
         if (PropertyName == GET_MEMBER_NAME_CHECKED(AMyMJGameCardBaseCpp, m_cResPath))
         {
             //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty 2, this %p, %s"), this, *m_cResPath.Path);
-            if (0 != checkAndLoadCardBasicResources(m_cResPath.Path)) {
+            if (MyErrorCodeCommonPartCpp::NoError != checkAndLoadCardBasicResources(m_cResPath.Path)) {
                 UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("Retrying for default settings."));
                 m_cResPath.Path = UMyCommonUtilsLibrary::getClassAssetPath(this->GetClass()) + TEXT("/") + MY_MODEL_RES_RELATIVE_PATH;
                 checkAndLoadCardBasicResources(m_cResPath.Path);
             }
-            updateVisual();
+            updateVisual(true);
         }
     }
 
@@ -288,10 +291,10 @@ void AMyMJGameCardBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
 
 #endif
 
-int32 AMyMJGameCardBaseCpp::updateSettings()
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::updateSettings()
 {
-    int32 ret = Super::updateSettings();
-    if (ret != 0) {
+    MyErrorCodeCommonPartCpp ret = Super::updateSettings();
+    if (ret != MyErrorCodeCommonPartCpp::NoError) {
         return ret;
     }
 
@@ -303,18 +306,18 @@ int32 AMyMJGameCardBaseCpp::updateSettings()
 
     m_pMainBox->SetRelativeLocation(-alignPoint);
 
-    return 0;
+    return MyErrorCodeCommonPartCpp::NoError;
 }
 
-int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath)
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath)
 {
-    int32 ret = 0;
+    MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
     if (inPath.IsEmpty()) {
         m_pResMesh = nullptr;
         m_pResMI = nullptr;
         m_cResPath.Path.Reset();
 
-        return 0;
+        return MyErrorCodeCommonPartCpp::NoError;
     }
 
 
@@ -327,7 +330,7 @@ int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath
     if (!IsValid(pMeshAsset)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to load mesh asset from %s."), *meshFullPathName);
         m_pResMesh = nullptr;
-        ret |= 0x01;
+        ret = MyErrorCodeCommonPartCpp::AssetLoadFail;
     }
     else {
         m_pResMesh = pMeshAsset;
@@ -337,7 +340,7 @@ int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath
     if (!IsValid(pMatInstAsset)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to load material default instance asset from %s."), *matDefaultInstFullPathName);
         m_pResMI = nullptr;
-        ret |= 0x10;
+        ret = MyErrorCodeCommonPartCpp::AssetLoadFail;
     }
     else {
         m_pResMI = pMatInstAsset;
@@ -348,25 +351,28 @@ int32 AMyMJGameCardBaseCpp::checkAndLoadCardBasicResources(const FString &inPath
     return ret;
 }
 
-int32 AMyMJGameCardBaseCpp::updateVisual()
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::updateVisual(bool bForce)
 {
     //if (m_cResPath.Path.IsEmpty()) {
         //return -1;
     //}
+    MyErrorCodeCommonPartCpp ret, rett;
 
-    updateWithCardBasicResources();
-    updateWithValue();
+    ret = updateWithCardBasicResources();
 
-    return 0;
+    rett = updateWithValue(bForce);
+    MyErrorCodePartJoin(ret, rett);
+
+    return ret;
 }
 
-int32 AMyMJGameCardBaseCpp::updateWithCardBasicResources()
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::updateWithCardBasicResources()
 {
     if (!IsValid(m_pMainBox)) {
-        UClass* uc = this->GetClass();
-        UObject* CDO = uc->GetDefaultObject();
+        //UClass* uc = this->GetClass();
+        //UObject* CDO = uc->GetDefaultObject();
 
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMainBox invalid 0x%p, this 0x%p, cdo 0x%p."), m_pMainBox, this, CDO);
+        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMainBox invalid 0x%p, this 0x%p, cdo 0x%p."), m_pMainBox, this, CDO);
         MY_VERIFY(false);
     }
 
@@ -402,13 +408,13 @@ int32 AMyMJGameCardBaseCpp::updateWithCardBasicResources()
         }
     }
  
-    return 0;
+    return MyErrorCodeCommonPartCpp::NoError;
 }
 
-int32 AMyMJGameCardBaseCpp::updateWithValue()
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::updateWithValue(bool bForce)
 {
-    if (m_iValueUpdatedBefore == m_iValueShowing) {
-        return 0;
+    if (m_iValueUpdatedBefore == m_iValueShowing && bForce == false) {
+        return MyErrorCodeCommonPartCpp::NoError;
     }
     m_iValueUpdatedBefore = m_iValueShowing;
 
@@ -435,7 +441,7 @@ int32 AMyMJGameCardBaseCpp::updateWithValue()
     return updateCardStaticMeshMIDParams(pTargetBaseColorTexture);
 }
 
-int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBaseColor)
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBaseColor)
 {
     MY_VERIFY(IsValid(m_pMainStaticMesh));
 
@@ -447,10 +453,10 @@ int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBase
             //our design need MID in any case
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cast to dynamic material instance fail: this %p, %s, %s."), this, *pMat->GetClass()->GetFullName(), *pMat->GetFullName());
             if (InBaseColor == nullptr) {
-                return 0;
+                return MyErrorCodeCommonPartCpp::NoError;
             }
             else {
-                return -30;
+                return MyErrorCodeCommonPartCpp::ObjectCastFail;
             }
         }
 
@@ -458,7 +464,7 @@ int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBase
         if (DynamicMaterial->GetTextureParameterValue(MyCardStaticMeshMIDParamInBaseColor, baseColorNow)) {
             if (baseColorNow == InBaseColor) {
                 //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("skip SetTextureParameterValue since target is same, this %p."), this);
-                return 0;
+                return MyErrorCodeCommonPartCpp::NoError;
             }
         }
         
@@ -470,76 +476,78 @@ int32 AMyMJGameCardBaseCpp::updateCardStaticMeshMIDParams(class UTexture* InBase
         //}
 
         DynamicMaterial->SetTextureParameterValue(MyCardStaticMeshMIDParamInBaseColor, InBaseColor);
-        return 0;
+        return MyErrorCodeCommonPartCpp::NoError;
     }
     else {
         if (InBaseColor == nullptr) {
-            return 0;
+            return MyErrorCodeCommonPartCpp::NoError;
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("try to set MID param but material is NULL."));
-            return -31;
+            return MyErrorCodeCommonPartCpp::ObjectNull;
         }
     }
+
+    return MyErrorCodeCommonPartCpp::NoError;
 };
 
-void AMyMJGameCardBaseCpp::updateValueShowing(int32 newValue, int32 animationTimeMs)
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::updateValueShowing(int32 newValueShowing, int32 animationTimeMs)
 {
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("setValueShowing %d."), newValue);
 
     //always set immediately
 
-    if (m_iValueShowing == newValue) {
-        return;
+    if (m_iValueShowing == newValueShowing) {
+        return MyErrorCodeCommonPartCpp::NoError;
     }
-    m_iValueShowing = newValue;
+    m_iValueShowing = newValueShowing;
 
-    updateWithValue();
+    return updateWithValue(false);
 }
 
-int32 AMyMJGameCardBaseCpp::getValueShowing() const
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::getValueShowing(int32& valueShowing) const
 {
-    return m_iValueShowing;
+    valueShowing = m_iValueShowing;
+
+    return MyErrorCodeCommonPartCpp::NoError;
 }
 
-void AMyMJGameCardBaseCpp::setResPath(const FDirectoryPath& newResPath)
-{
-    setResPathWithRet(newResPath);
-}
-
-bool AMyMJGameCardBaseCpp::setResPathWithRet(const FDirectoryPath& newResPath)
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::setResPath(const FDirectoryPath& newResPath)
 {
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("setResPath %s."), *newResPath.Path);
 
     if (m_cResPath.Path == newResPath.Path) {
-        return true;
+        return MyErrorCodeCommonPartCpp::NoError;
     }
 
-    bool ret = true;
     FDirectoryPath oldPath = m_cResPath;
     m_cResPath = newResPath;
 
-    if (0 == checkAndLoadCardBasicResources(m_cResPath.Path))
+    MyErrorCodeCommonPartCpp ret;
+    ret = checkAndLoadCardBasicResources(m_cResPath.Path);
+
+    if (ret == MyErrorCodeCommonPartCpp::NoError)
     {
     }
     else {
         m_cResPath = oldPath;
-        ret = false;
     }
 
-    updateVisual();
+    MyErrorCodePartJoin(ret, updateVisual(true));
 
     return ret;
 }
 
-const FDirectoryPath& AMyMJGameCardBaseCpp::getResPath() const
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::getResPath(FDirectoryPath& resPath) const
 {
-    return m_cResPath;
+    resPath = m_cResPath;
+    return MyErrorCodeCommonPartCpp::NoError;
 }
 
-bool AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, const FString &valuePrefix, class UTexture** ppOutBaseColorTexture)
+
+MyErrorCodeCommonPartCpp AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, const FString &valuePrefix, class UTexture** ppOutBaseColorTexture)
 {
-    bool bRet = true;
+    MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
 
     if (ppOutBaseColorTexture) {
         FString baseColorFullPathName = modelAssetPath + TEXT("/") + valuePrefix + MyCardAssetPartialNameSuffixValueBaseColorTexture;
@@ -549,11 +557,11 @@ bool AMyMJGameCardBaseCpp::helperTryLoadCardRes(const FString &modelAssetPath, c
         }
         else {
             *ppOutBaseColorTexture = NULL;
-            bRet = false;
+            ret = MyErrorCodeCommonPartCpp::AssetLoadFail;
         }
     }
 
-    return bRet;
+    return ret;
 };
 
 void AMyMJGameCardBaseCpp::helperMyMJCardsToMyTransformUpdaters(const TArray<AMyMJGameCardBaseCpp*>& aSub, bool bSort, TArray<IMyTransformUpdaterInterfaceCpp*> &aBase)

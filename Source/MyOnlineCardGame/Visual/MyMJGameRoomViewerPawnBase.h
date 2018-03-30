@@ -14,7 +14,7 @@
 
 //Our player controller will help do replication work, and only replication help code goes here
 UCLASS()
-class MYONLINECARDGAME_API AMyMJGameRoomViewerPawnBaseCpp : public APawn, public IMyPawnUIInterfaceCpp, public IMyTransformUpdaterInterfaceCpp
+class MYONLINECARDGAME_API AMyMJGameRoomViewerPawnBaseCpp : public APawn, public IMyPawnInterfaceCpp, public IMyTransformUpdaterInterfaceCpp
 {
 	GENERATED_BODY()
 
@@ -28,21 +28,24 @@ public:
         return m_pCamera;
     };
 
+
     //IMyTransformUpdaterInterfaceCpp begin
 
-    virtual int32 getModelInfo(FMyActorModelInfoBoxCpp& modelInfo, bool verify = true) const override
+    virtual MyErrorCodeCommonPartCpp getModelInfo(struct FMyActorModelInfoBoxCpp& modelInfo, bool verify = true) const override
     {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("not implemented yet!"));
-        return -1;
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameRoomViewerPawnBaseCpp::getModelInfo() not implemented yet!"));
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedOnPurPose;
     };
 
-    virtual FMyWithCurveUpdaterTransformCpp& getMyWithCurveUpdaterTransformRef() override
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterTransformCpp*& outUpdater) override
     {
-
         MY_VERIFY(m_pMyTransformUpdaterComponent != NULL);
+        outUpdater = &m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRef();
 
-        return m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRefRef();
+        return MyErrorCodeCommonPartCpp::NoError;
     };
+
+    //IMyTransformUpdaterInterfaceCpp end
 
 
     UFUNCTION(BlueprintCallable)
@@ -52,15 +55,16 @@ public:
     UFUNCTION(BlueprintCallable)
     void changeInRoomDeskPosition(int32 idxDeskPosition);
 
-    //IMyTransformUpdaterInterfaceCpp end
 protected:
     
-    //IMyPawnUIInterfaceCpp begin
 
-    virtual void OnPossessedByLocalPlayerController(APlayerController* newController) override;
-    virtual void OnUnPossessedByLocalPlayerController(APlayerController* oldController) override;
+    //IMyPawnInterfaceCpp begin
 
-    //IMyPawnUIInterfaceCpp end
+    virtual MyErrorCodeCommonPartCpp OnPossessedByLocalPlayerController(APlayerController* newController) override;
+    virtual MyErrorCodeCommonPartCpp OnUnPossessedByLocalPlayerController(APlayerController* oldController) override;
+
+    //IMyPawnInterfaceCpp end
+
 
     virtual void PossessedBy(AController* NewController) override;
     virtual void UnPossessed() override;

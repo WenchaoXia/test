@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
+#include "MyCommonDefines.h"
 
 //#include "Core.h"
 #include "CoreUObject.h"

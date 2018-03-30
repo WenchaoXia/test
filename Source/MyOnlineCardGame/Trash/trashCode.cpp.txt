@@ -81,7 +81,7 @@ void UMyMJGameCoreObjFullCpp::testLocalInit()
 
     m_pIOGroupAll = MakeShareable<FMyMJGameIOGroupAllCpp>(new FMyMJGameIOGroupAllCpp());
 
-    int32 iSeed = UMyMJUtilsLibrary::nowAsMsFromTick();
+    int32 iSeed = UMyCommonUtilsLibrary::nowAsMsFromTick();
     //int32 iSeed = 11180997;
     m_pCore = MakeShareable<FMyMJGameCoreCpp>(StaticCast<FMyMJGameCoreCpp *>(new FMyMJGameCoreLocalCSCpp(MyMJGameElemWorkModeCpp::Full, iSeed)));
     m_pCore->initFullMode(m_pCore, m_pIOGroupAll.Get());

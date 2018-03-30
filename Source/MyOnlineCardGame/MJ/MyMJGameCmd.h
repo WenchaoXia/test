@@ -37,16 +37,14 @@ public:
     FMyMJGameCmdBaseCpp()
     {
         m_eType = MyMJGameCmdType::Invalid;
-
-        m_eRespErrorCode = MyMJGameErrorCodeCpp::NotHandled;
     };
 
     virtual ~FMyMJGameCmdBaseCpp()
     {};
 
-    virtual FString genDebugString() const
+    virtual FString ToString() const
     {
-        FString ret = FString::Printf(TEXT("type %s, ret %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCmdType"), (uint8)m_eType), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameErrorCodeCpp"), (uint8)m_eRespErrorCode));
+        FString ret = FString::Printf(TEXT("type %s, ret %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameCmdType"), (uint8)m_eType), *m_cRespErrorCode.ToString());
         return ret;
     };
 
@@ -60,7 +58,7 @@ public:
     //int32 m_iIdxAttender; //see MyMJGameRoleTypeCpp
 
     UPROPERTY()
-    MyMJGameErrorCodeCpp m_eRespErrorCode;
+    FMyErrorCodeMJGameCpp m_cRespErrorCode;
 };
 
 USTRUCT()
@@ -167,12 +165,12 @@ public:
         return m_aCmdSharedPtr.Num();
     };
 
-    FString genDebugString() const
+    FString ToString() const
     {
         int32 l = getCount();
         FString str = FString::Printf(TEXT("count: %d."), l);
         for (int32 i = 0; i < l; i++) {
-            str += FString::Printf(TEXT(" idx %d: "), i) + getSharedPtrAtConst(i)->genDebugString();
+            str += FString::Printf(TEXT(" idx %d: "), i) + getSharedPtrAtConst(i)->ToString();
         }
 
         return str;

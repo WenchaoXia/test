@@ -506,7 +506,7 @@ public:
     }
 
 
-    inline FMyWithCurveUpdaterTransformCpp& getMyWithCurveUpdaterTransformRefRef()
+    inline FMyWithCurveUpdaterTransformCpp& getMyWithCurveUpdaterTransformRef()
     {
         return m_cUpdater;
     };
@@ -1081,7 +1081,7 @@ public:
         if (idx < managedActorArray.Num()) {
             T* pRet = managedActorArray[idx];
             MY_VERIFY(pRet);
-            MY_VERIFY(idx == pRet->getMyId())
+            MY_VERIFY(idx == pRet->getMyId2())
             return pRet;
         }
         else {
@@ -1149,6 +1149,22 @@ public:
             remainingCount--;
         }
     };
+
+
+    static FString getStringFromEnum(const TCHAR *enumName, uint8 value);
+
+    static int64 nowAsMsFromTick();
+
+    static FString formatStrIds(const TArray<int32> &aIds);
+
+    static FString formatStrIdsValues(const TArray<int32> &aIds, const TArray<int32> &aValues);
+
+    static FString formatStrIdValuePairs(const TArray<FMyIdValuePair> &aIdValues);
+
+    static FString formatMaskString(int32 iMask, uint32 uBitsCount);
+
+    static void convertIdValuePairs2Ids(const TArray<FMyIdValuePair> &aIdValues, TArray<int32> &outaValues);
+
 
     UFUNCTION(BlueprintCallable)
     static int32 getEngineNetMode(AActor *actor);
@@ -1261,7 +1277,7 @@ public:
     //note scale3D component in transform, is ignored
 
     UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (MyTransformZRotation)", CompactNodeTitle = "->", BlueprintAutocast), Category = "UMyCommonUtilsLibrary")
-    static FString Conv_MyTransformZRotationToString(const FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation);
+    static FString Conv_MyTransformZRotation_String(const FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation);
 
     UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
     static void MyTransformZRotationToTransformWorld(const FTransform& centerPointTransformWorld, const FMyTransformOfZRotationAroundPointCoordinateCpp& myTransformZRotation, FTransform& transformWorld);

@@ -847,13 +847,13 @@ public:
         //m_uiTimeWaitForAnimation_10Ms = 0;
     };
 
-    virtual FString genDebugString() const
+    virtual FString ToString() const
     {
-        FString ret = Super::genDebugString();
+        FString ret = Super::ToString();
 
         if (m_aCoreData.Num() > 0) {
             if (m_aCoreData[0].m_bUpdateGameState) {
-                ret += FString::Printf(TEXT("gameState %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)m_aCoreData[0].m_eGameState));
+                ret += FString::Printf(TEXT("gameState %s"), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)m_aCoreData[0].m_eGameState));
             }
         }
 
@@ -1188,7 +1188,7 @@ public:
         }
         else {
             MY_VERIFY(m_aResultDelta.Num() == 1)
-            return m_aResultDelta[0].genDebugString();
+            return m_aResultDelta[0].ToString();
         }
     };
 
@@ -1357,7 +1357,7 @@ protected:
 
     FString genDebugStateString() const
     {
-        return FString::Printf(TEXT("[%s]"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRoleTypeCpp"), (uint8)getAccessRoleType(false)));
+        return FString::Printf(TEXT("[%s]"), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRoleTypeCpp"), (uint8)getAccessRoleType(false)));
     };
 
 

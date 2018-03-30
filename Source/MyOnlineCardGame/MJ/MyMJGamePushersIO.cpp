@@ -82,9 +82,9 @@ FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriori
 
             //2nd, try make choice
             if (timeLeft == 0) {
-                MyMJGameErrorCodeCpp errorCode = makeSelection(0);
-                if (errorCode != MyMJGameErrorCodeCpp::None) {
-                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("errorCode: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameErrorCodeCpp"), (uint8)errorCode));
+                FMyErrorCodeMJGameCpp errorCode = makeSelection(0);
+                if (errorCode.hasError()) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("errorCode: %s"), *errorCode.ToString());
                     MY_VERIFY(false);
                 }
             }
@@ -142,9 +142,9 @@ FMyMJGameActionContainorCpp::makeRandomSelection(FRandomStream &RS)
     TSharedPtr<FMyMJGameActionBaseCpp> pAction = m_aActionChoices[selection0];
 
     if (pAction->getRealCountOfSelection() < 2) {
-        MyMJGameErrorCodeCpp errorCode = makeSelection(selection0);
-        if (errorCode != MyMJGameErrorCodeCpp::None) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("errorCode: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameErrorCodeCpp"), (uint8)errorCode));
+        FMyErrorCodeMJGameCpp errorCode = makeSelection(selection0);
+        if (errorCode.hasError()) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("errorCode: %s"), *errorCode.ToString());
             MY_VERIFY(false);
         }
         return;
@@ -153,9 +153,9 @@ FMyMJGameActionContainorCpp::makeRandomSelection(FRandomStream &RS)
     TArray<int32> subSelections;
     MY_VERIFY(pAction->genRandomSubSelections(RS, subSelections) == 0);
 
-    MyMJGameErrorCodeCpp errorCode = makeSelection(selection0, subSelections);
-    if (errorCode != MyMJGameErrorCodeCpp::None) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("errorCode: %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameErrorCodeCpp"), (uint8)errorCode));
+    FMyErrorCodeMJGameCpp errorCode = makeSelection(selection0, subSelections);
+    if (errorCode.hasError()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("errorCode: %s"), *errorCode.ToString());
         MY_VERIFY(false);
     }
     return;

@@ -184,17 +184,21 @@ void AMyMJGameRoomViewerPawnBaseCpp::changeInRoomDeskPosition(int32 idxDeskPosit
 };
 
 
-void AMyMJGameRoomViewerPawnBaseCpp::OnPossessedByLocalPlayerController(APlayerController* newController)
+MyErrorCodeCommonPartCpp AMyMJGameRoomViewerPawnBaseCpp::OnPossessedByLocalPlayerController(APlayerController* newController)
 {
     //Not doing anything now
     //int32 id = UGameplayStatics::GetPlayerControllerID(newController);
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnPossessedByLocalPlayerController: %s, %d."), *newController->GetClass()->GetName(), id);
+
+    return MyErrorCodeCommonPartCpp::NoError;
 };
 
-void AMyMJGameRoomViewerPawnBaseCpp::OnUnPossessedByLocalPlayerController(APlayerController* oldController)
+MyErrorCodeCommonPartCpp AMyMJGameRoomViewerPawnBaseCpp::OnUnPossessedByLocalPlayerController(APlayerController* oldController)
 {
     //int32 id = UGameplayStatics::GetPlayerControllerID(oldController);
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnUnPossessedByLocalPlayerController: %s, id %d."), *oldController->GetClass()->GetName(), id);
+
+    return MyErrorCodeCommonPartCpp::NoError;
 };
 
 void AMyMJGameRoomViewerPawnBaseCpp::PossessedBy(AController* NewController)

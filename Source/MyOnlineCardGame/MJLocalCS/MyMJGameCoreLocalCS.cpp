@@ -215,7 +215,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             bool bGened = p2->genActionUnified(&actionContainorForBP.m_aActionChoices[idx]);
             if (!bGened) {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pusher %s failed to gen unified action!"),
-                    *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)p2->getType()));
+                    *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)p2->getType()));
                 MY_VERIFY(false);
             }
 
@@ -863,7 +863,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pusher [%s] not valid for this core."),
-            *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
+            *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
     }
 
     return pRet;
@@ -1152,7 +1152,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
     }
     else {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pusher [%s] not valid for this core."),
-            *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
+            *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
     }
 
 
@@ -1182,16 +1182,16 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
 
                 m_pPusherIOFull->GivePusher(pPusherReset, (void**)&pPusherReset);
 
-                pCmd->m_eRespErrorCode = MyMJGameErrorCodeCpp::None;
+                pCmd->m_cRespErrorCode.reset(); // = MyErrorCodeSubPartMJGameCpp::None;
             }
             else {
                 UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("requested reset game but type not equal: cfg %d, self %d."), (uint8)pCmdRestartGame->m_cGameCfg.m_eRuleType, (uint8)getRuleType());
-                pCmd->m_eRespErrorCode = MyMJGameErrorCodeCpp::GameRuleTypeNotEqual;
+                pCmd->m_cRespErrorCode = FMyErrorCodeMJGameCpp(MyErrorCodeSubPartMJGameCpp::GameRuleTypeNotEqual);
             }
         }
         else {
             UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("requested reset game from invalid role: %d"), (uint8)eRoleTypeOfCmdSrc);
-            pCmd->m_eRespErrorCode = MyMJGameErrorCodeCpp::HaveNoAuthority;
+            pCmd->m_cRespErrorCode = FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::HaveNoAuthority);
         }
 
     }
@@ -1445,7 +1445,7 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(const FMyMJGamePusherResetGam
     m_pActionCollector->reinit(aContainors, pusher.m_iAttenderBehaviorRandomSelectMask);
 
     m_cDataLogic.m_eActionLoopState = MyMJActionLoopStateCpp::WaitingToGenAction;
-    m_cDataLogic.m_iMsLast = UMyMJUtilsLibrary::nowAsMsFromTick();
+    m_cDataLogic.m_iMsLast = UMyCommonUtilsLibrary::nowAsMsFromTick();
 
     //int32 uMask = genIdxAttenderStillInGameMaskOne(pusher.m_cGameRunData.m_iIdxAttenderMenFeng);
     //m_cActionLoopHelperData.setupDataForNextActionLoop(NULL, NULL, uMask, false, pusher.m_cGameRunData.m_iIdxAttenderMenFeng);

@@ -66,7 +66,7 @@ public:
     };
 
     inline
-    FString genDebugString() const
+    FString ToString() const
     {
         return FString::Printf(TEXT("[visible %d, trans %s]"), m_bVisible, *UKismetStringLibrary::Conv_TransformToString(m_cTransform));
     };

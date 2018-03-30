@@ -91,12 +91,12 @@ uint32 FMyMJGameEventTimeCfgCpp::helperGetDeltaDur(MyMJGameRuleTypeCpp ruleType,
                 ret = m_uiWeaveGangBuZhangLocalCS;
             }
             else {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid rule type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)ruleType));
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid rule type: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)ruleType));
                 MY_VERIFY(false);
             }
         }
         else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid weave visual type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameEventVisualTypeCpp"), (uint8)eWeaveVisualType));
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Invalid weave visual type: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameEventVisualTypeCpp"), (uint8)eWeaveVisualType));
             MY_VERIFY(false);
         }
     }

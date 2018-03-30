@@ -9,18 +9,18 @@ UMyTransformUpdaterInterfaceCpp::UMyTransformUpdaterInterfaceCpp(const FObjectIn
 };
 
 
-int32 IMyTransformUpdaterInterfaceCpp::getModelInfo(FMyActorModelInfoBoxCpp& modelInfo, bool verify) const
+MyErrorCodeCommonPartCpp IMyTransformUpdaterInterfaceCpp::getModelInfo(struct FMyActorModelInfoBoxCpp& modelInfo, bool verify) const
 {
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getModelInfo() must be implemented!"));
     MY_VERIFY(false);
-    return -1;
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
 };
 
-FMyWithCurveUpdaterTransformCpp& IMyTransformUpdaterInterfaceCpp::getMyWithCurveUpdaterTransformRef()
+MyErrorCodeCommonPartCpp IMyTransformUpdaterInterfaceCpp::getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterTransformCpp*& outUpdater)
 {
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyWithCurveUpdaterTransformRef() must be implemented!"));
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyWithCurveUpdaterTransform() must be implemented!"));
     MY_VERIFY(false);
-    return *((FMyWithCurveUpdaterTransformCpp *)NULL);
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
 };
 
 
@@ -29,13 +29,20 @@ UMyIdInterfaceCpp::UMyIdInterfaceCpp(const FObjectInitializer& ObjectInitializer
 
 };
 
-int32 IMyIdInterfaceCpp::getMyId() const
+MyErrorCodeCommonPartCpp IMyIdInterfaceCpp::getMyId(int32& outMyId) const
 {
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyId() not overrided by subclass."));
-    return -1;
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
 };
 
-void IMyIdInterfaceCpp::setMyId(int32 myId)
+MyErrorCodeCommonPartCpp IMyIdInterfaceCpp::setMyId(int32 myId)
 {
-    return;
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("setMyId() not overrided by subclass."));
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
+};
+
+
+UMyPawnInterfaceCpp::UMyPawnInterfaceCpp(const FObjectInitializer& ObjectInitializer)
+{
+
 };

@@ -17,20 +17,6 @@ typedef struct FMyMJDataStructCpp FMyMJDataStructCpp;
 typedef struct FMyMJDataDeltaCpp FMyMJDataDeltaCpp;
 typedef struct FMyMJGamePusherResultCpp FMyMJGamePusherResultCpp;
 
-//Warn: code use its uint8 value, don't modify it unless checked carefully
-UENUM()
-enum class MyMJGameErrorCodeCpp : uint8
-{
-    None = 0                     UMETA(DisplayName = "None"),
-    NotHandled = 1               UMETA(DisplayName = "NotHandled"),
-    HaveNoAuthority = 10         UMETA(DisplayName = "HaveNoAuthority"),
-    GameRuleTypeNotEqual = 20    UMETA(DisplayName = "GameRuleTypeNotEqual"),
-    pusherIdNotEqual = 100       UMETA(DisplayName = "pusherIdNotEqual"),
-    choicesEmpty = 120           UMETA(DisplayName = "choicesEmpty"),
-    choiceAlreadyMade = 121      UMETA(DisplayName = "choiceAlreadyMade"),
-    choiceOutOfRange = 122       UMETA(DisplayName = "choiceOutOfRange"),
-    choiceSubSelectInvalid = 123 UMETA(DisplayName = "choiceSubSelectInvalid")
-};
 
 UENUM()
 enum class MyMJGameRuleTypeCpp : uint8

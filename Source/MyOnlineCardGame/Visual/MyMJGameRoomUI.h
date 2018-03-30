@@ -15,15 +15,86 @@
 
 
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyMJGameCardWidgetBaseCpp : public UUserWidget, public IMyWidgetBasicOperationInterfaceCpp
+class MYONLINECARDGAME_API UMyMJGameCardWidgetBaseCpp : public UUserWidget, public IMyWidgetBasicOperationInterfaceCpp, public IMyIdInterfaceCpp, public IMyCardGameValueRelatedObjectInterfaceCpp
 {
     GENERATED_BODY()
 
 public:
 
+    UMyMJGameCardWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    {
+        m_iValueShowing = -1;
+        m_cResPath.Path.Reset();
+        m_iMyId = -1;
+    };
+
+    virtual ~UMyMJGameCardWidgetBaseCpp()
+    {
+
+    };
+
+
+    virtual MyErrorCodeCommonPartCpp updateValueShowing(int32 newValueShowing, int32 animationTimeMs) override;
+    virtual MyErrorCodeCommonPartCpp getValueShowing(int32& valueShowing) const override;
+    virtual MyErrorCodeCommonPartCpp setResPath(const FDirectoryPath& newResPath) override;
+    virtual MyErrorCodeCommonPartCpp getResPath(FDirectoryPath& resPath) const override;
+
+    virtual MyErrorCodeCommonPartCpp getMyId(int32& outMyId) const override
+    {
+        outMyId = m_iMyId;
+        return MyErrorCodeCommonPartCpp();
+    };
+
+    virtual MyErrorCodeCommonPartCpp setMyId(int32 myId) override
+    {
+        m_iMyId = myId;
+        return MyErrorCodeCommonPartCpp();
+    };
+
+
+    UFUNCTION(BlueprintSetter)
+        void setValueShowing2(int32 newValue)
+    {
+        updateValueShowing(newValue, 0);
+    };
+
+    UFUNCTION(BlueprintGetter)
+        int32 getValueShowing2() const
+    {
+        int32 ret = -1;
+        getValueShowing(ret);
+        return ret;
+    };
+
+    UFUNCTION(BlueprintSetter)
+        void setResPath2(const FDirectoryPath& newResPath)
+    {
+        setResPath(newResPath);
+    };
+
+    UFUNCTION(BlueprintGetter)
+        const FDirectoryPath getResPath2() const
+    {
+        FDirectoryPath ret;
+        getResPath(ret);
+
+        return ret;
+    };
+
+
 protected:
 
     IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject();
+
+    // < 0 means invalid, not set
+    UPROPERTY(EditAnywhere, BlueprintSetter = setValueShowing2, BlueprintGetter = getValueShowing2, meta = (DisplayName = "value showing"))
+    int32 m_iValueShowing;
+
+    //where the card resource is, example: /Game/Art/Models/MJCard/Type0
+    UPROPERTY(EditDefaultsOnly, BlueprintSetter = setResPath2, BlueprintGetter = getResPath2, meta = (DisplayName = "resource path", ContentDir = "true"))
+    FDirectoryPath m_cResPath;
+
+    int32 m_iMyId;
 };
 
 USTRUCT()
@@ -260,7 +331,7 @@ public:
         return m_cRuntimeMeta;
     };
 
-    int32 showAttenderWeave(float dur, MyMJGameEventVisualTypeCpp weaveVisualType);
+    FMyErrorCodeMJGameCpp showAttenderWeave(float dur, MyMJGameEventVisualTypeCpp weaveVisualType);
 
 
 protected:
@@ -349,6 +420,10 @@ public:
         invalidCachedData();
     };
 
+    
+    virtual FMyErrorCodeMJGameCpp changeDeskPositionOfIdxScreenPosition0(int32 idxDeskPositionOfIdxScreenPosition0) override;
+
+
     inline void invalidCachedData()
     {
         m_cCachedData.m_bValid = false;
@@ -380,25 +455,36 @@ public:
         return pRet;
     }; 
 
-    virtual int32 changeDeskPositionOfIdxScreenPosition0(int32 idxDeskPositionOfIdxScreenPosition0) override;
 
 protected:
 
     IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject()
 
-    int32 showImportantGameStateUpdated_Implementation(float dur, MyMJGameStateCpp newGameState)
+
+    virtual FMyErrorCodeMJGameCpp showImportantGameStateUpdated_Implementation(float dur, MyMJGameStateCpp newGameState) override
     {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: showImportantGameStateUpdated_Implementation only implemented in C++."), *GetClass()->GetName());
-        return 0;
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: showImportantGameStateUpdated only implemented in C++."), *GetClass()->GetName());
+        return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
     };
 
-    virtual int32 showAttenderWeave_Implementation(float dur, int32 idxAttender, MyMJGameEventVisualTypeCpp weaveVsualType) override;
+    virtual FMyErrorCodeMJGameCpp showAttenderWeave_Implementation(float dur, int32 idxAttender, MyMJGameEventVisualTypeCpp weaveVisualType) override;
 
-    class UMyMJGameInRoomPlayerInfoWidgetBaseCpp* getInRoomPlayerInfoWidgetByScreenPosition_Implementation(int32 idxScreenPosition)
+    virtual FMyErrorCodeMJGameCpp getInRoomPlayerInfoWidgetByScreenPositionEnsured_Implementation(int32 idxScreenPosition, class UMyMJGameInRoomPlayerInfoWidgetBaseCpp*& outWidget) override
     {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getInRoomPlayerInfoWidgetByScreenPosition_Implementation only implemented in C++."), *GetClass()->GetName());
-        return 0;
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getInRoomPlayerInfoWidgetByScreenPositionEnsured only implemented in C++."), *GetClass()->GetName());
+        MY_VERIFY(false);
+        return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
     };
+
+    inline UMyMJGameInRoomPlayerInfoWidgetBaseCpp* getInRoomPlayerInfoWidgetByScreenPositionEnsured(int32 i)
+    {
+        UMyMJGameInRoomPlayerInfoWidgetBaseCpp* ret = NULL;
+        IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_getInRoomPlayerInfoWidgetByScreenPositionEnsured(this, i, ret);
+
+        MY_VERIFY(ret);
+        return ret;
+    };
+
 
 
     //if @idxDeskPositionOfCamera < 0, it will use old settings, such as resetted value as 0

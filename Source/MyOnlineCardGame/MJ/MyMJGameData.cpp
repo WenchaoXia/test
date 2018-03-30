@@ -286,7 +286,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
 
             if (m_bShowApplyInfo) {
                 UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Debug: setting last cards with game state %s."),
-                    *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)coreDataSelf.m_eGameState));
+                    *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameStateCpp"), (uint8)coreDataSelf.m_eGameState));
             }
         }
 
@@ -349,7 +349,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
         if (coreDataDelta.m_bIncreaseActionGroupId) {
             if (ePusherType != MyMJGamePusherTypeCpp::PusherCountUpdate) {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("Increase action group id but type is %s."),
-                    *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
+                    *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
                 MY_VERIFY(false);
             }
             resetForNewActionLoop();

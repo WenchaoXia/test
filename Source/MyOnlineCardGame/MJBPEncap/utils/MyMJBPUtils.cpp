@@ -103,23 +103,23 @@ void AMyTestActorBaseCpp::genPusherPointers(FMyMJGamePusherPointersCpp &pusherPo
     pPusherUpdate->m_bActionGroupIncrease = true;
     cPushersIn.giveInLocalThread(pPusherUpdate);
 
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("genPusherPointers : %s"), *cPushersIn.genDebugString());
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("genPusherPointers : %s"), *cPushersIn.ToString());
 }
 
 
 void AMyTestActorBaseCpp::testRPCWithPusherPointers_Implementation(const FMyMJGamePusherPointersCpp &pusherPointers)
 {
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherPointers_Implementation called : %p, %s"), &pusherPointers, *pusherPointers.genDebugString());
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherPointers_Implementation called : %p, %s"), &pusherPointers, *pusherPointers.ToString());
 }
 
 void AMyTestActorBaseCpp::testRPCWithPusherNotify_Implementation(const FMyMJGamePusherMadeChoiceNotifyCpp &pusherNotify)
 {
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherNotify called : %s"), *pusherNotify.genDebugString());
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherNotify called : %s"), *pusherNotify.ToString());
 }
 
 void AMyTestActorBaseCpp::testRPCWithPusherFillIn_Implementation(const FMyMJGamePusherFillInActionChoicesCpp &pusherFillIn)
 {
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherFillIn called : %s"), *pusherFillIn.genDebugString());
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("testRPCWithPusherFillIn called : %s"), *pusherFillIn.ToString());
 }
 */
 
@@ -199,8 +199,8 @@ void UMyMJBPUtilsLibrary::testPusherSerialize0(int32 param)
     pPusherUpdate->m_bActionGroupIncrease = true;
     cPushersIn.giveInLocalThread(pPusherUpdate);
 
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("before Ser In : %s"), *cPushersIn.genDebugString());
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("before Ser Out: %s"), *cPushersOut.genDebugString());
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("before Ser In : %s"), *cPushersIn.ToString());
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("before Ser Out: %s"), *cPushersOut.ToString());
 
     FBufferArchive ToBinary;
     FMemoryReader FromBinary = FMemoryReader(ToBinary);
@@ -213,7 +213,7 @@ void UMyMJBPUtilsLibrary::testPusherSerialize0(int32 param)
     FromBinary.Seek(0);
     cPushersOut.trySerializeWithTag(FromBinary);
 
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("after Ser: %s"), *cPushersOut.genDebugString());
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("after Ser: %s"), *cPushersOut.ToString());
 
 }
 
@@ -224,7 +224,7 @@ void UMyMJBPUtilsLibrary::testGameCoreInLocalThread(int32 seed, bool bAttenderRa
         iSeed = seed;
     }
     else {
-        iSeed = UMyMJUtilsLibrary::nowAsMsFromTick();
+        iSeed = UMyCommonUtilsLibrary::nowAsMsFromTick();
     }
 
     FMyMJGameCoreCpp *pCore = helperCreateCoreByRuleType(MyMJGameRuleTypeCpp::LocalCS, iSeed, MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero | MyMJGameCoreTrivalConfigMaskShowPusherLog);
@@ -340,12 +340,12 @@ MyMJGameEventVisualTypeCpp UMyMJBPUtilsLibrary::helperGetEventVisualTypeFromWeav
             }
         }
         else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected weave type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)eWeaveType));
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected weave type: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)eWeaveType));
             return MyMJGameEventVisualTypeCpp::Invalid;
         }
     }
     else {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("meet unsupported rule type: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)ruleType));
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("meet unsupported rule type: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameRuleTypeCpp"), (uint8)ruleType));
         return MyMJGameEventVisualTypeCpp::Invalid;
     }
 };

@@ -8,12 +8,77 @@
 
 #include "Kismet/BlueprintFunctionLibrary.h"
 
-#include "Utils/CommonUtils/MyCommonUtils.h"
+#include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
 
 
 #include "MyMJUtils.generated.h"
 
 #define MY_MJCARD_ID_FAKE -1
+
+//Warn: code use its uint8 value, don't modify it unless checked carefully
+UENUM(BlueprintType)
+enum class MyErrorCodeSubPartMJGameCpp : uint8
+{
+    NoError = 0                     UMETA(DisplayName = "NoError"),
+
+    GameRuleTypeNotEqual = 20    UMETA(DisplayName = "GameRuleTypeNotEqual"),
+    pusherIdNotEqual = 100       UMETA(DisplayName = "pusherIdNotEqual"),
+    choicesEmpty = 120           UMETA(DisplayName = "choicesEmpty"),
+    choiceAlreadyMade = 121      UMETA(DisplayName = "choiceAlreadyMade"),
+    choiceOutOfRange = 122       UMETA(DisplayName = "choiceOutOfRange"),
+    choiceSubSelectInvalid = 123 UMETA(DisplayName = "choiceSubSelectInvalid")
+};
+
+
+USTRUCT(BlueprintType)
+struct FMyErrorCodeMJGameCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp eCommonPart = MyErrorCodeCommonPartCpp::NoError, MyErrorCodeSubPartMJGameCpp eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::NoError)
+    {
+        m_eCommonPart = eCommonPart;
+        m_eSubPartMJGame = eSubPartMJGame;
+    };
+
+    FMyErrorCodeMJGameCpp(MyErrorCodeSubPartMJGameCpp eSubPartMJGame) : FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::NoError, eSubPartMJGame)
+    {
+    };
+
+    virtual ~FMyErrorCodeMJGameCpp()
+    {
+
+    };
+
+    inline bool hasError() const
+    {
+        return m_eCommonPart != MyErrorCodeCommonPartCpp::NoError || m_eSubPartMJGame != MyErrorCodeSubPartMJGameCpp::NoError;
+    };
+
+    inline void reset()
+    {
+        m_eCommonPart = MyErrorCodeCommonPartCpp::NoError;
+        m_eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::NoError;
+    };
+
+    FString ToString() const
+    {
+        return FString::Printf(TEXT("(%s, %s)"), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyErrorCodeCommonPartCpp"), (uint8)m_eCommonPart), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyErrorCodeSubPartMJGameCpp"), (uint8)m_eSubPartMJGame));
+    };
+
+    //we don't combine error code pars, but list them here
+
+    //Common Error Code
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "common part"))
+    MyErrorCodeCommonPartCpp    m_eCommonPart;
+
+    //Sub Error Code
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "sub part MJ game"))
+    MyErrorCodeSubPartMJGameCpp m_eSubPartMJGame;
+};
+
 
 UENUM()
 enum class MyMJCardValueTypeCpp : uint8
@@ -570,7 +635,7 @@ struct FMyMJWeaveCpp
         }
     };
 
-    FString genDebugString() const;
+    FString ToString() const;
 
 protected:
 
@@ -781,7 +846,7 @@ struct FMyMJWeaveCpp
         getIdsSortedWithTriggerCardRule(idxAtttenderThisWeaveBelong, m_aIds);
     }
 
-    FString genDebugString() const;
+    FString ToString() const;
 
 protected:
 
@@ -989,7 +1054,7 @@ struct FMyMJHuScoreAttrCpp
         return m_eType == other.m_eType && m_iScorePerAttender == other.m_iScorePerAttender;
     };
 
-    FString genDebugString() const;
+    FString ToString() const;
 
     /* type */
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Type"))
@@ -1188,7 +1253,7 @@ public:
     };
 
 
-    FString genDebugString() const;
+    FString ToString() const;
 
 
 protected:
@@ -1293,13 +1358,13 @@ public:
         m_eHuMainType = MyMJHuMainTypeCpp::Invalid;
     };
 
-    FString genDebugString() const
+    FString ToString() const
     {
         int32 l = m_aScoreResults.Num();
         FString ret = FString::Printf(TEXT(" idxWin: %d, idxLoseOnlyOne %d,  m_eHuMainType %d, scoreResultNum %d. "), m_iIdxAttenderWin, m_iIdxAttenderLoseOnlyOne, (uint8)m_eHuMainType, l);
 
         for (int32 i = 0; i < l; i++) {
-            ret += m_aScoreResults[i].genDebugString();
+            ret += m_aScoreResults[i].ToString();
             //m_aScoreResults[i].
         }
 
@@ -1366,7 +1431,7 @@ public:
         return (m_iTriggerCardLeftOnDesktop != 0) && (!m_bBanPao);
     };
 
-    FString genDebugString() const
+    FString ToString() const
     {
         FString ret = FString::Printf(TEXT(" m_iValueTriggerCard %d, m_iTriggerCardLeftOnDesktop %d, m_bBanZiMo %d, m_bBanPao %d."), m_iValueTriggerCard, m_iTriggerCardLeftOnDesktop, m_bBanZiMo, m_bBanPao);
         return ret;
@@ -1412,13 +1477,13 @@ public:
     };
 
 
-    FString genDebugString() const
+    FString ToString() const
     {
         int32 l = m_aTings.Num();
         FString ret = FString::Printf(TEXT(" ting count %d, values count %d. "), getCount(), m_aValuesHandCardWhenChecking.Num());
 
         for (int32 i = 0; i < l; i++) {
-            ret += m_aTings[i].genDebugString();
+            ret += m_aTings[i].ToString();
         }
 
         return ret;
@@ -2400,48 +2465,23 @@ public:
 
     };
 
-    /*
-    static
-    int32 getMidValueWithWeaveType(const TArray<FMyIdValuePair> &aIdValues, MyMJWeaveTypeCpp eWeaveType)
+    //Return true if have error
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToBool (MyErrorCodeMJGameCpp)", CompactNodeTitle = "->", BlueprintAutocast), Category = "MyMJUtilsLibrary")
+    static bool Conv_MyErrorCodeMJGameCpp_Bool(const FMyErrorCodeMJGameCpp& errorCode)
     {
-        int32 l = aIdValues.Num();
-        MY_VERIFY(l > 0);
-
-        if (eWeaveType == MyMJWeaveTypeCpp::ShunZiAn || eWeaveType == MyMJWeaveTypeCpp::ShunZiMing) {
-            int vall = 0;
-            for (int32 i = 0; i < l; i++) {
-                int32 v = aIdValues[i].m_iValue;
-                MY_VERIFY(v > 0); //any time calc value, assert it is a valid one
-                vall += v;
-            }
-
-            return vall / l;
-        }
-        else {
-            int32 v = aIdValues[0].m_iValue;
-            MY_VERIFY(v > 0); //any time calc value, assert it is a valid one
-            return v;
-        }
+        return errorCode.hasError();
     };
-    */
+
+    //ToString
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (MyErrorCodeMJGameCpp)", CompactNodeTitle = "->", BlueprintAutocast), Category = "MyMJUtilsLibrary")
+    static FString Conv_MyErrorCodeMJGameCpp_String(const FMyErrorCodeMJGameCpp& errorCode)
+    {
+        return errorCode.ToString();
+    };
 
     static void array2MapForHuScoreAttr(const TArray<FMyMJHuScoreAttrCpp>& aHuBornScoreAttrs, TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& mHuBornScoreAttrs);
 
     static bool checkUniformOfArrayAndMapForHuScoreAttr(const TArray<FMyMJHuScoreAttrCpp>& aHuBornScoreAttrs, const TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& mHuBornScoreAttrs, bool bComplexCheck);
-
-    static FString getStringFromEnum(const TCHAR *enumName, uint8 value);
-
-    static int64 nowAsMsFromTick();
-
-    static FString formatStrIds(const TArray<int32> &aIds);
-
-    static FString formatStrIdsValues(const TArray<int32> &aIds, const TArray<int32> &aValues);
-
-    static FString formatStrIdValuePairs(const TArray<FMyIdValuePair> &aIdValues);
-
-    static FString formatMaskString(int32 iMask, uint32 uBitsCount);
-
-    static void convertIdValuePairs2Ids(const TArray<FMyIdValuePair> &aIdValues, TArray<int32> &outaValues);
 
     //Note if all cards of one weave is removed in @inWeaves, that weave will be deleted
     static bool removeCardByIdInWeaves(TArray<FMyMJWeaveCpp> &inWeaves, int32 id, bool *pOutWeaveDeleted);
@@ -2542,3 +2582,29 @@ protected:
 
     static void calcHuScorePostProcess(const FMyMJHuActionAttrBaseCpp &inHuActionAttrBase, const FMyTriggerDataCpp *pTriggerData, const TArray<FMyMJWeaveCpp> &inWeavesShowedOut, FMyMJScoreCalcResultCpp &outScoreResult);
 };
+
+
+/*
+static
+int32 getMidValueWithWeaveType(const TArray<FMyIdValuePair> &aIdValues, MyMJWeaveTypeCpp eWeaveType)
+{
+int32 l = aIdValues.Num();
+MY_VERIFY(l > 0);
+
+if (eWeaveType == MyMJWeaveTypeCpp::ShunZiAn || eWeaveType == MyMJWeaveTypeCpp::ShunZiMing) {
+int vall = 0;
+for (int32 i = 0; i < l; i++) {
+int32 v = aIdValues[i].m_iValue;
+MY_VERIFY(v > 0); //any time calc value, assert it is a valid one
+vall += v;
+}
+
+return vall / l;
+}
+else {
+int32 v = aIdValues[0].m_iValue;
+MY_VERIFY(v > 0); //any time calc value, assert it is a valid one
+return v;
+}
+};
+*/

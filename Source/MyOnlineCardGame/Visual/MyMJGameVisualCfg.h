@@ -171,7 +171,7 @@ public:
     UPROPERTY(EditAnywhere, meta = (DisplayName = "common action actor show point"))
     FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp m_cCommonActionActorShowPoint;
 
-    //By default, attender point on screen is calculated at runtime by project desktop point on player screen. If enabled, it will use overrided value directly to helper combine umg
+    //By default, attender point on screen is calculated at runtime by projected point from desktop area actor's attender point. If enabled, it will use overrided value directly to helper combine umg
     UPROPERTY(EditAnywhere, meta = (DisplayName = "attender point on screen override"))
     bool m_bAttenderPointOnScreenOverride;
 

@@ -32,25 +32,25 @@ class IMyMJGameInRoomDeskInterfaceCpp
 public:
 
     UFUNCTION(BlueprintNativeEvent)
-        int32 showAttenderThrowDices(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
-                                     int32 diceVisualStateKey,
-                                     const TArray<class AMyMJGameDiceBaseCpp *>& aDices);
+    FMyErrorCodeMJGameCpp showAttenderThrowDices(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+                                                 int32 diceVisualStateKey,
+                                                 const TArray<class AMyMJGameDiceBaseCpp *>& aDices);
 
 
     UFUNCTION(BlueprintNativeEvent)
-    int32 showAttenderCardsDistribute(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+    FMyErrorCodeMJGameCpp showAttenderCardsDistribute(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                       const TArray<int32>& aIdsHandCards, bool isLastDistribution,
                                       const TArray<class AMyMJGameCardBaseCpp*>& cardActorsDistributed,
                                       const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving);
 
     UFUNCTION(BlueprintNativeEvent)
-    int32 showAttenderTakeCards(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+    FMyErrorCodeMJGameCpp showAttenderTakeCards(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                  const TArray<AMyMJGameCardBaseCpp*>& cardActorsTaken);
     
 
     //@handCardCount is used to tip how many cards left, and the implemention can use it to detect if this card is injecting(jump into the cards stacks)
     UFUNCTION(BlueprintNativeEvent)
-    int32 showAttenderGiveOutCards(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+    FMyErrorCodeMJGameCpp showAttenderGiveOutCards(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                     int32 handCardsCount,
                                     const TArray<AMyMJGameCardBaseCpp*>& cardActorsGivenOut,
                                     const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving);
@@ -58,7 +58,7 @@ public:
 
     //All card actors passed in, are attender related
     UFUNCTION(BlueprintNativeEvent)
-    int32 showAttenderWeave(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+    FMyErrorCodeMJGameCpp showAttenderWeave(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                             MyMJGameEventVisualTypeCpp weaveVisualType, const struct FMyMJWeaveCpp& weave,
                             const TArray<class AMyMJGameCardBaseCpp*>& cardActorsWeaved, const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving);
 };
@@ -79,42 +79,23 @@ public:
 
     //some important event happend, like game start or end
     UFUNCTION(BlueprintNativeEvent)
-    int32 showImportantGameStateUpdated(float dur, MyMJGameStateCpp newGameState);
+    FMyErrorCodeMJGameCpp showImportantGameStateUpdated(float dur, MyMJGameStateCpp newGameState);
 
     //return error code, 0 means OK
     UFUNCTION(BlueprintNativeEvent)
-    int32 showAttenderWeave(float dur, int32 idxAttender, MyMJGameEventVisualTypeCpp weaveVisualType);
+    FMyErrorCodeMJGameCpp showAttenderWeave(float dur, int32 idxAttender, MyMJGameEventVisualTypeCpp weaveVisualType);
 
     //max is always 4
-    virtual int32 changeDeskPositionOfIdxScreenPosition0(int32 idxDeskPositionOfIdxScreenPosition0)
+    virtual FMyErrorCodeMJGameCpp changeDeskPositionOfIdxScreenPosition0(int32 idxDeskPositionOfIdxScreenPosition0)
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("changeDeskPositionOfIdxScreenPosition0 must be override!"));
         MY_VERIFY(false);
-        return 0;
+        return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass);
     };
 
 protected:
 
+    //never fail, coredump in that case
     UFUNCTION(BlueprintNativeEvent)
-    class UMyMJGameInRoomPlayerInfoWidgetBaseCpp* getInRoomPlayerInfoWidgetByScreenPosition(int32 idxScreenPosition);
-};
-
-
-UINTERFACE()
-class UMyPawnUIInterfaceCpp : public UInterface
-{
-    GENERATED_UINTERFACE_BODY()
-};
-
-class IMyPawnUIInterfaceCpp
-{
-    GENERATED_IINTERFACE_BODY()
-
-public:
-
-    virtual void OnPossessedByLocalPlayerController(APlayerController* newController) = NULL;
-    virtual void OnUnPossessedByLocalPlayerController(APlayerController* oldController) = NULL;
-
-protected:
-
+    FMyErrorCodeMJGameCpp getInRoomPlayerInfoWidgetByScreenPositionEnsured(int32 idxScreenPosition, class UMyMJGameInRoomPlayerInfoWidgetBaseCpp*& outWidget);
 };

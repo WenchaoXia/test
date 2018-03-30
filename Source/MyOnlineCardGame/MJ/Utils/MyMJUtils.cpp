@@ -6,12 +6,12 @@
 
 FString FMyMJCardPosiCpp::genDebugMsg() const
 {
-    return FString::Printf(TEXT("[%d, %s, %d, %d]"), m_iIdxAttender, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardSlotTypeCpp"), (uint8)m_eSlot), m_iIdxInSlot0, m_iIdxInSlot1);
+    return FString::Printf(TEXT("[%d, %s, %d, %d]"), m_iIdxAttender, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJCardSlotTypeCpp"), (uint8)m_eSlot), m_iIdxInSlot0, m_iIdxInSlot1);
 };
 
 FString FMyMJCardInfoCpp::genDebugMsg() const
 {
-    return FString::Printf(TEXT("[id %d, flip %s]"), m_iId, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eFlipState)) + m_cPosi.genDebugMsg();
+    return FString::Printf(TEXT("[id %d, flip %s]"), m_iId, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eFlipState)) + m_cPosi.genDebugMsg();
 };
 
 void FMyMJCardValuePackCpp::helperVerifyValues() const
@@ -141,17 +141,17 @@ void FMyMJWeaveCpp::addCard(int32 id)
 
     if (idx < 0) {
 
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("id not unique, id %d, now array: %s ."), id, *UMyMJUtilsLibrary::formatStrIds(m_aIds));
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("id not unique, id %d, now array: %s ."), id, *UMyCommonUtilsLibrary::formatStrIds(m_aIds));
         MY_VERIFY(false);
     }
 
 };
 
-FString FMyMJWeaveCpp::genDebugString() const
+FString FMyMJWeaveCpp::ToString() const
 {
-    FString ret = FString::Printf(TEXT(" m_eType: %s, m_iIdTriggerCard %d, m_iIdxAttenderTriggerCardSrc %d, m_eTypeConsumed: %s, m_bGangBuZhangLocalCS: %d."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eType), m_iIdTriggerCard, m_iIdxAttenderTriggerCardSrc, *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eTypeConsumed), m_bGangBuZhangLocalCS);
+    FString ret = FString::Printf(TEXT(" m_eType: %s, m_iIdTriggerCard %d, m_iIdxAttenderTriggerCardSrc %d, m_eTypeConsumed: %s, m_bGangBuZhangLocalCS: %d."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eType), m_iIdTriggerCard, m_iIdxAttenderTriggerCardSrc, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJWeaveTypeCpp"), (uint8)m_eTypeConsumed), m_bGangBuZhangLocalCS);
 
-    //ret += UMyMJUtilsLibrary::formatStrIdValuePairs(m_aIdValues);
+    //ret += UMyCommonUtilsLibrary::formatStrIdValuePairs(m_aIdValues);
 
     return ret;
 };
@@ -204,13 +204,13 @@ void FMyMJWeaveCpp::getIdsSortedWithTriggerCardRule(int32 idxAtttenderThisWeaveB
 };
 
 
-FString FMyMJHuScoreAttrCpp::genDebugString() const
+FString FMyMJHuScoreAttrCpp::ToString() const
 {
-    return FString::Printf(TEXT("(%s, %d)"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)m_eType), m_iScorePerAttender);
+    return FString::Printf(TEXT("(%s, %d)"), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)m_eType), m_iScorePerAttender);
 };
 
 
-FString FMyMJHuScoreResultBaseCpp::genDebugString() const
+FString FMyMJHuScoreResultBaseCpp::ToString() const
 {
     //FString::Printf(TEXT(" m_aWeavesShowedOut.NUm(): %d. m_aWeavesInHand.Num: %d."), m_aWeavesShowedOut.Num(), m_aWeavesInHand.Num());
     FString ret = FString::Printf(TEXT(" m_iScorePerAttenderTotal: %d. "), m_iScorePerAttenderTotal);
@@ -220,15 +220,15 @@ FString FMyMJHuScoreResultBaseCpp::genDebugString() const
     {
         MyMJHuScoreTypeCpp eType = It.Key();
 
-        ret += UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)eType) + ", ";
+        ret += UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)eType) + ", ";
 
     }
     */
 
     int32 l = m_aScoreResultItems.Num();
     for (int32 i = 0; i < l; i++) {
-        ret += FString::Printf(TEXT("(%s, %d, %d), "), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)m_aScoreResultItems[i].m_eType), m_aScoreResultItems[i].m_iScorePerAttender, m_aScoreResultItems[i].m_iCount);
-        //ret += UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)m_aScoreTypeItem[i].m_eType) + ", ";
+        ret += FString::Printf(TEXT("(%s, %d, %d), "), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)m_aScoreResultItems[i].m_eType), m_aScoreResultItems[i].m_iScorePerAttender, m_aScoreResultItems[i].m_iCount);
+        //ret += UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJHuScoreTypeCpp"), (uint8)m_aScoreTypeItem[i].m_eType) + ", ";
     }
 
     return ret;
@@ -1463,108 +1463,17 @@ bool UMyMJUtilsLibrary::checkUniformOfArrayAndMapForHuScoreAttr(const TArray<FMy
         const FMyMJHuScoreAttrCpp* pAttrOfArray = &aHuBornScoreAttrs[i];
         const FMyMJHuScoreAttrCpp* pAttrOfMap = mHuBornScoreAttrs.Find(pAttrOfArray->m_eType);
         if (pAttrOfMap == NULL) {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("array elem %s not found in map."), *pAttrOfArray->genDebugString());
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("array elem %s not found in map."), *pAttrOfArray->ToString());
             return false;
         }
 
         if (!pAttrOfArray->equal(*pAttrOfMap)) {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("array and map elem not equal: %s, %s."), *pAttrOfArray->genDebugString(), *pAttrOfMap->genDebugString());
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("array and map elem not equal: %s, %s."), *pAttrOfArray->ToString(), *pAttrOfMap->ToString());
             return false;
         }
     }
 
     return true;
-}
-
-FString
-UMyMJUtilsLibrary::getStringFromEnum(const TCHAR *enumName, uint8 value)
-{
-    //const UEnum* enumPtr = FindObject<UEnum>(ANY_PACKAGE, *Name, true);
-    const UEnum* enumPtr = FindObject<UEnum>(ANY_PACKAGE, enumName, true);
-    if (!enumPtr)
-    {
-        return FString("Invalid Enum type");
-    }
-
-    //return FString::Printf(TEXT("%s(%d)"), *enumPtr->GetEnumNameStringByValue(value), value);
-    //return enumPtr->GetEnumNameStringByValue(value);
-    return FString::Printf(TEXT("%s(%d)"), *enumPtr->GetNameStringByValue(value), value);
-    //GetNameStringByValue
-}
-
-int64
-UMyMJUtilsLibrary::nowAsMsFromTick()
-{
-    return UKismetMathLibrary::Now().GetTicks() / (ETimespan::TicksPerSecond / 1000);
-}
-
-FString UMyMJUtilsLibrary::formatStrIds(const TArray<int32> &aIds)
-{
-    FString str;
-    int32 l = aIds.Num();
-
-    for (int32 i = 0; i < l; i++) {
-        str += FString::Printf(TEXT("(%d), "), aIds[i]);
-    }
-
-    return str;
-}
-
-FString
-UMyMJUtilsLibrary::formatStrIdsValues(const TArray<int32> &aIds, const TArray<int32> &aValues)
-{
-    FString str;
-    int32 l = aIds.Num();
-    MY_VERIFY(l == aValues.Num());
-    for (int32 i = 0; i < l; i++) {
-        str += FString::Printf(TEXT("(%d, %d), "), aIds[i], aValues[i]);
-    }
-
-    return str;
-}
-
-FString
-UMyMJUtilsLibrary::formatStrIdValuePairs(const TArray<FMyIdValuePair> &aIdValues)
-{
-    FString str;
-    int32 l = aIdValues.Num();
-    for (int32 i = 0; i < l; i++) {
-        str += aIdValues[i].genDebugStr() + TEXT(",");
-        //str += FString::Printf(TEXT("(%d, %d), "), aIdValues[i].m_iId, aIdValues[i].m_iValue);
-    }
-
-    return str;
-}
-
-
-FString
-UMyMJUtilsLibrary::formatMaskString(int32 iMask, uint32 uBitsCount)
-{
-    FString str = FString::Printf(TEXT("%d(bin: "), iMask);
-
-    if (uBitsCount > 32) {
-        uBitsCount = 32;
-    }
-
-    while (uBitsCount > 0) {
-        uBitsCount--;
-        str += FString::Printf(TEXT("%d"), (iMask >> uBitsCount) & 1);
-    }
-
-    str += TEXT(")");
-
-    return str;
-
-}
-
-void UMyMJUtilsLibrary::convertIdValuePairs2Ids(const TArray<FMyIdValuePair> &aIdValues, TArray<int32> &outaValues)
-{
-    outaValues.Reset();
-
-    int32 l = aIdValues.Num();
-    for (int32 i = 0; i < l; i++) {
-        outaValues.Emplace(aIdValues[i].m_iId);
-    }
 }
 
 bool UMyMJUtilsLibrary::removeCardByIdInWeaves(TArray<FMyMJWeaveCpp> &inWeaves, int32 id, bool *pOutWeaveDeleted)

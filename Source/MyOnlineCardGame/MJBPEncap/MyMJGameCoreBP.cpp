@@ -320,7 +320,7 @@ bool AMyMJGameCoreDataSourceCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType, in
             iSeed = m_iSeed2OverWrite;
         }
         else {
-            iSeed = UMyMJUtilsLibrary::nowAsMsFromTick();
+            iSeed = UMyCommonUtilsLibrary::nowAsMsFromTick();
         }
         //iSeed = 530820412;
 

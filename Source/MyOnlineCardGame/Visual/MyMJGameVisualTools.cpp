@@ -46,7 +46,7 @@ int32 AMyMJGameTextureGenSuitBaseCpp::genTextureForMJCardValues(FString namePref
         for (int32 j = 1; j < 10; j++) {
             value = i * 10 + j;
 
-            pCardActor->setValueShowing(value);
+            pCardActor->setValueShowing2(value);
             fullPath = finalPrefix + FString::Printf(TEXT("%02d"), value);
 
             ret = genDo(fullPath);
@@ -63,7 +63,7 @@ int32 AMyMJGameTextureGenSuitBaseCpp::genTextureForMJCardValues(FString namePref
     if (haveWord) {
         for (value = 31; value < 35; value++)
         {
-            pCardActor->setValueShowing(value);
+            pCardActor->setValueShowing2(value);
             fullPath = finalPrefix + FString::Printf(TEXT("%02d"), value);
 
             ret = genDo(fullPath);
@@ -78,7 +78,7 @@ int32 AMyMJGameTextureGenSuitBaseCpp::genTextureForMJCardValues(FString namePref
 
         for (value = 41; value < 44; value++)
         {
-            pCardActor->setValueShowing(value);
+            pCardActor->setValueShowing2(value);
             fullPath = finalPrefix + FString::Printf(TEXT("%02d"), value);
 
             ret = genDo(fullPath);
@@ -95,7 +95,7 @@ int32 AMyMJGameTextureGenSuitBaseCpp::genTextureForMJCardValues(FString namePref
     if (haveHua) {
         for (value = 51; value < 59; value++)
         {
-            pCardActor->setValueShowing(value);
+            pCardActor->setValueShowing2(value);
             fullPath = finalPrefix + FString::Printf(TEXT("%02d"), value);
 
             ret = genDo(fullPath);

@@ -329,7 +329,7 @@ public:
 
         m_pResManager = MakeShareable<FMyMJGameResManager>(new FMyMJGameResManager(iSeed));
 
-        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("[%s] inited with seed: %d"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameElemWorkModeCpp"), (uint8)eWorkMode), iSeed);
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("[%s] inited with seed: %d"), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameElemWorkModeCpp"), (uint8)eWorkMode), iSeed);
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("full core inited with seed: %d"), iSeed);
     };
 

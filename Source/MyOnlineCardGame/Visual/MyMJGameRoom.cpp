@@ -24,16 +24,16 @@
 #include "Curves/CurveVector.h"
 
 
-int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp& cPointCfgCache) const
+FMyErrorCodeMJGameCpp AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp& cPointCfgCache) const
 {
     cPointCfgCache.clear();
 
     FMyMJGameDeskVisualPointCfgCpp temp;
-    int32 ret;
+    FMyErrorCodeMJGameCpp ret;
     for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
         for (uint8 eSlot = ((uint8)MyMJCardSlotTypeCpp::InvalidIterateMin + 1); eSlot < (uint8)MyMJCardSlotTypeCpp::InvalidIterateMax; eSlot++) {
             ret = retrieveCardVisualPointCfg(idxAttender, (MyMJCardSlotTypeCpp)eSlot, temp);
-            if (ret != 0) {
+            if (ret.hasError()) {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got error when retrieving card cfg from Blueprint idxAttender %d, eSlot %d."), idxAttender, eSlot);
                 return ret;
             }
@@ -45,7 +45,7 @@ int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp
     for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
         for (uint8 eSubtype = ((uint8)MyMJGameDeskVisualElemAttenderSubtypeCpp::Invalid + 1); eSubtype < (uint8)MyMJGameDeskVisualElemAttenderSubtypeCpp::Max; eSubtype++) {
             ret = retrieveAttenderVisualPointCfg(idxAttender, (MyMJGameDeskVisualElemAttenderSubtypeCpp)eSubtype, temp);
-            if (ret != 0) {
+            if (ret.hasError()) {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got error when retrieving attender cfg from Blueprint idxAttender %d, eSlot %d."), idxAttender, eSubtype);
                 return ret;
             }
@@ -56,14 +56,14 @@ int32 AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisualPointCfgCacheCpp
 
     MyMJGameDeskVisualElemTypeCpp elemType = MyMJGameDeskVisualElemTypeCpp::Dice;
     ret = retrieveTrivalVisualPointCfg(elemType, 0, 0, temp);
-    if (ret != 0) {
+    if (ret.hasError()) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got error when retrieving trival cfg from Blueprint elemType %d, subIdx0 %d, subIdx1 %d."), (uint8)elemType, 0, 0);
         return ret;
     }
 
     cPointCfgCache.setTrivalVisualPointCfgByIdxAttenderAndSlot(elemType, 0, 0, temp);
 
-    return 0;
+    return ret;
 };
 
 
@@ -164,33 +164,35 @@ int32 UMyMJGameDeskResManagerCpp::prepareForVisual(int32 cardActorNum)
     return 0;
 };
 
-int32 UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const
+FMyErrorCodeMJGameCpp UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const
 {
+    FMyErrorCodeMJGameCpp ret;
+
     cModelInfoCache.clear();
 
     const AMyMJGameCardBaseCpp* pCDO = getCardActorByIdxConst(0);
     if (!IsValid(pCDO)) {
-        return -1;
+        return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::RuntimeCDONotPrepared);
     }
 
-    int32 ret = pCDO->getModelInfo(cModelInfoCache.m_cCardModelInfo, false);
-    if (ret != 0) {
+    ret.m_eCommonPart = pCDO->getModelInfo(cModelInfoCache.m_cCardModelInfo, false);
+    if (ret.hasError()) {
         return ret;
     }
 
     const AMyMJGameDiceBaseCpp* pDice = getDiceActorByIdxConst(0);
     if (!IsValid(pDice)) {
-        return -1;
+        return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::RuntimeCDONotPrepared);
     }
 
     ret = pDice->getDiceModelInfo(cModelInfoCache.m_cDiceModelInfo, false);
-    if (ret != 0) {
+    if (ret.hasError()) {
         return ret;
     }
 
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("retrieveCfgCache, pCDO name %s, card box: %s."), *pCDO->GetName(), *cModelInfoCache.m_cCardModelInfo.m_cBoxExtend.ToString());
 
-    return 0;
+    return ret;
 };
 
 AMyMJGameTrivalDancingActorBaseCpp* UMyMJGameDeskResManagerCpp::getTrivalDancingActorByClass(TSubclassOf<AMyMJGameTrivalDancingActorBaseCpp> classType, bool freeActorOnly)
@@ -343,7 +345,7 @@ void AMyMJGameRoomCpp::startVisual()
 
     if (checkSettings()) {
         FMyMJGameDeskVisualCfgCacheCpp cCfgCache;
-        if (0 == retrieveCfg(cCfgCache)) {
+        if (!retrieveCfg(cCfgCache).hasError()) {
 
             UMyMJGameDeskVisualDataObjCpp* pO = m_pDataSuit->getDeskDataObjVerified();
 
@@ -430,31 +432,31 @@ void AMyMJGameRoomCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
     }
 };
 
-int32 AMyMJGameRoomCpp::retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache)
+FMyErrorCodeMJGameCpp AMyMJGameRoomCpp::retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache)
 {
     cCfgCache.clear();
 
     if (!IsValid(m_pResManager)) {
-        return -1;
+        return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::UComponentNotExist);
     }
 
-    int32 ret;
+    FMyErrorCodeMJGameCpp ret;
     ret = m_pResManager->retrieveCfgCache(cCfgCache.m_cModelInfo);
-    if (ret != 0) {
+    if (ret.hasError()) {
         return ret;
     }
 
     if (!IsValid(m_pDeskAreaActor)) {
-        return -2;
+        return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::AActorNotExist);
     }
 
     //get card
     ret = m_pDeskAreaActor->retrieveCfgCache(cCfgCache.m_cPointCfg);
-    if (ret != 0) {
+    if (ret.hasError()) {
         return ret;
     }
 
-    return 0;
+    return ret;
 };
 
 MyMJGameRuleTypeCpp AMyMJGameRoomCpp::helperGetRuleTypeNow() const
@@ -495,7 +497,7 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
 
         AMyMJGameCardBaseCpp* pCardActor = m_pResManager->getCardActorByIdxEnsured(idCard);
 
-        pCardActor->setValueShowing(cInfoAndResult.m_cVisualInfo.m_iCardValue);
+        pCardActor->setValueShowing2(cInfoAndResult.m_cVisualInfo.m_iCardValue);
         pCardActor->SetActorHiddenInGame(false);
         //pCardActor->setVisible(false);
         //pCardActor->SetActorTransform(cInfoAndResult.m_cVisualResult.m_cTransform);
@@ -511,7 +513,7 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
 
         pCardActor->addTargetToGoHistory(cInfoAndResult);
    
-        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor %03d updated: %s."), idCard, *cInfoAndResult.genDebugString());
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor %03d updated: %s."), idCard, *cInfoAndResult.ToString());
     }
 
     //Todo: handle other dirty data
@@ -552,7 +554,7 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
     FString eventStr = TEXT("other");
     if (cEvent.getPusherResult(false)) {
         if (cEvent.getPusherResult(false)->m_aResultDelta.Num() > 0) {
-            eventStr = cEvent.getPusherResult(false)->m_aResultDelta[0].genDebugString();
+            eventStr = cEvent.getPusherResult(false)->m_aResultDelta[0].ToString();
         }
         else {
             eventStr = TEXT("full base update");
@@ -782,7 +784,7 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
                 */
             }
             else {
-                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got a unhandled delta event with type %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got a unhandled delta event with type %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType));
             }
         }
     }
@@ -797,7 +799,8 @@ void AMyMJGameRoomCpp::tipDataSkipped()
 };
 
 
-int32 AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+FMyErrorCodeMJGameCpp
+AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                                               int32 diceVisualStateKey,
                                                               const TArray<class AMyMJGameDiceBaseCpp *>& aDices)
 {
@@ -928,10 +931,11 @@ int32 AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 i
 
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("showAttenderThrowDices_Implementation."));
 
-    return 0;
+    return FMyErrorCodeMJGameCpp();
 }
 
-int32 AMyMJGameRoomCpp::showAttenderCardsDistribute_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+FMyErrorCodeMJGameCpp
+AMyMJGameRoomCpp::showAttenderCardsDistribute_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                                                    const TArray<int32>& aIdsHandCards, bool isLastDistribution,
                                                                    const TArray<class AMyMJGameCardBaseCpp*>& cardActorsDistributed,
                                                                    const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving)
@@ -1048,10 +1052,11 @@ int32 AMyMJGameRoomCpp::showAttenderCardsDistribute_Implementation(float dur, in
 
     }
 
-    return 0;
+    return FMyErrorCodeMJGameCpp();
 }
 
-int32 AMyMJGameRoomCpp::showAttenderTakeCards_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+FMyErrorCodeMJGameCpp
+AMyMJGameRoomCpp::showAttenderTakeCards_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                                              const TArray<AMyMJGameCardBaseCpp*>& cardActorsTaken)
 {
     UMyCommonUtilsLibrary::invalidScreenDataCache();
@@ -1079,10 +1084,11 @@ int32 AMyMJGameRoomCpp::showAttenderTakeCards_Implementation(float dur, int32 id
         UMyCommonUtilsLibrary::helperSetupTransformUpdateAnimationStepsForPoint(this, dur, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSteps, 0, aBase, TEXT("take cards focused"), true);
     }
 
-    return 0;
+    return FMyErrorCodeMJGameCpp();
 }
 
-int32 AMyMJGameRoomCpp::showAttenderGiveOutCards_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+FMyErrorCodeMJGameCpp
+AMyMJGameRoomCpp::showAttenderGiveOutCards_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                                                 int32 handCardsCount,
                                                                 const TArray<AMyMJGameCardBaseCpp*>& cardActorsGivenOut,
                                                                 const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving)
@@ -1187,10 +1193,11 @@ int32 AMyMJGameRoomCpp::showAttenderGiveOutCards_Implementation(float dur, int32
         }
     }
 
-    return 0;
+    return FMyErrorCodeMJGameCpp();
 }
 
-int32 AMyMJGameRoomCpp::showAttenderWeave_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
+FMyErrorCodeMJGameCpp
+AMyMJGameRoomCpp::showAttenderWeave_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                                          MyMJGameEventVisualTypeCpp weaveVsualType, const struct FMyMJWeaveCpp& weave,
                                                          const TArray<class AMyMJGameCardBaseCpp*>& cardActorsWeaved, const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving)
 {
@@ -1262,7 +1269,7 @@ int32 AMyMJGameRoomCpp::showAttenderWeave_Implementation(float dur, int32 idxAtt
     while (IsValid(pEventCfg->m_cDancingActor0Class))
     {
         if (pEventCfg->m_cDancingActor0Class == AMyMJGameTrivalDancingActorBaseCpp::StaticClass()) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("dancing actor0 specified but not a child of AMyMJGameTrivalDancingActorBaseCpp class, weave visual type %s"), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameEventVisualTypeCpp"), (uint8)eWeaveVisualType));
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("dancing actor0 specified but not a child of AMyMJGameTrivalDancingActorBaseCpp class, weave visual type %s"), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameEventVisualTypeCpp"), (uint8)eWeaveVisualType));
             break;
         }
 
@@ -1281,5 +1288,5 @@ int32 AMyMJGameRoomCpp::showAttenderWeave_Implementation(float dur, int32 idxAtt
         break;
     }
 
-    return 0;
+    return FMyErrorCodeMJGameCpp();
 }

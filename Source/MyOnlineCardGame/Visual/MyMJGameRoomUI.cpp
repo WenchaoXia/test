@@ -12,7 +12,29 @@
 #define MyMJGameWidgetMainTypeIncidentVisual (0x01)
 #define MyMJGameWidgetKeyCalculation(mainType, subType) (((mainType & 0xff) << 8) | (((uint8)subType) & 0xff))
 
-int32 UMyMJGameInRoomPlayerInfoWidgetBaseCpp::showAttenderWeave(float dur, MyMJGameEventVisualTypeCpp weaveVisualType)
+
+MyErrorCodeCommonPartCpp UMyMJGameCardWidgetBaseCpp::updateValueShowing(int32 newValueShowing, int32 animationTimeMs)
+{
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+MyErrorCodeCommonPartCpp UMyMJGameCardWidgetBaseCpp::getValueShowing(int32& valueShowing) const
+{
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+MyErrorCodeCommonPartCpp UMyMJGameCardWidgetBaseCpp::setResPath(const FDirectoryPath& newResPath)
+{
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+MyErrorCodeCommonPartCpp UMyMJGameCardWidgetBaseCpp::getResPath(FDirectoryPath& resPath) const
+{
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+
+FMyErrorCodeMJGameCpp UMyMJGameInRoomPlayerInfoWidgetBaseCpp::showAttenderWeave(float dur, MyMJGameEventVisualTypeCpp weaveVisualType)
 {
     const UMyMJGameInRoomVisualCfgCpp* pVisualCfg = AMyMJGameRoomLevelScriptActorCpp::helperGetVisualCfg(this, true);
     const FMyMJGameTrivalDataCpp* pTrivalData = AMyMJGameRoomLevelScriptActorCpp::helperGetMJGameTrivalData(this, true);
@@ -23,7 +45,7 @@ int32 UMyMJGameInRoomPlayerInfoWidgetBaseCpp::showAttenderWeave(float dur, MyMJG
     TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> widgetClass;
     widgetClass = pTrivalData->m_aAttenderDatas[idxAttender].m_cStyleSettings.m_cEvent.getWeaveWidgetByType(weaveVisualType);
     if (!IsValid(widgetClass)) {
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("weave visual type have not set its corresponding widget class, using default one. visual type: %s, meta: %s."), *UMyMJUtilsLibrary::getStringFromEnum(TEXT("MyMJGameEventVisualTypeCpp"), (uint8)weaveVisualType), *m_cRuntimeMeta.ToString());
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("weave visual type have not set its corresponding widget class, using default one. visual type: %s, meta: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameEventVisualTypeCpp"), (uint8)weaveVisualType), *m_cRuntimeMeta.ToString());
         widgetClass = pVisualCfg->m_cUICfg.m_cDefaultInRoomViewRoleStyle.m_cEvent.getWeaveWidgetByType(weaveVisualType);
     }
 
@@ -42,7 +64,7 @@ int32 UMyMJGameInRoomPlayerInfoWidgetBaseCpp::showAttenderWeave(float dur, MyMJG
 
     IMyCardGameScreenPositionRelatedWidgetInterfaceCpp::Execute_restartMainAnimation(pW, m_cRuntimeMeta.m_iIdxScreenPosition, dur, m_cRuntimeMeta.m_cPosiCommonActionShowPoint - m_cRuntimeMeta.m_cPosiSelf, m_cRuntimeMeta.m_cPosiUICenter - m_cRuntimeMeta.m_cPosiSelf);
 
-    return 0;
+    return FMyErrorCodeMJGameCpp();
 };
 
 
@@ -93,19 +115,19 @@ UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp* UMyMJGameInRoomPl
 
 
 
-int32 UMyMJGameInRoomUIMainWidgetBaseCpp::showAttenderWeave_Implementation(float dur, int32 idxAttender, MyMJGameEventVisualTypeCpp weaveVsualType)
+FMyErrorCodeMJGameCpp UMyMJGameInRoomUIMainWidgetBaseCpp::showAttenderWeave_Implementation(float dur, int32 idxAttender, MyMJGameEventVisualTypeCpp weaveVsualType)
 {
     UMyMJGameInRoomPlayerInfoWidgetBaseCpp* pW = getInRoomPlayerInfoWidgetByIdxAttender(idxAttender, true);
     return pW->showAttenderWeave(dur, weaveVsualType);
 };
 
-int32 UMyMJGameInRoomUIMainWidgetBaseCpp::changeDeskPositionOfIdxScreenPosition0(int32 idxDeskPositionOfIdxScreenPosition0)
+FMyErrorCodeMJGameCpp UMyMJGameInRoomUIMainWidgetBaseCpp::changeDeskPositionOfIdxScreenPosition0(int32 idxDeskPositionOfIdxScreenPosition0)
 {
     MY_VERIFY(idxDeskPositionOfIdxScreenPosition0 >= 0 && idxDeskPositionOfIdxScreenPosition0 < 4);
 
     refillCachedData(idxDeskPositionOfIdxScreenPosition0);
 
-    return 0;
+    return FMyErrorCodeMJGameCpp();
 };
 
 void UMyMJGameInRoomUIMainWidgetBaseCpp::refillCachedData(int32 idxDeskPositionOfCamera)
@@ -130,11 +152,8 @@ void UMyMJGameInRoomUIMainWidgetBaseCpp::refillCachedData(int32 idxDeskPositionO
 
     m_cCachedData.m_aPlayerInfoWidgetsOnScreen.Reset();
     for (int32 i = 0; i < 4; i++) {
-        UMyMJGameInRoomPlayerInfoWidgetBaseCpp* pW = IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_getInRoomPlayerInfoWidgetByScreenPosition(this, i);
-        if (!IsValid(pW)) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get player info widget, screen position %d, result %p."), i, pW);
-            MY_VERIFY(false);
-        }
+        UMyMJGameInRoomPlayerInfoWidgetBaseCpp* pW = getInRoomPlayerInfoWidgetByScreenPositionEnsured(i);
+
         m_cCachedData.m_aPlayerInfoWidgetsOnScreen.Emplace(pW);
 
         FMyPlayerInfoWidgetRuntimeMetaCpp& cMeta = pW->getRuntimeMetaRef();

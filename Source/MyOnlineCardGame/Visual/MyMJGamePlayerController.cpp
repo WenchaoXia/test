@@ -147,7 +147,7 @@ void AMyMJGamePlayerControllerCommunicationCpp::onPawnChanged(APawn* oldPawn, AP
         /*
         if (OldPawnMy->Controller == this)
         {
-        IMyPawnUIInterfaceCpp* pI = Cast<IMyPawnUIInterfaceCpp>(OldPawnMy.Get());
+        IMyPawnInterfaceCpp* pI = Cast<IMyPawnInterfaceCpp>(OldPawnMy.Get());
         if (pI) {
         pI->OnUnPossessedByLocalPlayerController(this);
         }
@@ -157,7 +157,7 @@ void AMyMJGamePlayerControllerCommunicationCpp::onPawnChanged(APawn* oldPawn, AP
         }
         */
 
-        IMyPawnUIInterfaceCpp* pI = Cast<IMyPawnUIInterfaceCpp>(oldPawn);
+        IMyPawnInterfaceCpp* pI = Cast<IMyPawnInterfaceCpp>(oldPawn);
         if (pI) {
             pI->OnUnPossessedByLocalPlayerController(this);
         }
@@ -165,7 +165,7 @@ void AMyMJGamePlayerControllerCommunicationCpp::onPawnChanged(APawn* oldPawn, AP
 
     if (IsValid(newPawn))
     {
-        IMyPawnUIInterfaceCpp* pI = Cast<IMyPawnUIInterfaceCpp>(newPawn);
+        IMyPawnInterfaceCpp* pI = Cast<IMyPawnInterfaceCpp>(newPawn);
         if (pI) {
             pI->OnPossessedByLocalPlayerController(this);
         }
