@@ -36,8 +36,9 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
     MyErrorCodeCommonPartCpp getLocalSize(FVector2D& localSize) const;
 
+    //if @keepRatioByWidth is true, it keeps ratio by width, and has higher priority than @keepRatioByHeight
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-    MyErrorCodeCommonPartCpp setLocalSize(FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight);
+    MyErrorCodeCommonPartCpp setLocalSize(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight);
 };
 
 #define IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject() \
@@ -56,7 +57,7 @@ MyErrorCodeCommonPartCpp getLocalSize_Implementation(FVector2D &localSize) const
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize only implemented in C++."), *GetClass()->GetName()); \
     return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
 }; \
-MyErrorCodeCommonPartCpp setLocalSize_Implementation(FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight) \
+MyErrorCodeCommonPartCpp setLocalSize_Implementation(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight) \
 { \
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize only implemented in C++."), *GetClass()->GetName()); \
     return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \

@@ -2,18 +2,32 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
+#include "Utils/CardGameUtils/MyCardGameElems.h"
 
-#include "Utils/CardGameUtils/MyCardGameUtilsLibrary.h"
-#include "Blueprint/UserWidget.h"
-
-#include "MJBPEncap/MyMJGameCoreBP.h"
+//#include "MJBPEncap/MyMJGameCoreBP.h"
 
 #include "MyMJGameVisualInterfaces.h"
 
 #include "MyMJGameRoomUI.generated.h"
 
+UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
+class MYONLINECARDGAME_API UMyMJGameCardWidgetBaseCpp : public UMyCardGameCardWidgetBaseCpp
+{
+    GENERATED_BODY()
 
+public:
+
+    UMyMJGameCardWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    {
+
+    };
+
+    virtual ~UMyMJGameCardWidgetBaseCpp()
+    {
+
+    };
+};
+/*
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
 class MYONLINECARDGAME_API UMyMJGameCardWidgetBaseCpp : public UUserWidget, public IMyWidgetBasicOperationInterfaceCpp, public IMyIdInterfaceCpp, public IMyCardGameValueRelatedObjectInterfaceCpp
 {
@@ -94,8 +108,13 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintSetter = setResPath2, BlueprintGetter = getResPath2, meta = (DisplayName = "resource path", ContentDir = "true"))
     FDirectoryPath m_cResPath;
 
+    UPROPERTY(BlueprintReadOnly)
+    class UTexture2D *m_pCardMainTexture;
+
     int32 m_iMyId;
 };
+*/
+
 
 USTRUCT()
 struct FMyInRoomViewRoleEventStyleSettingsCpp
@@ -392,7 +411,9 @@ public:
     int32 m_idxDeskPositionOfCamera;
 
     //size is always 4, idx is screen position
+    UPROPERTY()
     TArray<UMyMJGameInRoomPlayerInfoWidgetBaseCpp* > m_aPlayerInfoWidgetsOnScreen;
+
     int32 m_iAttenderNumber;
 
     FVector2D m_cMainUILocalSize;

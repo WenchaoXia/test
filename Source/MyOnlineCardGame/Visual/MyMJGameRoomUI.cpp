@@ -13,27 +13,6 @@
 #define MyMJGameWidgetKeyCalculation(mainType, subType) (((mainType & 0xff) << 8) | (((uint8)subType) & 0xff))
 
 
-MyErrorCodeCommonPartCpp UMyMJGameCardWidgetBaseCpp::updateValueShowing(int32 newValueShowing, int32 animationTimeMs)
-{
-    return MyErrorCodeCommonPartCpp::NoError;
-}
-
-MyErrorCodeCommonPartCpp UMyMJGameCardWidgetBaseCpp::getValueShowing(int32& valueShowing) const
-{
-    return MyErrorCodeCommonPartCpp::NoError;
-}
-
-MyErrorCodeCommonPartCpp UMyMJGameCardWidgetBaseCpp::setResPath(const FDirectoryPath& newResPath)
-{
-    return MyErrorCodeCommonPartCpp::NoError;
-}
-
-MyErrorCodeCommonPartCpp UMyMJGameCardWidgetBaseCpp::getResPath(FDirectoryPath& resPath) const
-{
-    return MyErrorCodeCommonPartCpp::NoError;
-}
-
-
 FMyErrorCodeMJGameCpp UMyMJGameInRoomPlayerInfoWidgetBaseCpp::showAttenderWeave(float dur, MyMJGameEventVisualTypeCpp weaveVisualType)
 {
     const UMyMJGameInRoomVisualCfgCpp* pVisualCfg = AMyMJGameRoomLevelScriptActorCpp::helperGetVisualCfg(this, true);
