@@ -127,7 +127,7 @@ void UMyMJGameInRoomUIMainWidgetBaseCpp::refillCachedData(int32 idxDeskPositionO
     MY_VERIFY(attenderNumber >= 2 && attenderNumber <= 4);
     m_cCachedData.m_iAttenderNumber = attenderNumber;
 
-    IMyWidgetBasicOperationInterfaceCpp::Execute_getLocalSize(this, m_cCachedData.m_cMainUILocalSize);
+    IMyWidgetSizeInterfaceCpp::Execute_getLocalSize(this, m_cCachedData.m_cMainUILocalSize);
 
     m_cCachedData.m_aPlayerInfoWidgetsOnScreen.Reset();
     for (int32 i = 0; i < 4; i++) {

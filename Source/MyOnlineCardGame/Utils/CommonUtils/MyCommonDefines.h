@@ -7,6 +7,13 @@
 #include "MyCommonDefines.generated.h"
 
 //Some code have relationship with the implemention in UE4's source, when upgrade, search code with "UE4 upgrade" and check
+#define MySelectionUnknown (-1)
+#define MyIDUnknown (-1)
+#define MyIDFake (-2)
+
+#define MyValueUnknown (-1)
+
+#define MyTypeUnknown (-1)
 
 UENUM(BlueprintType)
 enum class MyErrorCodeCommonPartCpp : uint8

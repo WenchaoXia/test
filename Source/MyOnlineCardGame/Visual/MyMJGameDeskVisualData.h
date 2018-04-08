@@ -37,28 +37,28 @@ public:
 
 
     //return errocode. to make it easy to use, list every maintype's api to tip the parameter meanings
-    int32 getCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
-    void  setCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, const FMyMJGameDeskVisualPointCfgCpp &visualPoint);
+    int32 getCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp &visualPoint) const;
+    void  setCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, const FMyCardGameVisualPointCfgCpp &visualPoint);
 
     //return errocode.
-    int32 getAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
-    void  setAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, const FMyMJGameDeskVisualPointCfgCpp &visualPoint);
+    int32 getAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyCardGameVisualPointCfgCpp &visualPoint) const;
+    void  setAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, const FMyCardGameVisualPointCfgCpp &visualPoint);
 
     //return errocode.
-    int32 getTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
-    void  setTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, const FMyMJGameDeskVisualPointCfgCpp &visualPoint);
+    int32 getTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyCardGameVisualPointCfgCpp &visualPoint) const;
+    void  setTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, const FMyCardGameVisualPointCfgCpp &visualPoint);
 
 protected:
 
-    static int32 helperGetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, const TMap<int32, FMyMJGameDeskVisualPointCfgCpp>& cTargetMap, FMyMJGameDeskVisualPointCfgCpp &visualPoint);
-    static void  helperSetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, TMap<int32, FMyMJGameDeskVisualPointCfgCpp>& cTargetMap, const FMyMJGameDeskVisualPointCfgCpp &visualPoint);
+    static int32 helperGetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, const TMap<int32, FMyCardGameVisualPointCfgCpp>& cTargetMap, FMyCardGameVisualPointCfgCpp &visualPoint);
+    static void  helperSetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, TMap<int32, FMyCardGameVisualPointCfgCpp>& cTargetMap, const FMyCardGameVisualPointCfgCpp &visualPoint);
 
     //by split to two domains, it runs a bit faster at runtime
     //card cfg
-    TMap<int32, FMyMJGameDeskVisualPointCfgCpp> m_mCardVisualPointCache;
+    TMap<int32, FMyCardGameVisualPointCfgCpp> m_mCardVisualPointCache;
 
     //other cfg except card
-    TMap<int32, FMyMJGameDeskVisualPointCfgCpp> m_mTrivalVisualPointCache;
+    TMap<int32, FMyCardGameVisualPointCfgCpp> m_mTrivalVisualPointCache;
 };
 
 USTRUCT(BlueprintType)
@@ -83,8 +83,8 @@ public:
         m_cDiceModelInfo.reset();
     };
 
-    FMyActorModelInfoBoxCpp m_cCardModelInfo;
-    FMyMJDiceModelInfoBoxCpp m_cDiceModelInfo;
+    FMyModelInfoBox3DCpp m_cCardModelInfo;
+    FMyCardGameDiceModelInfoCpp m_cDiceModelInfo;
 };
 
 USTRUCT(BlueprintType)
@@ -110,7 +110,7 @@ public:
     };
 
     //return errorCode, 0 means OK
-    int32 helperGetColCountPerRow(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp& outVisualPointCfg, int32& outCount) const
+    int32 helperGetColCountPerRow(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp& outVisualPointCfg, int32& outCount) const
     {
         outCount = 1;
 
@@ -119,14 +119,14 @@ public:
             return retCode;
         }
 
-        const FMyActorModelInfoBoxCpp &cCardModelInfo = m_cModelInfo.m_cCardModelInfo;
+        const FMyModelInfoBox3DCpp &cCardModelInfoBox = m_cModelInfo.m_cCardModelInfo;
 
-        if (cCardModelInfo.m_cBoxExtend.Y < 1) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cCardModelInfo.m_cBoxExtend.Y too small: %f."), cCardModelInfo.m_cBoxExtend.Y);
+        if (cCardModelInfoBox.m_cBoxExtend.Y < 1) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cCardModelInfo.m_cBoxExtend.Y too small: %f."), cCardModelInfoBox.m_cBoxExtend.Y);
             return -2;
         }
 
-        outCount = helperGetColCountByWidth(outVisualPointCfg.m_cAreaBoxExtendFinal.Y, cCardModelInfo.m_cBoxExtend.Y);
+        outCount = helperGetColCountByWidth(outVisualPointCfg.m_cAreaBoxExtendFinal.Y, cCardModelInfoBox.m_cBoxExtend.Y);
 
         return 0;
     };
@@ -630,12 +630,6 @@ public:
         m_cDataOut.putInConsumedItem(item);
     };
 
-    //make it public for test purpose
-    static void helperResolveCardTransform(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
-                                            const FMyActorModelInfoBoxCpp& cCardModelInfo,
-                                            const FMyMJGameCardVisualInfoCpp& cCardVisualInfo,
-                                            FTransform& outTransform);
-
     inline
     const FMyMJGameDeskProcessorMainThreadReceivedLabelCpp& getMainThreadReceivedLabel() const
     {
@@ -675,12 +669,6 @@ protected:
                                                  bool bDicesAccumulatedChanges,
                                                  TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultChanges,
                                                  TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mOutIdDiceVisualInfoAndResultChanges);
-
-    //do the final work with resolved same point cfg and card model in prev step
-    static void helperResolveCardVisualResultChanges(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
-                                                     const FMyActorModelInfoBoxCpp& cCardModelInfo,
-                                                     const TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoKnownChanges,
-                                                     TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultAccumulatedChanges);
 
 
     FMyMJGameDeskVisualCfgCacheCpp m_cMainThreadWaitingToSendCfgCache;
@@ -777,16 +765,6 @@ public:
     //first and last will be 0 if all data already consumed
     void getDataTimeRange(uint32 &uiFirstDataGotServerTime_ms, uint32 &uiLastDataGotServerTime_ms) const;
     
-    UFUNCTION(BlueprintCallable)
-    static void helperResolveCardTransformForBp(const FMyMJGameDeskVisualPointCfgCpp& cVisualPointCfg,
-                                            const FMyActorModelInfoBoxCpp& cCardModelInfo,
-                                            const FMyMJGameCardVisualInfoCpp& cCardVisualInfo,
-                                            FTransform& outTransform)
-    {
-        FMyMJGameDeskProcessorRunnableCpp::helperResolveCardTransform(cVisualPointCfg, cCardModelInfo, cCardVisualInfo, outTransform);
-    };
-
-
 
 protected:
 

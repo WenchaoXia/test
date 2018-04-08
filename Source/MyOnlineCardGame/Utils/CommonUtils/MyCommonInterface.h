@@ -11,30 +11,24 @@
 //Warning:: Any function that maybe implemented by blueprint, can't be directly called, but using I*interface::Execute_*()
 
 UINTERFACE()
-class UMyTransformUpdaterInterfaceCpp : public UInterface
+class UMyWithCurveUpdaterTransformInterfaceCpp : public UInterface
 {
-    //GENERATED_BODY()
-    GENERATED_UINTERFACE_BODY()
+    GENERATED_BODY()
 };
 
-class IMyTransformUpdaterInterfaceCpp
+class IMyWithCurveUpdaterTransformInterfaceCpp
 {
-    //GENERATED_BODY()
-    GENERATED_IINTERFACE_BODY()
+    GENERATED_BODY()
 
 public:
 
-    virtual MyErrorCodeCommonPartCpp getModelInfo(struct FMyActorModelInfoBoxCpp& modelInfo, bool verify = true) const = NULL;
+    virtual MyErrorCodeCommonPartCpp getModelInfo(struct FMyModelInfoCpp& modelInfo, bool verify = true) const = NULL;
 
     //Never fail, core dump otherwise
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterTransformCpp*& outUpdater) = NULL;
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterBasicCpp*& outUpdater) = NULL;
 
-    inline struct FMyWithCurveUpdaterTransformCpp& getMyWithCurveUpdaterTransformRef()
-    {
-        struct FMyWithCurveUpdaterTransformCpp* pRet = NULL;
-        getMyWithCurveUpdaterTransformEnsured(pRet);
-        return *pRet;
-    };
+    //Never fail
+    struct FMyWithCurveUpdaterBasicCpp& getMyWithCurveUpdaterTransformRef();
 
 protected:
 
@@ -45,14 +39,12 @@ protected:
 UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
 class UMyIdInterfaceCpp : public UInterface
 {
-    //GENERATED_BODY()
-    GENERATED_UINTERFACE_BODY()
+    GENERATED_BODY()
 };
 
 class IMyIdInterfaceCpp
 {
-    //GENERATED_BODY()
-    GENERATED_IINTERFACE_BODY()
+    GENERATED_BODY()
 
 public:
 
@@ -76,15 +68,55 @@ protected:
 };
 
 
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
+class UMyValueInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMyValueInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    //@animationTimeMs if < 0, value should be updated at instance instead of animation, otherwise value will be updated by animation if possible
+    UFUNCTION(BlueprintCallable)
+        virtual MyErrorCodeCommonPartCpp updateValueShowing(int32 newValueShowing, int32 animationTimeMs);
+
+    UFUNCTION(BlueprintCallable)
+        virtual MyErrorCodeCommonPartCpp getValueShowing(int32& valueShowing) const;
+};
+
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
+class UMyResourceInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMyResourceInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    UFUNCTION(BlueprintCallable)
+        virtual MyErrorCodeCommonPartCpp setResourcePath(const FDirectoryPath& newResPath);
+
+    UFUNCTION(BlueprintCallable)
+        virtual MyErrorCodeCommonPartCpp getResourcePath(FDirectoryPath& resPath) const;
+};
+
+
 UINTERFACE()
 class UMyPawnInterfaceCpp : public UInterface
 {
-    GENERATED_UINTERFACE_BODY()
+    GENERATED_BODY()
 };
 
 class IMyPawnInterfaceCpp
 {
-    GENERATED_IINTERFACE_BODY()
+    GENERATED_BODY()
 
 public:
 

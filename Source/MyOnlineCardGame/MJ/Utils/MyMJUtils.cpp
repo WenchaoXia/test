@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MyMJUtils.h"
+#include "Utils/CommonUtils/MyCommonDefines.h"
 #include "Kismet/KismetMathLibrary.h"
 
 
@@ -11,7 +12,7 @@ FString FMyMJCardPosiCpp::genDebugMsg() const
 
 FString FMyMJCardInfoCpp::genDebugMsg() const
 {
-    return FString::Printf(TEXT("[id %d, flip %s]"), m_iId, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eFlipState)) + m_cPosi.genDebugMsg();
+    return FString::Printf(TEXT("[id %d, flip %s]"), m_iId, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyCardGameBoxLikeElemFlipStateCpp"), (uint8)m_eFlipState)) + m_cPosi.genDebugMsg();
 };
 
 void FMyMJCardValuePackCpp::helperVerifyValues() const
@@ -1831,7 +1832,7 @@ UMyMJUtilsLibrary::checkHu(const FMyMJCardValuePackCpp &inValuePack,
 
     if (extraValue > 0) {
 
-        MY_VERIFY(extraId >= 0 || extraId == MY_MJCARD_ID_FAKE);
+        MY_VERIFY(extraId >= 0 || extraId == MyIDFake);
 
 
         newMap.copyDeep(&inHandCardMap);

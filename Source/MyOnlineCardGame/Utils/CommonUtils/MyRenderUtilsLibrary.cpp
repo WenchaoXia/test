@@ -31,6 +31,758 @@
 #include "PackageTools.h"
 #endif
 
+
+
+#define MY_TRANSFORM_UPDATE_CYCLE_BUFFER_COUNT (64)
+
+FMyWithCurveUpdaterBasicCpp::FMyWithCurveUpdaterBasicCpp()
+{
+    m_cStepDataItemsCycleBuffer.reinit(TEXT("step data items cycle buffer"), NULL, NULL, MY_TRANSFORM_UPDATE_CYCLE_BUFFER_COUNT);
+
+    m_cTimeLineVectorDelegate.BindRaw(this, &FMyWithCurveUpdaterBasicCpp::onTimeLineUpdated); //binding to parent, should be safe
+    m_cTimeLineFinishEventDelegate.BindRaw(this, &FMyWithCurveUpdaterBasicCpp::onTimeLineFinished);
+
+    m_cTimeLine.Stop();
+    reset();
+
+    m_iType = MyTypeUnknown;
+};
+
+FMyWithCurveUpdaterBasicCpp::~FMyWithCurveUpdaterBasicCpp()
+{
+
+};
+
+void FMyWithCurveUpdaterBasicCpp::tick(float deltaTime)
+{
+    if (m_cTimeLine.IsPlaying()) {
+        //Todo: handle the case that tick() and addSeq() happen in one loop, which cause 1 tick time defloat
+        m_fDebugTimePassedForOneStep += deltaTime;
+        m_cTimeLine.TickTimeline(deltaTime);
+    }
+    else {
+        tryStartNextStep(TEXT("in tick() timeline stopped."));
+    }
+};
+
+int32 FMyWithCurveUpdaterBasicCpp::addStepToTail(const FMyWithCurveUpdateStepDataBasicCpp& data)
+{
+    if (!data.checkValid()) {
+        return -1;
+    }
+
+    //Safe tp const cast since result is still a const
+    //Todo:: better way to use constructor, remove const cast
+    const FMyWithCurveUpdateStepDataItemCpp tempD(const_cast<FMyWithCurveUpdateStepDataBasicCpp *>(&data));
+    int32 ret0 = m_cStepDataItemsCycleBuffer.addToTail(&tempD, NULL);
+
+    if (ret0 >= 0) {
+        if (!m_cTimeLine.IsPlaying()) {
+            tryStartNextStep(TEXT("addSeqToTail trigger"));
+        }
+
+        //debug
+        const FMyWithCurveUpdateStepDataItemCpp* pLast = m_cStepDataItemsCycleBuffer.peekLast();
+        MY_VERIFY(pLast->getDataConst());
+        MY_VERIFY(pLast->getDataConst() != &data);
+
+    }
+    else {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("addSeqToTail fail, ret %d."), ret0);
+    }
+
+    return ret0;
+};
+
+int32 FMyWithCurveUpdaterBasicCpp::removeStepsFromHead(int32 iCount)
+{
+    int32 ret0;
+    ret0 = m_cStepDataItemsCycleBuffer.removeFromHead(iCount);
+
+    if (getStepsCount() <= 0) {
+        m_cTimeLine.Stop();
+    }
+    return ret0;
+}
+
+int32 FMyWithCurveUpdaterBasicCpp::peekStepAt(int32 idxFromHead, const FMyWithCurveUpdateStepDataBasicCpp*& poutData) const
+{
+    int32 ret0 = 0;
+    const FMyWithCurveUpdateStepDataItemCpp* pD = m_cStepDataItemsCycleBuffer.peekAt(idxFromHead, &ret0);
+    if (pD) {
+        poutData = pD->getDataConst();
+    }
+    else {
+        poutData = NULL;
+    }
+    return ret0;
+};
+
+int32 FMyWithCurveUpdaterBasicCpp::peekStepLast(const FMyWithCurveUpdateStepDataBasicCpp*& poutData) const
+{
+    int32 l = getStepsCount();
+    if (l > 0) {
+        return peekStepAt(l - 1, poutData);
+    }
+    else {
+        return -1;
+    }
+}
+
+int32 FMyWithCurveUpdaterBasicCpp::getStepsCount() const
+{
+    int32 ret0;
+    ret0 = m_cStepDataItemsCycleBuffer.getCount();
+
+    return ret0;
+}
+
+void FMyWithCurveUpdaterBasicCpp::clearSteps()
+{
+    m_cStepDataItemsCycleBuffer.clearInGame();
+
+    MY_VERIFY(getStepsCount() == 0);
+    m_cTimeLine.Stop();
+
+    m_fDebugTimePassedForOneStep = 0;
+}
+
+//Todo:
+bool FMyWithCurveUpdaterBasicCpp::tryStartNextStep(FString sDebugReason)
+{
+    if (m_cTimeLine.IsPlaying()) {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("still playing, not start next seq now."));
+        return false;
+    }
+
+    m_fDebugTimePassedForOneStep = 0;
+    const FMyWithCurveUpdateStepDataBasicCpp* pData = NULL;
+
+    //skip any step incorrectly set
+    while (1)
+    {
+        if (peekStepAt(0, pData) < 0) {
+            break;
+        }
+
+        if (pData->m_fTime < MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT)
+        {
+            //directly finish
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("step have too short dur seq: %f sec."), pData->m_fTime);
+            finishOneStep(*pData);
+            removeStepsFromHead(1);
+        }
+        else {
+            break;
+        }
+    }
+
+    //start next valid one
+    if (peekStepAt(0, pData) >= 0) {
+
+        //we have data
+        MY_VERIFY(pData);
+        MY_VERIFY(pData->m_fTime > 0);
+        MY_VERIFY(pData->m_pCurve);
+
+        //the fuck is that: FTimeLine have NOT clear function for static bind type, so create new one
+        FTimeline newTimeLine;
+        m_cTimeLine = newTimeLine;
+
+        m_cTimeLine.AddInterpVector(pData->m_pCurve, m_cTimeLineVectorDelegate);
+        m_cTimeLine.SetTimelineFinishedFunc(m_cTimeLineFinishEventDelegate);
+
+        float MinVal, MaxVal;
+        pData->m_pCurve->GetTimeRange(MinVal, MaxVal);
+
+        m_cTimeLine.SetTimelineLengthMode(ETimelineLengthMode::TL_TimelineLength);
+        m_cTimeLine.SetTimelineLength(MaxVal);
+
+        m_cTimeLine.SetPlayRate(MaxVal / pData->m_fTime);
+
+        m_cTimeLine.Play();
+
+        m_cActivateTickDelegate.ExecuteIfBound(true, sDebugReason + TEXT(", activate since next step found."));
+
+        return true;
+    }
+    else {
+        //stop
+
+        m_cActivateTickDelegate.ExecuteIfBound(false, sDebugReason + TEXT(", deactivate since no more step found."));
+
+        return false;
+    }
+}
+
+
+void FMyWithCurveUpdaterBasicCpp::onTimeLineUpdated(FVector vector)
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onTimeLineUpdated."));
+
+    const FMyWithCurveUpdateStepDataBasicCpp* pData = NULL;
+    if (peekStepAt(0, pData) < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get data in the middle of timelineUpdate"));
+        return;
+    }
+
+    MY_VERIFY(pData);
+
+    if (!pData->m_bSkipCommonUpdateDelegate) {
+        m_cCommonUpdateDelegate.ExecuteIfBound(*pData, vector);
+    }
+
+    pData->m_cStepUpdateDelegate.ExecuteIfBound(*pData, vector);
+
+}
+
+void FMyWithCurveUpdaterBasicCpp::onTimeLineFinished()
+{
+    const FMyWithCurveUpdateStepDataBasicCpp* pData = NULL;
+    if (peekStepAt(0, pData) < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get data in timelinefinish"));
+        return;
+    }
+    MY_VERIFY(pData);
+
+    finishOneStep(*pData);
+
+    if (!UKismetMathLibrary::NearlyEqual_FloatFloat(pData->m_fTime, m_fDebugTimePassedForOneStep, 0.1)) {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("time line finished but time not quite equal: supposed %f, used %f."), pData->m_fTime, m_fDebugTimePassedForOneStep);
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("onTimeLineFinished, time used %f, time range %f, %f, value range %f, %f."), s1 - m_dDebugTimeLineStartRealTime, minTime, maxTime, minValue, maxValue);
+
+    removeStepsFromHead(1);
+    tryStartNextStep(TEXT("previous timeline finish"));
+}
+
+void FMyWithCurveUpdaterBasicCpp::finishOneStep(const FMyWithCurveUpdateStepDataBasicCpp& stepData)
+{
+    const FMyWithCurveUpdateStepDataBasicCpp* pData = &stepData;
+
+    if (!pData->m_bSkipCommonFinishDelegate) {
+        m_cCommonFinishDelegete.ExecuteIfBound(*pData);
+    }
+
+    pData->m_cStepFinishDelegete.ExecuteIfBound(*pData);
+
+    m_cTimeLine.Stop();
+}
+
+
+void FMyWithCurveUpdateStepDataWorldTransformCpp::helperSetDataBySrcAndDst(float fTime, UCurveVector* pCurve, const FTransform& cStart, const FTransform& cEnd, FIntVector extraRotateCycle)
+{
+    m_cStart = cStart;
+    m_cEnd = cEnd;
+    m_fTime = fTime;
+    m_pCurve = pCurve;
+
+    m_cStart.NormalizeRotation();
+    m_cEnd.NormalizeRotation();
+
+    m_cLocalRotatorExtra.Roll = extraRotateCycle.X * 360;
+    m_cLocalRotatorExtra.Pitch = extraRotateCycle.Y * 360;
+    m_cLocalRotatorExtra.Yaw = extraRotateCycle.Z * 360;
+
+    FQuat B = m_cStart.GetRotation();
+    FQuat A = m_cEnd.GetRotation();
+    FQuat NegA = A.Inverse();
+    NegA.Normalize();
+    FQuat X = B * NegA;
+
+    FRotator relativeRota;
+    relativeRota = X.Rotator();
+    relativeRota.Normalize();
+
+    //X.EnforceShortestArcWith(FRotator(0, 0, 0).Quaternion());
+
+    //X = FRotator(0, 0, 0).Quaternion() * X;
+    //UKismetMathLibrary::ComposeRotators();
+
+    //FVector v(1, 1, 1), vz(0, 0, 0);
+    //relativeRota = UKismetMathLibrary::FindLookAtRotation(vz, X.Rotator().RotateVector(v)) - UKismetMathLibrary::FindLookAtRotation(vz, v);
+    //relativeRota.Clamp();
+
+    //FRotator winding;
+    //X.Rotator().GetWindingAndRemainder(winding, relativeRota);
+
+    if (m_cEnd.GetLocation().Equals(m_cStart.GetLocation(), FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min)) {
+        m_bLocationEnabledCache = false;
+    }
+    else {
+        m_bLocationEnabledCache = true;
+    }
+
+    //since we allow roll at origin 360d, we can't use default isNealyZero() which treat that case zero
+    if (relativeRota.Euler().IsNearlyZero(FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min)) {
+        m_bRotatorBasicEnabledCache = false;
+    }
+    else {
+        m_bRotatorBasicEnabledCache = true;
+    }
+
+    if (m_cLocalRotatorExtra.Euler().IsNearlyZero(FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min)) {
+        m_bRotatorExtraEnabledCache = false;
+    }
+    else {
+        m_bRotatorExtraEnabledCache = true;
+    }
+
+    if (m_cEnd.GetScale3D().Equals(m_cStart.GetScale3D(), FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min)) {
+        m_bScaleEnabledCache = false;
+    }
+    else {
+        m_bScaleEnabledCache = true;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%d, %d, %d, %d. r:  %s -> %s, relativeRota %s."), m_bLocationEnabledCache, m_bRotatorBasicEnabledCache, m_bRotatorExtraEnabledCache, m_bScaleEnabledCache,
+    //         *cStart.GetRotation().Rotator().ToString(), *cEnd.GetRotation().Rotator().ToString(), *relativeRota.ToString());
+
+};
+
+
+
+UMyWithCurveUpdaterWorldTransformComponent::UMyWithCurveUpdaterWorldTransformComponent(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
+{
+    PrimaryComponentTick.TickGroup = TG_PrePhysics;
+    PrimaryComponentTick.TickInterval = 0;
+    bUpdateOnlyIfRendered = false;
+
+    bWantsInitializeComponent = true;
+    bAutoActivate = false;
+    SetTickableWhenPaused(false);
+
+    m_bShowWhenActivated = false;
+    m_bHideWhenInactivated = false;
+
+    m_cUpdater.m_cCommonUpdateDelegate.BindUObject(this, &UMyWithCurveUpdaterWorldTransformComponent::updaterOnCommonUpdate);
+    m_cUpdater.m_cCommonFinishDelegete.BindUObject(this, &UMyWithCurveUpdaterWorldTransformComponent::updaterOnCommonFinish);
+    m_cUpdater.m_cActivateTickDelegate.BindUObject(this, &UMyWithCurveUpdaterWorldTransformComponent::updaterActivateTick);
+}
+
+void UMyWithCurveUpdaterWorldTransformComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent."));
+
+    // skip if don't want component updated when not rendered or updated component can't move
+    if (!UpdatedComponent || !bIsActive || ShouldSkipUpdate(DeltaTime))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("UpdatedComponent %d, bIsActive %d, ShouldSkipUpdate(DeltaTime) %d."), UpdatedComponent, bIsActive, ShouldSkipUpdate(DeltaTime));
+        return;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent 1."));
+
+    AActor* ActorOwner = UpdatedComponent->GetOwner();
+    if (!ActorOwner || !ActorOwner->CheckStillInWorld())
+    {
+        return;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent 2."));
+
+    if (UpdatedComponent->IsSimulatingPhysics())
+    {
+        return;
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent 3."));
+
+    DeltaTime /= ActorOwner->GetActorTimeDilation();
+
+    m_cUpdater.tick(DeltaTime);
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent out."));
+}
+
+void UMyWithCurveUpdaterWorldTransformComponent::updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
+{
+    const FMyWithCurveUpdateStepDataWorldTransformCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWorldTransformCpp*>(&data);
+    MY_VERIFY(pData);
+
+    MY_VERIFY(IsValid(UpdatedComponent));
+
+    if (pData->m_bLocationEnabledCache || pData->m_bRotatorBasicEnabledCache || pData->m_bRotatorExtraEnabledCache) {
+        FVector MoveDelta = FVector::ZeroVector;
+        FQuat NewQuat = UpdatedComponent->GetComponentRotation().Quaternion();
+        FVector NewLocation = UpdatedComponent->GetComponentLocation();
+        if (pData->m_bLocationEnabledCache) {
+            NewLocation = UKismetMathLibrary::VLerp(pData->m_cStart.GetLocation(), pData->m_cEnd.GetLocation(), vector.X);
+            UpdatedComponent->SetWorldLocation(NewLocation);
+            //FVector CurrentLocation = UpdatedComponent->GetComponentLocation();
+            //if (NewLocation != CurrentLocation)
+            //{
+            //MoveDelta = NewLocation - CurrentLocation;
+            //}
+        }
+
+        if (pData->m_bRotatorBasicEnabledCache) {
+
+            FRotator r = UKismetMathLibrary::RLerp(pData->m_cStart.GetRotation().Rotator(), pData->m_cEnd.GetRotation().Rotator(), vector.Y, true);
+            if (r.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
+                return;
+            }
+
+            NewQuat = r.Quaternion();
+            if (NewQuat.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
+                return;
+            }
+            //FQuat quatDelta = pData->m_cRotatorRelativeToStartDelta.Quaternion() * vector.Y;
+            //NewQuat = quatDelta * pData->m_cStart.GetRotation();
+            //quatDelta.
+            /*
+            FRotator rotDelta = pData->m_cRotatorRelativeToStartDelta * vector.Y;
+            if (rotDelta.ContainsNaN())
+            {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 0, %s."), *rotDelta.ToString());
+            return;
+            }
+            FQuat quatDelta = rotDelta.Quaternion();
+            if (quatDelta.ContainsNaN())
+            {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 1, %s."), *quatDelta.ToString());
+            return;
+            }
+            NewQuat = quatDelta * pData->m_cStart.GetRotation();
+            if (NewQuat.ContainsNaN())
+            {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value 2, %s."), *NewQuat.ToString());
+            return;
+            }
+            */
+        }
+
+        if (pData->m_bRotatorExtraEnabledCache) {
+            FRotator r = UKismetMathLibrary::RLerp(FRotator::ZeroRotator, pData->m_cLocalRotatorExtra, vector.Y, false);
+            if (r.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
+                return;
+            }
+
+            FQuat q = r.Quaternion();
+            if (q.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *q.ToString());
+                return;
+            }
+
+            NewQuat = q * NewQuat;
+            if (NewQuat.ContainsNaN())
+            {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
+                return;
+            }
+        }
+
+        UpdatedComponent->SetWorldRotation(NewQuat);
+        //MoveUpdatedComponent(MoveDelta, NewQuat, false);
+    }
+
+    if (pData->m_bScaleEnabledCache) {
+        FVector NewScale = UKismetMathLibrary::VLerp(pData->m_cStart.GetScale3D(), pData->m_cEnd.GetScale3D(), vector.Z);
+        UpdatedComponent->SetWorldScale3D(NewScale);
+    }
+
+}
+
+void UMyWithCurveUpdaterWorldTransformComponent::updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
+{
+    const FMyWithCurveUpdateStepDataWorldTransformCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWorldTransformCpp*>(&data);
+    MY_VERIFY(pData);
+
+    MY_VERIFY(IsValid(UpdatedComponent));
+
+    FTransform cT = UpdatedComponent->GetComponentTransform();
+    if (!cT.Equals(pData->m_cEnd, 1.0f)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("time line finished but not equal: now %s. target %s."), *cT.ToString(), *pData->m_cEnd.ToString());
+    }
+
+    UpdatedComponent->SetWorldTransform(pData->m_cEnd);
+}
+
+void UMyWithCurveUpdaterWorldTransformComponent::updaterActivateTick(bool bNew, FString reason)
+{
+    if (IsActive() != bNew) {
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("activate component change %d -> %d, reason %s, last tick time ms %u."), !bNew, bNew, *reason, m_uDebugLastTickWorldTime_ms);
+        if (bNew) {
+            Activate();
+            if (m_bShowWhenActivated) {
+                AActor* actor = GetOwner();
+                if (IsValid(actor)) {
+                    actor->SetActorHiddenInGame(false);
+                }
+                else {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("UMyTransformUpdateSequenceMovementComponent's owner actor is NULL!"));
+                }
+            }
+
+
+        }
+        else {
+            Deactivate();
+            if (m_bHideWhenInactivated) {
+                AActor* actor = GetOwner();
+                if (IsValid(actor)) {
+                    actor->SetActorHiddenInGame(true);
+                }
+                else {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("UMyTransformUpdateSequenceMovementComponent's owner actor is NULL!"));
+                }
+            }
+        }
+
+    }
+}
+
+
+
+AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp() : Super()
+{
+    bNetLoadOnClient = true;
+
+    m_bFakeUpdateSettings = false;
+
+    createComponentsForCDO();
+}
+
+AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::~AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp()
+{
+
+}
+
+
+//Todo:: verify its correctness when root scene scaled
+MyErrorCodeCommonPartCpp AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::getModelInfo(FMyModelInfoCpp& modelInfo, bool verify) const
+{
+    //ignore the root scene/actor's scale, but calc from the box
+
+    //FVector actorScale3D = GetActorScale3D();
+    //m_pMainBox->GetScaledBoxExtent()
+    modelInfo.reset(MyModelInfoType::Box3D);
+    modelInfo.getBox3DRef().m_cBoxExtend = m_pMainBox->GetUnscaledBoxExtent() *  m_pMainBox->GetComponentScale();
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("name %s, box scale %s."), *GetName(), *m_pMainBox->GetComponentScale().ToString());
+    modelInfo.getBox3DRef().m_cCenterPointRelativeLocation = m_pMainBox->RelativeLocation;// * actorScale3D;
+
+    MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
+    if (modelInfo.getBox3DRef().m_cBoxExtend.Size() < 1) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("class %s: model size is too small: %s."), *this->GetClass()->GetName(), *modelInfo.getBox3DRef().m_cBoxExtend.ToString());
+        ret = MyErrorCodeCommonPartCpp::ModelSizeIncorrect;
+    }
+
+    if (verify) {
+        MY_VERIFY(ret == MyErrorCodeCommonPartCpp::NoError);
+    }
+
+    return ret;
+}
+
+MyErrorCodeCommonPartCpp AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterBasicCpp*& outUpdater)
+{
+    MY_VERIFY(IsValid(m_pMyTransformUpdaterComponent));
+
+    outUpdater = &m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRef();
+
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::createComponentsForCDO()
+{
+
+    USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
+    MY_VERIFY(IsValid(pRootSceneComponent));
+    RootComponent = pRootSceneComponent;
+    m_pRootScene = pRootSceneComponent;
+
+
+    UBoxComponent* pBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("MainBox"));
+    MY_VERIFY(IsValid(pBoxComponent));
+    pBoxComponent->SetupAttachment(m_pRootScene);
+    pBoxComponent->SetCollisionProfileName(TEXT("CollistionProfileBox"));
+    pBoxComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); //by default disable collision
+    m_pMainBox = pBoxComponent;
+
+
+    UStaticMeshComponent* pStaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MainStaticMesh"));
+    MY_VERIFY(IsValid(pStaticMeshComponent));
+    pStaticMeshComponent->SetupAttachment(m_pMainBox);
+    pStaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    m_pMainStaticMesh = pStaticMeshComponent;
+
+    m_pMyTransformUpdaterComponent = CreateDefaultSubobject<UMyWithCurveUpdaterWorldTransformComponent>(TEXT("transform updater component"));
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_pMainBox created as 0x%p, this 0x%p."), m_pMainBox, this);
+
+}
+
+
+#if WITH_EDITOR
+
+void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty, %s"), *m_cResPath.Path);
+    FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
+
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp, m_bFakeUpdateSettings))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_bFakeUpdateSettings clicked."));
+        updateSettings();
+    }
+    else {
+    }
+
+    Super::PostEditChangeProperty(e);
+}
+
+#endif
+
+
+MyErrorCodeCommonPartCpp AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::updateSettings()
+{
+    if (!IsValid(m_pMainBox)) {
+        UClass* uc = this->GetClass();
+        UObject* CDO = uc->GetDefaultObject();
+
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pMainBox invalid 0x%p, this 0x%p, cdo 0x%p."), m_pMainBox, this, CDO);
+        MY_VERIFY(false);
+    }
+
+    //MY_VERIFY(IsValid(m_pMainBox));
+    MY_VERIFY(IsValid(m_pMainStaticMesh));
+
+    UStaticMesh* pMeshNow = m_pMainStaticMesh->GetStaticMesh();
+
+    FVector boxSizeFix = FVector::ZeroVector, meshOrigin = FVector::ZeroVector;
+
+    if (IsValid(pMeshNow)) {
+
+        FBox meshBox = pMeshNow->GetBoundingBox();
+        FVector meshBoxSize = meshBox.Max - meshBox.Min;
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("mesh bounding box: %s."), *meshBox.ToString());
+
+        boxSizeFix.X = UKismetMathLibrary::FCeil(meshBoxSize.X) / 2;
+        boxSizeFix.Y = UKismetMathLibrary::FCeil(meshBoxSize.Y) / 2;
+        boxSizeFix.Z = UKismetMathLibrary::FCeil(meshBoxSize.Z) / 2;
+        boxSizeFix = boxSizeFix * m_pMainStaticMesh->RelativeScale3D;
+
+        meshOrigin.X = (meshBox.Min.X + meshBox.Max.X) / 2;
+        meshOrigin.Y = (meshBox.Min.Y + meshBox.Max.Y) / 2;
+        meshOrigin.Z = (meshBox.Min.Z + meshBox.Max.Z) / 2;
+        meshOrigin = meshOrigin * m_pMainStaticMesh->RelativeScale3D;
+    }
+    else {
+
+
+    }
+
+
+    m_pMainBox->SetRelativeLocation(FVector::ZeroVector);
+    m_pMainBox->SetBoxExtent(boxSizeFix);
+
+    m_pMainStaticMesh->SetRelativeLocation(-meshOrigin);
+
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+
+void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::helperTestAnimationStep(float time, FString debugStr, const TArray<AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp*>& actors)
+{
+    FMyTransformUpdateAnimationMetaWorldTransformCpp meta;
+    FMyWithCurveUpdateStepSettingsWorldTransformCpp stepData;
+
+    meta.m_sDebugString = debugStr;
+    meta.m_fTotalTime = time;
+    meta.m_cModelInfo.reset(MyModelInfoType::Box3D);
+    meta.m_cModelInfo.getBox3DRef().m_cBoxExtend = FVector(20, 30, 60);
+
+    stepData.m_fTimePercent = 1;
+    stepData.m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::OffsetFromPrevLocation;
+    stepData.m_cLocationOffsetPercent = FVector(0, 0, 1);
+
+    TArray<FMyWithCurveUpdaterBasicCpp *> updaterSortedGroup;
+
+    for (int32 i = 0; i < actors.Num(); i++)
+    {
+        FMyWithCurveUpdaterWorldTransformCpp* pUpdater = &actors[i]->getMyWithCurveUpdaterWorldTransformRef();
+        FTransform targetT;
+        targetT.SetLocation(FVector(0, 0, 100));
+        pUpdater->setHelperTransformOrigin(actors[i]->GetActorTransform());
+        pUpdater->setHelperTransformFinal(targetT);
+        updaterSortedGroup.Emplace(pUpdater);
+    }
+
+    UMyRenderUtilsLibrary::helperSetupTransformUpdateAnimationStep(meta, stepData, updaterSortedGroup);
+}
+
+/*
+void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::OnConstruction(const FTransform& Transform)
+{
+Super::OnConstruction(Transform);
+
+UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnConstruction m_pMainBox 0x%p, this 0x%p."), m_pMainBox, this);
+}
+*/
+
+
+void UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    if (m_bUpdaterNeedTick) {
+        m_cUpdater.tick(InDeltaTime);
+    }
+}
+
+void UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
+{
+    const FMyWithCurveUpdateStepDataWidgetTransformCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWidgetTransformCpp*>(&data);
+    MY_VERIFY(pData);
+
+    FWidgetTransform wtNow;
+    wtNow.Translation = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Translation, pData->m_cWidgetTransformEnd.Translation, vector.X, 1);
+
+    wtNow.Angle = FMath::FInterpTo(pData->m_cWidgetTransformStart.Angle, pData->m_cWidgetTransformEnd.Angle, vector.Y, 1);
+    wtNow.Shear = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Shear, pData->m_cWidgetTransformEnd.Shear, vector.Y, 1);
+
+    wtNow.Scale = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Scale, pData->m_cWidgetTransformEnd.Scale, vector.Z, 1);
+
+    SetRenderTransform(wtNow);
+}
+
+void UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
+{
+    const FMyWithCurveUpdateStepDataWidgetTransformCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWidgetTransformCpp*>(&data);
+    MY_VERIFY(pData);
+
+    SetRenderTransform(pData->m_cWidgetTransformEnd);
+}
+
+void UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::updaterActivateTick(bool activate, FString debugString)
+{
+    m_bUpdaterNeedTick = activate;
+
+    if (activate) {
+        if (m_bShowWhenActivated) {
+            this->SetVisibility(ESlateVisibility::Visible);
+        }
+    }
+    else {
+        if (m_bHideWhenInactivated) {
+            this->SetVisibility(ESlateVisibility::Hidden);
+        }
+    }
+}
+
 #if WITH_EDITOR
 
 void UMyFlipImage::PostEditChangeProperty(FPropertyChangedEvent& e)
@@ -311,6 +1063,8 @@ void UMyButton::SlateHandlePressedMy()
     }
 
     SlateHandlePressed();
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("pressed: %s"), *genStyleString());
 }
 
 void UMyButton::SlateHandleReleasedMy()
@@ -320,7 +1074,18 @@ void UMyButton::SlateHandleReleasedMy()
     }
 
     SlateHandleReleased();
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("released: %s"), *genStyleString());
 }
+
+FString UMyButton::genStyleString() const
+{
+    return FString::Printf(TEXT("normal: %s, pressed: %s"),
+                           *UMyRenderUtilsLibrary::Conv_SlateBrush_String(this->WidgetStyle.Normal),
+                           *UMyRenderUtilsLibrary::Conv_SlateBrush_String(this->WidgetStyle.Pressed));
+  
+}
+
 
 /*
 void UMyButton::SynchronizeProperties()
@@ -346,57 +1111,6 @@ void UMyButton::onReleasedInner()
     OnReleased.Broadcast();
 }
 */
-
-
-void UMyUserWidgetWithCurveUpdaterCpp::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
-{
-    Super::NativeTick(MyGeometry, InDeltaTime);
-
-    if (m_bUpdaterNeedTick) {
-        m_cUpdater.tick(InDeltaTime);
-    }
-}
-
-void UMyUserWidgetWithCurveUpdaterCpp::updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
-{
-    const FMyWithCurveUpdateStepDataWidgetBasicCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWidgetBasicCpp*>(&data);
-    MY_VERIFY(pData);
-
-    FWidgetTransform wtNow;
-    wtNow.Translation = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Translation, pData->m_cWidgetTransformEnd.Translation, vector.X, 1);
-    
-    wtNow.Angle = FMath::FInterpTo(pData->m_cWidgetTransformStart.Angle, pData->m_cWidgetTransformEnd.Angle, vector.Y, 1);
-    wtNow.Shear = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Shear, pData->m_cWidgetTransformEnd.Shear, vector.Y, 1);
-
-    wtNow.Scale = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Scale, pData->m_cWidgetTransformEnd.Scale, vector.Z, 1);
-
-    SetRenderTransform(wtNow);
-}
-
-void UMyUserWidgetWithCurveUpdaterCpp::updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
-{
-    const FMyWithCurveUpdateStepDataWidgetBasicCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWidgetBasicCpp*>(&data);
-    MY_VERIFY(pData);
-
-    SetRenderTransform(pData->m_cWidgetTransformEnd);
-}
-
-void UMyUserWidgetWithCurveUpdaterCpp::updaterActivateTick(bool activate, FString debugString)
-{
-    m_bUpdaterNeedTick = activate;
-
-    if (activate) {
-        if (m_bShowWhenActivated) {
-            this->SetVisibility(ESlateVisibility::Visible);
-        }
-    }
-    else {
-        if (m_bHideWhenInactivated) {
-            this->SetVisibility(ESlateVisibility::Hidden);
-        }
-    }
-}
-
 
 
 bool AMyTextureGenSuitBaseCpp::checkSettings() const
@@ -517,6 +1231,326 @@ int32 AMyTextureGenSuitBaseCpp::genDo(FString newTextureName)
     else {
         return - 100;
     }
+}
+
+
+
+void UMyRenderUtilsLibrary::helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp &meta,
+                                                                                                        float targetPosiFromCenterToBorderOnScreenPercent,
+                                                                                                        const FVector2D& targetPosiFixOnScreenPercent,
+                                                                                                        float targetVOnScreenPercent,
+                                                                                                        float targetModelHeightInWorld,
+                                                                                                        FTransform &outTargetTranform)
+{
+    FVector2D popPoint = meta.m_cScreenCenter + targetPosiFromCenterToBorderOnScreenPercent * meta.m_fCenterToPointUntilBorderLength * meta.m_cDirectionCenterToPoint;
+
+    popPoint += meta.m_cScreenCenter * 2 * targetPosiFixOnScreenPercent;
+
+    float vAbsoluteOnScreen = targetVOnScreenPercent * meta.m_cScreenCenter.Y * 2;
+
+    FVector cameraCenterLoc, cameraCenterDir;
+    UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByAbsolute(WorldContextObject, popPoint, vAbsoluteOnScreen, targetModelHeightInWorld, outTargetTranform, cameraCenterLoc, cameraCenterDir);
+}
+
+float UMyRenderUtilsLibrary::helperGetRemainTimePercent(const TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp>& stepDatas)
+{
+    float total = 1;
+    int32 l = stepDatas.Num();
+    for (int32 i = 0; i < l; i++) {
+        total -= stepDatas[i].m_fTimePercent;
+    }
+
+    if (total < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("total remain is negative: %f."), total);
+        return 0;
+    }
+
+    return total;
+}
+
+
+void UMyRenderUtilsLibrary::helperSetupWorldTransformUpdateAnimationStep(const FMyTransformUpdateAnimationMetaWorldTransformCpp& meta,
+                                                                         const FMyWithCurveUpdateStepSettingsWorldTransformCpp& stepData,
+                                                                         const TArray<FMyWithCurveUpdaterWorldTransformCpp *>& updatersSorted)
+{
+    float fTotalTime = meta.m_fTotalTime;
+
+    const FTransform& pointTransform = meta.m_cPointTransform;
+    const FTransform& disappearTransform = meta.m_cDisappearTransform;
+    const FVector& modelBoxExtend = meta.m_cModelInfo.getBox3DRefConst().m_cBoxExtend;
+
+    const FMyWithCurveUpdateStepSettingsWorldTransformCpp& cStepData = stepData;
+
+    TArray<FTransform> aNextTransforms;
+
+    int32 l = updatersSorted.Num();
+
+    aNextTransforms.Reset();
+    aNextTransforms.AddDefaulted(l);
+
+    if (l <= 0) {
+        return;
+    };
+
+    FVector finalLocationCenter = FVector::ZeroVector;
+    for (int32 i = 0; i < l; i++) {
+        if (updatersSorted[i] == NULL)
+        {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("actorComponentsSortedGroup[%d] == NULL."), i);
+            return;
+        }
+        FVector finalLocation = updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation();
+        finalLocationCenter += finalLocation;
+
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("finalLocation: %s"), *finalLocation.ToString());
+    }
+
+    finalLocationCenter /= l;
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("l %d, finalLocationCenter: %s"), l, *finalLocationCenter.ToString());
+    //find the middle one
+    //int32 idxCenter = l / 2;
+    //FMyWithCurveUpdaterWorldTransformCpp* updaterCenter = updatersSorted[idxCenter];
+    //FTransform& nextTransformCenter = aNextTransforms[idxCenter];
+
+
+    if (cStepData.m_eLocationUpdateType == MyWithCurveUpdateStepSettingsLocationType::PrevLocation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformPrevRefConst().GetLocation());
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyWithCurveUpdateStepSettingsLocationType::FinalLocation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation());
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyWithCurveUpdateStepSettingsLocationType::OffsetFromPrevLocation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformPrevRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend.Size() * 2);
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyWithCurveUpdateStepSettingsLocationType::OffsetFromFinalLocation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend.Size() * 2);
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyWithCurveUpdateStepSettingsLocationType::PointOnPlayerScreen)
+    {
+        FVector location = pointTransform.GetLocation();
+        for (int32 i = 0; i < l; i++) {
+            FVector locationForScreen = location + cStepData.m_cLocationOffsetPercent * modelBoxExtend.Size() * 2 + updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation() - finalLocationCenter;
+            //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("locationForScreen: %s"), *locationForScreen.ToString());
+            aNextTransforms[i].SetLocation(locationForScreen);
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyWithCurveUpdateStepSettingsLocationType::DisappearAtAttenderBorderOnPlayerScreen)
+    {
+        FVector location = disappearTransform.GetLocation();
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(location + cStepData.m_cLocationOffsetPercent * modelBoxExtend.Size() * 2 + updatersSorted[i]->getHelperTransformFinalRefConst().GetLocation() - finalLocationCenter);
+        }
+    }
+    else if (cStepData.m_eLocationUpdateType == MyWithCurveUpdateStepSettingsLocationType::OffsetFromGroupPoint)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetLocation(updatersSorted[i]->getHelperTransformGroupPointRefConst().GetLocation() + cStepData.m_cLocationOffsetPercent * modelBoxExtend.Size() * 2);
+        }
+    }
+
+    if (cStepData.m_eRotationUpdateType == MyWithCurveUpdateStepSettingsRotationType::PrevRotation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetRotation(updatersSorted[i]->getHelperTransformPrevRefConst().GetRotation());
+        }
+    }
+    else if (cStepData.m_eRotationUpdateType == MyWithCurveUpdateStepSettingsRotationType::FinalRotation)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetRotation(updatersSorted[i]->getHelperTransformFinalRefConst().GetRotation());
+        }
+    }
+    else if (cStepData.m_eRotationUpdateType == MyWithCurveUpdateStepSettingsRotationType::FacingPlayerScreen)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetRotation(pointTransform.GetRotation());
+        }
+    }
+
+    if (cStepData.m_eScaleUpdateType == MyWithCurveUpdateStepSettingsScaleType::PrevScale)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetScale3D(updatersSorted[i]->getHelperTransformPrevRefConst().GetScale3D());
+        }
+    }
+    else  if (cStepData.m_eScaleUpdateType == MyWithCurveUpdateStepSettingsScaleType::FinalScale)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetScale3D(updatersSorted[i]->getHelperTransformFinalRefConst().GetScale3D());
+        }
+    }
+    else  if (cStepData.m_eScaleUpdateType == MyWithCurveUpdateStepSettingsScaleType::Specified)
+    {
+        for (int32 i = 0; i < l; i++) {
+            aNextTransforms[i].SetScale3D(cStepData.m_cScaleSpecified);
+        }
+    }
+
+
+    float fDur = fTotalTime * cStepData.m_fTimePercent;
+    UCurveVector* pCurve = UMyCommonUtilsLibrary::getCurveVectorFromSettings(cStepData.m_cCurve);
+    for (int32 i = 0; i < l; i++) {
+
+        FMyWithCurveUpdaterWorldTransformCpp *pUpdater = updatersSorted[i];
+
+        FMyWithCurveUpdateStepDataWorldTransformCpp data;
+        data.helperSetDataBySrcAndDst(fDur, pCurve, pUpdater->getHelperTransformPrevRefConst(), aNextTransforms[i], cStepData.m_cRotationUpdateExtraCycles);
+        pUpdater->addStepToTail(data);
+    }
+};
+
+void UMyRenderUtilsLibrary::helperSetupTransformUpdateAnimationStep(const FMyTransformUpdateAnimationMetaBaseCpp& meta,
+                                                                    const FMyWithCurveUpdateStepSettingsBasicCpp& stepData,
+                                                                    const TArray<FMyWithCurveUpdaterBasicCpp *>& updatersSorted)
+{
+    if (meta.getType() == MyTransformTypeWorldTransform) {
+        const FMyTransformUpdateAnimationMetaWorldTransformCpp& metaWorldTransform = FMyTransformUpdateAnimationMetaWorldTransformCpp::castFromBaseRefConst(meta);
+        const FMyWithCurveUpdateStepSettingsWorldTransformCpp& stepDataWorldTransform = FMyWithCurveUpdateStepSettingsWorldTransformCpp::castFromBaseConst(stepData);
+
+        TArray<FMyWithCurveUpdaterWorldTransformCpp *> updatersWorldTransformSorted;
+        for (int32 i = 0; i < updatersSorted.Num(); i++) {
+            FMyWithCurveUpdaterWorldTransformCpp* pUpdater = &FMyWithCurveUpdaterWorldTransformCpp::castFromBaseRef(*updatersSorted[i]);
+            updatersWorldTransformSorted.Emplace(pUpdater);
+        }
+
+        helperSetupWorldTransformUpdateAnimationStep(metaWorldTransform, stepDataWorldTransform, updatersWorldTransformSorted);
+    }
+    else if  (meta.getType() == MyTransformTypeWidgetTransform) {
+    }
+    else {
+        //Todo
+    }
+};
+
+
+void UMyRenderUtilsLibrary::helperSetupTransformUpdateAnimationSteps(const FMyTransformUpdateAnimationMetaBaseCpp& meta,
+                                                                     const TArray<const FMyWithCurveUpdateStepSettingsBasicCpp *>& stepDatas,
+                                                                     const TArray<FMyWithCurveUpdaterBasicCpp *>& updatersSorted)
+{
+    int32 l = stepDatas.Num();
+
+    if (l <= 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("stepDatas num is zero, debugStr: %s."), *meta.m_sDebugString);
+        return;
+    }
+
+    float total = 0;
+
+    bool bTimePecentTotalExpectedNot100Pecent = false;
+
+    for (int32 i = 0; i < l; i++) {
+        helperSetupTransformUpdateAnimationStep(meta, *stepDatas[i], updatersSorted);
+        float f = stepDatas[i]->m_fTimePercent;
+        total += f;
+
+        bTimePecentTotalExpectedNot100Pecent |= stepDatas[i]->m_bTimePecentTotalExpectedNot100Pecent;
+    }
+
+    if ((!bTimePecentTotalExpectedNot100Pecent) && l > 0 && !FMath::IsNearlyEqual(total, 1, MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT))
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("total time is not 100%, str %s. now it is %f."), *meta.m_sDebugString, total);
+    };
+}
+
+void UMyRenderUtilsLibrary::helperSetupWorldTransformUpdateAnimationStepsForPoint(const UObject* WorldContextObject,
+                                                                                    float totalDur,
+                                                                                    const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp& pointAndCenterMeta,
+                                                                                    const FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp& pointInfo,
+                                                                                    const TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp>& stepDatas,
+                                                                                    float extraDelayDur,
+                                                                                    const TArray<IMyWithCurveUpdaterTransformInterfaceCpp *>& updaterInterfaces,
+                                                                                    FString debugName,
+                                                                                    bool clearPrevSteps)
+{
+    FMyTransformUpdateAnimationMetaWorldTransformCpp meta, *pMeta = &meta;
+    TArray<FMyWithCurveUpdaterBasicCpp *> aUpdaters, *pUpdaters = &aUpdaters;
+
+    //prepare meta
+    pMeta->m_sDebugString = debugName;
+    pMeta->m_fTotalTime = totalDur;
+    if (updaterInterfaces.Num() <= 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("updaterInterfaces num is zero."));
+        return;
+    }
+
+    updaterInterfaces[0]->getModelInfo(pMeta->m_cModelInfo);
+
+    helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, pointInfo.m_fShowPosiFromCenterToBorderPercent, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelInfo.getBox3DRefConst().m_cBoxExtend.Size() * 2, pMeta->m_cPointTransform);
+    helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, 1.2, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelInfo.getBox3DRefConst().m_cBoxExtend.Size() * 2, pMeta->m_cDisappearTransform);
+
+    bool bDelay = extraDelayDur >= MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT;
+
+    pUpdaters->Reset();
+    int32 l = updaterInterfaces.Num();
+    for (int32 i = 0; i < l; i++) {
+        FMyWithCurveUpdaterBasicCpp* pUpdater = &updaterInterfaces[i]->getMyWithCurveUpdaterTransformRef();
+        pUpdaters->Emplace(pUpdater);
+        if (clearPrevSteps) {
+            pUpdater->clearSteps();
+        }
+    }
+
+    if (bDelay) {
+        UMyRenderUtilsLibrary::helperAddWaitStep(extraDelayDur, debugName + TEXT(" wait"), *pUpdaters);
+    }
+
+    TArray<const FMyWithCurveUpdateStepSettingsBasicCpp *> stepDatasBase;
+    stepDatasBase.Reserve(stepDatas.Num());
+    for (int32 i = 0; i < stepDatas.Num(); i++) {
+        stepDatasBase.Emplace(&stepDatas[i]);
+    }
+
+    UMyRenderUtilsLibrary::helperSetupTransformUpdateAnimationSteps(meta, stepDatasBase, *pUpdaters);
+}
+
+void UMyRenderUtilsLibrary::helperAddWaitStep(float waitTime, FString debugStr, const TArray<FMyWithCurveUpdaterBasicCpp *>& updaters)
+{
+    FMyTransformUpdateAnimationMetaWorldTransformCpp meta;
+    FMyWithCurveUpdateStepSettingsWorldTransformCpp stepData;
+
+    meta.m_sDebugString = debugStr;
+    meta.m_fTotalTime = waitTime;
+
+    stepData.m_fTimePercent = 1;
+
+
+    helperSetupTransformUpdateAnimationStep(meta, stepData, updaters);
+}
+
+void UMyRenderUtilsLibrary::helperAddWaitStep(float waitTime, FString debugStr, const TArray<IMyWithCurveUpdaterTransformInterfaceCpp *>& updaterInterfaces)
+{
+
+    TArray<FMyWithCurveUpdaterBasicCpp *> aUpdaters;
+
+    for (int32 i = 0; i < updaterInterfaces.Num(); i++)
+    {
+        aUpdaters.Emplace(&updaterInterfaces[i]->getMyWithCurveUpdaterTransformRef());
+    }
+
+    UMyRenderUtilsLibrary::helperAddWaitStep(waitTime, debugStr, aUpdaters);
+}
+
+FString UMyRenderUtilsLibrary::Conv_SlateBrush_String(const FSlateBrush& brush)
+{
+    UObject* pRO = brush.GetResourceObject();
+    FString ROStr = TEXT("NULL");
+    if (pRO) {
+        ROStr = pRO->GetPathName();
+    }
+    
+    return FString::Printf(TEXT("RO: %s"), *ROStr);
 }
 
 bool UMyRenderUtilsLibrary::RenderTargetIsSizePowerOfTwo(class UTextureRenderTarget2D* inTextureRenderTarget)

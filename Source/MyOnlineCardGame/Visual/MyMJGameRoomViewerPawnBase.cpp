@@ -15,12 +15,12 @@
 
 
 //a step data support controlled roll
-struct FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp : public FMyWithCurveUpdateStepDataTransformCpp
+struct FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp : public FMyWithCurveUpdateStepDataWorldTransformCpp
 {
 
 public:
 
-    FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp() : FMyWithCurveUpdateStepDataTransformCpp()
+    FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp() : FMyWithCurveUpdateStepDataWorldTransformCpp()
     {
         m_sClassName = TEXT("FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp");
         reset(true);
@@ -33,7 +33,7 @@ public:
     inline void reset(bool resetSubClassDataonly = false)
     {
         if (!resetSubClassDataonly) {
-            FMyWithCurveUpdateStepDataTransformCpp::reset();
+            FMyWithCurveUpdateStepDataWorldTransformCpp::reset();
         }
 
         m_iIdxDeskPositionTarget = 0;
@@ -85,7 +85,7 @@ AMyMJGameRoomViewerPawnBaseCpp::AMyMJGameRoomViewerPawnBaseCpp() : Super()
     bCollideWhenPlacing = false;
     SpawnCollisionHandlingMethod = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-    m_pMyTransformUpdaterComponent = CreateDefaultSubobject<UMyTransformUpdaterComponent>(TEXT("my transform updater component"));
+    m_pMyTransformUpdaterComponent = CreateDefaultSubobject<UMyWithCurveUpdaterWorldTransformComponent>(TEXT("my transform updater component"));
 
     USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
     MY_VERIFY(IsValid(pRootSceneComponent));
@@ -139,7 +139,7 @@ void AMyMJGameRoomViewerPawnBaseCpp::changeInRoomDeskPosition(int32 idxDeskPosit
     bool bAlreadyInRoom = dynDataStart.m_cMyTransformOfZRotation.m_cLocation.m_fRadiusOnXYPlane < (dynDataEnd.m_cMyTransformOfZRotation.m_cLocation.m_fRadiusOnXYPlane * JudgePawnAlreadyInRoomCoOfRadius);
 
 
-    FMyWithCurveUpdaterTransformCpp* pUpdater = &getMyWithCurveUpdaterTransformRef();
+    FMyWithCurveUpdaterWorldTransformCpp* pUpdater = &getMyWithCurveUpdaterWorldTransformRef();
     pUpdater->clearSteps();
     pUpdater->setHelperTransformOrigin(GetActorTransform());
 
@@ -225,7 +225,7 @@ void AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepUpdate(const FMyWithCurveUpdat
     FMyCardGameCameraDynamicDataCpp dynNow;
     FMyCardGameCameraDynamicDataCpp::interp(pData->m_cDynamicDataStart, pData->m_cDynamicDataEnd, vector.Y, dynNow);
 
-    if (!FMath::IsNearlyEqual(getCameraComponent()->FieldOfView, dynNow.m_fFOV, FMyWithCurveUpdateStepDataTransformCpp_Delta_Min))
+    if (!FMath::IsNearlyEqual(getCameraComponent()->FieldOfView, dynNow.m_fFOV, FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min))
     {
         getCameraComponent()->SetFieldOfView(dynNow.m_fFOV);
     }
@@ -238,7 +238,7 @@ void AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepUpdate(const FMyWithCurveUpdat
         //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Updated: %s, %s, %s, %f. %s."), *dynNow.m_cMyTransformOfZRotation.ToString(), *pExtra->m_cDynamicDataStart.m_cMyTransformOfZRotation.ToString(), *pExtra->m_cDynamicDataEnd.m_cMyTransformOfZRotation.ToString(), vector.Y, *transformNow.ToString());
         //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Updated : %f, now %s, transform: %s."), vector.Y, *dynNow.m_cMyTransformOfZRotation.ToString(), *transformNow.ToString());
 
-        if (!transformNow.Equals(GetActorTransform(), FMyWithCurveUpdateStepDataTransformCpp_Delta_Min)) {
+        if (!transformNow.Equals(GetActorTransform(), FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min)) {
             SetActorTransform(transformNow);
         }
 
@@ -252,7 +252,7 @@ void AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepFinish(const FMyWithCurveUpdat
 
     const FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataTransformAndRotateAroundCenterCpp *>(&data);
 
-    if (!FMath::IsNearlyEqual(getCameraComponent()->FieldOfView, pData->m_cDynamicDataEnd.m_fFOV, FMyWithCurveUpdateStepDataTransformCpp_Delta_Min))
+    if (!FMath::IsNearlyEqual(getCameraComponent()->FieldOfView, pData->m_cDynamicDataEnd.m_fFOV, FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min))
     {
         getCameraComponent()->SetFieldOfView(pData->m_cDynamicDataEnd.m_fFOV);
     }

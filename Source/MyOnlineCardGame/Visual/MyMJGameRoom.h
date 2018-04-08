@@ -42,14 +42,14 @@ public:
     };
 
     /*
-    int32 getVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint)
+    int32 getVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp &visualPoint)
     {
         MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
         MY_VERIFY((uint8)eSlot < 0xff);
 
         int32 key = ((idxAttender & 0xff) << 8) & ((uint8)eSlot & 0xff);
 
-        const FMyMJGameDeskVisualPointCfgCpp *pV = m_mVisualPointCache.Find(key);
+        const FMyCardGameVisualPointCfgCpp *pV = m_mVisualPointCache.Find(key);
         if (pV) {
             visualPoint = *pV;
             return 0;
@@ -57,7 +57,7 @@ public:
 
         int32 errCode = retrieveVisualPointByIdxAttenderAndSlot(idxAttender, eSlot, visualPoint);
         if (errCode == 0) {
-            FMyMJGameDeskVisualPointCfgCpp& newAdded = m_mVisualPointCache.Add(key);
+            FMyCardGameVisualPointCfgCpp& newAdded = m_mVisualPointCache.Add(key);
             newAdded = visualPoint;
         }
         else {
@@ -74,18 +74,18 @@ protected:
 
     //return errcode, 0 means no error
     UFUNCTION(BlueprintNativeEvent, BlueprintPure)
-    FMyErrorCodeMJGameCpp retrieveCardVisualPointCfg(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
+    FMyErrorCodeMJGameCpp retrieveCardVisualPointCfg(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp &visualPoint) const;
 
-    FMyErrorCodeMJGameCpp retrieveCardVisualPointCfg_Implementation(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
+    FMyErrorCodeMJGameCpp retrieveCardVisualPointCfg_Implementation(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp &visualPoint) const
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDeskAreaCpp::retrieveCardVisualPointCfg() must be overrided by blueprint child class!"));
         return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
     };
 
     UFUNCTION(BlueprintNativeEvent, BlueprintPure)
-    FMyErrorCodeMJGameCpp retrieveAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
+    FMyErrorCodeMJGameCpp retrieveAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyCardGameVisualPointCfgCpp &visualPoint) const;
 
-    FMyErrorCodeMJGameCpp retrieveAttenderVisualPointCfg_Implementation(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
+    FMyErrorCodeMJGameCpp retrieveAttenderVisualPointCfg_Implementation(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyCardGameVisualPointCfgCpp &visualPoint) const
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDeskAreaCpp::retrieveAttenderVisualPointCfg() must be overrided by blueprint child class!"));
         return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
@@ -93,15 +93,15 @@ protected:
 
     //return errcode, 0 means no error, return cfg other than card
     UFUNCTION(BlueprintNativeEvent)
-    FMyErrorCodeMJGameCpp retrieveTrivalVisualPointCfg(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const;
+    FMyErrorCodeMJGameCpp retrieveTrivalVisualPointCfg(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyCardGameVisualPointCfgCpp &visualPoint) const;
 
-    FMyErrorCodeMJGameCpp retrieveTrivalVisualPointCfg_Implementation(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyMJGameDeskVisualPointCfgCpp &visualPoint) const
+    FMyErrorCodeMJGameCpp retrieveTrivalVisualPointCfg_Implementation(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyCardGameVisualPointCfgCpp &visualPoint) const
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDeskAreaCpp::retrieveTrivalVisualPointCfg() must be overrided by blueprint child class!"));
         return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
     };
 
-    TMap<int32, FMyMJGameDeskVisualPointCfgCpp> m_mVisualPointCache;
+    TMap<int32, FMyCardGameVisualPointCfgCpp> m_mVisualPointCache;
 };
 
 
@@ -125,15 +125,15 @@ public:
 
     //never fail
     UFUNCTION(BlueprintCallable)
-    AMyMJGameCardBaseCpp* getCardActorByIdxEnsured(int32 idx)
+    AMyMJGameCardActorBaseCpp* getCardActorByIdxEnsured(int32 idx)
     {
-        return UMyCommonUtilsLibrary::helperGetActorInArrayEnsured<AMyMJGameCardBaseCpp>(this, getVisualCfg()->m_cMainActorClassCfg.m_cCardClass, m_aCardActors, idx, MY_CARD_ACTOR_NUM_MAX, TEXT("Card Actors"), true);
+        return UMyCommonUtilsLibrary::helperGetActorInArrayEnsured<AMyMJGameCardActorBaseCpp>(this, getVisualCfg()->m_cMainActorClassCfg.m_cCardClass, m_aCardActors, idx, MY_CARD_ACTOR_NUM_MAX, TEXT("Card Actors"), true);
     };
 
     //may fail
-    inline AMyMJGameCardBaseCpp* getCardActorByIdxConst(int32 idx) const
+    inline AMyMJGameCardActorBaseCpp* getCardActorByIdxConst(int32 idx) const
     {
-        return UMyCommonUtilsLibrary::helperGetActorInArray<AMyMJGameCardBaseCpp>(m_aCardActors, idx);
+        return UMyCommonUtilsLibrary::helperGetActorInArray<AMyMJGameCardActorBaseCpp>(m_aCardActors, idx);
     };
 
     //never fail
@@ -173,7 +173,7 @@ protected:
     UMyMJGameInRoomVisualCfgCpp* m_pInRoomcfg;
 
     UPROPERTY(Transient, meta = (DisplayName = "card actors"))
-    TArray<AMyMJGameCardBaseCpp*> m_aCardActors;
+    TArray<AMyMJGameCardActorBaseCpp*> m_aCardActors;
 
     UPROPERTY(Transient, meta = (DisplayName = "dice actors"))
     TArray<AMyMJGameDiceBaseCpp*> m_aDiceActors;
@@ -254,23 +254,23 @@ protected:
     virtual FMyErrorCodeMJGameCpp
     showAttenderCardsDistribute_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                                const TArray<int32>& aIdsHandCards, bool isLastDistribution,
-                                               const TArray<class AMyMJGameCardBaseCpp*>& cardActorsDistributed,
-                                               const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving) override;
+                                               const TArray<class AMyMJGameCardActorBaseCpp*>& cardActorsDistributed,
+                                               const TArray<class AMyMJGameCardActorBaseCpp*>& cardActorsOtherMoving) override;
 
     virtual FMyErrorCodeMJGameCpp
     showAttenderTakeCards_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
-                                         const TArray<AMyMJGameCardBaseCpp*>& cardActorsTaken) override;
+                                         const TArray<AMyMJGameCardActorBaseCpp*>& cardActorsTaken) override;
 
     virtual FMyErrorCodeMJGameCpp
     showAttenderGiveOutCards_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                             int32 handCardsCount,
-                                            const TArray<AMyMJGameCardBaseCpp*>& cardActorsGivenOut,
-                                            const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving) override;
+                                            const TArray<AMyMJGameCardActorBaseCpp*>& cardActorsGivenOut,
+                                            const TArray<AMyMJGameCardActorBaseCpp*>& cardActorsOtherMoving) override;
 
     virtual FMyErrorCodeMJGameCpp
     showAttenderWeave_Implementation(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                      MyMJGameEventVisualTypeCpp weaveVsualType, const struct FMyMJWeaveCpp& weave,
-                                     const TArray<class AMyMJGameCardBaseCpp*>& cardActorsWeaved, const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving) override;
+                                     const TArray<class AMyMJGameCardActorBaseCpp*>& cardActorsWeaved, const TArray<class AMyMJGameCardActorBaseCpp*>& cardActorsOtherMoving) override;
 
     //return error code
     FMyErrorCodeMJGameCpp retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);

@@ -83,9 +83,9 @@ void FMyMJGameInGamePlayerScreenCfgCpp::fillDefaultData()
 
 void FMyMJGameEventPusherCfgCpp::fillDefaultData()
 {
-    FMyActorTransformUpdateAnimationStepCpp step;
-    FMyActorTransformUpdateAnimationStepCpp* pStep = &step;
-    TArray<FMyActorTransformUpdateAnimationStepCpp> *pSteps;
+    FMyWithCurveUpdateStepSettingsWorldTransformCpp step;
+    FMyWithCurveUpdateStepSettingsWorldTransformCpp* pStep = &step;
+    TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp> *pSteps;
 
     m_cClientCommonUpdate.reset();
     m_cClientCommonUpdate.m_fTotalTime = 1;
@@ -101,15 +101,15 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps = &m_cThrowDices.m_aDiceSteps;
     pStep->reset();
     pStep->m_fTimePercent = 0.15;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::PointOnPlayerScreen;
-    pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::PrevRotation;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::PointOnPlayerScreen;
+    pStep->m_eRotationUpdateType = MyWithCurveUpdateStepSettingsRotationType::PrevRotation;
     pStep->m_cCurve.m_eCurveType = MyCurveAssetType::DefaultAccelerate0;
     pSteps->Emplace(*pStep);
 
     pStep->reset();
     pStep->m_fTimePercent = 0.5;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::PrevLocation;
-    pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::FinalRotation;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::PrevLocation;
+    pStep->m_eRotationUpdateType = MyWithCurveUpdateStepSettingsRotationType::FinalRotation;
     pStep->m_cCurve.m_eCurveType = MyCurveAssetType::DefaultAccelerate0;
     pSteps->Emplace(*pStep);
 
@@ -118,9 +118,9 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps->Emplace(*pStep);
 
     pStep->reset();
-    pStep->m_fTimePercent = UMyCommonUtilsLibrary::helperGetRemainTimePercent(*pSteps);
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::FinalLocation;
-    pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::FinalRotation;
+    pStep->m_fTimePercent = UMyRenderUtilsLibrary::helperGetRemainTimePercent(*pSteps);
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::FinalLocation;
+    pStep->m_eRotationUpdateType = MyWithCurveUpdateStepSettingsRotationType::FinalRotation;
     pStep->m_cCurve.m_eCurveType = MyCurveAssetType::DefaultAccelerate0;
     pSteps->Emplace(*pStep);
 
@@ -132,9 +132,9 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pStep->reset();
     pStep->m_bTimePecentTotalExpectedNot100Pecent = true;
     pStep->m_fTimePercent = 0.3 * DefaultDistCardTimeInProgressCo;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::OffsetFromGroupPoint;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::OffsetFromGroupPoint;
     pStep->m_cLocationOffsetPercent.Z = 1;
-    pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::FinalRotation;
+    pStep->m_eRotationUpdateType = MyWithCurveUpdateStepSettingsRotationType::FinalRotation;
     pStep->m_cCurve.m_eCurveType = MyCurveAssetType::DefaultAccelerate0;
     pSteps->Emplace(*pStep);
 
@@ -144,15 +144,15 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
 
     pStep->reset();
     pStep->m_fTimePercent = 0.2 * DefaultDistCardTimeInProgressCo;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::OffsetFromFinalLocation;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::OffsetFromFinalLocation;
     pStep->m_cLocationOffsetPercent.Z = 1;
-    pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::FinalRotation;
+    pStep->m_eRotationUpdateType = MyWithCurveUpdateStepSettingsRotationType::FinalRotation;
     pStep->m_cCurve.m_eCurveType = MyCurveAssetType::DefaultAccelerate0;
     pSteps->Emplace(*pStep);
 
     pStep->reset();
     pStep->m_fTimePercent = 0.2 * DefaultDistCardTimeInProgressCo;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::FinalLocation;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::FinalLocation;
     pSteps->Emplace(*pStep);
 
     m_cDistCards.m_fTotalTimeOverrideForLast = DefaultDistCardTimeBase * DefaultDistCardTimeInProgressCo + DefaultDistCardTimeLastExtra;
@@ -178,7 +178,7 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
 
     pStep->reset();
     pStep->m_fTimePercent = 0.4;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::FinalLocation;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::FinalLocation;
     pSteps->Emplace(*pStep);
 
 
@@ -188,9 +188,9 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps = &m_cTakeCards.m_aCardsFocusedSteps;
     pStep->reset();
     pStep->m_fTimePercent = 0.4;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::OffsetFromFinalLocation;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::OffsetFromFinalLocation;
     pStep->m_cLocationOffsetPercent.Z = 1;
-    pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::FinalRotation;
+    pStep->m_eRotationUpdateType = MyWithCurveUpdateStepSettingsRotationType::FinalRotation;
     pStep->m_cCurve.m_eCurveType = MyCurveAssetType::DefaultAccelerate0;
     pSteps->Emplace(*pStep);
 
@@ -199,8 +199,8 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps->Emplace(*pStep);
 
     pStep->reset();
-    pStep->m_fTimePercent = UMyCommonUtilsLibrary::helperGetRemainTimePercent(*pSteps);
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::FinalLocation;
+    pStep->m_fTimePercent = UMyRenderUtilsLibrary::helperGetRemainTimePercent(*pSteps);
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::FinalLocation;
     pStep->m_cCurve.m_eCurveType = MyCurveAssetType::DefaultAccelerate0;
     pSteps->Emplace(*pStep);
 
@@ -211,8 +211,8 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps = &m_cGiveOutCards.m_aCardsFocusedSteps;
     pStep->reset();
     pStep->m_fTimePercent = 0.3;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::PointOnPlayerScreen;
-    pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::FinalRotation;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::PointOnPlayerScreen;
+    pStep->m_eRotationUpdateType = MyWithCurveUpdateStepSettingsRotationType::FinalRotation;
     pStep->m_cCurve.m_eCurveType = MyCurveAssetType::DefaultAccelerate0;
     pSteps->Emplace(*pStep);
 
@@ -221,8 +221,8 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps->Emplace(*pStep);
 
     pStep->reset();
-    pStep->m_fTimePercent = UMyCommonUtilsLibrary::helperGetRemainTimePercent(*pSteps);
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::FinalLocation;
+    pStep->m_fTimePercent = UMyRenderUtilsLibrary::helperGetRemainTimePercent(*pSteps);
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::FinalLocation;
     pStep->m_cCurve.m_eCurveType = MyCurveAssetType::DefaultAccelerate0;
     pSteps->Emplace(*pStep);
 
@@ -231,20 +231,20 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
     pSteps = &m_cGiveOutCards.m_aCardsInsertedToHandSlotSteps;
     pStep->reset();
     pStep->m_fTimePercent = 0.2;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::OffsetFromPrevLocation;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::OffsetFromPrevLocation;
     pStep->m_cLocationOffsetPercent.Z = 1;
     pSteps->Emplace(*pStep);
 
     pStep->reset();
     pStep->m_fTimePercent = 0.6;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::OffsetFromFinalLocation;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::OffsetFromFinalLocation;
     pStep->m_cLocationOffsetPercent.Z = 1;
-    pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::FinalRotation;
+    pStep->m_eRotationUpdateType = MyWithCurveUpdateStepSettingsRotationType::FinalRotation;
     pSteps->Emplace(*pStep);
 
     pStep->reset();
-    pStep->m_fTimePercent = UMyCommonUtilsLibrary::helperGetRemainTimePercent(*pSteps);
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::FinalLocation;
+    pStep->m_fTimePercent = UMyRenderUtilsLibrary::helperGetRemainTimePercent(*pSteps);
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::FinalLocation;
     pSteps->Emplace(*pStep);
 
 
@@ -257,19 +257,19 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
 
     pStep->reset();
     pStep->m_fTimePercent = 0.001;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::DisappearAtAttenderBorderOnPlayerScreen;
-    pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::FacingPlayerScreen;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::DisappearAtAttenderBorderOnPlayerScreen;
+    pStep->m_eRotationUpdateType = MyWithCurveUpdateStepSettingsRotationType::FacingPlayerScreen;
     pStep->m_cCurve.m_eCurveType = MyCurveAssetType::DefaultAccelerate0;
     pSteps->Emplace(*pStep);
 
     pStep->reset();
     pStep->m_fTimePercent = 0.4;
-    pStep->m_eLocationUpdateType = MyActorTransformUpdateAnimationLocationType::PointOnPlayerScreen;
-    pStep->m_eRotationUpdateType = MyActorTransformUpdateAnimationRotationType::FacingPlayerScreen;
+    pStep->m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::PointOnPlayerScreen;
+    pStep->m_eRotationUpdateType = MyWithCurveUpdateStepSettingsRotationType::FacingPlayerScreen;
     pSteps->Emplace(*pStep);
 
     pStep->reset();
-    pStep->m_fTimePercent = UMyCommonUtilsLibrary::helperGetRemainTimePercent(*pSteps);
+    pStep->m_fTimePercent = UMyRenderUtilsLibrary::helperGetRemainTimePercent(*pSteps);
     pSteps->Emplace(*pStep);
 
     m_cWeavePeng.copyExceptClass(m_cWeaveChi);
@@ -292,7 +292,7 @@ void FMyMJGameEventPusherCfgCpp::fillDefaultData()
 
 bool FMyMJGameInRoomMainActorClassCfgCpp::checkSettings() const
 {
-    if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<AMyMJGameCardBaseCpp>(m_cCardClass, TEXT("actor card class")))
+    if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<AMyMJGameCardActorBaseCpp>(m_cCardClass, TEXT("actor card class")))
     {
         return false;
     }

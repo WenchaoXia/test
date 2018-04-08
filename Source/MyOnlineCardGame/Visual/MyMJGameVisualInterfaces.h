@@ -40,40 +40,38 @@ public:
     UFUNCTION(BlueprintNativeEvent)
     FMyErrorCodeMJGameCpp showAttenderCardsDistribute(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                       const TArray<int32>& aIdsHandCards, bool isLastDistribution,
-                                      const TArray<class AMyMJGameCardBaseCpp*>& cardActorsDistributed,
-                                      const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving);
+                                      const TArray<class AMyMJGameCardActorBaseCpp*>& cardActorsDistributed,
+                                      const TArray<class AMyMJGameCardActorBaseCpp*>& cardActorsOtherMoving);
 
     UFUNCTION(BlueprintNativeEvent)
     FMyErrorCodeMJGameCpp showAttenderTakeCards(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
-                                 const TArray<AMyMJGameCardBaseCpp*>& cardActorsTaken);
+                                 const TArray<AMyMJGameCardActorBaseCpp*>& cardActorsTaken);
     
 
     //@handCardCount is used to tip how many cards left, and the implemention can use it to detect if this card is injecting(jump into the cards stacks)
     UFUNCTION(BlueprintNativeEvent)
     FMyErrorCodeMJGameCpp showAttenderGiveOutCards(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                                     int32 handCardsCount,
-                                    const TArray<AMyMJGameCardBaseCpp*>& cardActorsGivenOut,
-                                    const TArray<AMyMJGameCardBaseCpp*>& cardActorsOtherMoving);
+                                    const TArray<AMyMJGameCardActorBaseCpp*>& cardActorsGivenOut,
+                                    const TArray<AMyMJGameCardActorBaseCpp*>& cardActorsOtherMoving);
 
 
     //All card actors passed in, are attender related
     UFUNCTION(BlueprintNativeEvent)
     FMyErrorCodeMJGameCpp showAttenderWeave(float dur, int32 idxAttender, const FTransform &visualPointTransformForAttender,
                             MyMJGameEventVisualTypeCpp weaveVisualType, const struct FMyMJWeaveCpp& weave,
-                            const TArray<class AMyMJGameCardBaseCpp*>& cardActorsWeaved, const TArray<class AMyMJGameCardBaseCpp*>& cardActorsOtherMoving);
+                            const TArray<class AMyMJGameCardActorBaseCpp*>& cardActorsWeaved, const TArray<class AMyMJGameCardActorBaseCpp*>& cardActorsOtherMoving);
 };
 
 UINTERFACE(NotBlueprintable)
 class UMyMJGameInRoomUIMainWidgetInterfaceCpp : public UInterface
 {
-    //GENERATED_BODY()
-    GENERATED_UINTERFACE_BODY()
+    GENERATED_BODY()
 };
 
 class IMyMJGameInRoomUIMainWidgetInterfaceCpp
 {
-    //GENERATED_BODY()
-    GENERATED_IINTERFACE_BODY()
+    GENERATED_BODY()
 
 public:
 

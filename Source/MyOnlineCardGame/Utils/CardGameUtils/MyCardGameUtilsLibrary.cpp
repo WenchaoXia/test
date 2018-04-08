@@ -13,42 +13,36 @@
 #include "Kismet/KismetStringLibrary.h"
 
 void UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(int32 idxViewPositionBelongTo,
-                                                                            FVector centerMapped,
-                                                                            FVector PointMapped,
+                                                                            const FVector2D& center,
+                                                                            const FVector2D& Point,
                                                                             FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp &outMeta)
 {
-    PointMapped.Z = 0;
-
     outMeta.m_iIdxScreenPositionBelongTo = idxViewPositionBelongTo;
-    outMeta.m_cScreenCenterMapped = centerMapped; //Z is 0
-    outMeta.m_cScreenCenterMapped.Z = 0;
+    outMeta.m_cScreenCenter = center;
 
-    FVector& dir = outMeta.m_cDirectionCenterToPointMapped;
-    float& lenToPoint = outMeta.m_fCenterToPointLength;
-    (PointMapped - centerMapped).ToDirectionAndLength(dir, lenToPoint);
+
+    FVector2D& dir = outMeta.m_cDirectionCenterToPoint;
+    (Point - center).ToDirectionAndLength(dir, outMeta.m_fCenterToPointLength);
 
     float xLen = BIG_NUMBER;
     if (!FMath::IsNearlyEqual(dir.X, 0, KINDA_SMALL_NUMBER)) {
-        xLen = FMath::Abs(centerMapped.X / dir.X);
+        xLen = FMath::Abs(center.X / dir.X);
     }
     float yLen = BIG_NUMBER;
     if (!FMath::IsNearlyEqual(dir.Y, 0, KINDA_SMALL_NUMBER)) {
-        yLen = FMath::Abs(centerMapped.Y / dir.Y);
+        yLen = FMath::Abs(center.Y / dir.Y);
     }
     outMeta.m_fCenterToPointUntilBorderLength = FMath::Min(xLen, yLen);
 }
 
 void UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrainedByPointPercent(int32 idxViewPositionBelongTo,
-                                                                                                    FVector centerMapped,
+                                                                                                    const FVector2D& center,
                                                                                                     const FVector2D& pointPercent,
                                                                                                     FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp& outMeta)
 {
-    FVector pointMapped;
-    pointMapped.X = pointPercent.X * centerMapped.X * 2;
-    pointMapped.Y = pointPercent.Y * centerMapped.Y * 2;
-    pointMapped.Z = 0;
+    FVector2D point = pointPercent * center * 2;
 
-    UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(idxViewPositionBelongTo, centerMapped, pointMapped, outMeta);
+    UMyCardGameUtilsLibrary::helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(idxViewPositionBelongTo, center, point, outMeta);
 };
 
 void UMyCardGameUtilsLibrary::helperPointInWorldToPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FVector& pointInWorld, FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp &outMeta)
@@ -91,15 +85,11 @@ void UMyCardGameUtilsLibrary::helperPointInWorldToPointAndCenterMetaOnPlayerScre
         }
     }
 
-    FVector centerMapped;
-    FVector PointMapped;
-    centerMapped.X = constrainedScreenSize.X / 2;
-    centerMapped.Y = constrainedScreenSize.Y / 2;
 
-    PointMapped.X = projectedPoint.X;
-    PointMapped.Y = projectedPoint.Y;
+    FVector2D center = constrainedScreenSize / 2;
+    FVector2D& Point = projectedPoint;
 
-    helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(idxAttenderOnScreen, centerMapped, PointMapped, outMeta);
+    helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(idxAttenderOnScreen, center, Point, outMeta);
 }
 
 int32 UMyCardGameUtilsLibrary::idxAttenderToIdxDeskPosition(int32 idxAttender, int32 attenderNum)

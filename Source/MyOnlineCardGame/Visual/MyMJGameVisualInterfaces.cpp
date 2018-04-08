@@ -5,17 +5,3 @@
 #include "MyMJGameVisualInterfaces.h"
 
 #include "Utils/CommonUtils/MyCommonUtils.h"
-
-
-UMyMJGameInRoomUIMainWidgetInterfaceCpp::UMyMJGameInRoomUIMainWidgetInterfaceCpp(const FObjectInitializer& ObjectInitializer)
-{
-    //asd
-};
-
-/*
-int32 IMyMJGameInRoomUIMainWidgetInterfaceCpp::changeViewPosition_Implementation(int32 idxAttender)
-{
-    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("changeViewPosition_Implementation basic."));
-    return 0;
-};
-*/

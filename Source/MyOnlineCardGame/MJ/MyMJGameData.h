@@ -1008,7 +1008,7 @@ public:
             MY_VERIFY(false);
         }
 
-        cTargetData.m_cRoleDataPrivate.m_cCardValuePack.zeroValues();
+        cTargetData.m_cRoleDataPrivate.m_cCardValuePack.resetAsUnknown();
 
         int32 l = cTargetData.m_aRoleDataAttenders.Num();
         for (int32 i = 0; i < l; i++) {

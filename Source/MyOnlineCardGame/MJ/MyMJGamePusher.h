@@ -490,8 +490,8 @@ public:
     {
         m_eType = MyMJGamePusherTypeCpp::PusherMadeChoiceNotify;
 
-        m_iSelection = 0;
-        m_iActionGroupId = 0;
+        m_iSelection = MySelectionUnknown;
+        m_iActionGroupId = MySelectionUnknown;
         m_iIdxAttender = -1;
     };
 
@@ -657,7 +657,7 @@ public:
 
         m_iIdxAttender = -1;
 
-        m_eTargetState = MyMJCardFlipStateCpp::Invalid;
+        m_eTargetState = MyCardGameBoxLikeElemFlipStateCpp::Invalid;
         m_iMask0 = 0;
     };
 
@@ -679,7 +679,7 @@ public:
     virtual FString ToString() const override
     {
         FString str = Super::ToString();
-        str += FString::Printf(TEXT(" m_iIdxAttender: %d, any->%s, mask 0x%x"), m_iIdxAttender, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eTargetState), m_iMask0);
+        str += FString::Printf(TEXT(" m_iIdxAttender: %d, any->%s, mask 0x%x"), m_iIdxAttender, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyCardGameBoxLikeElemFlipStateCpp"), (uint8)m_eTargetState), m_iMask0);
         int32 l = m_aIdValues.Num();
         for (int32 i = 0; i < l; i++) {
             str += m_aIdValues[i].genDebugStr();
@@ -687,7 +687,7 @@ public:
         return str;
     };
 
-    void initWithCardsTargetStateAlreadyInited(int32 idxAttender, MyMJCardFlipStateCpp eCurrentState, MyMJCardFlipStateCpp eTargetState, int32 iMaskAttenderDataReset)
+    void initWithCardsTargetStateAlreadyInited(int32 idxAttender, MyCardGameBoxLikeElemFlipStateCpp eCurrentState, MyCardGameBoxLikeElemFlipStateCpp eTargetState, int32 iMaskAttenderDataReset)
     {
         m_iIdxAttender = idxAttender;
 
@@ -699,7 +699,7 @@ public:
     int32 m_iIdxAttender;
 
     UPROPERTY()
-    MyMJCardFlipStateCpp m_eTargetState;
+    MyCardGameBoxLikeElemFlipStateCpp m_eTargetState;
 
     UPROPERTY()
     int32 m_iMask0;
@@ -1368,7 +1368,7 @@ public:
         m_eType = MyMJGamePusherTypeCpp::ActionWeave;
         m_iPriority = 0;
 
-        m_eTargetFlipState = MyMJCardFlipStateCpp::Up;
+        m_eTargetFlipState = MyCardGameBoxLikeElemFlipStateCpp::Up;
     };
 
     virtual ~FMyMJGameActionWeaveCpp()
@@ -1385,7 +1385,7 @@ public:
     virtual FString ToString() const override
     {
         FString str = Super::ToString();
-        str += FString::Printf(TEXT(" m_eTargetFlipState: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJCardFlipStateCpp"), (uint8)m_eTargetFlipState));
+        str += FString::Printf(TEXT(" m_eTargetFlipState: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyCardGameBoxLikeElemFlipStateCpp"), (uint8)m_eTargetFlipState));
         str += m_cWeave.ToString();
         str += UMyCommonUtilsLibrary::formatStrIdValuePairs(m_aCardValuesRelated);
 
@@ -1412,7 +1412,7 @@ public:
         return;
     };
 
-    void initWithWeaveAlreadyInited(const FMyMJCardValuePackCpp &inValuePack, int32 idxAttender, MyMJCardFlipStateCpp eTargetFlipState)
+    void initWithWeaveAlreadyInited(const FMyMJCardValuePackCpp &inValuePack, int32 idxAttender, MyCardGameBoxLikeElemFlipStateCpp eTargetFlipState)
     {
         m_iIdxAttender = idxAttender;
         m_eTargetFlipState = eTargetFlipState;
@@ -1443,7 +1443,7 @@ public:
 
     //In some MJ rule, anGang need to be hide
     UPROPERTY()
-    MyMJCardFlipStateCpp m_eTargetFlipState;
+    MyCardGameBoxLikeElemFlipStateCpp m_eTargetFlipState;
 
     //All card related to this weave will be included, mainly for debug, but also in logic to keep data uniform
     UPROPERTY()

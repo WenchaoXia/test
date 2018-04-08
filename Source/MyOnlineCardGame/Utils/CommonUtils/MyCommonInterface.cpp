@@ -3,31 +3,30 @@
 #include "MyCommonInterface.h"
 #include "MyCommonUtilsLibrary.h"
 
-UMyTransformUpdaterInterfaceCpp::UMyTransformUpdaterInterfaceCpp(const FObjectInitializer& ObjectInitializer)
-{
-
-};
-
-
-MyErrorCodeCommonPartCpp IMyTransformUpdaterInterfaceCpp::getModelInfo(struct FMyActorModelInfoBoxCpp& modelInfo, bool verify) const
+/*
+MyErrorCodeCommonPartCpp IMyWithCurveUpdaterTransformInterfaceCpp::getModelInfo(struct FMyModelInfoCpp& modelInfo, bool verify) const
 {
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getModelInfo() must be implemented!"));
     MY_VERIFY(false);
     return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
 };
 
-MyErrorCodeCommonPartCpp IMyTransformUpdaterInterfaceCpp::getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterTransformCpp*& outUpdater)
+MyErrorCodeCommonPartCpp IMyWithCurveUpdaterTransformInterfaceCpp::getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterBasicCpp*& outUpdater)
 {
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyWithCurveUpdaterTransform() must be implemented!"));
     MY_VERIFY(false);
     return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
 };
+*/
 
-
-UMyIdInterfaceCpp::UMyIdInterfaceCpp(const FObjectInitializer& ObjectInitializer)
+struct FMyWithCurveUpdaterBasicCpp& IMyWithCurveUpdaterTransformInterfaceCpp::getMyWithCurveUpdaterTransformRef()
 {
-
+    struct FMyWithCurveUpdaterBasicCpp* pRet = NULL;
+    getMyWithCurveUpdaterTransformEnsured(pRet);
+    MY_VERIFY(pRet);
+    return *pRet;
 };
+
 
 MyErrorCodeCommonPartCpp IMyIdInterfaceCpp::getMyId(int32& outMyId) const
 {
@@ -42,7 +41,28 @@ MyErrorCodeCommonPartCpp IMyIdInterfaceCpp::setMyId(int32 myId)
 };
 
 
-UMyPawnInterfaceCpp::UMyPawnInterfaceCpp(const FObjectInitializer& ObjectInitializer)
+MyErrorCodeCommonPartCpp IMyValueInterfaceCpp::updateValueShowing(int32 newValueShowing, int32 animationTimeMs)
 {
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("updateValueShowing() must be override by subclass."));
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
+};
 
+MyErrorCodeCommonPartCpp IMyValueInterfaceCpp::getValueShowing(int32& valueShowing) const
+{
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getValueShowing() must be override by subclass."));
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
+};
+
+
+MyErrorCodeCommonPartCpp IMyResourceInterfaceCpp::setResourcePath(const FDirectoryPath& newResPath)
+{
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("setResourcePath() must be override by subclass."));
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
+};
+
+MyErrorCodeCommonPartCpp IMyResourceInterfaceCpp::getResourcePath(FDirectoryPath& resPath) const
+{
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getResourcePath() must be override by subclass."));
+    resPath.Path.Reset();
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
 };

@@ -40,7 +40,7 @@
 
 //a widget support per-viewer animation
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp : public UMyUserWidgetWithCurveUpdaterCpp, public IMyCardGameScreenPositionRelatedWidgetInterfaceCpp
+class MYONLINECARDGAME_API UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp : public UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp, public IMyCardGameScreenPositionRelatedWidgetInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -107,12 +107,12 @@ class UMyCardGameUtilsLibrary :
 public:
 
     static void helperUpdatePointAndCenterMetaOnPlayerScreenConstrained(int32 idxViewPositionBelongTo,
-                                                                       FVector centerMapped,
-                                                                       FVector PointMapped,
+                                                                       const FVector2D& center,
+                                                                       const FVector2D& Point,
                                                                        FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp &outMeta);
 
     static void helperUpdatePointAndCenterMetaOnPlayerScreenConstrainedByPointPercent(int32 idxViewPositionBelongTo,
-                                                                                        FVector centerMapped,
+                                                                                        const FVector2D& center,
                                                                                         const FVector2D& pointPercent,
                                                                                         FMyCardGamePointAndCenterMetaOnPlayerScreenConstrainedCpp& outMeta);
 

@@ -11,6 +11,40 @@
 //BP not implemented it
 
 UINTERFACE()
+class UMyWidgetSizeInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMyWidgetSizeInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+    //return the widget size at DESIGN time, like 1920 * 1080
+    //Must be implemented
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+    MyErrorCodeCommonPartCpp getLocalSize(FVector2D& localSize) const;
+
+    //if @keepRatioByWidth is true, it keeps ratio by width, and has higher priority than @keepRatioByHeight
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+    MyErrorCodeCommonPartCpp setLocalSize(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight);
+};
+
+#define IMyWidgetSizeInterfaceCpp_DefaultEmptyImplementationForUObject() \
+MyErrorCodeCommonPartCpp getLocalSize_Implementation(FVector2D &localSize) const override \
+{ \
+UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize only implemented in C++."), *GetClass()->GetName()); \
+return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+MyErrorCodeCommonPartCpp setLocalSize_Implementation(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight) \
+{ \
+UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize only implemented in C++."), *GetClass()->GetName()); \
+return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+};
+
+
+UINTERFACE()
 class UMyWidgetBasicOperationInterfaceCpp : public UInterface
 {
     GENERATED_BODY()
@@ -31,14 +65,6 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
     MyErrorCodeCommonPartCpp canvasSetChildPosi(UWidget *childWidget, FVector2D centerPosiInParentPecent);
 
-    //return the widget size at DESIGN time, like 1920 * 1080
-    //Must be implemented
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-    MyErrorCodeCommonPartCpp getLocalSize(FVector2D& localSize) const;
-
-    //if @keepRatioByWidth is true, it keeps ratio by width, and has higher priority than @keepRatioByHeight
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-    MyErrorCodeCommonPartCpp setLocalSize(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight);
 };
 
 #define IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject() \
@@ -50,15 +76,5 @@ MyErrorCodeCommonPartCpp canvasAddChild_Implementation(UWidget *childWidget) ove
 MyErrorCodeCommonPartCpp canvasSetChildPosi_Implementation(UWidget *childWidget, FVector2D centerPosiInParentPecent) override \
 { \
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: canvasSetChildPosi only implemented in C++."), *GetClass()->GetName()); \
-    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
-}; \
-MyErrorCodeCommonPartCpp getLocalSize_Implementation(FVector2D &localSize) const override \
-{ \
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize only implemented in C++."), *GetClass()->GetName()); \
-    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
-}; \
-MyErrorCodeCommonPartCpp setLocalSize_Implementation(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight) \
-{ \
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize only implemented in C++."), *GetClass()->GetName()); \
     return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
 };

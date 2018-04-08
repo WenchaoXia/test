@@ -21,7 +21,7 @@ int32 AMyMJGameTextureGenSuitBaseCpp::genTextureForMJCardValues(FString namePref
     AActor* pA = m_aTargetActors[0];
     MY_VERIFY(IsValid(pA));
 
-    AMyMJGameCardBaseCpp* pCardActor = Cast<AMyMJGameCardBaseCpp>(pA);
+    AMyMJGameCardActorBaseCpp* pCardActor = Cast<AMyMJGameCardActorBaseCpp>(pA);
     if (!IsValid(pCardActor)) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("target is not a MJ card child class, class name: %s."), *pA->StaticClass()->GetName());
         return -4;

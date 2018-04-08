@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MyMJUtilsLocalCS.h"
+#include "Utils/CommonUtils/MyCommonDefines.h"
 #include "Kismet/KismetMathLibrary.h"
 
 void
@@ -684,7 +685,7 @@ UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJCardValuePackCpp &i
             continue;
         }
 
-        checkingHandCards.insert(MY_MJCARD_ID_FAKE, cardValue);
+        checkingHandCards.insert(MyIDFake, cardValue);
         if (UMyMJUtilsLocalCSLibrary::checkTingWithFixedCardTypeLocalCSInGame(gameCfg.m_cHuCfg, gameCfg.getSubLocalCSCfgRefConst(), weavesShowedOut, weaveStatis, checkingHandCards, resultTing)) {
             FMyMJHuScoreResultTingCpp &item = outResultTingGroup.findOrAdd(cardValue);
             item = resultTing;
@@ -692,7 +693,7 @@ UMyMJUtilsLocalCSLibrary::checkTingsLocalCSInGame(const FMyMJCardValuePackCpp &i
             item.m_iValueTriggerCard = cardValue;
         }
 
-        checkingHandCards.remove(MY_MJCARD_ID_FAKE, cardValue);
+        checkingHandCards.remove(MyIDFake, cardValue);
     }
 
     if (outResultTingGroup.getCount() > 0) {

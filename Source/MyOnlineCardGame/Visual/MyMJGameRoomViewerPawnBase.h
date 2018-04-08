@@ -14,7 +14,7 @@
 
 //Our player controller will help do replication work, and only replication help code goes here
 UCLASS()
-class MYONLINECARDGAME_API AMyMJGameRoomViewerPawnBaseCpp : public APawn, public IMyPawnInterfaceCpp, public IMyTransformUpdaterInterfaceCpp
+class MYONLINECARDGAME_API AMyMJGameRoomViewerPawnBaseCpp : public APawn, public IMyPawnInterfaceCpp, public IMyWithCurveUpdaterTransformInterfaceCpp
 {
 	GENERATED_BODY()
 
@@ -29,15 +29,15 @@ public:
     };
 
 
-    //IMyTransformUpdaterInterfaceCpp begin
+    //IMyWithCurveUpdaterTransformInterfaceCpp begin
 
-    virtual MyErrorCodeCommonPartCpp getModelInfo(struct FMyActorModelInfoBoxCpp& modelInfo, bool verify = true) const override
+    virtual MyErrorCodeCommonPartCpp getModelInfo(struct FMyModelInfoCpp& modelInfo, bool verify = true) const override
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameRoomViewerPawnBaseCpp::getModelInfo() not implemented yet!"));
         return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedOnPurPose;
     };
 
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterTransformCpp*& outUpdater) override
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterBasicCpp*& outUpdater) override
     {
         MY_VERIFY(m_pMyTransformUpdaterComponent != NULL);
         outUpdater = &m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRef();
@@ -45,7 +45,12 @@ public:
         return MyErrorCodeCommonPartCpp::NoError;
     };
 
-    //IMyTransformUpdaterInterfaceCpp end
+    inline FMyWithCurveUpdaterWorldTransformCpp& getMyWithCurveUpdaterWorldTransformRef()
+    {
+        return FMyWithCurveUpdaterWorldTransformCpp::castFromBaseRef(getMyWithCurveUpdaterTransformRef());
+    };
+
+    //IMyWithCurveUpdaterTransformInterfaceCpp end
 
 
     UFUNCTION(BlueprintCallable)
@@ -80,6 +85,6 @@ protected:
     UCameraComponent* m_pCamera;
 
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "my transform updater component"))
-    UMyTransformUpdaterComponent* m_pMyTransformUpdaterComponent;
+    UMyWithCurveUpdaterWorldTransformComponent* m_pMyTransformUpdaterComponent;
 
 };

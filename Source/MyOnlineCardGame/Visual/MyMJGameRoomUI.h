@@ -10,23 +10,7 @@
 
 #include "MyMJGameRoomUI.generated.h"
 
-UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyMJGameCardWidgetBaseCpp : public UMyCardGameCardWidgetBaseCpp
-{
-    GENERATED_BODY()
 
-public:
-
-    UMyMJGameCardWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
-    {
-
-    };
-
-    virtual ~UMyMJGameCardWidgetBaseCpp()
-    {
-
-    };
-};
 /*
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
 class MYONLINECARDGAME_API UMyMJGameCardWidgetBaseCpp : public UUserWidget, public IMyWidgetBasicOperationInterfaceCpp, public IMyIdInterfaceCpp, public IMyCardGameValueRelatedObjectInterfaceCpp
@@ -50,8 +34,8 @@ public:
 
     virtual MyErrorCodeCommonPartCpp updateValueShowing(int32 newValueShowing, int32 animationTimeMs) override;
     virtual MyErrorCodeCommonPartCpp getValueShowing(int32& valueShowing) const override;
-    virtual MyErrorCodeCommonPartCpp setResPath(const FDirectoryPath& newResPath) override;
-    virtual MyErrorCodeCommonPartCpp getResPath(FDirectoryPath& resPath) const override;
+    virtual MyErrorCodeCommonPartCpp setResourcePath(const FDirectoryPath& newResPath) override;
+    virtual MyErrorCodeCommonPartCpp getResourcePath(FDirectoryPath& resPath) const override;
 
     virtual MyErrorCodeCommonPartCpp getMyId(int32& outMyId) const override
     {
@@ -81,16 +65,16 @@ public:
     };
 
     UFUNCTION(BlueprintSetter)
-        void setResPath2(const FDirectoryPath& newResPath)
+        void setResourcePath2(const FDirectoryPath& newResPath)
     {
-        setResPath(newResPath);
+        setResourcePath(newResPath);
     };
 
     UFUNCTION(BlueprintGetter)
-        const FDirectoryPath getResPath2() const
+        const FDirectoryPath getResourcePath2() const
     {
         FDirectoryPath ret;
-        getResPath(ret);
+        getResourcePath(ret);
 
         return ret;
     };
@@ -105,7 +89,7 @@ protected:
     int32 m_iValueShowing;
 
     //where the card resource is, example: /Game/Art/Models/MJCard/Type0
-    UPROPERTY(EditDefaultsOnly, BlueprintSetter = setResPath2, BlueprintGetter = getResPath2, meta = (DisplayName = "resource path", ContentDir = "true"))
+    UPROPERTY(EditDefaultsOnly, BlueprintSetter = setResourcePath2, BlueprintGetter = getResourcePath2, meta = (DisplayName = "resource path", ContentDir = "true"))
     FDirectoryPath m_cResPath;
 
     UPROPERTY(BlueprintReadOnly)
@@ -330,7 +314,7 @@ struct FMyPlayerInfoWidgetRuntimeMetaCpp
 
 
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyMJGameInRoomPlayerInfoWidgetBaseCpp : public UUserWidget, public IMyWidgetBasicOperationInterfaceCpp
+class MYONLINECARDGAME_API UMyMJGameInRoomPlayerInfoWidgetBaseCpp : public UUserWidget, public IMyWidgetSizeInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -355,7 +339,8 @@ public:
 
 protected:
 
-    IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject();
+    IMyWidgetSizeInterfaceCpp_DefaultEmptyImplementationForUObject()
+    IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject()
 
     //if @createIfNotExist, always exist
     UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp * getManagedWidget(int32 key, TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>& widgetClass, bool createIfNotExist = true);
@@ -421,7 +406,7 @@ public:
 
 
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyMJGameInRoomUIMainWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomUIMainWidgetInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
+class MYONLINECARDGAME_API UMyMJGameInRoomUIMainWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomUIMainWidgetInterfaceCpp, public IMyWidgetSizeInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -479,6 +464,7 @@ public:
 
 protected:
 
+    IMyWidgetSizeInterfaceCpp_DefaultEmptyImplementationForUObject();
     IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject()
 
 

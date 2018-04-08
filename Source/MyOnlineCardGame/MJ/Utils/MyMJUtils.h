@@ -10,10 +10,9 @@
 
 #include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
 
+#include "Utils/CardGameUtils/MyCardGameCommonDefines.h"
 
 #include "MyMJUtils.generated.h"
-
-#define MY_MJCARD_ID_FAKE -1
 
 //Warn: code use its uint8 value, don't modify it unless checked carefully
 UENUM(BlueprintType)
@@ -160,16 +159,6 @@ enum class MyMJHuCardTypeCpp : uint8
     //MTE_LAST = 0x80000000 UMETA(Hidden)
 };
 
-UENUM()
-enum class MyMJCardFlipStateCpp : uint8
-{
-    Invalid = 0                    UMETA(DisplayName = "Invalid"),
-
-    Down = 1                       UMETA(DisplayName = "Down"),
-    Stand = 2                      UMETA(DisplayName = "Stand"),
-    Up = 3                        UMETA(DisplayName = "Up")
-
-};
 
 UENUM(BlueprintType)
 enum class MyMJCardSlotTypeCpp : uint8
@@ -261,7 +250,7 @@ struct FMyMJCardInfoCpp
     void reset() {
         m_iId = -1;
 
-        m_eFlipState = MyMJCardFlipStateCpp::Invalid;
+        m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Invalid;
         m_cPosi.reset();
     };
 
@@ -271,7 +260,7 @@ struct FMyMJCardInfoCpp
         int32 m_iId; // >= 0 means valid
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "flip state"))
-        MyMJCardFlipStateCpp m_eFlipState;
+        MyCardGameBoxLikeElemFlipStateCpp m_eFlipState;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "position"))
         FMyMJCardPosiCpp m_cPosi;
@@ -329,10 +318,13 @@ public:
     {
         MY_VERIFY(iCardNum >= 0);
         m_aCardValues.Reset(iCardNum);
-        m_aCardValues.AddZeroed(iCardNum);
+        //m_aCardValues.AddZeroed(iCardNum);
+        for (int32 i = 0; i < iCardNum; i++) {
+            m_aCardValues.Emplace(MyCardGameValueUnknown);
+        }
     };
 
-    inline void zeroValues()
+    inline void resetAsUnknown()
     {
         reset(getLength());
     };
@@ -1757,7 +1749,7 @@ struct FMyTriggerDataCpp : public FMyIdValuePair
 
     void reset() {
         Super::reset(true);
-        m_iValueShowedOutCountAfter = -1;
+        m_iValueShowedOutCountAfter = MyCardGameValueUnknown;
     };
 
     FMyTriggerDataCpp& operator = (const FMyIdValuePair& rhs)

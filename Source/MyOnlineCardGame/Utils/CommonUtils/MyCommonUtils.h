@@ -76,7 +76,7 @@ struct FMyIdValuePair
     {
         m_iId = MyIntIdDefaultInvalidValue;
         if (bResetValue) {
-            m_iValue = 0;
+            m_iValue = MyValueUnknown;
         }
     };
 
