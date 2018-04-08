@@ -421,11 +421,6 @@ public:
 
     };
 
-    inline void reset()
-    {
-        invalidCachedData();
-    };
-
     
     virtual FMyErrorCodeMJGameCpp changeDeskPositionOfIdxScreenPosition0(int32 idxDeskPositionOfIdxScreenPosition0) override;
 
@@ -466,6 +461,13 @@ protected:
 
     IMyWidgetSizeInterfaceCpp_DefaultEmptyImplementationForUObject();
     IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject()
+
+    virtual void OnWidgetRebuilt() override
+    {
+        Super::OnWidgetRebuilt();
+
+        invalidCachedData();
+    };
 
 
     virtual FMyErrorCodeMJGameCpp showImportantGameStateUpdated_Implementation(float dur, MyMJGameStateCpp newGameState) override

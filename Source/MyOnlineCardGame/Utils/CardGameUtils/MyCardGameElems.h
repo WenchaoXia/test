@@ -325,11 +325,6 @@ public:
     AMyCardGameDiceActorBaseCpp();
     virtual ~AMyCardGameDiceActorBaseCpp();
 
-    //Todo: incomplete yet
-    inline void reset()
-    {
-        invalidModelInfoCache();
-    };
 
     virtual MyErrorCodeCommonPartCpp getMyId(int32& outMyId) const override
     {
@@ -349,18 +344,18 @@ public:
     {
 
         if (!m_cModelInfoCache.m_bValid) {
-            refillModelInfoCache();
+            refillCachedData();
         }
 
         return m_cModelInfoCache.m_cData;
     };
 
-    inline void invalidModelInfoCache()
+    inline void invalidCachedData()
     {
         m_cModelInfoCache.m_bValid = false;
     };
 
-    inline void refillModelInfoCache()
+    inline void refillCachedData()
     {
         m_cModelInfoCache.reset();
         getDiceModelInfoNotFromCache(m_cModelInfoCache.m_cData, true);
@@ -399,6 +394,12 @@ public:
     static FTransform helperCalcFinalTransform(const FMyCardGameDiceModelInfoCpp& diceModelInfo, const FMyCardGameVisualPointCfgCpp& diceVisualPointCfg, int32 diceVisualStateKey, int32 idxOfDiceRandomArranged, int32 diceTotalNum, int32 value);
 
 protected:
+
+    virtual void BeginPlay() override
+    {
+        Super::BeginPlay();
+        invalidCachedData();
+    };
 
     //it make box aligh in the center
     virtual MyErrorCodeCommonPartCpp updateSettings() override;
@@ -559,6 +560,7 @@ protected:
     {
         Super::OnWidgetRebuilt();
 
+        invalidCachedData();
         updateWithValue(true);
     };
 
