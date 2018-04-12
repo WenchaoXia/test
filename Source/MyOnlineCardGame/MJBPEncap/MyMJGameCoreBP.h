@@ -284,7 +284,7 @@ protected:
         //m_pDataHistoryBuffer0->reinit(eRoleType);
     //};
 
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "cfg", meta = (DisplayName = "data source"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "cfg", meta = (DisplayName = "data source"))
     AMyMJGameCoreDataSourceCpp* m_pDataSource;
 
     //this is the visual data

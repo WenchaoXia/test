@@ -7,7 +7,6 @@
 
 #include "MJBPEncap/MyMJGameCoreBP.h"
 #include "MyMJGameVisualElems.h"
-#include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
 
 
 #include "MyMJGameDeskVisualData.generated.h"
@@ -37,28 +36,28 @@ public:
 
 
     //return errocode. to make it easy to use, list every maintype's api to tip the parameter meanings
-    int32 getCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp &visualPoint) const;
-    void  setCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, const FMyCardGameVisualPointCfgCpp &visualPoint);
+    int32 getCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyArrangePointCfgWorld3DCpp &visualPoint) const;
+    void  setCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, const FMyArrangePointCfgWorld3DCpp &visualPoint);
 
     //return errocode.
-    int32 getAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyCardGameVisualPointCfgCpp &visualPoint) const;
-    void  setAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, const FMyCardGameVisualPointCfgCpp &visualPoint);
+    int32 getAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyArrangePointCfgWorld3DCpp &visualPoint) const;
+    void  setAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, const FMyArrangePointCfgWorld3DCpp &visualPoint);
 
     //return errocode.
-    int32 getTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyCardGameVisualPointCfgCpp &visualPoint) const;
-    void  setTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, const FMyCardGameVisualPointCfgCpp &visualPoint);
+    int32 getTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyArrangePointCfgWorld3DCpp &visualPoint) const;
+    void  setTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, const FMyArrangePointCfgWorld3DCpp &visualPoint);
 
 protected:
 
-    static int32 helperGetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, const TMap<int32, FMyCardGameVisualPointCfgCpp>& cTargetMap, FMyCardGameVisualPointCfgCpp &visualPoint);
-    static void  helperSetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, TMap<int32, FMyCardGameVisualPointCfgCpp>& cTargetMap, const FMyCardGameVisualPointCfgCpp &visualPoint);
+    static int32 helperGetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, const TMap<int32, FMyArrangePointCfgWorld3DCpp>& cTargetMap, FMyArrangePointCfgWorld3DCpp &visualPoint);
+    static void  helperSetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, TMap<int32, FMyArrangePointCfgWorld3DCpp>& cTargetMap, const FMyArrangePointCfgWorld3DCpp &visualPoint);
 
     //by split to two domains, it runs a bit faster at runtime
     //card cfg
-    TMap<int32, FMyCardGameVisualPointCfgCpp> m_mCardVisualPointCache;
+    TMap<int32, FMyArrangePointCfgWorld3DCpp> m_mCardVisualPointCache;
 
     //other cfg except card
-    TMap<int32, FMyCardGameVisualPointCfgCpp> m_mTrivalVisualPointCache;
+    TMap<int32, FMyArrangePointCfgWorld3DCpp> m_mTrivalVisualPointCache;
 };
 
 USTRUCT(BlueprintType)
@@ -83,7 +82,7 @@ public:
         m_cDiceModelInfo.reset();
     };
 
-    FMyModelInfoBox3DCpp m_cCardModelInfo;
+    FMyModelInfoBoxWorld3DCpp m_cCardModelInfo;
     FMyCardGameDiceModelInfoCpp m_cDiceModelInfo;
 };
 
@@ -109,38 +108,18 @@ public:
         m_cModelInfo.clear();
     };
 
-    //return errorCode, 0 means OK
-    int32 helperGetColCountPerRow(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp& outVisualPointCfg, int32& outCount) const
-    {
-        outCount = 1;
 
-        int32 retCode =m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(idxAttender, eSlot, outVisualPointCfg);
+    MyErrorCodeCommonPartCpp helperGetMyArrangePointCfgForCard(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyArrangePointCfgWorld3DCpp& outVisualPointCfg) const
+    {
+
+        int32 retCode = m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(idxAttender, eSlot, outVisualPointCfg);
         if (retCode != 0) {
-            return retCode;
+            return MyErrorCodeCommonPartCpp::ObjectNull;
         }
 
-        const FMyModelInfoBox3DCpp &cCardModelInfoBox = m_cModelInfo.m_cCardModelInfo;
-
-        if (cCardModelInfoBox.m_cBoxExtend.Y < 1) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cCardModelInfo.m_cBoxExtend.Y too small: %f."), cCardModelInfoBox.m_cBoxExtend.Y);
-            return -2;
-        }
-
-        outCount = helperGetColCountByWidth(outVisualPointCfg.m_cAreaBoxExtendFinal.Y, cCardModelInfoBox.m_cBoxExtend.Y);
-
-        return 0;
+        return MyErrorCodeCommonPartCpp::NoError;
     };
 
-    static inline int32 helperGetColCountByWidth(float fAreaWidth, float fColWidth)
-    {
-        int32 retCount = FMath::CeilToInt(fAreaWidth / fColWidth);
-        if (retCount <= 0) {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("fAreaWidth %f, fColWidth %f, fixing retCount it is %d before."), fAreaWidth, fColWidth, retCount);
-            retCount = 1;
-        }
-
-        return retCount;
-    };
 
     uint32 m_uiStateKey; //Represent the state, used to compare if it is changed.
     FMyMJGameDeskVisualPointCfgCacheCpp m_cPointCfg;
@@ -654,6 +633,7 @@ protected:
     int32 subThreadTryGenOutput(FMyMJEventWithTimeStampBaseCpp* pEventJustApplied);
 
     //Keywork accumulated means it does NOT reset inside, and the param can contain prev worked data before calling
+    //Assume the point have: col->Y, row->X, stack->Z
     static void helperResolveVisualInfoChanges(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
                                                const FMyMJDataStructWithTimeStampBaseCpp& cNextCoreData,
                                                const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cNextCoreDataDirtyRecordSincePrev,

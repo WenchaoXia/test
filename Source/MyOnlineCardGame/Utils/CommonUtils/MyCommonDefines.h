@@ -6,6 +6,16 @@
 
 #include "MyCommonDefines.generated.h"
 
+#define UE_MY_LOG(CategoryName, Verbosity, Format, ...) \
+        UE_LOG(CategoryName, Verbosity, TEXT("%s:%d: ") Format, *myGetFileNameFromFullPath(TEXT(__FILE__)), __LINE__, ##__VA_ARGS__)
+
+//Fatal cause log not written to disk but core dump, so we don't use Fatal anywhere
+#define MY_VERIFY(cond) \
+       if (!(cond)) { UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false: (" #cond ")")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false); }
+
+//     if (!(cond)) {UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false);}
+
+
 //Some code have relationship with the implemention in UE4's source, when upgrade, search code with "UE4 upgrade" and check
 #define MySelectionUnknown (-1)
 #define MyIDUnknown (-1)
@@ -14,6 +24,8 @@
 #define MyValueUnknown (-1)
 
 #define MyTypeUnknown (-1)
+
+#define MyIdxInvalid (-1)
 
 UENUM(BlueprintType)
 enum class MyErrorCodeCommonPartCpp : uint8
@@ -70,3 +82,85 @@ if ((int32)SourcePart == 0) { \
 #define MyErrorCodeBuild(commonPart, subPart) (MyErrorCodeInternalGenerateCommonPartValue(commonPart) + MyErrorCodeInternalGenerateSubPartValue(subPart))
 #define MyErrorCodeAddCommonPart(MyErrorCode, commonPart) MyErrorCodeBuild(commonPart, MyErrorCodeGetSubPart(MyErrorCode))
 #define MyErrorCodeAddSubPart(MyErrorCode, subPart)       MyErrorCodeBuild(MyErrorCodeGetCommonPart(MyErrorCode), subPart)
+
+
+UENUM()
+enum class MyAxisTypeCpp : uint8
+{
+    Invalid = 0     UMETA(DisplayName = "Invalid"),
+    X = 1           UMETA(DisplayName = "X"),
+    Y = 2           UMETA(DisplayName = "Y"),
+    Z = 3           UMETA(DisplayName = "Z")
+};
+
+UENUM()
+enum class MyPlaneTypeCpp : uint8
+{
+    Invalid = 0     UMETA(DisplayName = "Invalid"),
+    XY = 1           UMETA(DisplayName = "XY"),
+    YZ = 2           UMETA(DisplayName = "YZ"),
+    XZ = 3           UMETA(DisplayName = "XZ")
+};
+
+UENUM()
+enum class MyOrderTypeCpp : uint8
+{
+    Invalid = 0     UMETA(DisplayName = "Invalid"),
+    ASC = 1    UMETA(DisplayName = "ASC"),
+    DESC = 2    UMETA(DisplayName = "DESC")
+};
+
+#define SetValidValue_MyOrderTypeCpp(dest, source) \
+dest = source; \
+if (dest == MyOrderTypeCpp::Invalid) { \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT(#dest" invalid, using default value now.")); \
+    dest = MyOrderTypeCpp::ASC; \
+}
+
+UENUM()
+enum class MyAxisAlignmentTypeCpp : uint8
+{
+    Invalid = 0     UMETA(DisplayName = "Invalid"),
+    Negative = 1    UMETA(DisplayName = "Negative"),
+    Mid = 2         UMETA(DisplayName = "Mid"),
+    Positive = 3    UMETA(DisplayName = "Positive")
+};
+
+#define SetValidValue_MyAxisAlignmentTypeCpp(dest, source) \
+dest = source; \
+if (dest == MyAxisAlignmentTypeCpp::Invalid) { \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT(#dest" invalid, using default value now.")); \
+    dest = MyAxisAlignmentTypeCpp::Negative; \
+}
+
+UENUM()
+enum class MyContinuousAlignmentTypeCpp : uint8
+{
+    Invalid = 0     UMETA(DisplayName = "Invalid"),
+    Prev = 1    UMETA(DisplayName = "Prev"),
+    Mid = 2         UMETA(DisplayName = "Mid"),
+    Next = 3    UMETA(DisplayName = "Next")
+};
+
+//same as pitch
+UENUM()
+enum class MyBoxLikeFlipStateCpp : uint8
+{
+    Invalid = 0                    UMETA(DisplayName = "Invalid"),
+
+    Down = 1                       UMETA(DisplayName = "Down"),
+    Stand = 2                      UMETA(DisplayName = "Stand"),
+    Up = 3                         UMETA(DisplayName = "Up")
+
+};
+
+//UE4's coordinate are X positve as front. for any rotate axis, look toward its positive way, rotate as clockwise for positive rotate value
+UENUM()
+enum class MyRotateState90DCpp : uint8
+{
+    Invalid = 0                    UMETA(DisplayName = "Invalid"),
+
+    Zero = 1                       UMETA(DisplayName = "Zero"),
+    Positive90D = 10               UMETA(DisplayName = "Positive90D"),
+    Negative90D = 20               UMETA(DisplayName = "Negative90D")
+};

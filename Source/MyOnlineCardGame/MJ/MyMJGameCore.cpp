@@ -367,7 +367,7 @@ bool FMyMJGameCoreCpp::prevApplyPusherResult(const FMyMJGamePusherResultCpp &pus
                         moveCardToNewPosi(cardInfoTarget.m_iId, cardInfoTarget.m_cPosi.m_iIdxAttender, cardInfoTarget.m_cPosi.m_eSlot);
                     }
 
-                    if (cardInfoSelf.m_eFlipState != cardInfoTarget.m_eFlipState && cardInfoTarget.m_eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Up) {
+                    if (cardInfoSelf.m_eFlipState != cardInfoTarget.m_eFlipState && cardInfoTarget.m_eFlipState == MyBoxLikeFlipStateCpp::Up) {
                         int32 idCard = cardInfoTarget.m_iId;
                         int32 valueCard = cardValuePack.getByIdx(idCard);
                         MY_VERIFY(valueCard > 0);

@@ -20,11 +20,12 @@
 #include "Kismet/KismetMathLibrary.h"
 
 
-void FMyMJGameCardVisualInfoAndResultCpp::helperResolveCardVisualResultChanges(const FMyCardGameVisualPointCfgCpp& cVisualPointCfg,
-                                                                               const FMyModelInfoBox3DCpp& cCardModelInfo,
+void FMyMJGameCardVisualInfoAndResultCpp::helperResolveCardVisualResultChanges(const FMyArrangePointCfgWorld3DCpp& cVisualPointCfg,
+                                                                               const FMyModelInfoBoxWorld3DCpp& cCardModelInfo,
                                                                                const TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoKnownChanges,
                                                                                TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultAccumulatedChanges)
 {
+    FMyArrangePointResolvedMetaWorld3DCpp meta = UMyRenderUtilsLibrary::genMyArrangePointResolvedMetaWorld3D_World3D(cVisualPointCfg, cCardModelInfo);
 
     for (auto& Elem : mIdCardVisualInfoKnownChanges)
     {
@@ -35,7 +36,7 @@ void FMyMJGameCardVisualInfoAndResultCpp::helperResolveCardVisualResultChanges(c
         FMyMJGameCardVisualInfoAndResultCpp& cNewInfoAndResult = mOutIdCardVisualInfoAndResultAccumulatedChanges.Emplace(idCard);
         cNewInfoAndResult.m_cVisualInfo = cInfo;
 
-        FMyCardGameBoxLikeElemVisualInfoCpp::helperResolveTransform(cVisualPointCfg, cCardModelInfo, cInfo, cNewInfoAndResult.m_cVisualResult.m_cTransform);
+        UMyRenderUtilsLibrary::helperBoxModelResolveTransformWorld3D(meta, cInfo, cNewInfoAndResult.m_cVisualResult.m_cTransform);
 
         //post handle
 
@@ -48,12 +49,12 @@ void FMyMJGameCardVisualInfoAndResultCpp::helperResolveCardVisualResultChanges(c
 
 /*
 //a step data support controlled roll
-struct FMyWithCurveUpdateStepDataTransformAndRollCpp : public FMyWithCurveUpdateStepDataWorldTransformCpp
+struct FMyWithCurveUpdateStepDataTransformAndRollCpp : public FMyWithCurveUpdateStepDataTransformWorld3DCpp
 {
 
 public:
 
-    FMyWithCurveUpdateStepDataTransformAndRollCpp() : FMyWithCurveUpdateStepDataWorldTransformCpp()
+    FMyWithCurveUpdateStepDataTransformAndRollCpp() : FMyWithCurveUpdateStepDataTransformWorld3DCpp()
     {
         m_sClassName = TEXT("FMyWithCurveUpdateStepDataTransformAndRollCpp");
         reset(true);
@@ -66,7 +67,7 @@ public:
     inline void reset(bool resetSubClassDataonly = false)
     {
         if (!resetSubClassDataonly) {
-            FMyWithCurveUpdateStepDataWorldTransformCpp::reset();
+            FMyWithCurveUpdateStepDataTransformWorld3DCpp::reset();
         }
 
         totalTime = 1;
@@ -99,7 +100,7 @@ public:
 */
 
 
-void AMyMJGameCardActorBaseCpp::helperMyMJGameCardActorBaseToMyTransformUpdaters(const TArray<AMyMJGameCardActorBaseCpp*>& aSub, bool bSort, TArray<IMyWithCurveUpdaterTransformInterfaceCpp*> &aBase)
+void AMyMJGameCardActorBaseCpp::helperMyMJGameCardActorBaseToMyTransformUpdaters(const TArray<AMyMJGameCardActorBaseCpp*>& aSub, bool bSort, TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp*> &aBase)
 {
     TArray<AMyMJGameCardActorBaseCpp*> aTemp;
 
@@ -109,7 +110,7 @@ void AMyMJGameCardActorBaseCpp::helperMyMJGameCardActorBaseToMyTransformUpdaters
     {
         aTemp = aSub;
         aTemp.Sort([](AMyMJGameCardActorBaseCpp& pA, AMyMJGameCardActorBaseCpp& pB) {
-            return pA.getTargetToGoHistory(0, true)->m_cVisualInfo.m_iIdxColInRow < pB.getTargetToGoHistory(0, true)->m_cVisualInfo.m_iIdxColInRow;
+            return pA.getTargetToGoHistory(0, true)->m_cVisualInfo.m_cCol.m_iIdxElem < pB.getTargetToGoHistory(0, true)->m_cVisualInfo.m_cCol.m_iIdxElem;
         });
         pSrc = &aTemp;
     }
@@ -119,7 +120,7 @@ void AMyMJGameCardActorBaseCpp::helperMyMJGameCardActorBaseToMyTransformUpdaters
     for (int32 i = 0; i < l; i++)
     {
         AMyCardGameCardActorBaseCpp* pA = (*pSrc)[i];
-        IMyWithCurveUpdaterTransformInterfaceCpp* pI = Cast<IMyWithCurveUpdaterTransformInterfaceCpp>(pA);
+        IMyWithCurveUpdaterTransformWorld3DInterfaceCpp* pI = Cast<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp>(pA);
         MY_VERIFY(pI != NULL);
         aBase.Emplace(pI);
     }

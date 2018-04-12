@@ -42,15 +42,6 @@ inline FString myGetFileNameFromFullPath(FString inPath)
     }
 };
 
-#define UE_MY_LOG(CategoryName, Verbosity, Format, ...) \
-        UE_LOG(CategoryName, Verbosity, TEXT("%s:%d: ") Format, *myGetFileNameFromFullPath(TEXT(__FILE__)), __LINE__, ##__VA_ARGS__)
-
-//Fatal cause log not written to disk but core dump, so we don't use Fatal anywhere
-#define MY_VERIFY(cond) \
-       if (!(cond)) { UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false: (" #cond ")")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false); }
-
-       //     if (!(cond)) {UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false);}
-
 
 #define GetKey_KeyAnd4IdxsMap(idx0, idx1, idx2, idx3) (((idx0 & 0xff) << 24) | ((idx1 & 0xff) << 16) | ((idx2 & 0xff) << 8) | ((idx3 & 0xff)))
 #define GetIdx0_KeyAnd4IdxsMap(key) ((key >> 24) & 0xff)

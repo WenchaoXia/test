@@ -80,12 +80,12 @@ public:
 
     inline static bool equals(const FMyCardGameCameraDynamicDataCpp& a, const FMyCardGameCameraDynamicDataCpp& b)
     {
-        if (!FMyTransformOfZRotationAroundPointCoordinateCpp::equals(a.m_cMyTransformOfZRotation, b.m_cMyTransformOfZRotation, FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min))
+        if (!FMyTransformOfZRotationAroundPointCoordinateCpp::equals(a.m_cMyTransformOfZRotation, b.m_cMyTransformOfZRotation, FMyWithCurveUpdateStepDataTransformWorld3DCpp_Delta_Min))
         {
             return false;
         }
 
-        if (!FMath::IsNearlyEqual(a.m_fFOV, b.m_fFOV, FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min))
+        if (!FMath::IsNearlyEqual(a.m_fFOV, b.m_fFOV, FMyWithCurveUpdateStepDataTransformWorld3DCpp_Delta_Min))
         {
             return false;
         }
@@ -324,7 +324,7 @@ public:
     }
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "dice steps"))
-    TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp> m_aDiceSteps;
+    TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp> m_aDiceSteps;
 };
 
 USTRUCT()
@@ -350,11 +350,11 @@ public:
 
     //the cards focused, like given out cards in give out action. If empty it will use the default moving action.
     UPROPERTY(EditAnywhere, meta = (DisplayName = "cards focused steps"))
-    TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp> m_aCardsFocusedSteps;
+    TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp> m_aCardsFocusedSteps;
 
     //other cards, like the cards still moving but not the given out ones in give out action. If empty it will use the default moving action
     UPROPERTY(EditAnywhere, meta = (DisplayName = "cards Other steps"))
-    TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp> m_aCardsOtherSteps;
+    TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp> m_aCardsOtherSteps;
 
     //if it > 0.01 and steps for other(or subclass's step for specified cards), a wait sequence will be inserted at head for those cards
     UPROPERTY(EditAnywhere, meta = (DisplayName = "delay time for cards unfocused"))
@@ -389,7 +389,7 @@ public:
     float m_fTotalTimeOverrideForLast;
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "cards focused steps override for last"))
-    TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp> m_aCardsFocusedStepsOverrideForLast;
+    TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp> m_aCardsFocusedStepsOverrideForLast;
 };
 
 USTRUCT()
@@ -410,7 +410,7 @@ public:
 
     //for cards belong to the attender near camera
     UPROPERTY(EditAnywhere, meta = (DisplayName = "overrided cards focused steps for attender as viewer", EditCondition = "m_bOverrideCardsFocusedStepsForAttenderAsViewer"))
-    TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp> m_aOverridedCardsFocusedStepsForAttenderAsViewer;
+    TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp> m_aOverridedCardsFocusedStepsForAttenderAsViewer;
 };
 
 USTRUCT()
@@ -428,7 +428,7 @@ public:
 
     //If empty it will use the default moving action
     UPROPERTY(EditAnywhere, meta = (DisplayName = "cards inserted to hand slot steps"))
-    TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp> m_aCardsInsertedToHandSlotSteps;
+    TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp> m_aCardsInsertedToHandSlotSteps;
 };
 
 USTRUCT()
@@ -473,7 +473,7 @@ public:
     TSubclassOf<AMyMJGameTrivalDancingActorBaseCpp> m_cDancingActor0Class;
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "dancing actor0 steps"))
-    TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp> m_aDancingActor0Steps;
+    TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp> m_aDancingActor0Steps;
 };
 
 USTRUCT()

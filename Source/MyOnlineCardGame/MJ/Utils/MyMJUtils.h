@@ -250,7 +250,7 @@ struct FMyMJCardInfoCpp
     void reset() {
         m_iId = -1;
 
-        m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Invalid;
+        m_eFlipState = MyBoxLikeFlipStateCpp::Invalid;
         m_cPosi.reset();
     };
 
@@ -260,7 +260,7 @@ struct FMyMJCardInfoCpp
         int32 m_iId; // >= 0 means valid
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "flip state"))
-        MyCardGameBoxLikeElemFlipStateCpp m_eFlipState;
+        MyBoxLikeFlipStateCpp m_eFlipState;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "position"))
         FMyMJCardPosiCpp m_cPosi;
@@ -657,7 +657,7 @@ protected:
 */
 
 
-//Id should be unique always
+//Id should be unique always, supposed alignment is left to right
 USTRUCT(BlueprintInternalUseOnly)
 struct FMyMJWeaveCpp
 {

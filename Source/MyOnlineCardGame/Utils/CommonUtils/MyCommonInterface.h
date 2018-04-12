@@ -10,29 +10,6 @@
 //If a interface function have default return error code, it means child class can skip implemention and call it ignoring error.
 //Warning:: Any function that maybe implemented by blueprint, can't be directly called, but using I*interface::Execute_*()
 
-UINTERFACE()
-class UMyWithCurveUpdaterTransformInterfaceCpp : public UInterface
-{
-    GENERATED_BODY()
-};
-
-class IMyWithCurveUpdaterTransformInterfaceCpp
-{
-    GENERATED_BODY()
-
-public:
-
-    virtual MyErrorCodeCommonPartCpp getModelInfo(struct FMyModelInfoCpp& modelInfo, bool verify = true) const = NULL;
-
-    //Never fail, core dump otherwise
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterBasicCpp*& outUpdater) = NULL;
-
-    //Never fail
-    struct FMyWithCurveUpdaterBasicCpp& getMyWithCurveUpdaterTransformRef();
-
-protected:
-
-};
 
 
 //application level id

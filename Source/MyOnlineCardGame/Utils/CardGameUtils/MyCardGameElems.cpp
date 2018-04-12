@@ -28,20 +28,20 @@
 #define MyCardGameAsset_CardActor_StaticMesh_DefaultMI_Name (TEXT("cardBoxMat0_defaultInst"))
 
 
-
-void FMyCardGameBoxLikeElemVisualInfoCpp::helperResolveTransform(const FMyCardGameVisualPointCfgCpp& cVisualPointCfg,
-                                                                 const FMyModelInfoBox3DCpp& cModelInfo,
-                                                                 const FMyCardGameBoxLikeElemVisualInfoCpp& cVisualInfo,
+/*
+void FMyArrangeCoordinateWorld3DCpp::helperResolveTransform(const FMyArrangePointCfgWorld3DCpp& cVisualPointCfg,
+                                                                 const FMyModelInfoBoxWorld3DCpp& cModelInfo,
+                                                                 const FMyArrangeCoordinateWorld3DCpp& cVisualInfo,
                                                                  FTransform& outTransform)
 {
 
-    const FTransform& cTransFormCenter = cVisualPointCfg.m_cCenterPointWorldTransform;
+    const FTransform& cTransFormCenter = cVisualPointCfg.m_cCenterPointTransform;
     const FVector& cAreaBoxExtend = cVisualPointCfg.m_cAreaBoxExtendFinal;
     MyCardGameVerticalAlignmentCpp eRowAlignment = cVisualPointCfg.m_eRowAlignment;
     //int32 iRowMaxNum = cVisualPointCfg.m_iRowMaxNum;
     MyCardGameHorizontalAlignmentCpp eColInRowAlignment = cVisualPointCfg.m_eColInRowAlignment;
     //int32 iColInRowMaxNum = cVisualPointCfg.m_iColInRowMaxNum;
-    float fColInRowExtraMarginAbs = cVisualPointCfg.m_fColInRowExtraMarginAbs;
+    float fColInRowExtraMarginAbs = cVisualPointCfg.m_fColInRowExtraMarginPercent * cModelInfo.m_cBoxExtend.Y * 2;
     if (fColInRowExtraMarginAbs < 0) {
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("fColInRowExtraMarginAbs is negative: %f, forceing to default."), fColInRowExtraMarginAbs);
         fColInRowExtraMarginAbs = 0;
@@ -71,12 +71,12 @@ void FMyCardGameBoxLikeElemVisualInfoCpp::helperResolveTransform(const FMyCardGa
     //}
 
     int32 idxRow = cVisualInfo.m_iIdxRow;
-    int32 idxColInRow = cVisualInfo.m_iIdxColInRow;
+    int32 idxColInRow = cVisualInfo.m_cCol.m_iIdxElem;
     if (cVisualInfo.m_iHelperIdxColInRowReal >= 0) {
         idxColInRow = cVisualInfo.m_iHelperIdxColInRowReal;
     }
-    int32 idxStackInCol = cVisualInfo.m_iIdxStackInCol;
-    MyCardGameBoxLikeElemFlipStateCpp eFlipState = cVisualInfo.m_eFlipState;
+    int32 idxStackInCol = cVisualInfo.m_cStack.m_iIdxElem;
+    MyBoxLikeFlipStateCpp eFlipState = cVisualInfo.m_eFlipState;
     int32 iXRotate90D = cVisualInfo.m_iRotateX90D;
     int32 iXRotate90DBeforeCount = cVisualInfo.m_iRotateX90DBeforeCount;
     int32 iColInRowExtraMarginCount = cVisualInfo.m_iColInRowExtraMarginCount;
@@ -107,9 +107,9 @@ void FMyCardGameBoxLikeElemVisualInfoCpp::helperResolveTransform(const FMyCardGa
     //}
 
 
-    if (eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Invalid) {
+    if (eFlipState == MyBoxLikeFlipStateCpp::Invalid) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid eflipstate!"));
-        eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Stand;
+        eFlipState = MyBoxLikeFlipStateCpp::Stand;
     }
 
     if (cModelInfo.m_cBoxExtend.IsZero()) {
@@ -149,7 +149,7 @@ void FMyCardGameBoxLikeElemVisualInfoCpp::helperResolveTransform(const FMyCardGa
 
     FVector localPointOfAttaching2StackPointRelativeLocation(0); //which will combine to stack point after rotate
     FVector localPointOfAttaching2StackPointRelativeLocationFixL2R(0);
-    if (eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Stand) {
+    if (eFlipState == MyBoxLikeFlipStateCpp::Stand) {
         perRowOffsetB2T = forwardV * cModelInfo.m_cBoxExtend.X * 2;
         perStackOffsetB2T = upV * cModelInfo.m_cBoxExtend.Z * 2;
 
@@ -159,7 +159,7 @@ void FMyCardGameBoxLikeElemVisualInfoCpp::helperResolveTransform(const FMyCardGa
         localRotatorRelative2StackPoint.Yaw = 180;
 
     }
-    else if (eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Up) {
+    else if (eFlipState == MyBoxLikeFlipStateCpp::Up) {
         perRowOffsetB2T = forwardV * cModelInfo.m_cBoxExtend.Z * 2;
         perStackOffsetB2T = upV * cModelInfo.m_cBoxExtend.X * 2;
 
@@ -194,7 +194,7 @@ void FMyCardGameBoxLikeElemVisualInfoCpp::helperResolveTransform(const FMyCardGa
 
         }
     }
-    else if (eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Down) {
+    else if (eFlipState == MyBoxLikeFlipStateCpp::Down) {
         perRowOffsetB2T = forwardV * cModelInfo.m_cBoxExtend.Z * 2;
         perStackOffsetB2T = upV * cModelInfo.m_cBoxExtend.X * 2;
 
@@ -279,7 +279,7 @@ void FMyCardGameBoxLikeElemVisualInfoCpp::helperResolveTransform(const FMyCardGa
 
     return;
 }
-
+*/
 
 
 
@@ -669,7 +669,7 @@ MyErrorCodeCommonPartCpp AMyCardGameDiceActorBaseCpp::updateSettings()
 };
 
 
-FTransform AMyCardGameDiceActorBaseCpp::helperCalcFinalTransform(const FMyCardGameDiceModelInfoCpp& diceModelInfo, const FMyCardGameVisualPointCfgCpp& diceVisualPointCfg, int32 diceVisualStateKey, int32 idxOfDiceRandomArranged, int32 diceTotalNum, int32 value)
+FTransform AMyCardGameDiceActorBaseCpp::helperCalcFinalTransform(const FMyCardGameDiceModelInfoCpp& diceModelInfo, const FMyArrangePointCfgWorld3DCpp& diceVisualPointCfg, int32 diceVisualStateKey, int32 idxOfDiceRandomArranged, int32 diceTotalNum, int32 value)
 {
     MY_VERIFY(idxOfDiceRandomArranged >= 0);
     MY_VERIFY(idxOfDiceRandomArranged < diceTotalNum);
@@ -702,7 +702,7 @@ FTransform AMyCardGameDiceActorBaseCpp::helperCalcFinalTransform(const FMyCardGa
     localT.SetLocation(localLoc);
     localT.SetRotation(localRot.Quaternion());
 
-    finalT = localT * diceVisualPointCfg.m_cCenterPointWorldTransform;
+    finalT = localT * diceVisualPointCfg.m_cCenterPointTransform;
 
     return finalT;
 };

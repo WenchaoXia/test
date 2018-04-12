@@ -271,7 +271,7 @@ void FMyWithCurveUpdaterBasicCpp::finishOneStep(const FMyWithCurveUpdateStepData
 }
 
 
-void FMyWithCurveUpdateStepDataWorldTransformCpp::helperSetDataBySrcAndDst(float fTime, UCurveVector* pCurve, const FTransform& cStart, const FTransform& cEnd, FIntVector extraRotateCycle)
+void FMyWithCurveUpdateStepDataTransformWorld3DCpp::helperSetDataBySrcAndDst(float fTime, UCurveVector* pCurve, const FTransform& cStart, const FTransform& cEnd, FIntVector extraRotateCycle)
 {
     m_cStart = cStart;
     m_cEnd = cEnd;
@@ -307,7 +307,7 @@ void FMyWithCurveUpdateStepDataWorldTransformCpp::helperSetDataBySrcAndDst(float
     //FRotator winding;
     //X.Rotator().GetWindingAndRemainder(winding, relativeRota);
 
-    if (m_cEnd.GetLocation().Equals(m_cStart.GetLocation(), FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min)) {
+    if (m_cEnd.GetLocation().Equals(m_cStart.GetLocation(), FMyWithCurveUpdateStepDataTransformWorld3DCpp_Delta_Min)) {
         m_bLocationEnabledCache = false;
     }
     else {
@@ -315,21 +315,21 @@ void FMyWithCurveUpdateStepDataWorldTransformCpp::helperSetDataBySrcAndDst(float
     }
 
     //since we allow roll at origin 360d, we can't use default isNealyZero() which treat that case zero
-    if (relativeRota.Euler().IsNearlyZero(FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min)) {
+    if (relativeRota.Euler().IsNearlyZero(FMyWithCurveUpdateStepDataTransformWorld3DCpp_Delta_Min)) {
         m_bRotatorBasicEnabledCache = false;
     }
     else {
         m_bRotatorBasicEnabledCache = true;
     }
 
-    if (m_cLocalRotatorExtra.Euler().IsNearlyZero(FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min)) {
+    if (m_cLocalRotatorExtra.Euler().IsNearlyZero(FMyWithCurveUpdateStepDataTransformWorld3DCpp_Delta_Min)) {
         m_bRotatorExtraEnabledCache = false;
     }
     else {
         m_bRotatorExtraEnabledCache = true;
     }
 
-    if (m_cEnd.GetScale3D().Equals(m_cStart.GetScale3D(), FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min)) {
+    if (m_cEnd.GetScale3D().Equals(m_cStart.GetScale3D(), FMyWithCurveUpdateStepDataTransformWorld3DCpp_Delta_Min)) {
         m_bScaleEnabledCache = false;
     }
     else {
@@ -343,7 +343,7 @@ void FMyWithCurveUpdateStepDataWorldTransformCpp::helperSetDataBySrcAndDst(float
 
 
 
-UMyWithCurveUpdaterWorldTransformComponent::UMyWithCurveUpdaterWorldTransformComponent(const FObjectInitializer& ObjectInitializer)
+UMyWithCurveUpdaterTransformWorld3DComponent::UMyWithCurveUpdaterTransformWorld3DComponent(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
     PrimaryComponentTick.TickGroup = TG_PrePhysics;
@@ -357,12 +357,12 @@ UMyWithCurveUpdaterWorldTransformComponent::UMyWithCurveUpdaterWorldTransformCom
     m_bShowWhenActivated = false;
     m_bHideWhenInactivated = false;
 
-    m_cUpdater.m_cCommonUpdateDelegate.BindUObject(this, &UMyWithCurveUpdaterWorldTransformComponent::updaterOnCommonUpdate);
-    m_cUpdater.m_cCommonFinishDelegete.BindUObject(this, &UMyWithCurveUpdaterWorldTransformComponent::updaterOnCommonFinish);
-    m_cUpdater.m_cActivateTickDelegate.BindUObject(this, &UMyWithCurveUpdaterWorldTransformComponent::updaterActivateTick);
+    m_cUpdater.m_cCommonUpdateDelegate.BindUObject(this, &UMyWithCurveUpdaterTransformWorld3DComponent::updaterOnCommonUpdate);
+    m_cUpdater.m_cCommonFinishDelegete.BindUObject(this, &UMyWithCurveUpdaterTransformWorld3DComponent::updaterOnCommonFinish);
+    m_cUpdater.m_cActivateTickDelegate.BindUObject(this, &UMyWithCurveUpdaterTransformWorld3DComponent::updaterActivateTick);
 }
 
-void UMyWithCurveUpdaterWorldTransformComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+void UMyWithCurveUpdaterTransformWorld3DComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
@@ -399,9 +399,9 @@ void UMyWithCurveUpdaterWorldTransformComponent::TickComponent(float DeltaTime, 
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("TickComponent out."));
 }
 
-void UMyWithCurveUpdaterWorldTransformComponent::updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
+void UMyWithCurveUpdaterTransformWorld3DComponent::updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
 {
-    const FMyWithCurveUpdateStepDataWorldTransformCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWorldTransformCpp*>(&data);
+    const FMyWithCurveUpdateStepDataTransformWorld3DCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataTransformWorld3DCpp*>(&data);
     MY_VERIFY(pData);
 
     MY_VERIFY(IsValid(UpdatedComponent));
@@ -494,9 +494,9 @@ void UMyWithCurveUpdaterWorldTransformComponent::updaterOnCommonUpdate(const FMy
 
 }
 
-void UMyWithCurveUpdaterWorldTransformComponent::updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
+void UMyWithCurveUpdaterTransformWorld3DComponent::updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
 {
-    const FMyWithCurveUpdateStepDataWorldTransformCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWorldTransformCpp*>(&data);
+    const FMyWithCurveUpdateStepDataTransformWorld3DCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataTransformWorld3DCpp*>(&data);
     MY_VERIFY(pData);
 
     MY_VERIFY(IsValid(UpdatedComponent));
@@ -509,7 +509,7 @@ void UMyWithCurveUpdaterWorldTransformComponent::updaterOnCommonFinish(const FMy
     UpdatedComponent->SetWorldTransform(pData->m_cEnd);
 }
 
-void UMyWithCurveUpdaterWorldTransformComponent::updaterActivateTick(bool bNew, FString reason)
+void UMyWithCurveUpdaterTransformWorld3DComponent::updaterActivateTick(bool bNew, FString reason)
 {
     if (IsActive() != bNew) {
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("activate component change %d -> %d, reason %s, last tick time ms %u."), !bNew, bNew, *reason, m_uDebugLastTickWorldTime_ms);
@@ -545,7 +545,7 @@ void UMyWithCurveUpdaterWorldTransformComponent::updaterActivateTick(bool bNew, 
 
 
 
-AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp() : Super()
+AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp() : Super()
 {
     bNetLoadOnClient = true;
 
@@ -554,20 +554,20 @@ AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::AMyWithCurveUpdaterWorldTr
     createComponentsForCDO();
 }
 
-AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::~AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp()
+AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::~AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp()
 {
 
 }
 
 
 //Todo:: verify its correctness when root scene scaled
-MyErrorCodeCommonPartCpp AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::getModelInfo(FMyModelInfoCpp& modelInfo, bool verify) const
+MyErrorCodeCommonPartCpp AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::getModelInfo(FMyModelInfoWorld3DCpp& modelInfo, bool verify) const
 {
     //ignore the root scene/actor's scale, but calc from the box
 
     //FVector actorScale3D = GetActorScale3D();
     //m_pMainBox->GetScaledBoxExtent()
-    modelInfo.reset(MyModelInfoType::Box3D);
+    modelInfo.reset(MyModelInfoType::BoxWorld3D);
     modelInfo.getBox3DRef().m_cBoxExtend = m_pMainBox->GetUnscaledBoxExtent() *  m_pMainBox->GetComponentScale();
 
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("name %s, box scale %s."), *GetName(), *m_pMainBox->GetComponentScale().ToString());
@@ -586,16 +586,16 @@ MyErrorCodeCommonPartCpp AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::g
     return ret;
 }
 
-MyErrorCodeCommonPartCpp AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterBasicCpp*& outUpdater)
+MyErrorCodeCommonPartCpp AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::getMyWithCurveUpdaterTransformWorld3DEnsured(struct FMyWithCurveUpdaterTransformWorld3DCpp*& outUpdater)
 {
     MY_VERIFY(IsValid(m_pMyTransformUpdaterComponent));
 
-    outUpdater = &m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRef();
+    outUpdater = &m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformWorld3DRef();
 
     return MyErrorCodeCommonPartCpp::NoError;
 }
 
-void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::createComponentsForCDO()
+void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::createComponentsForCDO()
 {
 
     USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
@@ -618,7 +618,7 @@ void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::createComponentsForCD
     pStaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     m_pMainStaticMesh = pStaticMeshComponent;
 
-    m_pMyTransformUpdaterComponent = CreateDefaultSubobject<UMyWithCurveUpdaterWorldTransformComponent>(TEXT("transform updater component"));
+    m_pMyTransformUpdaterComponent = CreateDefaultSubobject<UMyWithCurveUpdaterTransformWorld3DComponent>(TEXT("transform updater component"));
 
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_pMainBox created as 0x%p, this 0x%p."), m_pMainBox, this);
 
@@ -627,12 +627,12 @@ void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::createComponentsForCD
 
 #if WITH_EDITOR
 
-void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
+void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty, %s"), *m_cResPath.Path);
     FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
 
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp, m_bFakeUpdateSettings))
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp, m_bFakeUpdateSettings))
     {
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_bFakeUpdateSettings clicked."));
         updateSettings();
@@ -646,7 +646,7 @@ void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::PostEditChangePropert
 #endif
 
 
-MyErrorCodeCommonPartCpp AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::updateSettings()
+MyErrorCodeCommonPartCpp AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::updateSettings()
 {
     if (!IsValid(m_pMainBox)) {
         UClass* uc = this->GetClass();
@@ -695,25 +695,25 @@ MyErrorCodeCommonPartCpp AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::u
 }
 
 
-void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::helperTestAnimationStep(float time, FString debugStr, const TArray<AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp*>& actors)
+void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::helperTestAnimationStep(float time, FString debugStr, const TArray<AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp*>& actors)
 {
-    FMyTransformUpdateAnimationMetaWorldTransformCpp meta;
-    FMyWithCurveUpdateStepSettingsWorldTransformCpp stepData;
+    FMyWithCurveUpdateStepMetaTransformWorld3DCpp meta;
+    FMyWithCurveUpdateStepSettingsTransformWorld3DCpp stepData;
 
     meta.m_sDebugString = debugStr;
     meta.m_fTotalTime = time;
-    meta.m_cModelInfo.reset(MyModelInfoType::Box3D);
+    meta.m_cModelInfo.reset(MyModelInfoType::BoxWorld3D);
     meta.m_cModelInfo.getBox3DRef().m_cBoxExtend = FVector(20, 30, 60);
 
     stepData.m_fTimePercent = 1;
     stepData.m_eLocationUpdateType = MyWithCurveUpdateStepSettingsLocationType::OffsetFromPrevLocation;
     stepData.m_cLocationOffsetPercent = FVector(0, 0, 1);
 
-    TArray<FMyWithCurveUpdaterBasicCpp *> updaterSortedGroup;
+    TArray<FMyWithCurveUpdaterTransformWorld3DCpp *> updaterSortedGroup;
 
     for (int32 i = 0; i < actors.Num(); i++)
     {
-        FMyWithCurveUpdaterWorldTransformCpp* pUpdater = &actors[i]->getMyWithCurveUpdaterWorldTransformRef();
+        FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &actors[i]->getMyWithCurveUpdaterTransformWorld3DRef();
         FTransform targetT;
         targetT.SetLocation(FVector(0, 0, 100));
         pUpdater->setHelperTransformOrigin(actors[i]->GetActorTransform());
@@ -721,11 +721,11 @@ void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::helperTestAnimationSt
         updaterSortedGroup.Emplace(pUpdater);
     }
 
-    UMyRenderUtilsLibrary::helperSetupTransformUpdateAnimationStep(meta, stepData, updaterSortedGroup);
+    UMyRenderUtilsLibrary::helperUpdatersSetupStep(meta, stepData, updaterSortedGroup);
 }
 
 /*
-void AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp::OnConstruction(const FTransform& Transform)
+void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::OnConstruction(const FTransform& Transform)
 {
 Super::OnConstruction(Transform);
 
@@ -734,7 +734,7 @@ UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnConstruction m_pMainBox 0x%p, thi
 */
 
 
-void UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
 
@@ -743,31 +743,31 @@ void UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::NativeTick(const FG
     }
 }
 
-void UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
+void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
 {
-    const FMyWithCurveUpdateStepDataWidgetTransformCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWidgetTransformCpp*>(&data);
+    const FMyWithCurveUpdateStepDataTransformWidget2DCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataTransformWidget2DCpp*>(&data);
     MY_VERIFY(pData);
 
     FWidgetTransform wtNow;
-    wtNow.Translation = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Translation, pData->m_cWidgetTransformEnd.Translation, vector.X, 1);
+    wtNow.Translation = FMath::Vector2DInterpTo(pData->m_cTransformWidget2DStart.Translation, pData->m_cTransformWidget2DEnd.Translation, vector.X, 1);
 
-    wtNow.Angle = FMath::FInterpTo(pData->m_cWidgetTransformStart.Angle, pData->m_cWidgetTransformEnd.Angle, vector.Y, 1);
-    wtNow.Shear = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Shear, pData->m_cWidgetTransformEnd.Shear, vector.Y, 1);
+    wtNow.Angle = FMath::FInterpTo(pData->m_cTransformWidget2DStart.Angle, pData->m_cTransformWidget2DEnd.Angle, vector.Y, 1);
+    wtNow.Shear = FMath::Vector2DInterpTo(pData->m_cTransformWidget2DStart.Shear, pData->m_cTransformWidget2DEnd.Shear, vector.Y, 1);
 
-    wtNow.Scale = FMath::Vector2DInterpTo(pData->m_cWidgetTransformStart.Scale, pData->m_cWidgetTransformEnd.Scale, vector.Z, 1);
+    wtNow.Scale = FMath::Vector2DInterpTo(pData->m_cTransformWidget2DStart.Scale, pData->m_cTransformWidget2DEnd.Scale, vector.Z, 1);
 
     SetRenderTransform(wtNow);
 }
 
-void UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
+void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
 {
-    const FMyWithCurveUpdateStepDataWidgetTransformCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataWidgetTransformCpp*>(&data);
+    const FMyWithCurveUpdateStepDataTransformWidget2DCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataTransformWidget2DCpp*>(&data);
     MY_VERIFY(pData);
 
-    SetRenderTransform(pData->m_cWidgetTransformEnd);
+    SetRenderTransform(pData->m_cTransformWidget2DEnd);
 }
 
-void UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::updaterActivateTick(bool activate, FString debugString)
+void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterActivateTick(bool activate, FString debugString)
 {
     m_bUpdaterNeedTick = activate;
 
@@ -992,8 +992,8 @@ void UMyFlipImage::tryNextFrame(int32 idxOfImage, int32 frameOfImage)
 UMyButton::UMyButton(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
-    m_bEnableWidgetTransformPressed = false;
-    m_cWidgetTransformPressed.Scale.X = m_cWidgetTransformPressed.Scale.Y = 0.8;
+    m_bEnableTransformWidget2DPressed = false;
+    m_cTransformWidget2DPressed.Scale.X = m_cTransformWidget2DPressed.Scale.Y = 0.8;
 }
 
 void UMyButton::PostEditChangeProperty(FPropertyChangedEvent& e)
@@ -1004,11 +1004,11 @@ void UMyButton::PostEditChangeProperty(FPropertyChangedEvent& e)
 
     if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyButton, RenderTransform))
     {
-        m_cWidgetTransformNormal = RenderTransform;
+        m_cTransformWidget2DNormal = RenderTransform;
     }
-    else if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyButton, m_cWidgetTransformNormal))
+    else if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyButton, m_cTransformWidget2DNormal))
     {
-        RenderTransform = m_cWidgetTransformNormal;
+        RenderTransform = m_cTransformWidget2DNormal;
     }
     else if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyButton, WidgetStyle))
     {
@@ -1025,7 +1025,7 @@ void UMyButton::PostEditChangeProperty(FPropertyChangedEvent& e)
                 WidgetStyle.Disabled.SetResourceObject(NULL);
             }
         }
-        RenderTransform = m_cWidgetTransformNormal;
+        RenderTransform = m_cTransformWidget2DNormal;
     }
 
 
@@ -1058,8 +1058,8 @@ TSharedRef<SWidget> UMyButton::RebuildWidget()
 
 void UMyButton::SlateHandlePressedMy()
 {
-    if (m_bEnableWidgetTransformPressed) {
-        SetRenderTransform(m_cWidgetTransformPressed);
+    if (m_bEnableTransformWidget2DPressed) {
+        SetRenderTransform(m_cTransformWidget2DPressed);
     }
 
     SlateHandlePressed();
@@ -1069,8 +1069,8 @@ void UMyButton::SlateHandlePressedMy()
 
 void UMyButton::SlateHandleReleasedMy()
 {
-    if (m_bEnableWidgetTransformPressed) {
-        SetRenderTransform(m_cWidgetTransformNormal);
+    if (m_bEnableTransformWidget2DPressed) {
+        SetRenderTransform(m_cTransformWidget2DNormal);
     }
 
     SlateHandleReleased();
@@ -1101,13 +1101,13 @@ void UMyButton::SynchronizeProperties()
 
 void UMyButton::onPressedInner()
 {
-    SetRenderTransform(m_cWidgetTransformPressed);
+    SetRenderTransform(m_cTransformWidget2DPressed);
     OnPressedOverride.Broadcast();
 }
 
 void UMyButton::onReleasedInner()
 {
-    SetRenderTransform(m_cWidgetTransformNormal);
+    SetRenderTransform(m_cTransformWidget2DNormal);
     OnReleased.Broadcast();
 }
 */
@@ -1234,8 +1234,163 @@ int32 AMyTextureGenSuitBaseCpp::genDo(FString newTextureName)
 }
 
 
+FMyArrangeCfgOneDimensionCpp FMyArrangeCfgOneDimensionCpp::inv() const
+{
+    FMyArrangeCfgOneDimensionCpp ret;
+    ret = *this;
+    ret.m_eCellOrderType = UMyRenderUtilsLibrary::Inv_MyOrderType(m_eCellOrderType);
+    ret.m_eCellGatherType = UMyRenderUtilsLibrary::Inv_MyAxisAlignmentType(m_eCellGatherType);
 
-void UMyRenderUtilsLibrary::helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp &meta,
+    return ret;
+}
+
+
+void FMyArrangeCoordinateWorld3DCpp::helperSetIdxColRowStack(const FMyArrangePointResolvedMetaWorld3DCpp& meta, int32 colArranged, int32 rowArranged, int32 stackArranged)
+{
+    m_cStack.m_iIdxElem = meta.getStackIdx(stackArranged);
+    m_cRow.m_iIdxElem = meta.getRowIdx(stackArranged, rowArranged);
+    m_cCol.m_iIdxElem = meta.getColIdx(rowArranged, colArranged);
+}
+
+void FMyArrangeCoordinateWorld3DCpp::helperSetIdxColRowStackByMyArrangeCoordinateMeta(const FMyArrangePointResolvedMetaWorld3DCpp& meta, const FMyArrangeCoordinateMetaCpp& myArrangeCoordinateMeta)
+{
+    int32 colArranged = myArrangeCoordinateMeta.m_iColArranged;
+    int32 rowArranged = 0;
+    int32 stackArranged = 0;
+    if (myArrangeCoordinateMeta.m_bColNumMaxLimitEnabled) {
+        rowArranged = myArrangeCoordinateMeta.m_iRowArranged;
+        if (myArrangeCoordinateMeta.m_bRowNumMaxLimitEnabled) {
+            stackArranged = myArrangeCoordinateMeta.m_iStackArranged;
+        }
+    }
+
+    helperSetIdxColRowStack(meta, colArranged, rowArranged, stackArranged);
+}
+
+void FMyArrangeCfgResolvedOneDimCpp::rebuildFrom(const FMyArrangeCfgOneDimensionCpp& cfgDim, MyAxisTypeCpp axisType,
+                                                const FVector& areaExtend,
+                                                const FMyModelInfoBoxWorld3DCpp& modelInfoExpected,
+                                                const FMyModelInfoBoxWorld3DCpp& modelInfoUnexpected)
+{
+    *StaticCast<FMyArrangeCfgOneDimensionCpp *>(this) = cfgDim;
+    m_fAreaExtend = UMyRenderUtilsLibrary::getAxisFromVectorRefConst(areaExtend, axisType);
+    m_fCellExtendExpected = UMyRenderUtilsLibrary::getAxisFromVectorRefConst(modelInfoExpected.m_cBoxExtend, axisType);
+    m_fCellExtendUnexpected = UMyRenderUtilsLibrary::getAxisFromVectorRefConst(modelInfoUnexpected.m_cBoxExtend, axisType);
+
+    m_eAxisType = axisType;
+}
+
+
+ void FMyArrangePointResolvedMetaWorld3DCpp::rebuildFrom(const FMyArrangePointCfgWorld3DCpp& cPointCfg, const FMyModelInfoBoxWorld3DCpp& cModelInfo)
+ {
+     m_cCenterPointTransform = cPointCfg.m_cCenterPointTransform;
+     m_fModelUnifiedSize = UMyRenderUtilsLibrary::getUnifiedSize2D3D(cModelInfo);
+     
+     FMyModelInfoBoxWorld3DCpp modelInfoExpected = UMyRenderUtilsLibrary::applyMyRotateState90D_ModelInfoBox_World3D(cModelInfo, cPointCfg.m_cLimitedRotationAllExpected);
+     FMyModelInfoBoxWorld3DCpp modelInfoUnexpected = UMyRenderUtilsLibrary::applyMyRotateState90D_ModelInfoBox_World3D(cModelInfo, cPointCfg.m_cLimitedRotationAllUnexpected);
+
+     TArray<MyAxisTypeCpp> aAxis;
+     UMyRenderUtilsLibrary::getSortedAxis3D(cPointCfg.m_eColAxisType, cPointCfg.m_eRowAxisType, aAxis);
+
+     m_aDimCfgs[0].rebuildFrom(cPointCfg.m_cColArrange, aAxis[0], cPointCfg.m_cAreaBoxExtendFinal, modelInfoExpected, modelInfoUnexpected);
+     m_aDimCfgs[1].rebuildFrom(cPointCfg.m_cRowArrange, aAxis[1], cPointCfg.m_cAreaBoxExtendFinal, modelInfoExpected, modelInfoUnexpected);
+     m_aDimCfgs[2].rebuildFrom(cPointCfg.m_cStackArrange, aAxis[2], cPointCfg.m_cAreaBoxExtendFinal, modelInfoExpected, modelInfoUnexpected);
+
+     m_aDimCfgs[0].postBuild(&m_aDimCfgs[1], m_fModelUnifiedSize);
+     m_aDimCfgs[1].postBuild(&m_aDimCfgs[2], m_fModelUnifiedSize);
+     m_aDimCfgs[2].postBuild(NULL, m_fModelUnifiedSize);
+
+     m_cModelInfo = cModelInfo;
+ }
+
+
+void UMyRenderUtilsLibrary::helperBoxModelResolveTransformWorld3D(const FMyArrangePointResolvedMetaWorld3DCpp& meta,
+                                                                  const FMyArrangeCoordinateWorld3DCpp& coordinate,
+                                                                  FTransform& outTransform)
+{
+
+    FMyModelInfoBoxWorld3DCpp modelInfoThisElem = UMyRenderUtilsLibrary::applyMyRotateState90D_ModelInfoBox_World3D(meta.m_cModelInfo, coordinate.m_cLimitedRotation);
+
+
+    //let's locate the cell
+
+    TArray<FMyArrangeCoordinateResolvedOneDimCpp> aCos;
+    aCos.AddDefaulted(3);
+
+    aCos[0].rebuildFrom(coordinate.m_cCol, meta.m_aDimCfgs[0].m_eAxisType, modelInfoThisElem);
+    aCos[1].rebuildFrom(coordinate.m_cRow, meta.m_aDimCfgs[1].m_eAxisType, modelInfoThisElem);
+    aCos[2].rebuildFrom(coordinate.m_cStack, meta.m_aDimCfgs[2].m_eAxisType, modelInfoThisElem);
+
+
+    for (int32 i = 0; i < 3; i++) {
+        const FMyArrangeCfgResolvedOneDimCpp& cfgDim = meta.m_aDimCfgs[i];
+        FMyArrangeCoordinateResolvedOneDimCpp& coDim = aCos[i];
+
+        float cellStart = cfgDim.getCellStart(meta.m_fModelUnifiedSize, coDim);
+
+
+        MyContinuousAlignmentTypeCpp eElemInCellAlignmentType = cfgDim.m_eElemInCellAlignmentType;
+        if (eElemInCellAlignmentType == MyContinuousAlignmentTypeCpp::Invalid) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("eElemInCellAlignmentType invalid, using default. dim idx %d"), i);
+            eElemInCellAlignmentType = MyContinuousAlignmentTypeCpp::Prev;
+        }
+
+        float elemStart = cellStart;
+        if (eElemInCellAlignmentType == MyContinuousAlignmentTypeCpp::Prev) {
+        }
+        else if (eElemInCellAlignmentType == MyContinuousAlignmentTypeCpp::Mid) {
+            elemStart += cfgDim.m_fCellExtendExpected - coDim.m_fElemExtend;
+        }
+        else {
+            elemStart += (cfgDim.m_fCellExtendExpected - coDim.m_fElemExtend) * 2;
+        }
+
+
+        MyOrderTypeCpp eCellOrderType = cfgDim.m_eCellOrderType;
+        if (eCellOrderType == MyOrderTypeCpp::Invalid) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("eCellOrderType invalid, using default. dim idx %d"), i);
+            eCellOrderType = MyOrderTypeCpp::ASC;
+        }
+
+        if (eCellOrderType == MyOrderTypeCpp::ASC) {
+            coDim.m_fOutAxisValue = -cfgDim.m_fAreaExtend + elemStart - (coDim.m_fElemCenter - coDim.m_fElemExtend);
+        }
+        else {
+            coDim.m_fOutAxisValue = cfgDim.m_fAreaExtend - elemStart - (coDim.m_fElemCenter + coDim.m_fElemExtend);
+        }
+    }
+
+
+    FVector relativeLoc;
+    for (int32 i = 0; i < 3; i++) {
+        getAxisFromVectorRef(relativeLoc, aCos[i].m_eAxisType) = aCos[i].m_fOutAxisValue;
+    }
+
+    FRotator relativeRot = Conv_MyRotateState90DWorld3D_Rotator(coordinate.m_cLimitedRotation);
+
+    FTransform relativeTransform;
+    relativeTransform.SetLocation(relativeLoc);
+    relativeTransform.SetRotation(relativeRot.Quaternion());
+
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("inputCoordinate : %s, model: %s."), *coordinate.ToString(), *meta.m_cModelInfo.ToString());
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("relativeTransform : %s."), *relativeTransform.ToString());
+
+    outTransform = relativeTransform * meta.m_cCenterPointTransform;
+
+    return;
+}
+
+void UMyRenderUtilsLibrary::helperBoxModelResolveTransformWidget2D(const FMyArrangePointResolvedMetaWorld3DCpp& meta,
+                                                                   const FMyArrangeCoordinateWidget2DCpp& coordinate,
+                                                                   FWidgetTransform& outTransform)
+{
+    FMyArrangeCoordinateWorld3DCpp co3D = Conv_MyArrangeCoordinateWidget2D_MyArrangeCoordinateWorld3D(coordinate);
+    FTransform t3D;
+    helperBoxModelResolveTransformWorld3D(meta, co3D, t3D);
+    outTransform = Conv_TransformWorld3D_TransformWidget2D(t3D);
+}
+
+void UMyRenderUtilsLibrary::helperResolveTransformWorld3DFromPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp &meta,
                                                                                                         float targetPosiFromCenterToBorderOnScreenPercent,
                                                                                                         const FVector2D& targetPosiFixOnScreenPercent,
                                                                                                         float targetVOnScreenPercent,
@@ -1249,10 +1404,10 @@ void UMyRenderUtilsLibrary::helperResolveWorldTransformFromPointAndCenterMetaOnP
     float vAbsoluteOnScreen = targetVOnScreenPercent * meta.m_cScreenCenter.Y * 2;
 
     FVector cameraCenterLoc, cameraCenterDir;
-    UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByAbsolute(WorldContextObject, popPoint, vAbsoluteOnScreen, targetModelHeightInWorld, outTargetTranform, cameraCenterLoc, cameraCenterDir);
+    UMyCommonUtilsLibrary::helperResolveTransformWorld3DFromPlayerCameraByAbsolute(WorldContextObject, popPoint, vAbsoluteOnScreen, targetModelHeightInWorld, outTargetTranform, cameraCenterLoc, cameraCenterDir);
 }
 
-float UMyRenderUtilsLibrary::helperGetRemainTimePercent(const TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp>& stepDatas)
+float UMyRenderUtilsLibrary::helperGetRemainTimePercent(const TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp>& stepDatas)
 {
     float total = 1;
     int32 l = stepDatas.Num();
@@ -1269,9 +1424,9 @@ float UMyRenderUtilsLibrary::helperGetRemainTimePercent(const TArray<FMyWithCurv
 }
 
 
-void UMyRenderUtilsLibrary::helperSetupWorldTransformUpdateAnimationStep(const FMyTransformUpdateAnimationMetaWorldTransformCpp& meta,
-                                                                         const FMyWithCurveUpdateStepSettingsWorldTransformCpp& stepData,
-                                                                         const TArray<FMyWithCurveUpdaterWorldTransformCpp *>& updatersSorted)
+void UMyRenderUtilsLibrary::helperUpdatersSetupStep(const FMyWithCurveUpdateStepMetaTransformWorld3DCpp& meta,
+                                                                         const FMyWithCurveUpdateStepSettingsTransformWorld3DCpp& stepData,
+                                                                         const TArray<FMyWithCurveUpdaterTransformWorld3DCpp *>& updatersSorted)
 {
     float fTotalTime = meta.m_fTotalTime;
 
@@ -1279,7 +1434,7 @@ void UMyRenderUtilsLibrary::helperSetupWorldTransformUpdateAnimationStep(const F
     const FTransform& disappearTransform = meta.m_cDisappearTransform;
     const FVector& modelBoxExtend = meta.m_cModelInfo.getBox3DRefConst().m_cBoxExtend;
 
-    const FMyWithCurveUpdateStepSettingsWorldTransformCpp& cStepData = stepData;
+    const FMyWithCurveUpdateStepSettingsTransformWorld3DCpp& cStepData = stepData;
 
     TArray<FTransform> aNextTransforms;
 
@@ -1309,7 +1464,7 @@ void UMyRenderUtilsLibrary::helperSetupWorldTransformUpdateAnimationStep(const F
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("l %d, finalLocationCenter: %s"), l, *finalLocationCenter.ToString());
     //find the middle one
     //int32 idxCenter = l / 2;
-    //FMyWithCurveUpdaterWorldTransformCpp* updaterCenter = updatersSorted[idxCenter];
+    //FMyWithCurveUpdaterTransformWorld3DCpp* updaterCenter = updatersSorted[idxCenter];
     //FTransform& nextTransformCenter = aNextTransforms[idxCenter];
 
 
@@ -1403,41 +1558,18 @@ void UMyRenderUtilsLibrary::helperSetupWorldTransformUpdateAnimationStep(const F
     UCurveVector* pCurve = UMyCommonUtilsLibrary::getCurveVectorFromSettings(cStepData.m_cCurve);
     for (int32 i = 0; i < l; i++) {
 
-        FMyWithCurveUpdaterWorldTransformCpp *pUpdater = updatersSorted[i];
+        FMyWithCurveUpdaterTransformWorld3DCpp *pUpdater = updatersSorted[i];
 
-        FMyWithCurveUpdateStepDataWorldTransformCpp data;
+        FMyWithCurveUpdateStepDataTransformWorld3DCpp data;
         data.helperSetDataBySrcAndDst(fDur, pCurve, pUpdater->getHelperTransformPrevRefConst(), aNextTransforms[i], cStepData.m_cRotationUpdateExtraCycles);
         pUpdater->addStepToTail(data);
     }
 };
 
-void UMyRenderUtilsLibrary::helperSetupTransformUpdateAnimationStep(const FMyTransformUpdateAnimationMetaBaseCpp& meta,
-                                                                    const FMyWithCurveUpdateStepSettingsBasicCpp& stepData,
-                                                                    const TArray<FMyWithCurveUpdaterBasicCpp *>& updatersSorted)
-{
-    if (meta.getType() == MyTransformTypeWorldTransform) {
-        const FMyTransformUpdateAnimationMetaWorldTransformCpp& metaWorldTransform = FMyTransformUpdateAnimationMetaWorldTransformCpp::castFromBaseRefConst(meta);
-        const FMyWithCurveUpdateStepSettingsWorldTransformCpp& stepDataWorldTransform = FMyWithCurveUpdateStepSettingsWorldTransformCpp::castFromBaseConst(stepData);
 
-        TArray<FMyWithCurveUpdaterWorldTransformCpp *> updatersWorldTransformSorted;
-        for (int32 i = 0; i < updatersSorted.Num(); i++) {
-            FMyWithCurveUpdaterWorldTransformCpp* pUpdater = &FMyWithCurveUpdaterWorldTransformCpp::castFromBaseRef(*updatersSorted[i]);
-            updatersWorldTransformSorted.Emplace(pUpdater);
-        }
-
-        helperSetupWorldTransformUpdateAnimationStep(metaWorldTransform, stepDataWorldTransform, updatersWorldTransformSorted);
-    }
-    else if  (meta.getType() == MyTransformTypeWidgetTransform) {
-    }
-    else {
-        //Todo
-    }
-};
-
-
-void UMyRenderUtilsLibrary::helperSetupTransformUpdateAnimationSteps(const FMyTransformUpdateAnimationMetaBaseCpp& meta,
-                                                                     const TArray<const FMyWithCurveUpdateStepSettingsBasicCpp *>& stepDatas,
-                                                                     const TArray<FMyWithCurveUpdaterBasicCpp *>& updatersSorted)
+void UMyRenderUtilsLibrary::helperUpdatersSetupSteps(const FMyWithCurveUpdateStepMetaTransformWorld3DCpp& meta,
+                                                    const TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp>& stepDatas,
+                                                    const TArray<FMyWithCurveUpdaterTransformWorld3DCpp *>& updatersSorted)
 {
     int32 l = stepDatas.Num();
 
@@ -1451,11 +1583,11 @@ void UMyRenderUtilsLibrary::helperSetupTransformUpdateAnimationSteps(const FMyTr
     bool bTimePecentTotalExpectedNot100Pecent = false;
 
     for (int32 i = 0; i < l; i++) {
-        helperSetupTransformUpdateAnimationStep(meta, *stepDatas[i], updatersSorted);
-        float f = stepDatas[i]->m_fTimePercent;
+        helperUpdatersSetupStep(meta, stepDatas[i], updatersSorted);
+        float f = stepDatas[i].m_fTimePercent;
         total += f;
 
-        bTimePecentTotalExpectedNot100Pecent |= stepDatas[i]->m_bTimePecentTotalExpectedNot100Pecent;
+        bTimePecentTotalExpectedNot100Pecent |= stepDatas[i].m_bTimePecentTotalExpectedNot100Pecent;
     }
 
     if ((!bTimePecentTotalExpectedNot100Pecent) && l > 0 && !FMath::IsNearlyEqual(total, 1, MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT))
@@ -1464,18 +1596,18 @@ void UMyRenderUtilsLibrary::helperSetupTransformUpdateAnimationSteps(const FMyTr
     };
 }
 
-void UMyRenderUtilsLibrary::helperSetupWorldTransformUpdateAnimationStepsForPoint(const UObject* WorldContextObject,
+void UMyRenderUtilsLibrary::helperUpdatersSetupStepsForPointTransformWorld3D(const UObject* WorldContextObject,
                                                                                     float totalDur,
                                                                                     const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp& pointAndCenterMeta,
                                                                                     const FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp& pointInfo,
-                                                                                    const TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp>& stepDatas,
+                                                                                    const TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp>& stepDatas,
                                                                                     float extraDelayDur,
-                                                                                    const TArray<IMyWithCurveUpdaterTransformInterfaceCpp *>& updaterInterfaces,
+                                                                                    const TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp *>& updaterInterfaces,
                                                                                     FString debugName,
                                                                                     bool clearPrevSteps)
 {
-    FMyTransformUpdateAnimationMetaWorldTransformCpp meta, *pMeta = &meta;
-    TArray<FMyWithCurveUpdaterBasicCpp *> aUpdaters, *pUpdaters = &aUpdaters;
+    FMyWithCurveUpdateStepMetaTransformWorld3DCpp meta, *pMeta = &meta;
+    TArray<FMyWithCurveUpdaterTransformWorld3DCpp *> aUpdaters, *pUpdaters = &aUpdaters;
 
     //prepare meta
     pMeta->m_sDebugString = debugName;
@@ -1485,17 +1617,17 @@ void UMyRenderUtilsLibrary::helperSetupWorldTransformUpdateAnimationStepsForPoin
         return;
     }
 
-    updaterInterfaces[0]->getModelInfo(pMeta->m_cModelInfo);
+    pMeta->m_cModelInfo = updaterInterfaces[0]->getModelInfo();
 
-    helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, pointInfo.m_fShowPosiFromCenterToBorderPercent, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelInfo.getBox3DRefConst().m_cBoxExtend.Size() * 2, pMeta->m_cPointTransform);
-    helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, 1.2, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelInfo.getBox3DRefConst().m_cBoxExtend.Size() * 2, pMeta->m_cDisappearTransform);
+    helperResolveTransformWorld3DFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, pointInfo.m_fShowPosiFromCenterToBorderPercent, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelInfo.getBox3DRefConst().m_cBoxExtend.Size() * 2, pMeta->m_cPointTransform);
+    helperResolveTransformWorld3DFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, 1.2, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelInfo.getBox3DRefConst().m_cBoxExtend.Size() * 2, pMeta->m_cDisappearTransform);
 
     bool bDelay = extraDelayDur >= MY_FLOAT_TIME_MIN_VALUE_TO_TAKE_EFFECT;
 
     pUpdaters->Reset();
     int32 l = updaterInterfaces.Num();
     for (int32 i = 0; i < l; i++) {
-        FMyWithCurveUpdaterBasicCpp* pUpdater = &updaterInterfaces[i]->getMyWithCurveUpdaterTransformRef();
+        FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &updaterInterfaces[i]->getMyWithCurveUpdaterTransformWorld3DRef();
         pUpdaters->Emplace(pUpdater);
         if (clearPrevSteps) {
             pUpdater->clearSteps();
@@ -1503,22 +1635,17 @@ void UMyRenderUtilsLibrary::helperSetupWorldTransformUpdateAnimationStepsForPoin
     }
 
     if (bDelay) {
-        UMyRenderUtilsLibrary::helperAddWaitStep(extraDelayDur, debugName + TEXT(" wait"), *pUpdaters);
+        UMyRenderUtilsLibrary::helperUpdatersAddWaitStep(extraDelayDur, debugName + TEXT(" wait"), *pUpdaters);
     }
 
-    TArray<const FMyWithCurveUpdateStepSettingsBasicCpp *> stepDatasBase;
-    stepDatasBase.Reserve(stepDatas.Num());
-    for (int32 i = 0; i < stepDatas.Num(); i++) {
-        stepDatasBase.Emplace(&stepDatas[i]);
-    }
 
-    UMyRenderUtilsLibrary::helperSetupTransformUpdateAnimationSteps(meta, stepDatasBase, *pUpdaters);
+    UMyRenderUtilsLibrary::helperUpdatersSetupSteps(meta, stepDatas, *pUpdaters);
 }
 
-void UMyRenderUtilsLibrary::helperAddWaitStep(float waitTime, FString debugStr, const TArray<FMyWithCurveUpdaterBasicCpp *>& updaters)
+void UMyRenderUtilsLibrary::helperUpdatersAddWaitStep(float waitTime, FString debugStr, const TArray<FMyWithCurveUpdaterTransformWorld3DCpp *>& updaters)
 {
-    FMyTransformUpdateAnimationMetaWorldTransformCpp meta;
-    FMyWithCurveUpdateStepSettingsWorldTransformCpp stepData;
+    FMyWithCurveUpdateStepMetaTransformWorld3DCpp meta;
+    FMyWithCurveUpdateStepSettingsTransformWorld3DCpp stepData;
 
     meta.m_sDebugString = debugStr;
     meta.m_fTotalTime = waitTime;
@@ -1526,21 +1653,22 @@ void UMyRenderUtilsLibrary::helperAddWaitStep(float waitTime, FString debugStr, 
     stepData.m_fTimePercent = 1;
 
 
-    helperSetupTransformUpdateAnimationStep(meta, stepData, updaters);
+    helperUpdatersSetupStep(meta, stepData, updaters);
 }
 
-void UMyRenderUtilsLibrary::helperAddWaitStep(float waitTime, FString debugStr, const TArray<IMyWithCurveUpdaterTransformInterfaceCpp *>& updaterInterfaces)
+void UMyRenderUtilsLibrary::helperUpdatersAddWaitStep(float waitTime, FString debugStr, const TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp *>& updaterInterfaces)
 {
 
-    TArray<FMyWithCurveUpdaterBasicCpp *> aUpdaters;
+    TArray<FMyWithCurveUpdaterTransformWorld3DCpp *> aUpdaters;
 
     for (int32 i = 0; i < updaterInterfaces.Num(); i++)
     {
-        aUpdaters.Emplace(&updaterInterfaces[i]->getMyWithCurveUpdaterTransformRef());
+        aUpdaters.Emplace(&updaterInterfaces[i]->getMyWithCurveUpdaterTransformWorld3DRef());
     }
 
-    UMyRenderUtilsLibrary::helperAddWaitStep(waitTime, debugStr, aUpdaters);
+    UMyRenderUtilsLibrary::helperUpdatersAddWaitStep(waitTime, debugStr, aUpdaters);
 }
+
 
 FString UMyRenderUtilsLibrary::Conv_SlateBrush_String(const FSlateBrush& brush)
 {
@@ -1827,8 +1955,8 @@ int32 UMyRenderUtilsLibrary::getCenterPointPositionForWidgetInCanvasWithPointAnc
 
     FVector2D anchorEndPosi = canvasSize * layoutData.Anchors.Minimum;
     FVector2D anchorStartPosi = anchorEndPosi + FVector2D(layoutData.Offsets.Left, layoutData.Offsets.Top);
-    FVector2D widgetSize = FVector2D(layoutData.Offsets.Right, layoutData.Offsets.Bottom);
-    FVector2D widgetCenterOffsetFromAnchorStartPosi = (FVector2D(0.5, 0.5) - layoutData.Alignment) * widgetSize;
+    FVector2D sizeWidget2D = FVector2D(layoutData.Offsets.Right, layoutData.Offsets.Bottom);
+    FVector2D widgetCenterOffsetFromAnchorStartPosi = (FVector2D(0.5, 0.5) - layoutData.Alignment) * sizeWidget2D;
 
     positionInCanvas = anchorStartPosi + widgetCenterOffsetFromAnchorStartPosi;
 
@@ -1841,7 +1969,7 @@ void UMyRenderUtilsLibrary::myElemAndGroupDynamicArrangeCalcTotalSize(const FMyE
     FVector distanceIgnorePadding;
     myElemAndGroupDynamicArrangeCalcDistanceWalkedBeforeIgnorePadding(meta, groupCount, elemCount, distanceIgnorePadding);
 
-    totalSize = meta.m_cPaddingPercent.GetDesiredSize3D() * meta.m_cElemSize + distanceIgnorePadding;
+    totalSize = meta.m_cAllMarginPercent.GetDesiredSize3D() * meta.m_cElemSize + distanceIgnorePadding;
 }
 
 void UMyRenderUtilsLibrary::myElemAndGroupDynamicArrangeGetElemCenterPositionArrangeDirectionAllPositive(const FMyElemAndGroupDynamicArrangeMetaCpp& meta, const FIntVector& idxGroup, const FIntVector& idxElem, FVector& centerPosition)
@@ -1852,7 +1980,7 @@ void UMyRenderUtilsLibrary::myElemAndGroupDynamicArrangeGetElemCenterPositionArr
     FVector distanceCenterIgnorePadding = distanceIgnorePadding + meta.m_cElemSize / 2;
 
     //direction is from negtive to positve
-    FVector sourcePaddingPecent(meta.m_cPaddingPercent.Left, meta.m_cPaddingPercent.Top, meta.m_cPaddingPercent.ZNegative);
+    FVector sourcePaddingPecent(meta.m_cAllMarginPercent.Left, meta.m_cAllMarginPercent.Top, meta.m_cAllMarginPercent.ZNegative);
 
     centerPosition = distanceCenterIgnorePadding + sourcePaddingPecent * meta.m_cElemSize;
 }
@@ -1882,8 +2010,8 @@ void UMyRenderUtilsLibrary::myElemAndGroupDynamicArrangeCalcDistanceWalkedBefore
     myElemAndGroupCalcDelimiterNumber(groupWalked, elemWalked, groupDelimiterNumber, elemDelimiterNumber);
 
     distanceIgnorePadding = 
-        FVector(groupDelimiterNumber) * meta.m_cGroupSpacingPercent * meta.m_cElemSize +
-        FVector(elemDelimiterNumber)  * meta.m_cElemSpacingPercent * meta.m_cElemSize +
+        FVector(groupDelimiterNumber) * meta.m_cGroupMarginPercent * meta.m_cElemSize +
+        FVector(elemDelimiterNumber)  * meta.m_cCellMarginPercent * meta.m_cElemSize +
         FVector(elemWalked) * meta.m_cElemSize;
 }
 
@@ -1897,9 +2025,9 @@ void UMyRenderUtilsLibrary::myElem2DDynamicArrangeCalcTotalSize(const FMyElem2DD
 
 
     totalSize = 
-    meta.m_cPaddingPercent.GetDesiredSize() * meta.m_cElemSize +
-        groupDelim.ToVector2D() * meta.m_cGroupSpacingPercent * meta.m_cElemSize +
-        elemDelim.ToVector2D()  * meta.m_cElemSpacingPercent * meta.m_cElemSize +
+    meta.m_cAllMarginPercent.GetDesiredSize() * meta.m_cElemSize +
+        groupDelim.ToVector2D() * meta.m_cGroupMarginPercent * meta.m_cElemSize +
+        elemDelim.ToVector2D()  * meta.m_cCellMarginPercent * meta.m_cElemSize +
         elemCount.ToVector2D() * meta.m_cElemSize;
 }
 

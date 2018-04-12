@@ -385,7 +385,7 @@ void FMyMJGameAttenderLocalCSCpp::showOutCardsAfterHu()
         TArray<int32> *pArray = pArrays[k];
         l = pArray->Num();
         for (int32 i = 0; i < l; i++) {
-            pCardInfoPack->getByIdx((*pArray)[i])->m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Up;
+            pCardInfoPack->getByIdx((*pArray)[i])->m_eFlipState = MyBoxLikeFlipStateCpp::Up;
         }
     }
     */
@@ -427,7 +427,7 @@ void FMyMJGameAttenderLocalCSCpp::onNewTurn(bool bIsWeave)
         for (int32 i = 0; i < l; i++) {
             int32 idCard = m_aIdHandCardShowedOutLocalCS[i];
             const FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdxConst(idCard);
-            if (pCardInfo->m_cPosi.m_eSlot == MyMJCardSlotTypeCpp::InHand && pCardInfo->m_eFlipState != MyCardGameBoxLikeElemFlipStateCpp::Up) {
+            if (pCardInfo->m_cPosi.m_eSlot == MyMJCardSlotTypeCpp::InHand && pCardInfo->m_eFlipState != MyBoxLikeFlipStateCpp::Up) {
 
                 int32 idx = pPusher->m_aIdValues.Emplace();
                 pPusher->m_aIdValues[idx].m_iId = idCard;
@@ -436,7 +436,7 @@ void FMyMJGameAttenderLocalCSCpp::onNewTurn(bool bIsWeave)
             }
         }
 
-        pPusher->initWithCardsTargetStateAlreadyInited(getIdx(), MyCardGameBoxLikeElemFlipStateCpp::Up, MyCardGameBoxLikeElemFlipStateCpp::Stand, MyMJGamePusherUpdateAttenderCardsAndState_Mask0_ResetIdHandCardShowedOutLocalCS | 0);
+        pPusher->initWithCardsTargetStateAlreadyInited(getIdx(), MyBoxLikeFlipStateCpp::Up, MyBoxLikeFlipStateCpp::Stand, MyMJGamePusherUpdateAttenderCardsAndState_Mask0_ResetIdHandCardShowedOutLocalCS | 0);
 
         pCore->getPusherIOFullRef().GivePusher(pPusher, (void **)&pPusher);
     }
@@ -713,7 +713,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
                 pWeaveInAction->addCard(cardIdFound);
 
                 pWeaveInAction->initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp::GangMing, iIdTriggerCard, iIdxAttenderTriggerCardSrc, MyMJWeaveTypeCpp::KeZiMing, true);
-                pAction->initWithWeaveAlreadyInited(*pCardValuePack, idxAttenderSelf, MyCardGameBoxLikeElemFlipStateCpp::Up);
+                pAction->initWithWeaveAlreadyInited(*pCardValuePack, idxAttenderSelf, MyBoxLikeFlipStateCpp::Up);
             }
         }
     }
@@ -730,11 +730,11 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
         int32 iIdTriggerCard = -1;
         int32 iIdxAttenderTriggerCardSrc = -1;
         MyMJWeaveTypeCpp eType = MyMJWeaveTypeCpp::Invalid;
-        MyCardGameBoxLikeElemFlipStateCpp eTargetFlipState = MyCardGameBoxLikeElemFlipStateCpp::Up;
+        MyBoxLikeFlipStateCpp eTargetFlipState = MyBoxLikeFlipStateCpp::Up;
         if (aPairsTemp.Num() >= 4) {
             if (!bLimited2TriggerCard) {
                 eType = MyMJWeaveTypeCpp::GangAn;
-                eTargetFlipState = MyCardGameBoxLikeElemFlipStateCpp::Down;
+                eTargetFlipState = MyBoxLikeFlipStateCpp::Down;
             }
         }
         else if (aPairsTemp.Num() >= 3 && pTriggerCard && pTriggerCard->m_iValue == cardValue) {
@@ -742,7 +742,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkGang(const FMyMJCardCpp *pTriggerCard, bo
             iIdxAttenderTriggerCardSrc = pTriggerCard->m_cPosi.m_iIdxAttender;
             if (pTriggerCard->m_cPosi.m_iIdxAttender == idxAttenderSelf) {
                 eType = MyMJWeaveTypeCpp::GangAn;
-                eTargetFlipState = MyCardGameBoxLikeElemFlipStateCpp::Down;
+                eTargetFlipState = MyBoxLikeFlipStateCpp::Down;
             }
             else {
                 eType = MyMJWeaveTypeCpp::GangMing;
@@ -865,7 +865,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkPeng(const FMyMJCardCpp &triggerCard, TAr
             pWeaveInAction->addCard(triggerCard.m_iId);
 
             pWeaveInAction->initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp::KeZiMing, triggerCard.m_iId, triggerCard.m_cPosi.m_iIdxAttender, MyMJWeaveTypeCpp::Invalid, 0);
-            pAction->initWithWeaveAlreadyInited(pCore->getCardValuePackOfSysKeeperRefConst(), getIdx(), MyCardGameBoxLikeElemFlipStateCpp::Up);
+            pAction->initWithWeaveAlreadyInited(pCore->getCardValuePackOfSysKeeperRefConst(), getIdx(), MyBoxLikeFlipStateCpp::Up);
         }
     }
 
@@ -921,7 +921,7 @@ bool FMyMJGameAttenderLocalCSCpp::checkChi(const FMyMJCardCpp &triggerCard, TArr
             pWeaveInAction->addCard(triggerCardIdValuePair.m_iId);
 
             pWeaveInAction->initWitIdValuesAlreadyInited(MyMJWeaveTypeCpp::ShunZiMing, triggerCard.m_iId, triggerCard.m_cPosi.m_iIdxAttender, MyMJWeaveTypeCpp::Invalid, 0);
-            pAction->initWithWeaveAlreadyInited(pCore->getCardValuePackOfSysKeeperRefConst(), getIdx(), MyCardGameBoxLikeElemFlipStateCpp::Up);
+            pAction->initWithWeaveAlreadyInited(pCore->getCardValuePackOfSysKeeperRefConst(), getIdx(), MyBoxLikeFlipStateCpp::Up);
         }
         //bool checkShunZi(MyMJChiTypeCpp type, int32 checkingValueInMap, int32 extraValue, TArray<int32> &outIds, TArray<int32> &outValues) const;
     }

@@ -7,16 +7,97 @@
 #include "MyRenderInterface.generated.h"
 
 
-//BlueprintNativeEvent is better than BlueprintImplementableEvent since it gives C++ code a nice way to report error that
-//BP not implemented it
 
-UINTERFACE()
-class UMyWidgetSizeInterfaceCpp : public UInterface
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
+class UMyWithCurveUpdaterTransformWorld3DInterfaceCpp : public UInterface
 {
     GENERATED_BODY()
 };
 
-class IMyWidgetSizeInterfaceCpp
+class IMyWithCurveUpdaterTransformWorld3DInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWorld3DCpp& modelInfo, bool verify) const = NULL;
+
+    //Never fail, core dump otherwise
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWorld3DEnsured(struct FMyWithCurveUpdaterTransformWorld3DCpp*& outUpdater) = NULL;
+
+    //Never fail
+    inline struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformWorld3DRef()
+    {
+        struct FMyWithCurveUpdaterTransformWorld3DCpp* pRet = NULL;
+        getMyWithCurveUpdaterTransformWorld3DEnsured(pRet);
+        MY_VERIFY(pRet);
+        return *pRet;
+    }
+
+    //Never fail
+    inline FMyModelInfoWorld3DCpp getModelInfo() const
+    {
+        FMyModelInfoWorld3DCpp ret;
+        MY_VERIFY(getModelInfo(ret, true) == MyErrorCodeCommonPartCpp::NoError);
+        return ret;
+    };
+
+protected:
+
+};
+
+
+
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
+class UMyWithCurveUpdaterTransformWidget2DInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMyWithCurveUpdaterTransformWidget2DInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWidget2DCpp& modelInfo, bool verify) const = NULL;
+
+    //Never fail, core dump otherwise
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWidget2DEnsured(struct FMyWithCurveUpdaterTransformWidget2DCpp*& outUpdater) = NULL;
+
+    //Never fail
+    inline struct FMyWithCurveUpdaterTransformWidget2DCpp& getMyWithCurveUpdaterTransformWidget2DRef()
+    {
+        struct FMyWithCurveUpdaterTransformWidget2DCpp* pRet = NULL;
+        getMyWithCurveUpdaterTransformWidget2DEnsured(pRet);
+        MY_VERIFY(pRet);
+        return *pRet;
+    };
+
+    //Never fail
+    inline FMyModelInfoWidget2DCpp getModelInfo() const
+    {
+        FMyModelInfoWidget2DCpp ret;
+        MY_VERIFY(getModelInfo(ret, true) == MyErrorCodeCommonPartCpp::NoError);
+        return ret;
+    };
+
+protected:
+
+};
+
+
+
+//BlueprintNativeEvent is better than BlueprintImplementableEvent since it gives C++ code a nice way to report error that
+//BP not implemented it
+
+UINTERFACE()
+class UMySizeWidget2DInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMySizeWidget2DInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -31,7 +112,7 @@ public:
     MyErrorCodeCommonPartCpp setLocalSize(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight);
 };
 
-#define IMyWidgetSizeInterfaceCpp_DefaultEmptyImplementationForUObject() \
+#define IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject() \
 MyErrorCodeCommonPartCpp getLocalSize_Implementation(FVector2D &localSize) const override \
 { \
 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize only implemented in C++."), *GetClass()->GetName()); \

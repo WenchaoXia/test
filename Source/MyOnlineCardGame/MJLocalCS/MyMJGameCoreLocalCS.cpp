@@ -286,7 +286,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
 
             //1st, check if we need to reveal card values
             //if up, it means already revealed to everyone, we don't need to reveal anymore
-            if (currentInfo.m_eFlipState != MyCardGameBoxLikeElemFlipStateCpp::Up && targetIdValue.m_iValue > 0) {
+            if (currentInfo.m_eFlipState != MyBoxLikeFlipStateCpp::Up && targetIdValue.m_iValue > 0) {
                 aIdValues2Reveal.Emplace(targetIdValue);
             }
 
@@ -304,7 +304,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             roleDataPriv.m_aIdValuePairs2Reveal = aIdValues2Reveal;
 
             roleDataPriv.m_eRoleType = MyMJGameRoleTypeCpp::SysKeeper;
-            if (pusherUpdateAttenderCardsAndState.m_eTargetState == MyCardGameBoxLikeElemFlipStateCpp::Up) {
+            if (pusherUpdateAttenderCardsAndState.m_eTargetState == MyBoxLikeFlipStateCpp::Up) {
                 roleDataPriv.m_iRoleMaskForDataPrivateClone = MyMJRoleDataPrivateDeltaCpp_RoleMaskForDataPrivateClone_All;
             }
             else {
@@ -457,7 +457,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
             cardInfoTarget.m_cPosi.m_iIdxAttender = idxAttender;
             cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::InHand;
-            cardInfoTarget.m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Stand;
+            cardInfoTarget.m_eFlipState = MyBoxLikeFlipStateCpp::Stand;
 
         }
 
@@ -504,7 +504,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
             cardInfoTarget.m_cPosi.m_iIdxAttender = idxAttender;
             cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::JustTaken;
-            cardInfoTarget.m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Stand;
+            cardInfoTarget.m_eFlipState = MyBoxLikeFlipStateCpp::Stand;
         }
 
         if (actionTakeCards.m_bIsGang) {
@@ -551,7 +551,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
             cardInfoTarget.m_cPosi.m_iIdxAttender = idxAttender;
             cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::GivenOut;
-            cardInfoTarget.m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Up;
+            cardInfoTarget.m_eFlipState = MyBoxLikeFlipStateCpp::Up;
         }
 
         //any card left in just taken slot, must go
@@ -566,7 +566,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
                 FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
 
                 cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::InHand;
-                cardInfoTarget.m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Stand;
+                cardInfoTarget.m_eFlipState = MyBoxLikeFlipStateCpp::Stand;
             }
         }
 
@@ -602,7 +602,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
 
         FMyMJRoleDataPrivateDeltaCpp* pRoleDataPrivDelta = NULL;
 
-        if (actionWeave.m_eTargetFlipState == MyCardGameBoxLikeElemFlipStateCpp::Up) {
+        if (actionWeave.m_eTargetFlipState == MyBoxLikeFlipStateCpp::Up) {
             idx = delta.m_aRoleDataPrivate.Emplace();
             pRoleDataPrivDelta = &delta.m_aRoleDataPrivate[idx];
             pRoleDataPrivDelta->m_eRoleType = MyMJGameRoleTypeCpp::SysKeeper;
@@ -621,7 +621,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             //pCardValuePack->revealCardValue(*pPair);
 
             //1st, reveal value
-            if (actionWeave.m_eTargetFlipState == MyCardGameBoxLikeElemFlipStateCpp::Up) {
+            if (actionWeave.m_eTargetFlipState == MyBoxLikeFlipStateCpp::Up) {
                 pRoleDataPrivDelta->m_aIdValuePairs2Reveal.Emplace(pair);
             }
 
@@ -646,7 +646,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
                 FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
 
                 cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::InHand;
-                cardInfoTarget.m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Up;
+                cardInfoTarget.m_eFlipState = MyBoxLikeFlipStateCpp::Up;
             }
         }
 
@@ -716,7 +716,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         int32 l = cardInfoPack.getLength();
         for (int32 i = 0; i < l; i++) {
             const FMyMJCardInfoCpp& cardInfo = cardInfoPack.getRefByIdxConst(i);
-            if (cardInfo.m_eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Up) {
+            if (cardInfo.m_eFlipState == MyBoxLikeFlipStateCpp::Up) {
                 continue;
             }
 
@@ -745,12 +745,12 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
 
             for (int32 j = 0; j < aIds.Num(); j++) {
                 const FMyMJCardInfoCpp& cardInfoSelf = cardInfoPack.getRefByIdxConst(aIds[j]);
-                if (cardInfoSelf.m_eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Up) {
+                if (cardInfoSelf.m_eFlipState == MyBoxLikeFlipStateCpp::Up) {
                     continue;
                 }
 
                 int32 idxTemp = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoSelf);
-                coreDataDelta.m_aCardInfos2Update[idxTemp].m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Up;
+                coreDataDelta.m_aCardInfos2Update[idxTemp].m_eFlipState = MyBoxLikeFlipStateCpp::Up;
             }
         }
 
@@ -809,7 +809,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             //2, move card and flip
             idx = coreDataDelta.m_aCardInfos2Update.Emplace(cardInfoPack.getRefByIdxConst(id));
             FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
-            cardInfoTarget.m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Up;
+            cardInfoTarget.m_eFlipState = MyBoxLikeFlipStateCpp::Up;
         }
 
         idx = attenderPublicDelta.m_aHuScoreResultFinalGroup2Add.Emplace();
@@ -854,7 +854,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             FMyMJCardInfoCpp& cardInfoTarget = coreDataDelta.m_aCardInfos2Update[idx];
             //cardInfoTarget.m_cPosi.m_iIdxAttender = idxAttenderTarget;
             cardInfoTarget.m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::ShownOnDesktop;
-            cardInfoTarget.m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Up;
+            cardInfoTarget.m_eFlipState = MyBoxLikeFlipStateCpp::Up;
 
         }
 
@@ -1381,7 +1381,7 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(FMyMJGameResManager& RM
                 int32 idxCard = pC->m_aIds[idxInStack];
 
                 FMyMJCardInfoCpp *pCardInfo = pCardInfoPack->getByIdx(idxCard);
-                pCardInfo->m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Down;
+                pCardInfo->m_eFlipState = MyBoxLikeFlipStateCpp::Down;
                 pCardInfo->m_cPosi.m_eSlot = MyMJCardSlotTypeCpp::Untaken;
                 pCardInfo->m_cPosi.m_iIdxAttender = i;
                 pCardInfo->m_cPosi.m_iIdxInSlot0 = idxUntaken;

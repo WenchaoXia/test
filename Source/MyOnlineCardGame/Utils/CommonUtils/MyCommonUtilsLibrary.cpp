@@ -54,7 +54,7 @@ UMyCommonUtilsLibrary::getStringFromEnum(const TCHAR *enumName, uint8 value)
 
     //return FString::Printf(TEXT("%s(%d)"), *enumPtr->GetEnumNameStringByValue(value), value);
     //return enumPtr->GetEnumNameStringByValue(value);
-    return FString::Printf(TEXT("%s(%d)"), *enumPtr->GetNameStringByValue(value), value);
+    return FString::Printf(TEXT("%s %d"), *enumPtr->GetNameStringByValue(value), value);
     //GetNameStringByValue
 }
 
@@ -171,26 +171,26 @@ FRotator UMyCommonUtilsLibrary::fixRotatorValuesIfGimbalLock(const FRotator& rot
 };
 
 
-void UMyCommonUtilsLibrary::rotateOriginWithPivot(const FTransform& originCurrentWorldTransform, const FVector& pivot2OriginRelativeLocation, const FRotator& originTargetWorldRotator, FTransform& originResultWorldTransform)
+void UMyCommonUtilsLibrary::rotateOriginWithPivot(const FTransform& originCurrentTransformWorld3D, const FVector& pivot2OriginRelativeLocation, const FRotator& originTargetWorldRotator, FTransform& originResultTransformWorld3D)
 {
-    //FRotator originCurrentWorldRotator(originCurrentWorldTransform.GetRotation());
+    //FRotator originCurrentWorldRotator(originCurrentTransformWorld3D.GetRotation());
     //FVector origin2pivotRelativeLocation = -pivot2OriginRelativeLocation;
 
-    //FVector originZeroRotateWorldLocation = originCurrentWorldTransform.GetLocation() - (originCurrentWorldRotator.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation);
+    //FVector originZeroRotateLocWorld3Dation = originCurrentTransformWorld3D.GetLocation() - (originCurrentWorldRotator.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation);
 
-    //originResultWorldTransform.SetLocation(originZeroRotateWorldLocation + (originTargetWorldRotator.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation));
-    //originResultWorldTransform.SetRotation(FQuat(originTargetWorldRotator));
-    //originResultWorldTransform.SetScale3D(originCurrentWorldTransform.GetScale3D());
+    //originResultTransformWorld3D.SetLocation(originZeroRotateLocWorld3Dation + (originTargetWorldRotator.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation));
+    //originResultTransformWorld3D.SetRotation(FQuat(originTargetWorldRotator));
+    //originResultTransformWorld3D.SetScale3D(originCurrentTransformWorld3D.GetScale3D());
 
-    FQuat originCurrentWorldQuat = originCurrentWorldTransform.GetRotation();
+    FQuat originCurrentWorldQuat = originCurrentTransformWorld3D.GetRotation();
     FVector origin2pivotRelativeLocation = -pivot2OriginRelativeLocation;
 
     FVector testV = originCurrentWorldQuat.RotateVector(origin2pivotRelativeLocation);
     UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("testV: (%f, %f, %f)."), testV.X, testV.Y, testV.Z);
     //return;
 
-    FVector originZeroRotateWorldLocation = originCurrentWorldTransform.GetLocation() - (originCurrentWorldQuat.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation);
-    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("originZeroRotateWorldLocation: (%f, %f, %f)."), originZeroRotateWorldLocation.X, originZeroRotateWorldLocation.Y, originZeroRotateWorldLocation.Z);
+    FVector originZeroRotateLocWorld3Dation = originCurrentTransformWorld3D.GetLocation() - (originCurrentWorldQuat.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation);
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("originZeroRotateLocWorld3Dation: (%f, %f, %f)."), originZeroRotateLocWorld3Dation.X, originZeroRotateLocWorld3Dation.Y, originZeroRotateLocWorld3Dation.Z);
     //return;
 
     UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("originTargetWorldRotator: (%f, %f, %f)."),
@@ -210,9 +210,9 @@ void UMyCommonUtilsLibrary::rotateOriginWithPivot(const FTransform& originCurren
     FVector locResultRotated = originTargetWorldQuat.RotateVector(origin2pivotRelativeLocation);
     UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("locResultRotated: (%f, %f, %f)."), locResultRotated.X, locResultRotated.Y, locResultRotated.Z);
 
-    originResultWorldTransform.SetLocation(originZeroRotateWorldLocation + (originTargetWorldQuat.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation));
-    originResultWorldTransform.SetRotation(originTargetWorldQuat);
-    originResultWorldTransform.SetScale3D(originCurrentWorldTransform.GetScale3D());
+    originResultTransformWorld3D.SetLocation(originZeroRotateLocWorld3Dation + (originTargetWorldQuat.RotateVector(origin2pivotRelativeLocation) - origin2pivotRelativeLocation));
+    originResultTransformWorld3D.SetRotation(originTargetWorldQuat);
+    originResultTransformWorld3D.SetScale3D(originCurrentTransformWorld3D.GetScale3D());
 };
 
 FString UMyCommonUtilsLibrary::getDebugStringFromEWorldType(EWorldType::Type t)
@@ -613,7 +613,7 @@ void UMyCommonUtilsLibrary::playerScreenConstrainedVLengthAbsoluteToDistanceFrom
 }
 
 
-void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByAbsolute(const UObject* WorldContextObject, FVector2D ConstrainedPosiAbsoluteInCamera, float ConstrainedVLengthAbsoluteInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection)
+void UMyCommonUtilsLibrary::helperResolveTransformWorld3DFromPlayerCameraByAbsolute(const UObject* WorldContextObject, FVector2D ConstrainedPosiAbsoluteInCamera, float ConstrainedVLengthAbsoluteInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection)
 {
     float distanceFromCamera = 10;
     playerScreenConstrainedVLengthAbsoluteToDistanceFromCamera(WorldContextObject, ConstrainedVLengthAbsoluteInCamera, ModelInWorldHeight, distanceFromCamera, CameraCenterWorldPosition, CameraCenterDirection);
@@ -627,7 +627,7 @@ void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByAbsolut
     ResultTransform.SetScale3D(FVector(1, 1, 1));
 }
 
-void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByPercent(const UObject* WorldContextObject, FVector2D ConstrainedPosiPercentInCamera, float ConstrainedVLengthPercentInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection)
+void UMyCommonUtilsLibrary::helperResolveTransformWorld3DFromPlayerCameraByPercent(const UObject* WorldContextObject, FVector2D ConstrainedPosiPercentInCamera, float ConstrainedVLengthPercentInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection)
 {
     FVector2D ConstrainedPosiAbsoluteInCamera;
     playerScreenConstrainedPosiPercentToPlayerScreenConstrainedPosiAbsolute(WorldContextObject, ConstrainedPosiPercentInCamera, ConstrainedPosiAbsoluteInCamera);
@@ -636,7 +636,7 @@ void UMyCommonUtilsLibrary::helperResolveWorldTransformFromPlayerCameraByPercent
     vPercent.Y = ConstrainedVLengthPercentInCamera;
     playerScreenConstrainedPosiPercentToPlayerScreenConstrainedPosiAbsolute(WorldContextObject, vPercent, vAbsolute);
 
-    helperResolveWorldTransformFromPlayerCameraByAbsolute(WorldContextObject, ConstrainedPosiAbsoluteInCamera, vAbsolute.Y, ModelInWorldHeight, ResultTransform, CameraCenterWorldPosition, CameraCenterDirection);
+    helperResolveTransformWorld3DFromPlayerCameraByAbsolute(WorldContextObject, ConstrainedPosiAbsoluteInCamera, vAbsolute.Y, ModelInWorldHeight, ResultTransform, CameraCenterWorldPosition, CameraCenterDirection);
 }
 
 #define MyArtDirBase (TEXT("/Game/Art"))
@@ -814,7 +814,7 @@ void UMyCommonUtilsLibrary::calcRingPointTransformAroundCenterPointZAxis(const F
 }
 
 
-void UMyCommonUtilsLibrary::calcWorldTransformFromWorldOffsetAndDegreeForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, float degree, const FTransform& worldOffset, FTransform& worldTransform, FVector ringPointLocalOffset, FRotator ringPointLocalRotator)
+void UMyCommonUtilsLibrary::calcTransformWorld3DFromWorldOffsetAndDegreeForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, float degree, const FTransform& worldOffset, FTransform& TransformWorld3D, FVector ringPointLocalOffset, FRotator ringPointLocalRotator)
 {
     float radiusFixed, radiansDelta;
     if (0 != fixRadiusAndRadiansForLocalOffsetOn2DCycle(ringRadius, ringPointLocalOffset.X, ringPointLocalOffset.Y, radiusFixed, radiansDelta))
@@ -831,12 +831,12 @@ void UMyCommonUtilsLibrary::calcWorldTransformFromWorldOffsetAndDegreeForRingPoi
 
     FVector locLocalOffsetTowardOuter;
 
-    worldTransform.SetLocation(worldOffset.GetLocation() + ringPointTransform.GetLocation());
-    worldTransform.SetRotation((worldOffset.GetRotation().Rotator() + ringPointTransform.GetRotation().Rotator()).Quaternion());
-    worldTransform.SetScale3D(FVector(1, 1, 1));
+    TransformWorld3D.SetLocation(worldOffset.GetLocation() + ringPointTransform.GetLocation());
+    TransformWorld3D.SetRotation((worldOffset.GetRotation().Rotator() + ringPointTransform.GetRotation().Rotator()).Quaternion());
+    TransformWorld3D.SetScale3D(FVector(1, 1, 1));
 }
 
-void UMyCommonUtilsLibrary::calcWorldOffsetAndDegreeFromWorldTransformForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, const FTransform& worldTransform, float &degree, FTransform& worldOffset, FVector ringPointLocalOffset, FRotator ringPointLocalRotator)
+void UMyCommonUtilsLibrary::calcWorldOffsetAndDegreeFromTransformWorld3DForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, const FTransform& TransformWorld3D, float &degree, FTransform& worldOffset, FVector ringPointLocalOffset, FRotator ringPointLocalRotator)
 {
     float radiusFixed, radiansDelta;
     if (0 != fixRadiusAndRadiansForLocalOffsetOn2DCycle(ringRadius, ringPointLocalOffset.X, ringPointLocalOffset.Y, radiusFixed, radiansDelta))
@@ -845,7 +845,7 @@ void UMyCommonUtilsLibrary::calcWorldOffsetAndDegreeFromWorldTransformForRingPoi
     }
 
     FQuat centerPointQuat = centerPointTransform.GetRotation();
-    FVector worldPointRelativePosi = worldTransform.GetLocation() - centerPointTransform.GetLocation();
+    FVector worldPointRelativePosi = TransformWorld3D.GetLocation() - centerPointTransform.GetLocation();
 
     FVector posiMapped;
     posiMapped.X = FVector::DotProduct(centerPointQuat.GetAxisX(), worldPointRelativePosi);
@@ -857,8 +857,8 @@ void UMyCommonUtilsLibrary::calcWorldOffsetAndDegreeFromWorldTransformForRingPoi
 
     degree = FMath::RadiansToDegrees(radiansMapped - radiansDelta);
 
-    worldOffset.SetLocation(worldTransform.GetLocation() - ringPointTransform.GetLocation());
-    worldOffset.SetRotation((worldTransform.GetRotation().Rotator() - ringPointTransform.GetRotation().Rotator()).Quaternion());
+    worldOffset.SetLocation(TransformWorld3D.GetLocation() - ringPointTransform.GetLocation());
+    worldOffset.SetRotation((TransformWorld3D.GetRotation().Rotator() - ringPointTransform.GetRotation().Rotator()).Quaternion());
     worldOffset.SetScale3D(FVector(1, 1, 1));
 }
 

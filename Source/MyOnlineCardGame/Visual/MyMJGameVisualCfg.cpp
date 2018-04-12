@@ -83,9 +83,9 @@ void FMyMJGameInGamePlayerScreenCfgCpp::fillDefaultData()
 
 void FMyMJGameEventPusherCfgCpp::fillDefaultData()
 {
-    FMyWithCurveUpdateStepSettingsWorldTransformCpp step;
-    FMyWithCurveUpdateStepSettingsWorldTransformCpp* pStep = &step;
-    TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp> *pSteps;
+    FMyWithCurveUpdateStepSettingsTransformWorld3DCpp step;
+    FMyWithCurveUpdateStepSettingsTransformWorld3DCpp* pStep = &step;
+    TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp> *pSteps;
 
     m_cClientCommonUpdate.reset();
     m_cClientCommonUpdate.m_fTotalTime = 1;

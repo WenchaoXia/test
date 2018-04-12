@@ -17,7 +17,7 @@
 
 
 USTRUCT(BlueprintType)
-struct FMyMJGameCardVisualInfoCpp : public FMyCardGameBoxLikeElemVisualInfoCpp
+struct FMyMJGameCardVisualInfoCpp : public FMyArrangeCoordinateWorld3DCpp
 {
     GENERATED_USTRUCT_BODY()
 
@@ -88,8 +88,8 @@ public:
     };
 
     //do the final resolve with same point cfg and card model
-    static void helperResolveCardVisualResultChanges(const FMyCardGameVisualPointCfgCpp& cVisualPointCfg,
-                                                     const FMyModelInfoBox3DCpp& cCardModelInfo,
+    static void helperResolveCardVisualResultChanges(const FMyArrangePointCfgWorld3DCpp& cVisualPointCfg,
+                                                     const FMyModelInfoBoxWorld3DCpp& cCardModelInfo,
                                                      const TMap<int32, FMyMJGameCardVisualInfoCpp>& mIdCardVisualInfoKnownChanges,
                                                      TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mOutIdCardVisualInfoAndResultAccumulatedChanges);
 
@@ -148,7 +148,7 @@ public:
         return ret;
     };
 
-    static void helperMyMJGameCardActorBaseToMyTransformUpdaters(const TArray<AMyMJGameCardActorBaseCpp*>& aSub, bool bSort, TArray<IMyWithCurveUpdaterTransformInterfaceCpp*> &aBase);
+    static void helperMyMJGameCardActorBaseToMyTransformUpdaters(const TArray<AMyMJGameCardActorBaseCpp*>& aSub, bool bSort, TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp*> &aBase);
 
 protected:
     //where this card should go, but allow it not be there now(should move smoothly there)
@@ -188,7 +188,7 @@ reset();
 
 inline void reset()
 {
-m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Invalid;
+m_eFlipState = MyBoxLikeFlipStateCpp::Invalid;
 }
 
 UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "dice visual state key"))
@@ -235,7 +235,7 @@ protected:
 
 
 UCLASS(BlueprintType, Blueprintable)
-class MYONLINECARDGAME_API AMyMJGameTrivalDancingActorBaseCpp : public AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp
+class MYONLINECARDGAME_API AMyMJGameTrivalDancingActorBaseCpp : public AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp
 {
     GENERATED_BODY()
 

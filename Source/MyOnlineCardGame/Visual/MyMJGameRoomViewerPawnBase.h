@@ -14,7 +14,7 @@
 
 //Our player controller will help do replication work, and only replication help code goes here
 UCLASS()
-class MYONLINECARDGAME_API AMyMJGameRoomViewerPawnBaseCpp : public APawn, public IMyPawnInterfaceCpp, public IMyWithCurveUpdaterTransformInterfaceCpp
+class MYONLINECARDGAME_API AMyMJGameRoomViewerPawnBaseCpp : public APawn, public IMyPawnInterfaceCpp, public IMyWithCurveUpdaterTransformWorld3DInterfaceCpp
 {
 	GENERATED_BODY()
 
@@ -29,28 +29,24 @@ public:
     };
 
 
-    //IMyWithCurveUpdaterTransformInterfaceCpp begin
+    //IMyWithCurveUpdaterTransformWorld3DInterfaceCpp begin
 
-    virtual MyErrorCodeCommonPartCpp getModelInfo(struct FMyModelInfoCpp& modelInfo, bool verify = true) const override
+
+    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWorld3DCpp& modelInfo, bool verify) const override
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameRoomViewerPawnBaseCpp::getModelInfo() not implemented yet!"));
         return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedOnPurPose;
     };
 
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterBasicCpp*& outUpdater) override
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWorld3DEnsured(struct FMyWithCurveUpdaterTransformWorld3DCpp*& outUpdater) override
     {
         MY_VERIFY(m_pMyTransformUpdaterComponent != NULL);
-        outUpdater = &m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRef();
+        outUpdater = &m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformWorld3DRef();
 
         return MyErrorCodeCommonPartCpp::NoError;
-    };
+    }
 
-    inline FMyWithCurveUpdaterWorldTransformCpp& getMyWithCurveUpdaterWorldTransformRef()
-    {
-        return FMyWithCurveUpdaterWorldTransformCpp::castFromBaseRef(getMyWithCurveUpdaterTransformRef());
-    };
-
-    //IMyWithCurveUpdaterTransformInterfaceCpp end
+    //IMyWithCurveUpdaterTransformWorld3DInterfaceCpp end
 
 
     UFUNCTION(BlueprintCallable)
@@ -85,6 +81,6 @@ protected:
     UCameraComponent* m_pCamera;
 
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "my transform updater component"))
-    UMyWithCurveUpdaterWorldTransformComponent* m_pMyTransformUpdaterComponent;
+    UMyWithCurveUpdaterTransformWorld3DComponent* m_pMyTransformUpdaterComponent;
 
 };

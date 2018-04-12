@@ -40,7 +40,7 @@
 
 //a widget support per-viewer animation
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp : public UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp, public IMyCardGameScreenPositionRelatedWidgetInterfaceCpp
+class MYONLINECARDGAME_API UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp : public UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp, public IMyCardGameScreenPositionRelatedWidgetInterfaceCpp
 {
     GENERATED_BODY()
 

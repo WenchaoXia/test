@@ -3,29 +3,6 @@
 #include "MyCommonInterface.h"
 #include "MyCommonUtilsLibrary.h"
 
-/*
-MyErrorCodeCommonPartCpp IMyWithCurveUpdaterTransformInterfaceCpp::getModelInfo(struct FMyModelInfoCpp& modelInfo, bool verify) const
-{
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getModelInfo() must be implemented!"));
-    MY_VERIFY(false);
-    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
-};
-
-MyErrorCodeCommonPartCpp IMyWithCurveUpdaterTransformInterfaceCpp::getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterBasicCpp*& outUpdater)
-{
-    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyWithCurveUpdaterTransform() must be implemented!"));
-    MY_VERIFY(false);
-    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
-};
-*/
-
-struct FMyWithCurveUpdaterBasicCpp& IMyWithCurveUpdaterTransformInterfaceCpp::getMyWithCurveUpdaterTransformRef()
-{
-    struct FMyWithCurveUpdaterBasicCpp* pRet = NULL;
-    getMyWithCurveUpdaterTransformEnsured(pRet);
-    MY_VERIFY(pRet);
-    return *pRet;
-};
 
 
 MyErrorCodeCommonPartCpp IMyIdInterfaceCpp::getMyId(int32& outMyId) const

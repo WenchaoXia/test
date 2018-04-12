@@ -31,7 +31,7 @@
 
 #define MyMJGameVisualStateCatchUpMinTimeToStayMs (500)
 
-int32 FMyMJGameDeskVisualPointCfgCacheCpp::getCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp &visualPoint) const
+int32 FMyMJGameDeskVisualPointCfgCacheCpp::getCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyArrangePointCfgWorld3DCpp &visualPoint) const
 {
 
     int32 errCode = helperGetVisualPointCfgByIdxs((int32)MyMJGameDeskVisualElemTypeCpp::Card, idxAttender, (int32)eSlot, m_mCardVisualPointCache, visualPoint);
@@ -42,12 +42,12 @@ int32 FMyMJGameDeskVisualPointCfgCacheCpp::getCardVisualPointCfgByIdxAttenderAnd
     return errCode;
 };
 
-void  FMyMJGameDeskVisualPointCfgCacheCpp::setCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, const FMyCardGameVisualPointCfgCpp &visualPoint)
+void  FMyMJGameDeskVisualPointCfgCacheCpp::setCardVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, const FMyArrangePointCfgWorld3DCpp &visualPoint)
 {
     helperSetVisualPointCfgByIdxs((int32)MyMJGameDeskVisualElemTypeCpp::Card, idxAttender, (int32)eSlot, m_mCardVisualPointCache, visualPoint);
 };
 
-int32 FMyMJGameDeskVisualPointCfgCacheCpp::getAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyCardGameVisualPointCfgCpp &visualPoint) const
+int32 FMyMJGameDeskVisualPointCfgCacheCpp::getAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyArrangePointCfgWorld3DCpp &visualPoint) const
 {
     int32 errCode = helperGetVisualPointCfgByIdxs((int32)MyMJGameDeskVisualElemTypeCpp::Attender, idxAttender, (int32)eSubtype, m_mCardVisualPointCache, visualPoint);
     if (errCode != 0) {
@@ -57,12 +57,12 @@ int32 FMyMJGameDeskVisualPointCfgCacheCpp::getAttenderVisualPointCfg(int32 idxAt
     return errCode;
 };
 
-void FMyMJGameDeskVisualPointCfgCacheCpp::setAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, const FMyCardGameVisualPointCfgCpp &visualPoint)
+void FMyMJGameDeskVisualPointCfgCacheCpp::setAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, const FMyArrangePointCfgWorld3DCpp &visualPoint)
 {
     helperSetVisualPointCfgByIdxs((int32)MyMJGameDeskVisualElemTypeCpp::Attender, idxAttender, (int32)eSubtype, m_mCardVisualPointCache, visualPoint);
 };
 
-int32 FMyMJGameDeskVisualPointCfgCacheCpp::getTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyCardGameVisualPointCfgCpp &visualPoint) const
+int32 FMyMJGameDeskVisualPointCfgCacheCpp::getTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyArrangePointCfgWorld3DCpp &visualPoint) const
 {
     int32 errCode = helperGetVisualPointCfgByIdxs((int32)eElemType, subIdx0, subIdx1, m_mTrivalVisualPointCache, visualPoint);
     if (errCode != 0) {
@@ -72,17 +72,17 @@ int32 FMyMJGameDeskVisualPointCfgCacheCpp::getTrivalVisualPointCfgByIdxAttenderA
     return errCode;
 };
 
-void  FMyMJGameDeskVisualPointCfgCacheCpp::setTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, const FMyCardGameVisualPointCfgCpp &visualPoint)
+void  FMyMJGameDeskVisualPointCfgCacheCpp::setTrivalVisualPointCfgByIdxAttenderAndSlot(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, const FMyArrangePointCfgWorld3DCpp &visualPoint)
 {
     helperSetVisualPointCfgByIdxs((int32)eElemType, subIdx0, subIdx1, m_mTrivalVisualPointCache, visualPoint);
 };
 
-int32 FMyMJGameDeskVisualPointCfgCacheCpp::helperGetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, const TMap<int32, FMyCardGameVisualPointCfgCpp>& cTargetMap, FMyCardGameVisualPointCfgCpp &visualPoint)
+int32 FMyMJGameDeskVisualPointCfgCacheCpp::helperGetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, const TMap<int32, FMyArrangePointCfgWorld3DCpp>& cTargetMap, FMyArrangePointCfgWorld3DCpp &visualPoint)
 {
     int32 key;
     CalcKey_Macro_KeyAnd4IdxsMap(key, 0, idx0, idx1, idx2);
 
-    const FMyCardGameVisualPointCfgCpp *pV = cTargetMap.Find(key);
+    const FMyArrangePointCfgWorld3DCpp *pV = cTargetMap.Find(key);
     if (pV) {
         visualPoint = *pV;
         return 0;
@@ -91,12 +91,12 @@ int32 FMyMJGameDeskVisualPointCfgCacheCpp::helperGetVisualPointCfgByIdxs(int32 i
     return -1;
 };
 
-void  FMyMJGameDeskVisualPointCfgCacheCpp::helperSetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, TMap<int32, FMyCardGameVisualPointCfgCpp>& cTargetMap, const FMyCardGameVisualPointCfgCpp &visualPoint)
+void  FMyMJGameDeskVisualPointCfgCacheCpp::helperSetVisualPointCfgByIdxs(int32 idx0, int32 idx1, int32 idx2, TMap<int32, FMyArrangePointCfgWorld3DCpp>& cTargetMap, const FMyArrangePointCfgWorld3DCpp &visualPoint)
 {
     int32 key;
     CalcKey_Macro_KeyAnd4IdxsMap(key, 0, idx0, idx1, idx2);
 
-    FMyCardGameVisualPointCfgCpp *pV = &cTargetMap.FindOrAdd(key);
+    FMyArrangePointCfgWorld3DCpp *pV = &cTargetMap.FindOrAdd(key);
     MY_VERIFY(pV);
     *pV = visualPoint;
 };
@@ -795,9 +795,10 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
             //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("process dirty card slot %d, %d"), idxAttender, (uint8)eSlot);
 
             const FMyMJRoleDataAttenderPublicCpp& attenderPublic = cInBase.getRoleDataAttenderPublicRefConst(idxAttender);
-            FMyCardGameVisualPointCfgCpp cVisualPointCfg;
-            int32 iColPerRow;
-            MY_VERIFY(cInVisualCfgCache.helperGetColCountPerRow(idxAttender, eSlot, cVisualPointCfg, iColPerRow) == 0);
+            FMyArrangePointCfgWorld3DCpp cMyArrangePointCfg;
+  
+            MY_VERIFY(cInVisualCfgCache.helperGetMyArrangePointCfgForCard(idxAttender, eSlot, cMyArrangePointCfg) == MyErrorCodeCommonPartCpp::NoError);
+            FMyArrangePointResolvedMetaWorld3DCpp cMyArrangePointMeta = UMyRenderUtilsLibrary::genMyArrangePointResolvedMetaWorld3D_World3D(cMyArrangePointCfg, cInVisualCfgCache.m_cModelInfo.m_cCardModelInfo);
 
             if (eSlot == MyMJCardSlotTypeCpp::Untaken) {
 
@@ -820,7 +821,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                         FMyMJGameCardVisualInfoCpp* pCardVisualInfo = &mIdCardVisualInfoTemp.FindOrAdd(cCardInfo.m_iId);
 
                         pCardVisualInfo->reset();
-                        pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                        pCardVisualInfo->m_cLimitedRotation.m_eFlipState = cCardInfo.m_eFlipState;
                         pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
                         pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
                         if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
@@ -828,11 +829,15 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                         }
                         MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::Untaken);
 
-                        pCardVisualInfo->m_iIdxRow = 0;
-                        pCardVisualInfo->m_iIdxColInRow = cCardInfo.m_cPosi.m_iIdxInSlot0 - attenderPublic.m_cUntakenSlotSubSegmentInfo.m_iIdxStart;
-                        pCardVisualInfo->m_iIdxStackInCol = cCardInfo.m_cPosi.m_iIdxInSlot1;
+                        int32 idxCol = cCardInfo.m_cPosi.m_iIdxInSlot0 - attenderPublic.m_cUntakenSlotSubSegmentInfo.m_iIdxStart;
+                        int32 idxRow = 0;
+                        int32 idxStack = cCardInfo.m_cPosi.m_iIdxInSlot1;
+
+                        pCardVisualInfo->helperSetIdxColRowStack(cMyArrangePointMeta, idxCol, idxRow, idxStack);
 
                         pCardVisualInfo->m_iCardValue = cardValue;
+
+                        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("untaken visual info: %d:%d:%d -> %s."), idxCol, idxRow, idxStack, *pCardVisualInfo->ToString());
 
                     }
                 }
@@ -844,7 +849,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 int32 l0 = aIdHandCards.Num();
                 int32 l1 = aIdJustTakenCards.Num();
 
-                int32 emptyColHalf = (iColPerRow - l0 - l1) / 2;
+                //int32 emptyColHalf = (iColPerRow - l0 - l1) / 2;
                 for (int32 i = 0; i < l1; i++) {
                     int32 cardId = aIdJustTakenCards[i];
                     const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
@@ -852,7 +857,8 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
 
                     FMyMJGameCardVisualInfoCpp* pCardVisualInfo = &mIdCardVisualInfoTemp.FindOrAdd(cCardInfo.m_iId);
                     pCardVisualInfo->reset();
-                    pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+
+                    pCardVisualInfo->m_cLimitedRotation.m_eFlipState = cCardInfo.m_eFlipState;
                     pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
                     pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
                     if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
@@ -860,19 +866,11 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     }
                     MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::JustTaken);
 
-                    pCardVisualInfo->m_iIdxRow = 0;
-                    pCardVisualInfo->m_iIdxColInRow = l0 + i;
-                    pCardVisualInfo->m_iIdxStackInCol = 0;
-
-                    pCardVisualInfo->m_iColInRowExtraMarginCount = 1;
+                    pCardVisualInfo->helperSetIdxColRowStack(cMyArrangePointMeta, l0 + i, 0, 0);
+                    pCardVisualInfo->m_cCol.m_iIdxGroup = 1;
 
                     pCardVisualInfo->m_iCardValue = cardValue;
 
-                    //trick for mid alignment
-                    if (cVisualPointCfg.m_eColInRowAlignment == MyCardGameHorizontalAlignmentCpp::Mid && (pCardVisualInfo->m_iIdxColInRow + emptyColHalf) >= 0) {
-                        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("fixing idx col for Mid alignment %d->%d"), pCardVisualInfo->m_iIdxColInRow, pCardVisualInfo->m_iIdxColInRow + emptyColHalf);
-                        pCardVisualInfo->m_iHelperIdxColInRowReal = pCardVisualInfo->m_iIdxColInRow + emptyColHalf;
-                    }
                 }
             }
             else if (eSlot == MyMJCardSlotTypeCpp::InHand) {
@@ -905,7 +903,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 m_cSortCards.collectAllWithValue(aPairs);
                 MY_VERIFY(aPairs.Num() == l0);
 
-                int32 emptyColHalf = (iColPerRow - l0 - l1) / 2;
+                //int32 emptyColHalf = (iColPerRow - l0 - l1) / 2;
                 for (int32 i = 0; i < l0; i++) {
                     int32 cardId = aPairs[i].m_iId;
                     const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
@@ -922,7 +920,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
 
                     FMyMJGameCardVisualInfoCpp* pCardVisualInfo = &mIdCardVisualInfoTemp.FindOrAdd(cCardInfo.m_iId);
                     pCardVisualInfo->reset();
-                    pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                    pCardVisualInfo->m_cLimitedRotation.m_eFlipState = cCardInfo.m_eFlipState;
                     pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
                     pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
                     if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
@@ -930,17 +928,10 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     }
                     MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::InHand);
 
-                    pCardVisualInfo->m_iIdxRow = 0;
-                    pCardVisualInfo->m_iIdxColInRow = i;
-                    pCardVisualInfo->m_iIdxStackInCol = 0;
+                    pCardVisualInfo->helperSetIdxColRowStack(cMyArrangePointMeta, i, 0, 0);
 
                     pCardVisualInfo->m_iCardValue = cardValue;
 
-                    //trick for mid alignment
-                    if (cVisualPointCfg.m_eColInRowAlignment == MyCardGameHorizontalAlignmentCpp::Mid && (pCardVisualInfo->m_iIdxColInRow + emptyColHalf) >= 0) {
-                        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("fixing idx col for Mid alignment %d->%d"), pCardVisualInfo->m_iIdxColInRow, pCardVisualInfo->m_iIdxColInRow + emptyColHalf);
-                        pCardVisualInfo->m_iHelperIdxColInRowReal = pCardVisualInfo->m_iIdxColInRow + emptyColHalf;
-                    }
                 }
             }
             else if (eSlot == MyMJCardSlotTypeCpp::GivenOut) {
@@ -948,64 +939,13 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 const TArray<int32>& aIdGivenOutCards = attenderPublic.m_aIdGivenOutCards;
                 int32 l = aIdGivenOutCards.Num();
 
-                //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("GivenOut: cVisualPointCfg.m_iExtra0 %d."), cVisualPointCfg.m_iExtra0);
-                //support for extra reduce based on row number
-                int32 rowAngle_100 = cVisualPointCfg.m_iExtra0;
-                if (rowAngle_100 == 0) {
-                    rowAngle_100 = 90 * 100;
-                }
+                FMyArrangeCoordinateMetaCpp cMyArrangeCoordinateMeta;
+                cMyArrangeCoordinateMeta.m_bColNumMaxLimitEnabled = true;
+                cMyArrangeCoordinateMeta.m_bRowNumMaxLimitEnabled = true;
 
-                float fCardNum2ReducePerRowHalf = 0;
-                if ((rowAngle_100 % 9000) != 0) {
-                    float fRowHeight = 0;
-                    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("aIdGivenOutCards.Num() %d."), aIdGivenOutCards.Num());
-                    if (aIdGivenOutCards.Num() > 0) {
-                        const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(aIdGivenOutCards[0]);
-                        float fCardWidth = cCfgCache.m_cModelInfo.m_cCardModelInfo.m_cBoxExtend.Y * 2;
-                        if (cCardInfo.m_eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Up || cCardInfo.m_eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Down) {
-                            fRowHeight = cCfgCache.m_cModelInfo.m_cCardModelInfo.m_cBoxExtend.Z * 2;
-                        }
-                        else if (cCardInfo.m_eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Stand)
-                        {
-                            fRowHeight = cCfgCache.m_cModelInfo.m_cCardModelInfo.m_cBoxExtend.X * 2;
-                        }
-                        else {
-                            MY_VERIFY(false);
-                        }
-
-                        float fT = FMath::Tan(FMath::DegreesToRadians((float)rowAngle_100 / 100));
-                        float fLength2ReducePerRowHalf = fRowHeight / fT;
-                        fCardNum2ReducePerRowHalf = fLength2ReducePerRowHalf / fCardWidth;
-   
-                        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("%f, %f."), FMath::Sin(90), FMath::Sin(FMath::DegreesToRadians(90)));
-                        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("rowAngle_100 %d, fT %f, fRowHeight %f, fCardWidth %f, fCardNum2ReducePerRowHalf %f."), rowAngle_100, fT, fRowHeight, fCardWidth, fCardNum2ReducePerRowHalf);
-                    }
-                }
- 
-                int32 iCol2Skip = 0;
-                int32 iColPerRowNow = 0;
-                int32 rowNumMax = cVisualPointCfg.m_iRowMax;
-
-                int32 idxRowNow = -1;
-                int32 idxColInRowNow = 0;
-                int32 idxStackNow = 0;
                 for (int32 i = 0; i < l; i++) {
 
-                    if (idxColInRowNow >= iColPerRowNow) {
-                        idxRowNow++;
-                        if (rowNumMax > 0 && idxRowNow >= rowNumMax) {
-                            idxStackNow++;
-                            idxRowNow = 0;
-                        }
-
-                        idxColInRowNow = 0;
-
-                        iCol2Skip = FMath::FloorToInt(idxRowNow * fCardNum2ReducePerRowHalf);
-                        iColPerRowNow = iColPerRow - (2 * iCol2Skip);
-                        if (iColPerRowNow < 2) {
-                            iColPerRowNow = 2;
-                        }
-                    }
+                    cMyArrangeCoordinateMeta.helperUpdateMyArrangeCoordinateMetaAfterOneElemArranged(cMyArrangePointMeta);
 
                     int32 cardId = aIdGivenOutCards[i];
                     const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
@@ -1013,7 +953,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
 
                     FMyMJGameCardVisualInfoCpp* pCardVisualInfo = &mIdCardVisualInfoTemp.FindOrAdd(cCardInfo.m_iId);
                     pCardVisualInfo->reset();
-                    pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                    pCardVisualInfo->m_cLimitedRotation.m_eFlipState = cCardInfo.m_eFlipState;
                     pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
                     pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
                     if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
@@ -1021,16 +961,11 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     }
                     MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::GivenOut);
 
-                    pCardVisualInfo->m_iIdxRow = idxRowNow;
-                    pCardVisualInfo->m_iIdxColInRow = idxColInRowNow;
-                    pCardVisualInfo->m_iHelperIdxColInRowReal = idxColInRowNow + iCol2Skip;
-                    pCardVisualInfo->m_iIdxStackInCol = idxStackNow;
+                    pCardVisualInfo->helperSetIdxColRowStackByMyArrangeCoordinateMeta(cMyArrangePointMeta, cMyArrangeCoordinateMeta);
 
                     pCardVisualInfo->m_iCardValue = cardValue;
 
                     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("give out card info: %s."), *pCardVisualInfo->ToString());
-
-                    idxColInRowNow++;
                 }
             }
             else if (eSlot == MyMJCardSlotTypeCpp::Weaved) {
@@ -1062,18 +997,8 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                         }
                     }
 
-                    int32 workingIdx = 0;
-                    if (cVisualPointCfg.m_eColInRowAlignment == MyCardGameHorizontalAlignmentCpp::Left) {
-                    }
-                    else if (cVisualPointCfg.m_eColInRowAlignment == MyCardGameHorizontalAlignmentCpp::Right) {
-                        workingIdx = l0 - 1;
-                    }
-                    else {
-                        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected visualPointCfg: idxAttender %d, slot weave, m_eColInRowAlignment %d."), idxAttender, (uint8)cVisualPointCfg.m_eColInRowAlignment);
-                        continue;
-                    }
-
-                    while (1)
+                    //our visual layer arrange weaves from right to left, so reverse
+                    for (int32 workingIdx = l0 - 1 ; workingIdx >= 0; workingIdx--)
                     {
                         int32 cardId = aIds[workingIdx];
                         const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
@@ -1081,7 +1006,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
 
                         FMyMJGameCardVisualInfoCpp* pCardVisualInfo = &mIdCardVisualInfoTemp.FindOrAdd(cCardInfo.m_iId);
                         pCardVisualInfo->reset();
-                        pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                        pCardVisualInfo->m_cLimitedRotation.m_eFlipState = cCardInfo.m_eFlipState;
                         pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
                         pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
                         if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
@@ -1089,32 +1014,25 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                         }
                         MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::Weaved);
 
-                        pCardVisualInfo->m_iIdxRow = 0;
-                        pCardVisualInfo->m_iIdxColInRow = cardArrangedCount;
-                        pCardVisualInfo->m_iIdxStackInCol = 0;
+                        pCardVisualInfo->helperSetIdxColRowStack(cMyArrangePointMeta, cardArrangedCount, 0, 0);
 
-                        pCardVisualInfo->m_iRotateX90DBeforeCount = cardRotatedX90DCount;
-                        pCardVisualInfo->m_iColInRowExtraMarginCount = weaveArrangedCount;
+                        pCardVisualInfo->m_cCol.m_iCountElemArrangedUnexpected = cardRotatedX90DCount;
+                        pCardVisualInfo->m_cCol.m_iIdxGroup = weaveArrangedCount;
+
                         if (triggerCardX90D != 0 && cardId == cWeave.getIdTriggerCard()) {
-                            pCardVisualInfo->m_iRotateX90D = triggerCardX90D;
+                            if (triggerCardX90D > 0) {
+                                pCardVisualInfo->m_cLimitedRotation.m_eRollState = MyRotateState90DCpp::Negative90D;
+                            }
+                            else {
+                                pCardVisualInfo->m_cLimitedRotation.m_eRollState = MyRotateState90DCpp::Positive90D;
+                            }
+
                             cardRotatedX90DCount++;
                         }
 
                         pCardVisualInfo->m_iCardValue = cardValue;
                         cardArrangedCount++;
 
-                        if (cVisualPointCfg.m_eColInRowAlignment == MyCardGameHorizontalAlignmentCpp::Right) {
-                            workingIdx--;
-                            if (workingIdx < 0) {
-                                break;
-                            }
-                        }
-                        else {
-                            workingIdx++;
-                            if (workingIdx >= l0) {
-                                break;
-                            }
-                        }
                     }
                     weaveArrangedCount++;
 
@@ -1126,14 +1044,21 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                 const TArray<int32>& aIdWinSymbolCards = attenderPublic.m_aIdWinSymbolCards;
                 int32 l = aIdWinSymbolCards.Num();
 
+                FMyArrangeCoordinateMetaCpp cMyArrangeCoordinateMeta;
+                cMyArrangeCoordinateMeta.m_bColNumMaxLimitEnabled = true;
+                cMyArrangeCoordinateMeta.m_bRowNumMaxLimitEnabled = false;
+
                 for (int32 i = 0; i < l; i++) {
+
+                    cMyArrangeCoordinateMeta.helperUpdateMyArrangeCoordinateMetaAfterOneElemArranged(cMyArrangePointMeta);
+
                     int32 cardId = aIdWinSymbolCards[i];
                     const FMyMJCardInfoCpp& cCardInfo = cCardInfoPack.getRefByIdxConst(cardId);
                     int32 cardValue = ccardValuePack.getByIdx(cardId);
 
                     FMyMJGameCardVisualInfoCpp* pCardVisualInfo = &mIdCardVisualInfoTemp.FindOrAdd(cCardInfo.m_iId);
                     pCardVisualInfo->reset();
-                    pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                    pCardVisualInfo->m_cLimitedRotation.m_eFlipState = cCardInfo.m_eFlipState;
                     pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
                     pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
                     if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
@@ -1141,9 +1066,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     }
                     MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::WinSymbol);
 
-                    pCardVisualInfo->m_iIdxRow = i / iColPerRow;
-                    pCardVisualInfo->m_iIdxColInRow = i % iColPerRow;
-                    pCardVisualInfo->m_iIdxStackInCol = 0;
+                    pCardVisualInfo->helperSetIdxColRowStackByMyArrangeCoordinateMeta(cMyArrangePointMeta, cMyArrangeCoordinateMeta);
 
                     pCardVisualInfo->m_iCardValue = cardValue;
                 }
@@ -1160,7 +1083,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
 
                     FMyMJGameCardVisualInfoCpp* pCardVisualInfo = &mIdCardVisualInfoTemp.FindOrAdd(cCardInfo.m_iId);
                     pCardVisualInfo->reset();
-                    pCardVisualInfo->m_eFlipState = cCardInfo.m_eFlipState;
+                    pCardVisualInfo->m_cLimitedRotation.m_eFlipState = cCardInfo.m_eFlipState;
                     pCardVisualInfo->m_iIdxAttender = cCardInfo.m_cPosi.m_iIdxAttender;
                     pCardVisualInfo->m_eSlot = cCardInfo.m_cPosi.m_eSlot;
                     if (pCardVisualInfo->m_iIdxAttender != idxAttender) {
@@ -1168,9 +1091,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualInfoChanges(const FMy
                     }
                     MY_VERIFY(pCardVisualInfo->m_eSlot == MyMJCardSlotTypeCpp::ShownOnDesktop);
 
-                    pCardVisualInfo->m_iIdxRow = 0;
-                    pCardVisualInfo->m_iIdxColInRow = i;
-                    pCardVisualInfo->m_iIdxStackInCol = 0;
+                    pCardVisualInfo->helperSetIdxColRowStack(cMyArrangePointMeta, i, 0, 0);
 
                     pCardVisualInfo->m_iCardValue = cardValue;
                 }
@@ -1307,7 +1228,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const F
         else {
             if (iWorkingIdCardVisualInfoKey != key && iWorkingIdCardVisualInfoKey >= 0) {
                 //handle it
-                FMyCardGameVisualPointCfgCpp cVisualPoint;
+                FMyArrangePointCfgWorld3DCpp cVisualPoint;
                 if (cCfgCache.m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(GetIdxAttender_CardVisualInfoKey(iWorkingIdCardVisualInfoKey), GetESlot_CardVisualInfoKey(iWorkingIdCardVisualInfoKey), cVisualPoint) != 0)
                 {
                     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("error, iWorkingIdCardVisualInfoKey 0x%x, info %d, %d."), iWorkingIdCardVisualInfoKey, cDebugLast.m_iIdxAttender, (uint8)cDebugLast.m_eSlot);
@@ -1329,7 +1250,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const F
     if (iWorkingIdCardVisualInfoKey >= 0) {
         //handle it
         MY_VERIFY(mWorkingIdCardVisualInfo.Num() > 0);
-        FMyCardGameVisualPointCfgCpp cVisualPoint;
+        FMyArrangePointCfgWorld3DCpp cVisualPoint;
         MY_VERIFY(cCfgCache.m_cPointCfg.getCardVisualPointCfgByIdxAttenderAndSlot(GetIdxAttender_CardVisualInfoKey(iWorkingIdCardVisualInfoKey), GetESlot_CardVisualInfoKey(iWorkingIdCardVisualInfoKey), cVisualPoint) == 0);
         FMyMJGameCardVisualInfoAndResultCpp::helperResolveCardVisualResultChanges(cVisualPoint, cCfgCache.m_cModelInfo.m_cCardModelInfo, mWorkingIdCardVisualInfo, mOutIdCardVisualInfoAndResultChanges);
 
@@ -1344,7 +1265,7 @@ void FMyMJGameDeskProcessorRunnableCpp::helperResolveVisualResultChanges(const F
         //if dice update, update them all, like in real world
 
         MyMJGameDeskVisualElemTypeCpp elemType = MyMJGameDeskVisualElemTypeCpp::Dice;
-        FMyCardGameVisualPointCfgCpp cDiceVisualPoint;
+        FMyArrangePointCfgWorld3DCpp cDiceVisualPoint;
         MY_VERIFY(cCfgCache.m_cPointCfg.getTrivalVisualPointCfgByIdxAttenderAndSlot(elemType, 0, 0, cDiceVisualPoint) == 0);
 
         int32 iDiceVisualStateKey = cNextCoreData.getCoreDataPublicRefConst().m_iDiceVisualStateKey;
@@ -1397,7 +1318,7 @@ void UMyMJGameDeskSuiteCpp::helperCalcCardTransform(const FMyMJGameCardVisualInf
 
         MY_VERIFY(IsValid(m_pDeskAreaActor));
 
-        FMyCardGameVisualPointCfgCpp cVisualPointCenter;
+        FMyArrangePointCfgWorld3DCpp cVisualPointCenter;
         int32 errCode;
         m_pDeskAreaActor->getVisualPointCfgByIdxAttenderAndSlotInternal(idxAttender, eSlot, errCode, cVisualPointCenter);
         MY_VERIFY(errCode == 0);
@@ -1434,9 +1355,9 @@ void UMyMJGameDeskSuiteCpp::helperCalcCardTransform(const FMyMJGameCardVisualInf
         const FVector cardBoxExtend;
 
         int32 idxRow = cCardVisualInfo.m_iIdxRow;
-        int32 idxColInRow = cCardVisualInfo.m_iIdxColInRow;
-        int32 idxStackInCol = cCardVisualInfo.m_iIdxStackInCol;
-        MyCardGameBoxLikeElemFlipStateCpp eFlipState = cCardVisualInfo.m_eFlipState;
+        int32 idxColInRow = cCardVisualInfo.m_cCol.m_iIdxElem;
+        int32 idxStackInCol = cCardVisualInfo.m_cStack.m_iIdxElem;
+        MyBoxLikeFlipStateCpp eFlipState = cCardVisualInfo.m_eFlipState;
         int32 iXRotate90D = cCardVisualInfo.m_iRotateX90D;
         int32 iXRotate90DBeforeCount = cCardVisualInfo.m_iRotateX90DBeforeCount;
         int32 iColInRowExtraMarginCount = cCardVisualInfo.m_iColInRowExtraMarginCount;
@@ -1467,9 +1388,9 @@ void UMyMJGameDeskSuiteCpp::helperCalcCardTransform(const FMyMJGameCardVisualInf
         //}
 
 
-        if (eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Invalid) {
+        if (eFlipState == MyBoxLikeFlipStateCpp::Invalid) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid eflipstate!"));
-            eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Stand;
+            eFlipState = MyBoxLikeFlipStateCpp::Stand;
         }
 
         if (cardBoxExtend.IsZero()) {
@@ -1495,13 +1416,13 @@ void UMyMJGameDeskSuiteCpp::helperCalcCardTransform(const FMyMJGameCardVisualInf
         FVector extraLocOffset;
         FVector extraLocOffsetB2T;
         FVector extraLocOffsetL2R;
-        if (eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Stand) {
+        if (eFlipState == MyBoxLikeFlipStateCpp::Stand) {
             perRowOffsetB2T = -forwardV * cardBoxExtend.X * 2;
             perStackOffsetB2T = upV * cardBoxExtend.Z * 2;
 
 
         }
-        else if (eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Up) {
+        else if (eFlipState == MyBoxLikeFlipStateCpp::Up) {
             perRowOffsetB2T = -forwardV * cardBoxExtend.Z * 2;
             perStackOffsetB2T = upV * cardBoxExtend.X * 2;
 
@@ -1521,7 +1442,7 @@ void UMyMJGameDeskSuiteCpp::helperCalcCardTransform(const FMyMJGameCardVisualInf
                 rotaterLocalDelta.Roll = -90;
             }
         }
-        else if (eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Down) {
+        else if (eFlipState == MyBoxLikeFlipStateCpp::Down) {
             perRowOffsetB2T = -forwardV * cardBoxExtend.Z * 2;
             perStackOffsetB2T = upV * cardBoxExtend.X * 2;
 
@@ -1608,7 +1529,7 @@ void UMyMJGameDeskSuiteCpp::helperResolveTargetCardVisualState(int32 idxCard, FM
         return;
         }
 
-        FMyCardGameVisualPointCfgCpp cVisualPoint;
+        FMyArrangePointCfgWorld3DCpp cVisualPoint;
         if (0 != m_pDeskAreaActor->getVisualPointCfgByIdxAttenderAndSlot(cCardInfo.m_cPosi.m_iIdxAttender, cCardInfo.m_cPosi.m_eSlot, cVisualPoint)) {
         return;
         }
@@ -1618,7 +1539,7 @@ void UMyMJGameDeskSuiteCpp::helperResolveTargetCardVisualState(int32 idxCard, FM
         return;
         }
 
-        FMyModelInfoBox3DCpp cModelInfo;
+        FMyModelInfoBoxWorld3DCpp cModelInfo;
         if (0 != m_pResManager->getCardModelInfoUnscaled(cModelInfo)) {
         return;
         }
@@ -1635,7 +1556,7 @@ void UMyMJGameDeskSuiteCpp::helperResolveTargetCardVisualState(int32 idxCard, FM
 
 
 /*
-int32 UMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMyModelInfoBox3DCpp& cardModelInfoFinal, const FMyMJGameCardVisualInfoCpp& cardVisualInfoFinal, const FMyCardGameVisualPointCfgCpp& visualPointCfg, FTransform& outTransform)
+int32 UMyMJGameDeskSuiteCpp::helperCalcCardTransformFromvisualPointCfg(const FMyModelInfoBoxWorld3DCpp& cardModelInfoFinal, const FMyMJGameCardVisualInfoCpp& cardVisualInfoFinal, const FMyArrangePointCfgWorld3DCpp& visualPointCfg, FTransform& outTransform)
 {
 
 }

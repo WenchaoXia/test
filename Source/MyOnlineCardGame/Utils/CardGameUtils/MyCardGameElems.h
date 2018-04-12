@@ -9,176 +9,9 @@
 #include "MyCardGameElems.generated.h"
 
 
-UENUM()
-enum class MyCardGameHorizontalAlignmentCpp : uint8
-{
-    Invalid = 0     UMETA(DisplayName = "Invalid"),
-    Left = 1     UMETA(DisplayName = "Left"),
-    Mid = 2    UMETA(DisplayName = "Mid"),
-    Right = 3    UMETA(DisplayName = "Right")
-};
-
-UENUM()
-enum class MyCardGameVerticalAlignmentCpp : uint8
-{
-    Invalid = 0     UMETA(DisplayName = "Invalid"),
-    Bottom = 1     UMETA(DisplayName = "Bottom"),
-    Mid = 2    UMETA(DisplayName = "Mid"),
-    Top = 3    UMETA(DisplayName = "Top")
-};
-
-
-//Can change in runtime, and caller should invalidate cache after change
-//Use UE4's XYZ coordinate, stack align is not list but always from -Z to +Z
-USTRUCT(BlueprintType)
-struct FMyCardGameVisualPointCfgCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyCardGameVisualPointCfgCpp() : m_cAreaBoxExtendFinal(0)
-    {
-        m_eRowAlignment = MyCardGameVerticalAlignmentCpp::Invalid;
-        //m_iRowMaxNum = 0;
-        m_eColInRowAlignment = MyCardGameHorizontalAlignmentCpp::Invalid;
-        //m_iColInRowMaxNum = 0;
-
-        m_fColInRowExtraMarginAbs = 0;
-        m_iRowMax = 0;
-        m_iExtra0 = 0;
-    };
-
-    virtual ~FMyCardGameVisualPointCfgCpp()
-    {
-
-    };
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "center point world transform"))
-        FTransform m_cCenterPointWorldTransform;
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "area box extend final"))
-        FVector m_cAreaBoxExtendFinal;
-
-    //from -X to +X
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row alignment"))
-        MyCardGameVerticalAlignmentCpp m_eRowAlignment;
-
-    //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row max num"))
-    //int32 m_iRowMaxNum;
-
-    //two layer of meaning: single card arrange sequence, all card actors gather point
-    //from -Y to +Y, actually it contains two aspect: card sequence and actor alignment, left = card seq left + actor align left, for simple we use one property here. Warn: mid = card seq left + actor align mid, and only valid for hand and just taken slot now!
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "column in row alignment"))
-        MyCardGameHorizontalAlignmentCpp m_eColInRowAlignment;
-
-    //assumed card num, if exceed the position may be out of range but will not crash the program
-    //UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "column in row max num"))
-    //int32 m_iColInRowMaxNum;
-
-    //must >= 0
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col in row extra margin abs"))
-        float m_fColInRowExtraMarginAbs;
-
-    //if row number exceed this, the actor should stack. If it is 0, means no limit
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row max"))
-        int32 m_iRowMax;
-
-    //in case some unstandard cfg is needed, use this 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "extra 0"))
-        int32 m_iExtra0;
-};
-
-
-USTRUCT(BlueprintType)
-struct FMyCardGameBoxLikeElemVisualInfoCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyCardGameBoxLikeElemVisualInfoCpp()
-    {
-        reset();
-    };
-
-    //virtual function to allow reset by base pointer
-    virtual void reset(bool resetSubClassDataonly = false)
-    {
-        m_eFlipState = MyCardGameBoxLikeElemFlipStateCpp::Invalid;
-
-        m_iIdxRow = 0;
-        m_iIdxColInRow = 0;
-        //m_iCountOfColInRow = 0;
-        m_iIdxStackInCol = 0;
-
-        m_iRotateX90D = 0;
-        m_iRotateX90DBeforeCount = 0;
-        m_iColInRowExtraMarginCount = 0;
-
-        m_iHelperIdxColInRowReal = -1;
-    };
-
-    inline bool equal(const FMyCardGameBoxLikeElemVisualInfoCpp& other) const
-    {
-        if (&other == this) {
-            return true;
-        }
-
-        return m_eFlipState == other.m_eFlipState &&
-            m_iIdxRow == other.m_iIdxRow && m_iIdxColInRow == other.m_iIdxColInRow && m_iIdxStackInCol == other.m_iIdxStackInCol &&
-            m_iRotateX90D == other.m_iRotateX90D && m_iRotateX90DBeforeCount == other.m_iRotateX90DBeforeCount && m_iColInRowExtraMarginCount == other.m_iColInRowExtraMarginCount &&
-            m_iHelperIdxColInRowReal == other.m_iHelperIdxColInRowReal;
-    };
-
-    virtual FString ToString() const
-    {
-        return FString::Printf(TEXT("flip %s, vidxs %d:%d:%d:%d"), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyCardGameBoxLikeElemFlipStateCpp"), (uint8)m_eFlipState),
-            m_iIdxRow, m_iIdxColInRow, m_iIdxStackInCol, m_iHelperIdxColInRowReal);
-    };
-
-    static void helperResolveTransform(const FMyCardGameVisualPointCfgCpp& cVisualPointCfg,
-                                       const FMyModelInfoBox3DCpp& cModelInfo,
-                                       const FMyCardGameBoxLikeElemVisualInfoCpp& cVisualInfo,
-                                       FTransform& outTransform);
-
-
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "flip state"))
-    MyCardGameBoxLikeElemFlipStateCpp m_eFlipState;
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "idx row"))
-        int32 m_iIdxRow;
-
-    //when colInRow Aligment is left or mid, this count from left to right, othwise reverse
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "idx col in row"))
-        int32 m_iIdxColInRow;
-
-    //UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "count of col in row"))
-    //int32 m_iCountOfColInRow;
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "idx stack in col"))
-        int32 m_iIdxStackInCol;
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Rotate X 90D"))
-        int32 m_iRotateX90D;
-
-    //when colInRow Aligment is left mid, this count from left to right, othwise reverse
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "Rotate X 90D before count"))
-        int32 m_iRotateX90DBeforeCount;
-
-    //when colInRow Aligment is left mid, this count from left to right, othwise reverse
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col in row extra margin count"))
-        int32 m_iColInRowExtraMarginCount;
-
-    // >= 0 means valid;
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "helper idx col in row real"))
-        int32 m_iHelperIdxColInRowReal;
-};
-
-
-
 
 UCLASS(BlueprintType)
-class MYONLINECARDGAME_API AMyCardGameCardActorBaseCpp : public AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp, public IMyIdInterfaceCpp, public IMyValueInterfaceCpp, public IMyResourceInterfaceCpp
+class MYONLINECARDGAME_API AMyCardGameCardActorBaseCpp : public AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp, public IMyIdInterfaceCpp, public IMyValueInterfaceCpp, public IMyResourceInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -222,7 +55,7 @@ public:
     };
 
 
-    static void helperMyMJGameCardActorBaseToMyTransformUpdaters(const TArray<AMyCardGameCardActorBaseCpp*>& aSub, bool bSort, TArray<IMyWithCurveUpdaterTransformInterfaceCpp*> &aBase);
+    static void helperMyMJGameCardActorBaseToMyTransformUpdaters(const TArray<AMyCardGameCardActorBaseCpp*>& aSub, bool bSort, TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp*> &aBase);
 
 protected:
 
@@ -276,7 +109,7 @@ protected:
 
 
 USTRUCT(BlueprintType)
-struct FMyCardGameDiceModelInfoCpp : public FMyModelInfoBox3DCpp
+struct FMyCardGameDiceModelInfoCpp : public FMyModelInfoBoxWorld3DCpp
 {
     GENERATED_USTRUCT_BODY()
 
@@ -310,14 +143,14 @@ public:
 protected:
 
     //the array's index means the value, and the array size is always 7
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, EditFixedSize, meta = (DisplayName = "local rotator for dice values"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, EditFixedSize, meta = (DisplayName = "local rotator for dice values"))
     TArray<FRotator> m_aLocalRotatorForDiceValues;
 
 };
 
 //for simple, dice is not set by value directly, but through world rotation 
 UCLASS(BlueprintType)
-class MYONLINECARDGAME_API AMyCardGameDiceActorBaseCpp : public AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp, public IMyIdInterfaceCpp
+class MYONLINECARDGAME_API AMyCardGameDiceActorBaseCpp : public AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp, public IMyIdInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -368,7 +201,7 @@ public:
         MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
         while (1) {
 
-            FMyModelInfoCpp modelInfoAll;
+            FMyModelInfoWorld3DCpp modelInfoAll;
 
             ret = getModelInfo(modelInfoAll, verify);
             if (ret != MyErrorCodeCommonPartCpp::NoError) {
@@ -391,7 +224,7 @@ public:
     };
 
     //@idxOfDiceRandomArranged is the randome arranged sequece idx, and it may NOT equal to idxOfDice, acctually the shuffered idx in dices array. it must <= diceTotalNum
-    static FTransform helperCalcFinalTransform(const FMyCardGameDiceModelInfoCpp& diceModelInfo, const FMyCardGameVisualPointCfgCpp& diceVisualPointCfg, int32 diceVisualStateKey, int32 idxOfDiceRandomArranged, int32 diceTotalNum, int32 value);
+    static FTransform helperCalcFinalTransform(const FMyCardGameDiceModelInfoCpp& diceModelInfo, const FMyArrangePointCfgWorld3DCpp& diceVisualPointCfg, int32 diceVisualStateKey, int32 idxOfDiceRandomArranged, int32 diceTotalNum, int32 value);
 
 protected:
 
@@ -406,9 +239,9 @@ protected:
 
     //@basicInfo is the parent class info already get, BP can direct use it as part of @fullInfo, or overrite it
     UFUNCTION(BlueprintNativeEvent, BlueprintPure)
-        MyErrorCodeCommonPartCpp getDiceModelInfoFromBP(const FMyModelInfoBox3DCpp& basicInfo, FMyCardGameDiceModelInfoCpp& fullInfo) const;
+        MyErrorCodeCommonPartCpp getDiceModelInfoFromBP(const FMyModelInfoBoxWorld3DCpp& basicInfo, FMyCardGameDiceModelInfoCpp& fullInfo) const;
 
-    virtual MyErrorCodeCommonPartCpp getDiceModelInfoFromBP_Implementation(const FMyModelInfoBox3DCpp& basicInfo, FMyCardGameDiceModelInfoCpp& fullInfo) const
+    virtual MyErrorCodeCommonPartCpp getDiceModelInfoFromBP_Implementation(const FMyModelInfoBoxWorld3DCpp& basicInfo, FMyCardGameDiceModelInfoCpp& fullInfo) const
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDiceBaseCpp::getDiceModelInfoFromBP() must be overrided by blueprint child class!"));
         return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint;
@@ -480,7 +313,7 @@ public:
 
 
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyCardGameCardWidgetBaseCpp : public UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp, public IMyWidgetBasicOperationInterfaceCpp, public IMyIdInterfaceCpp, public IMyValueInterfaceCpp, public IMyResourceInterfaceCpp
+class MYONLINECARDGAME_API UMyCardGameCardWidgetBaseCpp : public UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp, public IMyWidgetBasicOperationInterfaceCpp, public IMyIdInterfaceCpp, public IMyValueInterfaceCpp, public IMyResourceInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -644,12 +477,4 @@ class UMyCardGameElemsLibrary :
 
 public:
 
-    UFUNCTION(BlueprintCallable)
-    static void helperResolveBoxLikeElemTransformForBp(const FMyCardGameVisualPointCfgCpp& cVisualPointCfg,
-                                                        const FMyModelInfoBox3DCpp& cModelInfo,
-                                                        const FMyCardGameBoxLikeElemVisualInfoCpp& cVisualInfo,
-                                                        FTransform& outTransform)
-    {
-        FMyCardGameBoxLikeElemVisualInfoCpp::helperResolveTransform(cVisualPointCfg, cModelInfo, cVisualInfo, outTransform);
-    };
 };

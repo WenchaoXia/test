@@ -314,7 +314,7 @@ struct FMyPlayerInfoWidgetRuntimeMetaCpp
 
 
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyMJGameInRoomPlayerInfoWidgetBaseCpp : public UUserWidget, public IMyWidgetSizeInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
+class MYONLINECARDGAME_API UMyMJGameInRoomPlayerInfoWidgetBaseCpp : public UUserWidget, public IMySizeWidget2DInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -339,7 +339,7 @@ public:
 
 protected:
 
-    IMyWidgetSizeInterfaceCpp_DefaultEmptyImplementationForUObject()
+    IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject()
     IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject()
 
     //if @createIfNotExist, always exist
@@ -406,7 +406,7 @@ public:
 
 
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyMJGameInRoomUIMainWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomUIMainWidgetInterfaceCpp, public IMyWidgetSizeInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
+class MYONLINECARDGAME_API UMyMJGameInRoomUIMainWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomUIMainWidgetInterfaceCpp, public IMySizeWidget2DInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -459,7 +459,7 @@ public:
 
 protected:
 
-    IMyWidgetSizeInterfaceCpp_DefaultEmptyImplementationForUObject();
+    IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject();
     IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject()
 
     virtual void OnWidgetRebuilt() override

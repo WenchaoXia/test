@@ -12,10 +12,10 @@
 
 #include "MyRenderUtilsLibrary.generated.h"
 
-#define MyTransformTypeWorldTransform (MyTypeUnknown + 1)
-#define MyTransformTypeWidgetTransform (MyTypeUnknown + 2)
+#define MyTransformTypeTransformWorld3D (MyTypeUnknown + 1)
+#define MyTransformTypeTransformWidget2D (MyTypeUnknown + 2)
 
-#define FMyWithCurveUpdateStepDataWorldTransformCpp_Delta_Min (0.1f)
+#define FMyWithCurveUpdateStepDataTransformWorld3DCpp_Delta_Min (0.1f)
 
 
 //Two ways to store * data in containor: allocator or virtual function.
@@ -341,36 +341,38 @@ public:
 
 
 USTRUCT(BlueprintType)
-struct FMyWithCurveUpdateStepDataWorldTransformCpp : public FMyWithCurveUpdateStepDataBasicCpp
+struct FMyWithCurveUpdateStepDataTransformWorld3DCpp : public FMyWithCurveUpdateStepDataBasicCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyWithCurveUpdateStepDataWorldTransformCpp() : Super()
+    FMyWithCurveUpdateStepDataTransformWorld3DCpp() : Super()
     {
         reset(true);
 
-        m_sClassName = TEXT("FMyWithCurveUpdateStepDataWorldTransformCpp");
-        m_iType = MyTransformTypeWorldTransform;
+        m_sClassName = TEXT("FMyWithCurveUpdateStepDataTransformWorld3DCpp");
+        m_iType = MyTransformTypeTransformWorld3D;
     };
 
-    virtual ~FMyWithCurveUpdateStepDataWorldTransformCpp()
+    virtual ~FMyWithCurveUpdateStepDataTransformWorld3DCpp()
     {
     };
 
-    inline static const FMyWithCurveUpdateStepDataWorldTransformCpp& castFromBaseRefConst(const FMyWithCurveUpdateStepDataBasicCpp& base)
+    /*
+    inline static const FMyWithCurveUpdateStepDataTransformWorld3DCpp& castFromBaseRefConst(const FMyWithCurveUpdateStepDataBasicCpp& base)
     {
-        if (base.getType() != MyTransformTypeWorldTransform) {
+        if (base.getType() != MyTransformTypeTransformWorld3D) {
             MY_VERIFY(false);
         }
 
-        return StaticCast<const FMyWithCurveUpdateStepDataWorldTransformCpp&>(base);
+        return StaticCast<const FMyWithCurveUpdateStepDataTransformWorld3DCpp&>(base);
     };
 
-    inline static FMyWithCurveUpdateStepDataWorldTransformCpp& castFromBaseRef(FMyWithCurveUpdateStepDataBasicCpp& base)
+    inline static FMyWithCurveUpdateStepDataTransformWorld3DCpp& castFromBaseRef(FMyWithCurveUpdateStepDataBasicCpp& base)
     {
-        return const_cast<FMyWithCurveUpdateStepDataWorldTransformCpp&>(castFromBaseRefConst(base));
+        return const_cast<FMyWithCurveUpdateStepDataTransformWorld3DCpp&>(castFromBaseRefConst(base));
     };
+    */
 
     inline void reset(bool resetSubClassDataonly = false)
     {
@@ -391,12 +393,12 @@ public:
 
     virtual FMyWithCurveUpdateStepDataBasicCpp* createOnHeap() override
     {
-        return new FMyWithCurveUpdateStepDataWorldTransformCpp();
+        return new FMyWithCurveUpdateStepDataTransformWorld3DCpp();
     };
 
     virtual void copyContentFrom(const FMyWithCurveUpdateStepDataBasicCpp& other) override
     {
-        const FMyWithCurveUpdateStepDataWorldTransformCpp* pOther = StaticCast<const FMyWithCurveUpdateStepDataWorldTransformCpp *>(&other);
+        const FMyWithCurveUpdateStepDataTransformWorld3DCpp* pOther = StaticCast<const FMyWithCurveUpdateStepDataTransformWorld3DCpp *>(&other);
         *this = *pOther;
     };
 
@@ -417,33 +419,35 @@ public:
 };
 
 
-struct FMyWithCurveUpdaterWorldTransformCpp : public FMyWithCurveUpdaterTemplateCpp<FMyWithCurveUpdateStepDataWorldTransformCpp>
+struct FMyWithCurveUpdaterTransformWorld3DCpp : public FMyWithCurveUpdaterTemplateCpp<FMyWithCurveUpdateStepDataTransformWorld3DCpp>
 {
 
 public:
-    FMyWithCurveUpdaterWorldTransformCpp() : FMyWithCurveUpdaterTemplateCpp<FMyWithCurveUpdateStepDataWorldTransformCpp>()
+    FMyWithCurveUpdaterTransformWorld3DCpp() : FMyWithCurveUpdaterTemplateCpp<FMyWithCurveUpdateStepDataTransformWorld3DCpp>()
     {
-        m_iType = MyTransformTypeWorldTransform;
+        m_iType = MyTransformTypeTransformWorld3D;
     };
 
-    virtual ~FMyWithCurveUpdaterWorldTransformCpp()
+    virtual ~FMyWithCurveUpdaterTransformWorld3DCpp()
     {
 
     };
 
-    inline static const FMyWithCurveUpdaterWorldTransformCpp& castFromBaseRefConst(const FMyWithCurveUpdaterBasicCpp& base)
+    /*
+    inline static const FMyWithCurveUpdaterTransformWorld3DCpp& castFromBaseRefConst(const FMyWithCurveUpdaterBasicCpp& base)
     {
-        if (base.getType() != MyTransformTypeWorldTransform) {
+        if (base.getType() != MyTransformTypeTransformWorld3D) {
             MY_VERIFY(false);
         }
 
-        return StaticCast<const FMyWithCurveUpdaterWorldTransformCpp&>(base);
+        return StaticCast<const FMyWithCurveUpdaterTransformWorld3DCpp&>(base);
     };
 
-    inline static FMyWithCurveUpdaterWorldTransformCpp& castFromBaseRef(FMyWithCurveUpdaterBasicCpp& base)
+    inline static FMyWithCurveUpdaterTransformWorld3DCpp& castFromBaseRef(FMyWithCurveUpdaterBasicCpp& base)
     {
-        return const_cast<FMyWithCurveUpdaterWorldTransformCpp&>(castFromBaseRefConst(base));
+        return const_cast<FMyWithCurveUpdaterTransformWorld3DCpp&>(castFromBaseRefConst(base));
     };
+    */
 
     inline void reset()
     {
@@ -459,7 +463,7 @@ public:
     {
         int32 l = getStepsCount();
         if (l > 0) {
-            const FMyWithCurveUpdateStepDataWorldTransformCpp *pLast = NULL;
+            const FMyWithCurveUpdateStepDataTransformWorld3DCpp *pLast = NULL;
             peekStepLast(pLast);
             MY_VERIFY(pLast);
             return pLast->m_cEnd;
@@ -515,26 +519,26 @@ protected:
 *
 */
 UCLASS(ClassGroup = Movement, meta = (BlueprintSpawnableComponent))
-class MYONLINECARDGAME_API UMyWithCurveUpdaterWorldTransformComponent : public UMovementComponent
+class MYONLINECARDGAME_API UMyWithCurveUpdaterTransformWorld3DComponent : public UMovementComponent
 {
     GENERATED_BODY()
 
 public:
-    UMyWithCurveUpdaterWorldTransformComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
-    virtual ~UMyWithCurveUpdaterWorldTransformComponent()
+    UMyWithCurveUpdaterTransformWorld3DComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+    virtual ~UMyWithCurveUpdaterTransformWorld3DComponent()
     {
 
     };
 
     //following blueprint functions mainly used for test
     UFUNCTION(BlueprintCallable)
-        static void helperSetUpdateStepDataTransformBySrcAndDst(FMyWithCurveUpdateStepDataWorldTransformCpp& data, float time, UCurveVector* curve, const FTransform& start, const FTransform& end, FIntVector extraRotateCycle)
+        static void helperSetUpdateStepDataTransformBySrcAndDst(FMyWithCurveUpdateStepDataTransformWorld3DCpp& data, float time, UCurveVector* curve, const FTransform& start, const FTransform& end, FIntVector extraRotateCycle)
     {
         data.helperSetDataBySrcAndDst(time, curve, start, end, extraRotateCycle);
     };
 
     UFUNCTION(BlueprintCallable)
-        int32 updaterAddStepToTail(const FMyWithCurveUpdateStepDataWorldTransformCpp& data)
+        int32 updaterAddStepToTail(const FMyWithCurveUpdateStepDataTransformWorld3DCpp& data)
     {
         return m_cUpdater.addStepToTail(data);
     };
@@ -546,7 +550,7 @@ public:
     }
 
 
-    inline FMyWithCurveUpdaterWorldTransformCpp& getMyWithCurveUpdaterTransformRef()
+    inline FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformWorld3DRef()
     {
         return m_cUpdater;
     };
@@ -584,7 +588,7 @@ protected:
     void updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data);
     void updaterActivateTick(bool activate, FString debugString);
 
-    FMyWithCurveUpdaterWorldTransformCpp m_cUpdater;
+    FMyWithCurveUpdaterTransformWorld3DCpp m_cUpdater;
 
     bool m_bShowWhenActivated;
     bool m_bHideWhenInactivated;
@@ -593,33 +597,30 @@ protected:
 //Note: this can be split into actor and boxlike actor two classes, but now we only need one
 //most functions are implemented in C++, so fast and free to call
 UCLASS(Blueprintable)
-class MYONLINECARDGAME_API AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp : public AActor, public IMyWithCurveUpdaterTransformInterfaceCpp
+class MYONLINECARDGAME_API AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp : public AActor, public IMyWithCurveUpdaterTransformWorld3DInterfaceCpp
 {
     GENERATED_BODY()
 
 public:
 
-    AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp();
+    AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp();
 
-    virtual ~AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp();
+    virtual ~AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp();
 
-
-    virtual MyErrorCodeCommonPartCpp getModelInfo(struct FMyModelInfoCpp& modelInfo, bool verify = true) const override;
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformEnsured(struct FMyWithCurveUpdaterBasicCpp*& outUpdater) override;
-
-    inline FMyWithCurveUpdaterWorldTransformCpp& getMyWithCurveUpdaterWorldTransformRef()
-    {
-        return FMyWithCurveUpdaterWorldTransformCpp::castFromBaseRef(getMyWithCurveUpdaterTransformRef());
-    };
+    //BP should only use it for test purpose
+    UFUNCTION(BlueprintCallable)
+    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWorld3DCpp& modelInfo, bool verify) const override;
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWorld3DEnsured(struct FMyWithCurveUpdaterTransformWorld3DCpp*& outUpdater) override;
 
 
-    inline UMyWithCurveUpdaterWorldTransformComponent* getMyTransformUpdaterComponent() const
+    inline UMyWithCurveUpdaterTransformWorld3DComponent* getMyTransformUpdaterComponent() const
     {
         return m_pMyTransformUpdaterComponent;
     };
 
+
     UFUNCTION(BlueprintCallable, meta = (UnsafeDuringActorConstruction = "true"))
-        static void helperTestAnimationStep(float time, FString debugStr, const TArray<AMyWithCurveUpdaterWorldTransformBoxLikeActorBaseCpp*>& actors);
+        static void helperTestAnimationStep(float time, FString debugStr, const TArray<AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp*>& actors);
 
 protected:
 
@@ -644,7 +645,7 @@ protected:
         class UStaticMeshComponent *m_pMainStaticMesh;
 
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "my transform updater component"))
-        UMyWithCurveUpdaterWorldTransformComponent* m_pMyTransformUpdaterComponent;
+        UMyWithCurveUpdaterTransformWorld3DComponent* m_pMyTransformUpdaterComponent;
 
     UPROPERTY(EditDefaultsOnly, Category = "My Helper", meta = (DisplayName = "fake button to update settings"))
         bool m_bFakeUpdateSettings;
@@ -655,20 +656,20 @@ private:
 
 
 USTRUCT(BlueprintType)
-struct FMyWithCurveUpdateStepDataWidgetTransformCpp : public FMyWithCurveUpdateStepDataBasicCpp
+struct FMyWithCurveUpdateStepDataTransformWidget2DCpp : public FMyWithCurveUpdateStepDataBasicCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyWithCurveUpdateStepDataWidgetTransformCpp() : Super()
+    FMyWithCurveUpdateStepDataTransformWidget2DCpp() : Super()
     {
         reset(true);
 
-        m_sClassName = TEXT("FMyWithCurveUpdateStepDataWidgetTransformCpp");
-        m_iType = MyTransformTypeWidgetTransform;
+        m_sClassName = TEXT("FMyWithCurveUpdateStepDataTransformWidget2DCpp");
+        m_iType = MyTransformTypeTransformWidget2D;
     };
 
-    virtual ~FMyWithCurveUpdateStepDataWidgetTransformCpp()
+    virtual ~FMyWithCurveUpdateStepDataTransformWidget2DCpp()
     {
     };
 
@@ -679,55 +680,57 @@ public:
         }
 
         FWidgetTransform t;
-        m_cWidgetTransformStart = m_cWidgetTransformEnd = t;
+        m_cTransformWidget2DStart = m_cTransformWidget2DEnd = t;
     };
 
-    virtual FMyWithCurveUpdateStepDataWidgetTransformCpp* createOnHeap() override
+    virtual FMyWithCurveUpdateStepDataTransformWidget2DCpp* createOnHeap() override
     {
-        return new FMyWithCurveUpdateStepDataWidgetTransformCpp();
+        return new FMyWithCurveUpdateStepDataTransformWidget2DCpp();
     };
 
     virtual void copyContentFrom(const FMyWithCurveUpdateStepDataBasicCpp& other) override
     {
-        const FMyWithCurveUpdateStepDataWidgetTransformCpp* pOther = StaticCast<const FMyWithCurveUpdateStepDataWidgetTransformCpp *>(&other);
+        const FMyWithCurveUpdateStepDataTransformWidget2DCpp* pOther = StaticCast<const FMyWithCurveUpdateStepDataTransformWidget2DCpp *>(&other);
         *this = *pOther;
     };
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "render transform start"))
-        FWidgetTransform m_cWidgetTransformStart;
+        FWidgetTransform m_cTransformWidget2DStart;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "render transform end"))
-        FWidgetTransform m_cWidgetTransformEnd;
+        FWidgetTransform m_cTransformWidget2DEnd;
 };
 
 
-struct FMyWithCurveUpdaterWidgetTransformCpp : public FMyWithCurveUpdaterTemplateCpp<FMyWithCurveUpdateStepDataWidgetTransformCpp>
+struct FMyWithCurveUpdaterTransformWidget2DCpp : public FMyWithCurveUpdaterTemplateCpp<FMyWithCurveUpdateStepDataTransformWidget2DCpp>
 {
 
 public:
-    FMyWithCurveUpdaterWidgetTransformCpp() : FMyWithCurveUpdaterTemplateCpp<FMyWithCurveUpdateStepDataWidgetTransformCpp>()
+    FMyWithCurveUpdaterTransformWidget2DCpp() : FMyWithCurveUpdaterTemplateCpp<FMyWithCurveUpdateStepDataTransformWidget2DCpp>()
     {
-        m_iType = MyTransformTypeWidgetTransform;
+        m_iType = MyTransformTypeTransformWidget2D;
     };
 
-    virtual ~FMyWithCurveUpdaterWidgetTransformCpp()
+    virtual ~FMyWithCurveUpdaterTransformWidget2DCpp()
     {
 
     };
 
-    inline static const FMyWithCurveUpdaterWidgetTransformCpp& castFromBaseRefConst(const FMyWithCurveUpdaterBasicCpp& base)
+    /*
+    inline static const FMyWithCurveUpdaterTransformWidget2DCpp& castFromBaseRefConst(const FMyWithCurveUpdaterBasicCpp& base)
     {
-        if (base.getType() != MyTransformTypeWidgetTransform) {
+        if (base.getType() != MyTransformTypeTransformWidget2D) {
             MY_VERIFY(false);
         }
 
-        return StaticCast<const FMyWithCurveUpdaterWidgetTransformCpp&>(base);
+        return StaticCast<const FMyWithCurveUpdaterTransformWidget2DCpp&>(base);
     };
 
-    inline static FMyWithCurveUpdaterWidgetTransformCpp& castFromBaseRef(FMyWithCurveUpdaterBasicCpp& base)
+    inline static FMyWithCurveUpdaterTransformWidget2DCpp& castFromBaseRef(FMyWithCurveUpdaterBasicCpp& base)
     {
-        return const_cast<FMyWithCurveUpdaterWidgetTransformCpp&>(castFromBaseRefConst(base));
+        return const_cast<FMyWithCurveUpdaterTransformWidget2DCpp&>(castFromBaseRefConst(base));
     };
+    */
 
     inline void reset()
     {
@@ -738,16 +741,16 @@ public:
 
 //a widget support animation setup at runtime, since default widget's animation is static
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp : public UUserWidget, public IMyWithCurveUpdaterTransformInterfaceCpp, public IMyWidgetSizeInterfaceCpp
+class MYONLINECARDGAME_API UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp : public UUserWidget, public IMyWithCurveUpdaterTransformWidget2DInterfaceCpp, public IMySizeWidget2DInterfaceCpp
 {
     GENERATED_BODY()
 
 public:
-    UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
     {
-        m_cUpdater.m_cCommonUpdateDelegate.BindUObject(this, &UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::updaterOnCommonUpdate);
-        m_cUpdater.m_cCommonFinishDelegete.BindUObject(this, &UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::updaterOnCommonFinish);
-        m_cUpdater.m_cActivateTickDelegate.BindUObject(this, &UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp::updaterActivateTick);
+        m_cUpdater.m_cCommonUpdateDelegate.BindUObject(this, &UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonUpdate);
+        m_cUpdater.m_cCommonFinishDelegete.BindUObject(this, &UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonFinish);
+        m_cUpdater.m_cActivateTickDelegate.BindUObject(this, &UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterActivateTick);
 
         m_bUpdaterNeedTick = false;
 
@@ -755,15 +758,17 @@ public:
         m_bHideWhenInactivated = false;
     };
 
-    virtual ~UMyWithCurveUpdaterWidgetTransformBoxLikeWidgetBaseCpp()
+    virtual ~UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp()
     {
 
     };
 
-    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoCpp& modelInfo, bool verify = true) const override
+
+
+    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWidget2DCpp& modelInfo, bool verify) const override
     {
-        modelInfo.reset(MyModelInfoType::Box2D);
-        MyErrorCodeCommonPartCpp ret = IMyWidgetSizeInterfaceCpp::Execute_getLocalSize(this, modelInfo.getBox2DRef().m_cBoxExtend);
+        modelInfo.reset(MyModelInfoType::BoxWidget2D);
+        MyErrorCodeCommonPartCpp ret = IMySizeWidget2DInterfaceCpp::Execute_getLocalSize(this, modelInfo.getBox2DRef().m_cBoxExtend);
 
         if (verify) {
             MY_VERIFY(ret == MyErrorCodeCommonPartCpp::NoError);
@@ -771,20 +776,16 @@ public:
         return ret;
     };
 
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformEnsured(FMyWithCurveUpdaterBasicCpp*& outUpdater) override
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWidget2DEnsured(struct FMyWithCurveUpdaterTransformWidget2DCpp*& outUpdater) override
     {
         outUpdater = &m_cUpdater;
         return MyErrorCodeCommonPartCpp::NoError;
     };
 
-    inline FMyWithCurveUpdaterWidgetTransformCpp& getMyWithCurveUpdaterWidgetTransformRef()
-    {
-        return FMyWithCurveUpdaterWidgetTransformCpp::castFromBaseRef(getMyWithCurveUpdaterTransformRef());
-    };
 
 
     UFUNCTION(BlueprintCallable)
-        int32 updaterAddStepToTail(const FMyWithCurveUpdateStepDataWidgetTransformCpp& data)
+        int32 updaterAddStepToTail(const FMyWithCurveUpdateStepDataTransformWidget2DCpp& data)
     {
         return m_cUpdater.addStepToTail(data);
     };
@@ -795,14 +796,14 @@ public:
         m_cUpdater.clearSteps();
     }
 
-    inline FMyWithCurveUpdaterWidgetTransformCpp& getUpdaterRef()
+    inline FMyWithCurveUpdaterTransformWidget2DCpp& getUpdaterRef()
     {
         return m_cUpdater;
     };
 
 protected:
 
-    IMyWidgetSizeInterfaceCpp_DefaultEmptyImplementationForUObject()
+    IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject()
 
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
@@ -816,7 +817,7 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "hide when Inactivated"))
         bool m_bHideWhenInactivated;
 
-    FMyWithCurveUpdaterWidgetTransformCpp m_cUpdater;
+    FMyWithCurveUpdaterTransformWidget2DCpp m_cUpdater;
     bool m_bUpdaterNeedTick;
 };
 
@@ -895,31 +896,33 @@ protected:
 };
 
 USTRUCT()
-struct FMyWithCurveUpdateStepSettingsWorldTransformCpp : public FMyWithCurveUpdateStepSettingsBasicCpp
+struct FMyWithCurveUpdateStepSettingsTransformWorld3DCpp : public FMyWithCurveUpdateStepSettingsBasicCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyWithCurveUpdateStepSettingsWorldTransformCpp() : Super()
+    FMyWithCurveUpdateStepSettingsTransformWorld3DCpp() : Super()
     {
         reset(true);
-        m_iType = MyTransformTypeWorldTransform;
+        m_iType = MyTransformTypeTransformWorld3D;
     };
 
-    inline static const FMyWithCurveUpdateStepSettingsWorldTransformCpp& castFromBaseConst(const FMyWithCurveUpdateStepSettingsBasicCpp& base)
+    /*
+    inline static const FMyWithCurveUpdateStepSettingsTransformWorld3DCpp& castFromBaseConst(const FMyWithCurveUpdateStepSettingsBasicCpp& base)
     {
-        if (base.getType() != MyTransformTypeWorldTransform) {
+        if (base.getType() != MyTransformTypeTransformWorld3D) {
             MY_VERIFY(false);
         }
 
-        return StaticCast<const FMyWithCurveUpdateStepSettingsWorldTransformCpp&>(base);
+        return StaticCast<const FMyWithCurveUpdateStepSettingsTransformWorld3DCpp&>(base);
     };
 
-    inline static FMyWithCurveUpdateStepSettingsWorldTransformCpp& castFromBase(FMyWithCurveUpdateStepSettingsBasicCpp& base)
+    inline static FMyWithCurveUpdateStepSettingsTransformWorld3DCpp& castFromBase(FMyWithCurveUpdateStepSettingsBasicCpp& base)
     {
-        return const_cast<FMyWithCurveUpdateStepSettingsWorldTransformCpp&>(castFromBaseConst(base));
+        return const_cast<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp&>(castFromBaseConst(base));
     };
+    */
 
     inline void reset(bool resetSubClassDataonly = false)
     {
@@ -964,31 +967,33 @@ public:
 };
 
 USTRUCT()
-struct FMyWithCurveUpdateStepSettingsWidgetTransformCpp : public FMyWithCurveUpdateStepSettingsBasicCpp
+struct FMyWithCurveUpdateStepSettingsTransformWidget2DCpp : public FMyWithCurveUpdateStepSettingsBasicCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyWithCurveUpdateStepSettingsWidgetTransformCpp() : Super()
+    FMyWithCurveUpdateStepSettingsTransformWidget2DCpp() : Super()
     {
         reset(true);
-        m_iType = MyTransformTypeWidgetTransform;
+        m_iType = MyTransformTypeTransformWidget2D;
     };
 
-    inline static const FMyWithCurveUpdateStepSettingsWidgetTransformCpp& castFromBaseConst(const FMyWithCurveUpdateStepSettingsBasicCpp& base)
+    /*
+    inline static const FMyWithCurveUpdateStepSettingsTransformWidget2DCpp& castFromBaseConst(const FMyWithCurveUpdateStepSettingsBasicCpp& base)
     {
-        if (base.getType() != MyTransformTypeWidgetTransform) {
+        if (base.getType() != MyTransformTypeTransformWidget2D) {
             MY_VERIFY(false);
         }
 
-        return StaticCast<const FMyWithCurveUpdateStepSettingsWidgetTransformCpp&>(base);
+        return StaticCast<const FMyWithCurveUpdateStepSettingsTransformWidget2DCpp&>(base);
     };
 
-    inline static FMyWithCurveUpdateStepSettingsWidgetTransformCpp& castFromBase(FMyWithCurveUpdateStepSettingsBasicCpp& base)
+    inline static FMyWithCurveUpdateStepSettingsTransformWidget2DCpp& castFromBase(FMyWithCurveUpdateStepSettingsBasicCpp& base)
     {
-        return const_cast<FMyWithCurveUpdateStepSettingsWidgetTransformCpp&>(castFromBaseConst(base));
+        return const_cast<FMyWithCurveUpdateStepSettingsTransformWidget2DCpp&>(castFromBaseConst(base));
     };
+    */
 
     inline void reset(bool resetSubClassDataonly = false)
     {
@@ -1109,19 +1114,19 @@ public:
 
 
 USTRUCT()
-struct FMyTransformUpdateAnimationMetaBaseCpp
+struct FMyWithCurveUpdateStepMetaBaseCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyTransformUpdateAnimationMetaBaseCpp()
+    FMyWithCurveUpdateStepMetaBaseCpp()
     {
         reset();
         m_iType = MyTypeUnknown;
     };
 
-    virtual ~FMyTransformUpdateAnimationMetaBaseCpp()
+    virtual ~FMyWithCurveUpdateStepMetaBaseCpp()
     {
 
     };
@@ -1129,7 +1134,6 @@ public:
     inline void reset()
     {
         m_fTotalTime = 0;
-        m_cModelInfo.reset();
         m_sDebugString.Reset();
     };
 
@@ -1139,7 +1143,6 @@ public:
     }
 
     float m_fTotalTime;
-    FMyModelInfoCpp m_cModelInfo;
     FString m_sDebugString;
 
 protected:
@@ -1148,43 +1151,50 @@ protected:
 };
 
 USTRUCT()
-struct FMyTransformUpdateAnimationMetaWorldTransformCpp : public FMyTransformUpdateAnimationMetaBaseCpp
+struct FMyWithCurveUpdateStepMetaTransformWorld3DCpp : public FMyWithCurveUpdateStepMetaBaseCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyTransformUpdateAnimationMetaWorldTransformCpp() : Super()
+    FMyWithCurveUpdateStepMetaTransformWorld3DCpp() : Super()
     {
         reset(true);
-        m_iType = MyTransformTypeWorldTransform;
+        m_iType = MyTransformTypeTransformWorld3D;
     };
 
-    inline static const FMyTransformUpdateAnimationMetaWorldTransformCpp& castFromBaseRefConst(const FMyTransformUpdateAnimationMetaBaseCpp& base)
+    /*
+    inline static const FMyWithCurveUpdateStepMetaTransformWorld3DCpp& castFromBaseRefConst(const FMyWithCurveUpdateStepMetaBaseCpp& base)
     {
-        if (base.getType() != MyTransformTypeWorldTransform) {
+        if (base.getType() != MyTransformTypeTransformWorld3D) {
             MY_VERIFY(false);
         }
 
-        return StaticCast<const FMyTransformUpdateAnimationMetaWorldTransformCpp&>(base);
+        return StaticCast<const FMyWithCurveUpdateStepMetaTransformWorld3DCpp&>(base);
     };
 
-    inline static FMyTransformUpdateAnimationMetaWorldTransformCpp& castFromBaseRef(FMyTransformUpdateAnimationMetaBaseCpp& base)
+    inline static FMyWithCurveUpdateStepMetaTransformWorld3DCpp& castFromBaseRef(FMyWithCurveUpdateStepMetaBaseCpp& base)
     {
-        return const_cast<FMyTransformUpdateAnimationMetaWorldTransformCpp&>(castFromBaseRefConst(base));
+        return const_cast<FMyWithCurveUpdateStepMetaTransformWorld3DCpp&>(castFromBaseRefConst(base));
     };
+    */
 
     inline void reset(bool resetSubClassDataonly = false)
     {
         if (!resetSubClassDataonly) {
             Super::reset();
         }
+
+        m_cModelInfo.reset();
+
         FTransform zeroT;
 
         m_cPointTransform = zeroT;
         m_cDisappearTransform = zeroT;
 
     };
+
+    FMyModelInfoWorld3DCpp m_cModelInfo;
 
     FTransform m_cPointTransform;
     FTransform m_cDisappearTransform;
@@ -1193,16 +1203,16 @@ public:
 
 
 USTRUCT()
-struct FMyTransformUpdateAnimationMetaWidgetTransformCpp : public FMyTransformUpdateAnimationMetaBaseCpp
+struct FMyTransformUpdateAnimationMetaTransformWidget2DCpp : public FMyWithCurveUpdateStepMetaBaseCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyTransformUpdateAnimationMetaWidgetTransformCpp() : Super()
+    FMyTransformUpdateAnimationMetaTransformWidget2DCpp() : Super()
     {
         reset(true);
-        m_iType = MyTransformTypeWidgetTransform;
+        m_iType = MyTransformTypeTransformWidget2D;
     };
 
     inline void reset(bool resetSubClassDataonly = false)
@@ -1210,7 +1220,11 @@ public:
         if (!resetSubClassDataonly) {
             Super::reset();
         }
+
+        m_cModelInfo.reset();
     };
+
+    FMyModelInfoWidget2DCpp m_cModelInfo;
 };
 
 
@@ -1443,14 +1457,14 @@ protected:
     //Todo: use setter to update the state when modify in BP
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "render transform normal"))
-    FWidgetTransform m_cWidgetTransformNormal;
+    FWidgetTransform m_cTransformWidget2DNormal;
 
     //If true, that transform will be applied when pressed
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "enable render transform pressed"))
-    bool m_bEnableWidgetTransformPressed;
+    bool m_bEnableTransformWidget2DPressed;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = m_bEnableWidgetTransformPressed, DisplayName = "render transform pressed"))
-    FWidgetTransform m_cWidgetTransformPressed;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = m_bEnableTransformWidget2DPressed, DisplayName = "render transform pressed"))
+    FWidgetTransform m_cTransformWidget2DPressed;
 };
 
 
@@ -1517,6 +1531,71 @@ public:
     UMaterialInstanceDynamic* m_pTempRenderMaterialInstance;
 };
 
+
+USTRUCT(BlueprintType)
+struct FMyMargin1D
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMargin1D(float UniformMargin = 0)
+    {
+        m_fPrev = m_fNext = UniformMargin;
+    };
+
+    FMyMargin1D(float inPrev, float inNext)
+    {
+        m_fPrev = inPrev;
+        m_fNext = inNext;
+    };
+
+    inline void reset()
+    {
+        m_fPrev = m_fNext = 0;
+    };
+
+    FMyMargin1D operator*(float Scale) const
+    {
+        return FMyMargin1D(m_fPrev * Scale, m_fNext * Scale);
+    }
+
+    FMyMargin1D operator*(const FMyMargin1D& InScale) const
+    {
+        return FMyMargin1D(m_fPrev * InScale.m_fPrev, m_fNext * InScale.m_fNext);
+    }
+
+    FMyMargin1D operator+(const FMyMargin1D& InDelta) const
+    {
+        return FMyMargin1D(m_fPrev + InDelta.m_fPrev, m_fNext + InDelta.m_fNext);
+    }
+
+    FMyMargin1D operator-(const FMyMargin1D& Other) const
+    {
+        return FMyMargin1D(m_fPrev - Other.m_fPrev, m_fNext - Other.m_fNext);
+    }
+
+    bool operator==(const FMyMargin1D& Other) const
+    {
+        return (m_fPrev == Other.m_fPrev) && (m_fNext == Other.m_fNext);
+    }
+
+    bool operator!=(const FMyMargin1D& Other) const
+    {
+        return m_fPrev != Other.m_fPrev || m_fNext != Other.m_fNext;
+    }
+
+    inline float GetDesiredSize1D() const
+    {
+        return m_fPrev + m_fNext;
+    }
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Appearance, meta = (DisplayName = "previous"))
+    float m_fPrev;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Appearance, meta = (DisplayName = "next"))
+    float m_fNext;
+};
 
 USTRUCT(BlueprintType)
 struct FMyMargin3D : public FMargin
@@ -1602,25 +1681,761 @@ public:
     {
         m_cElemSize = FVector::ZeroVector;
 
-        m_cPaddingPercent.reset();
+        m_cAllMarginPercent.reset();
 
-        m_cElemSpacingPercent = FVector::ZeroVector;
-        m_cGroupSpacingPercent = FVector::ZeroVector;
+        m_cCellMarginPercent = FVector::ZeroVector;
+        m_cGroupMarginPercent = FVector::ZeroVector;
     };
 
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "elem size"))
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "elem size"))
     FVector m_cElemSize;
 
     //the padding to elem that will be arranged, unit is elem size's precent
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "padding percent"))
-    FMyMargin3D m_cPaddingPercent;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "padding percent"))
+    FMyMargin3D m_cAllMarginPercent;
 
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "elem spacing percent"))
-    FVector m_cElemSpacingPercent;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "elem spacing percent"))
+    FVector m_cCellMarginPercent;
 
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "group spacing percent"))
-    FVector m_cGroupSpacingPercent;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "group spacing percent"))
+    FVector m_cGroupMarginPercent;
 };
+
+
+//currently only pose enumed, is supported. To implement more, add enum define and implementions
+USTRUCT(BlueprintType)
+struct FMyRotateState90DWorld3DCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyRotateState90DWorld3DCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_eFlipState = MyBoxLikeFlipStateCpp::Stand;
+        m_eRollState = MyRotateState90DCpp::Zero;
+    };
+
+    inline bool operator==(const FMyRotateState90DWorld3DCpp& Other) const
+    {
+        return (m_eFlipState == Other.m_eFlipState) && (m_eRollState == Other.m_eRollState);
+    };
+
+    inline FString ToString() const
+    {
+        return FString::Printf(TEXT("%s:%s"),
+            *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyBoxLikeFlipStateCpp"), (uint8)m_eFlipState),
+            *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyRotateState90DCpp"), (uint8)m_eRollState));
+    };
+
+
+    //same as limited pitch
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "flip state"))
+        MyBoxLikeFlipStateCpp m_eFlipState;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "roll state"))
+        MyRotateState90DCpp m_eRollState;
+};
+
+
+USTRUCT(BlueprintType)
+struct FMyRotateState90DWidget2DCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyRotateState90DWidget2DCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_eAngleState = MyRotateState90DCpp::Zero;
+    };
+
+    inline bool operator==(const FMyRotateState90DWidget2DCpp& Other) const
+    {
+        return (m_eAngleState == Other.m_eAngleState);
+    };
+
+    inline FString ToString() const
+    {
+        return FString::Printf(TEXT("%s"),
+            *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyBoxLikeFlipStateCpp"), (uint8)m_eAngleState));
+    };
+
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "angle state"))
+        MyRotateState90DCpp m_eAngleState;
+};
+
+
+//To caclulate the arrange, it have two steps: find the cell, fill elem in cell, cell does NOT contain any spacing or padding inside!
+USTRUCT(BlueprintType)
+struct FMyArrangeCfgOneDimensionCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyArrangeCfgOneDimensionCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_eCellOrderType = MyOrderTypeCpp::ASC;
+        m_eCellGatherType = MyAxisAlignmentTypeCpp::Negative;
+        m_eElemInCellAlignmentType = MyContinuousAlignmentTypeCpp::Prev;
+        m_cAllMarginPercent.reset();
+        m_cCellMarginPercent.reset();
+        m_cGroupMarginPercent.reset();
+        m_iNumMaxAtDimNext0Override = 0;
+        m_iReduceDegree = 0;
+    };
+
+    FMyArrangeCfgOneDimensionCpp inv() const;
+
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "cell order type"))
+        MyOrderTypeCpp m_eCellOrderType;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "elem in cell alignment type"))
+        MyContinuousAlignmentTypeCpp m_eElemInCellAlignmentType;
+
+    //unit is elem's size's percent, use unified size for 2D and 3D
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "all margin percent"))
+        FMyMargin1D m_cAllMarginPercent;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "cell margin percent"))
+        FMyMargin1D m_cCellMarginPercent;
+
+    //this is how many extra margin will be added to cell's when group idx is not 0
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "group margin percent"))
+        FMyMargin1D m_cGroupMarginPercent;
+
+
+protected:
+
+    //members only affect coordinate calculation, not related to corordinate transform resolve
+
+    //Every dimension have numMax unless last dimension, by default it is calculated from area.
+    //If it > 0, it will override the calculated value which at next dim value 0. For example, col num max at row 0.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "num max at dim next 0 override"))
+        int32 m_iNumMaxAtDimNext0Override;
+
+    //where the cell should gather
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "cell gather type"))
+        MyAxisAlignmentTypeCpp m_eCellGatherType;
+
+    // |  /   E   \
+    // |D/  E E E  \
+    // |/ E E E E E \
+    // if 0, no reduce. If positive, next ones of this dimension will reduce. If Negative, increase. Range is (-90, 90).
+    // Warn: will always affect the elem coordinate, not the elem axis value, which means elem always align in axis.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "reduce degree"))
+        int32 m_iReduceDegree;
+};
+
+
+//Warn: any idx < 0 is valid
+USTRUCT(BlueprintType)
+struct FMyArrangeCoordinateOneDimensionCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyArrangeCoordinateOneDimensionCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_iIdxElem = 0;
+        m_iIdxGroup = 0;
+        m_iCountElemArrangedUnexpected = 0;
+    };
+
+    inline bool operator==(const FMyArrangeCoordinateOneDimensionCpp& Other) const
+    {
+        return (m_iIdxElem == Other.m_iIdxElem) && (m_iIdxGroup == Other.m_iIdxGroup) && (m_iCountElemArrangedUnexpected == Other.m_iCountElemArrangedUnexpected);
+    }
+
+    inline FString ToString(bool verbose = false) const
+    {
+        FString ret = FString::Printf(TEXT("%d"), m_iIdxElem);
+        if (verbose) {
+            ret += FString::Printf(TEXT(" %d %d"), m_iIdxGroup, m_iCountElemArrangedUnexpected);
+        }
+
+        return ret;
+    };
+
+    inline int32 getIdxElemUnexpected() const
+    {
+        int32 unexpected = m_iCountElemArrangedUnexpected >= 0 ? m_iCountElemArrangedUnexpected : 0;
+
+        if (m_iIdxElem >= 0) {
+            return unexpected;
+        }
+        else {
+            return -unexpected;
+        }
+    };
+
+    inline int32 getIdxElemExpected() const
+    {
+        return m_iIdxElem - getIdxElemUnexpected();
+    };
+
+
+    //idx is all in this dimension, NOT in group, including expected ones and unexpected ones
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "idx elem"))
+    int32 m_iIdxElem;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "idx group"))
+    int32 m_iIdxGroup;
+
+    //count how many unexpected elem arranged before, always >= 0, < 0 is considered as 0
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "count elem arranged unexpected"))
+    int32 m_iCountElemArrangedUnexpected;
+
+};
+
+
+USTRUCT(BlueprintType)
+struct FMyArrangePointCfgWorld3DCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyArrangePointCfgWorld3DCpp()
+    {
+        reset();
+    };
+
+    virtual ~FMyArrangePointCfgWorld3DCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        FTransform t;
+        m_cCenterPointTransform = t;
+
+        m_cAreaBoxExtendFinal = FVector::OneVector;
+
+        m_eColAxisType = MyAxisTypeCpp::Y;
+        m_eRowAxisType = MyAxisTypeCpp::X;
+
+        m_cColArrange.reset();
+        m_cRowArrange.reset();
+        m_cStackArrange.reset();
+
+        m_cLimitedRotationAllExpected.reset();
+        m_cLimitedRotationAllUnexpected.reset();
+    };
+
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "center point transform"))
+        FTransform m_cCenterPointTransform;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "area box extend final"))
+        FVector m_cAreaBoxExtendFinal;
+
+    //Must be valid and can't be sme as RowAxisType
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col axis type"))
+        MyAxisTypeCpp m_eColAxisType;
+
+    //Must be valid and can't be same as ColAxisType
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row axis type"))
+        MyAxisTypeCpp m_eRowAxisType;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col arrange"))
+        FMyArrangeCfgOneDimensionCpp m_cColArrange;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row arrange"))
+        FMyArrangeCfgOneDimensionCpp m_cRowArrange;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "stack arrange"))
+        FMyArrangeCfgOneDimensionCpp m_cStackArrange;
+
+    //all elems should have same rotation expected, to calculate col, row, stack position
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation all expected"))
+        FMyRotateState90DWorld3DCpp m_cLimitedRotationAllExpected;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation all unexpected"))
+        FMyRotateState90DWorld3DCpp m_cLimitedRotationAllUnexpected;
+
+protected:
+
+};
+
+//the box like model have limited rotation: Pitch is actually flip state, some card game will use it
+//dimention arrange order: col -> row -> stack, call could arrange idx as stack:row:col(higher dimention takes bigger priority)
+//Three dimensions are always orthogonal, they don't bend
+USTRUCT(BlueprintType)
+struct FMyArrangeCoordinateWorld3DCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyArrangeCoordinateWorld3DCpp()
+    {
+        reset();
+    };
+
+    //virtual function to allow reset by base pointer
+    virtual void reset(bool resetSubClassDataonly = false)
+    {
+        m_cLimitedRotation.reset();
+        m_cCol.reset();
+        m_cRow.reset();
+        m_cStack.reset();
+    };
+
+
+    inline bool equal(const FMyArrangeCoordinateWorld3DCpp& other) const
+    {
+        if (&other == this) {
+            return true;
+        }
+
+        return m_cLimitedRotation == other.m_cLimitedRotation &&
+            m_cCol == other.m_cCol && m_cRow == other.m_cRow && m_cStack == other.m_cStack;
+    };
+
+    virtual FString ToString() const
+    {
+        return FString::Printf(TEXT("rot %s, idxs %s: %s: %s"), *m_cLimitedRotation.ToString(),
+            *m_cCol.ToString(), *m_cRow.ToString(), *m_cStack.ToString());
+    };
+
+    void helperSetIdxColRowStack(const struct FMyArrangePointResolvedMetaWorld3DCpp& meta, int32 colArranged, int32 rowArranged, int32 stackArranged);
+
+    //Warning: whether one dim is used, is decided by whether previous dim have num limit enabled
+    void helperSetIdxColRowStackByMyArrangeCoordinateMeta(const struct FMyArrangePointResolvedMetaWorld3DCpp& meta, const struct FMyArrangeCoordinateMetaCpp& myArrangeCoordinateMeta);
+
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation"))
+        FMyRotateState90DWorld3DCpp m_cLimitedRotation;
+
+    //when colInRow Aligment is left or mid, this count from left to right, othwise reverse
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col"))
+        FMyArrangeCoordinateOneDimensionCpp m_cCol;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row"))
+        FMyArrangeCoordinateOneDimensionCpp m_cRow;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "stack"))
+        FMyArrangeCoordinateOneDimensionCpp m_cStack;
+};
+
+USTRUCT(BlueprintType)
+struct FMyArrangePointCfgWidget2DCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyArrangePointCfgWidget2DCpp()
+    {
+        reset();
+    };
+
+    virtual ~FMyArrangePointCfgWidget2DCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        FWidgetTransform t;
+        m_cCenterPointTransform = t;
+
+        m_cAreaBoxExtendFinal = FVector2D::UnitVector;
+
+        m_eColAxisType = MyAxisTypeCpp::X;
+        m_cColArrange.reset();
+        m_cRowArrange.reset();
+
+        m_cLimitedRotationAllExpected.reset();
+        m_cLimitedRotationAllUnexpected.reset();
+    };
+
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "center point transform"))
+        FWidgetTransform m_cCenterPointTransform;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "area box extend final"))
+        FVector2D m_cAreaBoxExtendFinal;
+
+    //Must be valid and can't be sme as RowAxisType
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col axis type"))
+        MyAxisTypeCpp m_eColAxisType;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col arrange"))
+        FMyArrangeCfgOneDimensionCpp m_cColArrange;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row arrange"))
+        FMyArrangeCfgOneDimensionCpp m_cRowArrange;
+
+
+    //all elems should have same rotation expected, to calculate col, row, stack position
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation all expected"))
+        FMyRotateState90DWidget2DCpp m_cLimitedRotationAllExpected;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation all unexpected"))
+        FMyRotateState90DWidget2DCpp m_cLimitedRotationAllUnexpected;
+};
+
+
+USTRUCT(BlueprintType)
+struct FMyArrangeCoordinateWidget2DCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyArrangeCoordinateWidget2DCpp()
+    {
+        reset();
+    };
+
+    //virtual function to allow reset by base pointer
+    virtual void reset(bool resetSubClassDataonly = false)
+    {
+        m_cLimitedRotation.reset();
+        m_cCol.reset();
+        m_cRow.reset();
+    };
+
+
+    inline bool equal(const FMyArrangeCoordinateWidget2DCpp& other) const
+    {
+        if (&other == this) {
+            return true;
+        }
+
+        return m_cLimitedRotation == other.m_cLimitedRotation &&
+            m_cCol == other.m_cCol && m_cRow == other.m_cRow;
+    };
+
+    virtual FString ToString() const
+    {
+        return FString::Printf(TEXT("rot %s, idxs %s: %s"), *m_cLimitedRotation.ToString(),
+            *m_cCol.ToString(), *m_cRow.ToString());
+    };
+
+
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation"))
+        FMyRotateState90DWidget2DCpp m_cLimitedRotation;
+
+    //when colInRow Aligment is left or mid, this count from left to right, othwise reverse
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col"))
+        FMyArrangeCoordinateOneDimensionCpp m_cCol;
+
+    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row"))
+        FMyArrangeCoordinateOneDimensionCpp m_cRow;
+
+};
+
+USTRUCT()
+struct FMyArrangeCfgResolvedOneDimCpp : public FMyArrangeCfgOneDimensionCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyArrangeCfgResolvedOneDimCpp() : Super()
+    {
+        reset(true);
+    };
+
+    inline void reset(bool resetSubClassDataonly = false)
+    {
+        if (!resetSubClassDataonly) {
+            Super::reset();
+        }
+
+        m_fAreaExtend = 1;
+        m_fCellExtendExpected = 1;
+        m_fCellExtendUnexpected = 1;
+        m_eAxisType = MyAxisTypeCpp::Invalid;
+
+        m_iNumMaxAtDimNext0 = 0;
+        m_iNumMaxByAreaAtDimNext0 = 0;
+        m_iNumReduceHalfPerDimNext_100 = 0;
+    };
+
+    inline float getCellStart(float elemUnifiedSize, const FMyArrangeCoordinateOneDimensionCpp& coordinate) const
+    {
+        return elemUnifiedSize * m_cAllMarginPercent.m_fPrev +
+            coordinate.getIdxElemExpected() * m_fCellExtendExpected * 2 + coordinate.getIdxElemUnexpected() * m_fCellExtendUnexpected * 2 +
+            (coordinate.getIdxElemExpected() + coordinate.getIdxElemUnexpected()) * elemUnifiedSize * m_cCellMarginPercent.GetDesiredSize1D() +
+            coordinate.m_iIdxGroup * elemUnifiedSize * m_cGroupMarginPercent.GetDesiredSize1D();
+    };
+
+    inline float getCellExtend() const
+    {
+        return m_fCellExtendExpected;
+    };
+
+    inline float getCellOccupiedLen(float fModelUnifiedSize) const
+    {
+        return getCellExtend() * 2 + m_cCellMarginPercent.GetDesiredSize1D() * fModelUnifiedSize;
+    };
+
+    //for last dimmension, caller should ignore the num max cap, and continue arrange elem in
+    inline int32 getNumMax(int32 idxDimNext) const
+    {
+        int32 ret = m_iNumMaxAtDimNext0 - m_iNumReduceHalfPerDimNext_100 * idxDimNext / 100 * 2;
+        if (ret < 1) {
+            ret = 1;
+        }
+
+        return ret;
+    };
+
+    inline int32 getIdxElem(int32 idxDimNext, int32 elemArrangedBefore) const
+    {
+        MyOrderTypeCpp eCellOrderType;
+        SetValidValue_MyOrderTypeCpp(eCellOrderType, m_eCellOrderType);
+
+        MyAxisAlignmentTypeCpp eCellGatherType;
+        SetValidValue_MyAxisAlignmentTypeCpp(eCellGatherType, m_eCellGatherType)
+
+        int32 ret = elemArrangedBefore;
+        if (eCellGatherType == MyAxisAlignmentTypeCpp::Mid) {
+            ret += (m_iNumMaxByAreaAtDimNext0 - m_iNumMaxAtDimNext0) / 2;
+        }
+        else if (eCellGatherType == MyAxisAlignmentTypeCpp::Negative) {
+            if (eCellOrderType == MyOrderTypeCpp::DESC) {
+                ret += (m_iNumMaxByAreaAtDimNext0 - m_iNumMaxAtDimNext0);
+            }
+
+        }
+        else if (eCellGatherType == MyAxisAlignmentTypeCpp::Positive) {
+            if (eCellOrderType == MyOrderTypeCpp::ASC) {
+                ret += (m_iNumMaxByAreaAtDimNext0 - m_iNumMaxAtDimNext0);
+            }
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
+        ret += m_iNumReduceHalfPerDimNext_100 * idxDimNext / 100;
+
+        //debug
+        //if (m_iReduceDegree == 45) {
+            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("reduce angle 45: %d, %d, %d, ret %d."), idxDimNext, elemArrangedBefore, (uint8)eCellGatherType, ret);
+            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_iNumReduceHalfPerDimNext_100: %d, m_iNumMaxByAreaAtDimNext0 %d,m_iNumMaxAtDimNext0 %d."), m_iNumReduceHalfPerDimNext_100, m_iNumMaxByAreaAtDimNext0, m_iNumMaxAtDimNext0);
+        //}
+
+        return ret;
+    };
+
+    void rebuildFrom(const FMyArrangeCfgOneDimensionCpp& cfgDim, MyAxisTypeCpp axisType,
+                    const FVector& areaExtend,
+                    const FMyModelInfoBoxWorld3DCpp& modelInfoExpected,
+                    const FMyModelInfoBoxWorld3DCpp& modelInfoUnexpected);
+
+    void postBuild(const FMyArrangeCfgResolvedOneDimCpp* pdimNext, float fModelUnifiedSize)
+    {
+        float cellOccupiedLenDimThis = getCellOccupiedLen(fModelUnifiedSize);
+        m_iNumMaxByAreaAtDimNext0 = (m_fAreaExtend * 2 - fModelUnifiedSize * m_cAllMarginPercent.GetDesiredSize1D()) / cellOccupiedLenDimThis;
+        if (m_iNumMaxByAreaAtDimNext0 < 1) {
+            m_iNumMaxByAreaAtDimNext0 = 1;
+
+        }
+
+        m_iNumMaxAtDimNext0 = m_iNumMaxByAreaAtDimNext0;
+        if (m_iNumMaxAtDimNext0Override > 0) {
+            m_iNumMaxAtDimNext0 = m_iNumMaxAtDimNext0Override;
+        }
+
+
+        if (pdimNext) {
+            m_iNumReduceHalfPerDimNext_100 = getNumReducedHalfPerDimNext_100(pdimNext, fModelUnifiedSize);
+        }
+        else {
+            //no limit
+            m_iNumReduceHalfPerDimNext_100 = 0;
+        }
+    };
+
+
+    float m_fAreaExtend;
+    float m_fCellExtendExpected;
+    float m_fCellExtendUnexpected;
+    MyAxisTypeCpp m_eAxisType;
+
+protected:
+
+    //Only used expected model size yet, unexpected is ignored now, but enough for most cases
+    inline int32 getNumReducedHalfPerDimNext_100(const FMyArrangeCfgResolvedOneDimCpp* pdimNext, float fModelUnifiedSize) const
+    {
+        if (pdimNext) {
+            int32 reduceAngle = FMath::Clamp<int32>(m_iReduceDegree, -89, 89);
+            if (reduceAngle != 0) {
+
+                float cellOccupiedLenDimThis = getCellOccupiedLen(fModelUnifiedSize);
+                float cellOccupiedLenDimNext = pdimNext->getCellOccupiedLen(fModelUnifiedSize);
+
+                float fT = FMath::Tan(FMath::DegreesToRadians((float)reduceAngle));
+                float fLenReducedHalfPerNextDim = cellOccupiedLenDimNext * fT;
+                return fLenReducedHalfPerNextDim * 100 / cellOccupiedLenDimThis;
+            }
+        }
+
+        return 0;
+    };
+
+
+    //post build datas
+    int32 m_iNumMaxAtDimNext0;
+    int32 m_iNumMaxByAreaAtDimNext0;
+    int32 m_iNumReduceHalfPerDimNext_100;
+};
+
+
+USTRUCT(BlueprintType)
+struct FMyArrangePointResolvedMetaWorld3DCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyArrangePointResolvedMetaWorld3DCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        FTransform t;
+        m_cCenterPointTransform = t;
+
+        m_fModelUnifiedSize = 0;
+
+        m_aDimCfgs.Reset();
+        m_aDimCfgs.AddDefaulted(3);
+
+        m_cModelInfo.reset();
+    };
+
+
+    inline int32 getColNumMax(int32 idxRow) const
+    {
+        return m_aDimCfgs[0].getNumMax(idxRow);
+    };
+
+    inline int32 getColIdx(int32 idxRow, int32 elemArrangedBefore) const
+    {
+        return m_aDimCfgs[0].getIdxElem(idxRow, elemArrangedBefore);
+    };
+
+    inline int32 getRowNumMax(int32 idxStack) const
+    {
+        return m_aDimCfgs[1].getNumMax(idxStack);
+    };
+
+    inline int32 getRowIdx(int32 idxStack, int32 elemArrangedBefore) const
+    {
+        return m_aDimCfgs[1].getIdxElem(idxStack, elemArrangedBefore);
+    };
+
+    inline int32 getStackNumMax() const
+    {
+        return m_aDimCfgs[2].getNumMax(0);
+    };
+
+    inline int32 getStackIdx(int32 elemArrangedBefore) const
+    {
+        return m_aDimCfgs[2].getIdxElem(0, elemArrangedBefore);
+    };
+
+
+    void rebuildFrom(const FMyArrangePointCfgWorld3DCpp& cPointCfg, const FMyModelInfoBoxWorld3DCpp& cModelInfo);
+
+
+
+    FTransform m_cCenterPointTransform;
+
+    float m_fModelUnifiedSize;
+
+    //always size 3, and is col->row->stack, unless not build
+    TArray<FMyArrangeCfgResolvedOneDimCpp> m_aDimCfgs;
+
+    FMyModelInfoBoxWorld3DCpp m_cModelInfo;
+
+protected:
+
+};
+
+
+
+USTRUCT()
+struct FMyArrangeCoordinateMetaCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyArrangeCoordinateMetaCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_iColArranged = -1;
+        m_iRowArranged = -1;
+        m_iStackArranged = -1;
+
+        m_iColNumMax = -1;
+        m_bColNumMaxLimitEnabled = true;
+        m_iRowNumMax = -1;
+        m_bRowNumMaxLimitEnabled = true;
+    };
+
+    inline void helperUpdateMyArrangeCoordinateMetaAfterOneElemArranged(const FMyArrangePointResolvedMetaWorld3DCpp& meta)
+    {
+        m_iColArranged++;
+
+        if (m_bColNumMaxLimitEnabled && m_iColArranged >= m_iColNumMax) {
+            m_iRowArranged++;
+            if (m_bRowNumMaxLimitEnabled && m_iRowArranged >= m_iRowNumMax) {
+                m_iStackArranged++;
+                m_iRowArranged = 0;
+                m_iRowNumMax = meta.getRowNumMax(m_iStackArranged);
+            }
+            m_iColArranged = 0;
+            m_iColNumMax = meta.getColNumMax(m_iRowArranged);
+        }
+
+    };
+
+
+    int32 m_iColArranged;
+    int32 m_iRowArranged;
+    int32 m_iStackArranged;
+
+    int32 m_iColNumMax;
+    bool m_bColNumMaxLimitEnabled;
+    int32 m_iRowNumMax;
+    bool m_bRowNumMaxLimitEnabled;
+};
+
 
 
 //Warn: we don't support multiple player screen in one client now!
@@ -1632,43 +2447,505 @@ class UMyRenderUtilsLibrary :
 
 public:
 
-    static void helperResolveWorldTransformFromPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp &meta,
+    static inline const float& getAxisFromVectorRefConst(const FVector &data, MyAxisTypeCpp type)
+    {
+        if (type == MyAxisTypeCpp::X) {
+            return data.X;
+        }
+        else if (type == MyAxisTypeCpp::Y) {
+            return data.Y;
+        }
+        else if (type == MyAxisTypeCpp::Z) {
+            return data.Z;
+        }
+        else {
+            MY_VERIFY(false);
+            return data.X;
+        }
+    };
+
+    static inline float& getAxisFromVectorRef(FVector &data, MyAxisTypeCpp type)
+    {
+        return const_cast<float&>(getAxisFromVectorRefConst(data, type));
+    };
+
+    //@aSorted will have col, row, stack axiss
+    static inline void getSortedAxis3D(MyAxisTypeCpp colAxis, MyAxisTypeCpp rawAxis, TArray<MyAxisTypeCpp>& aSorted)
+    {
+        aSorted.Reset();
+
+        TSet<MyAxisTypeCpp> sAxiss;
+        sAxiss.Emplace(MyAxisTypeCpp::X);
+        sAxiss.Emplace(MyAxisTypeCpp::Y);
+        sAxiss.Emplace(MyAxisTypeCpp::Z);
+
+        if (sAxiss.Find(colAxis) == NULL) {
+            MyAxisTypeCpp newT = *sAxiss.CreateIterator();
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("fixing col axis type since it invalid or already used: %s -> %s"),
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyAxisTypeCpp"), (uint8)colAxis),
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyAxisTypeCpp"), (uint8)newT));
+            colAxis = newT;
+        }
+        sAxiss.Remove(colAxis);
+        aSorted.Emplace(colAxis);
+
+        if (sAxiss.Find(rawAxis) == NULL) {
+            MyAxisTypeCpp newT = *sAxiss.CreateIterator();
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("fixing row axis type since it invalid or already used: %s -> %s"),
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyAxisTypeCpp"), (uint8)rawAxis),
+                *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyAxisTypeCpp"), (uint8)newT));
+            rawAxis = newT;
+        }
+        sAxiss.Remove(rawAxis);
+        aSorted.Emplace(rawAxis);
+
+        aSorted.Emplace(*sAxiss.CreateIterator());
+    };
+
+    static inline MyAxisTypeCpp Conv_AxisTypeWidget2D_AxisTypeWorld3D(MyAxisTypeCpp type2D)
+    {
+        if (type2D == MyAxisTypeCpp::Invalid || type2D == MyAxisTypeCpp::Z) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("2D to 3D: invalid MyAxisTypeCpp %s, forceing to default!."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyAxisTypeCpp"), (uint8)type2D));
+            type2D = MyAxisTypeCpp::X;
+        }
+
+        if (type2D == MyAxisTypeCpp::X) {
+            return MyAxisTypeCpp::Y;
+        }
+        else if (type2D == MyAxisTypeCpp::Y) {
+            return MyAxisTypeCpp::Z;
+        }
+        else {
+            MY_VERIFY(false);
+            return MyAxisTypeCpp::Invalid;
+        }
+    };
+
+    static inline MyAxisTypeCpp Conv_AxisTypeWorld3D_AxisTypeWidget2D(MyAxisTypeCpp type3D)
+    {
+        if (type3D == MyAxisTypeCpp::Invalid || type3D == MyAxisTypeCpp::X) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("3D to 2D: invalid MyAxisTypeCpp %s, forceing to default!."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyAxisTypeCpp"), (uint8)type3D));
+            type3D = MyAxisTypeCpp::Y;
+        }
+
+        if (type3D == MyAxisTypeCpp::Y) {
+            return MyAxisTypeCpp::X;
+        }
+        else if (type3D == MyAxisTypeCpp::Z) {
+            return MyAxisTypeCpp::Y;
+        }
+        else {
+            MY_VERIFY(false);
+            return MyAxisTypeCpp::Invalid;
+        }
+    };
+
+    static inline FVector Conv_LocWidget2D_LocWorld3D(const FVector2D& locWidget2D)
+    {
+        return FVector(0, -locWidget2D.X, -locWidget2D.Y);
+    };
+
+    static inline FVector2D Conv_LocWorld3D_LocWidget2D(const FVector& locWorld3D)
+    {
+        return FVector2D(-locWorld3D.Y, -locWorld3D.Z);
+    };
+
+    static inline FRotator Conv_AngleWidget2D_RotationWorld3D(float angleWidget2D)
+    {
+        return FRotator(0, 0, -angleWidget2D);
+    };
+
+    static inline float Conv_RotationWorld3D_AngleWidget2D(const FRotator& rotatorWorld3D)
+    {
+        return -rotatorWorld3D.Roll;
+    };
+
+    //suitable for box extend, and scale
+    static inline FVector Conv_SizeWidget2D_SizeWorld3D(const FVector2D& sizeWidget2D, float defaultX = 1)
+    {
+        return FVector(defaultX, sizeWidget2D.X, sizeWidget2D.Y);
+    };
+
+    static inline FVector2D Conv_SizeWorld3D_SizeWidget2D(const FVector& sizeWorld3D)
+    {
+        return FVector2D(sizeWorld3D.Y, sizeWorld3D.Z);
+    };
+
+    //world model facing camera with x positive£º X->-Y, Y->-Z, angle->-roll
+    //Warn: rotator's X, Y is ignored now, since in widget it is coupled in scale and shear
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToTransformWorld3D (TransformWidget2D)", CompactNodeTitle = "->", BlueprintAutocast), Category = "UMyRenderUtilsLibrary")
+        static inline FTransform Conv_TransformWidget2D_TransformWorld3D(const FWidgetTransform& TransformWidget2D)
+    {
+        FTransform ret;
+
+        ret.SetLocation(Conv_LocWidget2D_LocWorld3D(TransformWidget2D.Translation));
+        ret.SetRotation(Conv_AngleWidget2D_RotationWorld3D(TransformWidget2D.Angle).Quaternion());
+        ret.SetScale3D(Conv_SizeWidget2D_SizeWorld3D(TransformWidget2D.Scale));
+
+        return ret;
+    };
+
+    //world model facing camera with x positive£º Y->-X, Z->-Y, roll->-Angle
+    //Warn: rotator's X, Y is ignored now, since in widget it is coupled in scale and shear
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToTransformWidget2D (TransformWorld3D)", CompactNodeTitle = "->", BlueprintAutocast), Category = "UMyRenderUtilsLibrary")
+        static inline FWidgetTransform Conv_TransformWorld3D_TransformWidget2D(const FTransform& TransformWorld3D)
+    {
+        FWidgetTransform ret;
+
+        FVector loc = TransformWorld3D.GetLocation();
+        FVector scale3D = TransformWorld3D.GetScale3D();
+
+        ret.Translation = Conv_LocWorld3D_LocWidget2D(loc);
+        ret.Angle = Conv_RotationWorld3D_AngleWidget2D(TransformWorld3D.GetRotation().Rotator());
+        ret.Scale = Conv_SizeWorld3D_SizeWidget2D(scale3D);
+
+        ret.Shear = FVector2D::ZeroVector;
+
+        return ret;
+    };
+
+    static inline MyRotateState90DCpp Inv_MyRotateState90D(MyRotateState90DCpp rotateState)
+    {
+        if (rotateState == MyRotateState90DCpp::Invalid) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("rotate state is invalid, setting as default one now."));
+            rotateState = MyRotateState90DCpp::Zero;
+        }
+
+        if (rotateState == MyRotateState90DCpp::Zero) {
+            return MyRotateState90DCpp::Zero;
+        }
+        else if (rotateState == MyRotateState90DCpp::Positive90D) {
+            return MyRotateState90DCpp::Negative90D;
+        }
+        else if (rotateState == MyRotateState90DCpp::Negative90D) {
+            return MyRotateState90DCpp::Positive90D;
+        }
+        else {
+            MY_VERIFY(false);
+            return MyRotateState90DCpp::Zero;
+        }
+    };
+
+    static inline MyOrderTypeCpp Inv_MyOrderType(MyOrderTypeCpp type)
+    {
+        if (type == MyOrderTypeCpp::Invalid) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("type is invalid, setting as default one now."));
+            type = MyOrderTypeCpp::ASC;
+        }
+
+        if (type == MyOrderTypeCpp::ASC) {
+            return MyOrderTypeCpp::DESC;
+        }
+        else if (type == MyOrderTypeCpp::DESC) {
+            return MyOrderTypeCpp::ASC;
+        }
+        else {
+            MY_VERIFY(false);
+            return MyOrderTypeCpp::Invalid;
+        }
+    };
+
+    static inline MyAxisAlignmentTypeCpp Inv_MyAxisAlignmentType(MyAxisAlignmentTypeCpp type)
+    {
+        if (type == MyAxisAlignmentTypeCpp::Invalid) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("type is invalid, setting as default one now."));
+            type = MyAxisAlignmentTypeCpp::Negative;
+        }
+
+        if (type == MyAxisAlignmentTypeCpp::Negative) {
+            return MyAxisAlignmentTypeCpp::Positive;
+        }
+        else if (type == MyAxisAlignmentTypeCpp::Mid) {
+            return MyAxisAlignmentTypeCpp::Mid;
+        }
+        else if (type == MyAxisAlignmentTypeCpp::Positive) {
+            return MyAxisAlignmentTypeCpp::Negative;
+        }
+        else {
+            MY_VERIFY(false);
+            return MyAxisAlignmentTypeCpp::Invalid;
+        }
+    };
+
+    //quick path for 90D rotate, instead of float calculation
+    static inline FVector applyFlipState(const FVector& old, MyBoxLikeFlipStateCpp state)
+    {
+        FVector ret = old;
+        if (state == MyBoxLikeFlipStateCpp::Up)
+        {
+            ret.X = -old.Z;
+            ret.Z = old.X;
+        }
+        else if (state == MyBoxLikeFlipStateCpp::Down)
+        {
+            ret.X = old.Z;
+            ret.Z = -old.X;
+        }
+
+        return ret;
+    };
+
+    static inline FVector applyRollState90D(const FVector& old, MyRotateState90DCpp state)
+    {
+        FVector ret = old;
+        if (state == MyRotateState90DCpp::Positive90D)
+        {
+            ret.Y = old.Z;
+            ret.Z = -old.Y;
+        }
+        else if (state == MyRotateState90DCpp::Negative90D)
+        {
+            ret.Y = -old.Z;
+            ret.Z = old.Y;
+        }
+
+        return ret;
+    };
+
+    static inline FRotator Conv_MyRotateState90DWorld3D_Rotator(const FMyRotateState90DWorld3DCpp& data)
+    {
+        FRotator ret(0, 0, 0);
+        if (data.m_eRollState == MyRotateState90DCpp::Negative90D) {
+            ret.Roll = -90;
+        }
+        else if (data.m_eRollState == MyRotateState90DCpp::Zero) {
+
+        }
+        else if (data.m_eRollState == MyRotateState90DCpp::Positive90D) {
+            ret.Roll = 90;
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got unexpected roll state %d."), (uint8)data.m_eRollState);
+        }
+
+        if (data.m_eFlipState == MyBoxLikeFlipStateCpp::Down) {
+            ret.Pitch = -90;
+        }
+        else if (data.m_eFlipState == MyBoxLikeFlipStateCpp::Stand) {
+
+        }
+        else if (data.m_eFlipState == MyBoxLikeFlipStateCpp::Up) {
+            ret.Pitch = 90;
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got unexpected flip state %d."), (uint8)data.m_eFlipState);
+        }
+
+        return ret;
+    };
+
+    static inline FMyRotateState90DWorld3DCpp Conv_MyRotateState90DWidget2D_MyRotateState90DWorld3D(const FMyRotateState90DWidget2DCpp& data)
+    {
+        FMyRotateState90DWorld3DCpp ret;
+        ret.m_eFlipState = MyBoxLikeFlipStateCpp::Stand;
+        ret.m_eRollState = Inv_MyRotateState90D(data.m_eAngleState);
+
+        return ret;
+    };
+
+    static inline FMyRotateState90DWidget2DCpp Conv_MyRotateState90DWorld3D_MyRotateState90DWidget2D(const FMyRotateState90DWorld3DCpp& data)
+    {
+        FMyRotateState90DWidget2DCpp ret;
+        ret.m_eAngleState = Inv_MyRotateState90D(data.m_eRollState);
+
+        return ret;
+    };
+
+    UFUNCTION(BlueprintCallable)
+    static inline FVector applyMyRotateState90D_Vector_World3D(const FVector& old, const FMyRotateState90DWorld3DCpp& state)
+    {
+        //The interesting thing is that, UE4 apply with sequence yaw->pitch->roll in local space
+        //equal to roll->pitch->yaw in global space
+        //here we need global space result
+
+        //FVector ret = applyFlipState(old, state.m_eFlipState);
+        //return applyRollState90D(ret, state.m_eRollState);
+
+        FVector ret = applyRollState90D(old, state.m_eRollState);
+        return applyFlipState(ret, state.m_eFlipState);
+    };
+
+    UFUNCTION(BlueprintCallable)
+    static inline FVector2D applyMyRotateState90D_Vector_Widget2D(const FVector2D& old, const FMyRotateState90DWidget2DCpp& state)
+    {
+        FVector ret3D = applyMyRotateState90D_Vector_World3D(Conv_LocWidget2D_LocWorld3D(old), Conv_MyRotateState90DWidget2D_MyRotateState90DWorld3D(state));
+        return Conv_LocWorld3D_LocWidget2D(ret3D);
+    };
+
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (MyModelInfoBoxWorld3D)", CompactNodeTitle = "->", BlueprintAutocast))
+        static inline FString Conv_MyModelInfoBoxWorld3D_String(const FMyModelInfoBoxWorld3DCpp& data)
+    {
+        return data.ToString();
+    };
+
+    UFUNCTION(BlueprintCallable)
+    static inline FMyModelInfoBoxWorld3DCpp applyMyRotateState90D_ModelInfoBox_World3D(const FMyModelInfoBoxWorld3DCpp& old, const FMyRotateState90DWorld3DCpp& state)
+    {
+        FMyModelInfoBoxWorld3DCpp ret = old;
+        ret.m_cCenterPointRelativeLocation = applyMyRotateState90D_Vector_World3D(old.m_cCenterPointRelativeLocation, state);
+        ret.m_cBoxExtend = applyMyRotateState90D_Vector_World3D(ret.m_cBoxExtend, state).GetAbs();
+        return ret;
+    };
+
+    static inline FMyArrangePointCfgWorld3DCpp Conv_MyArrangePointCfgWidget2D_MyArrangePointCfgWorld3D(const FMyArrangePointCfgWidget2DCpp& data)
+    {
+        FMyArrangePointCfgWorld3DCpp ret;
+
+        ret.m_cCenterPointTransform = Conv_TransformWidget2D_TransformWorld3D(data.m_cCenterPointTransform);
+        ret.m_cAreaBoxExtendFinal = Conv_SizeWidget2D_SizeWorld3D(data.m_cAreaBoxExtendFinal);
+        ret.m_eColAxisType = Conv_AxisTypeWidget2D_AxisTypeWorld3D(data.m_eColAxisType);
+        if (ret.m_eColAxisType == MyAxisTypeCpp::Y) {
+            ret.m_eRowAxisType = MyAxisTypeCpp::Z;
+        }
+        else {
+            MY_VERIFY(ret.m_eColAxisType == MyAxisTypeCpp::Z);
+            ret.m_eRowAxisType = MyAxisTypeCpp::Y;
+        }
+
+        ret.m_cColArrange = data.m_cColArrange.inv();
+        ret.m_cRowArrange = data.m_cRowArrange.inv();
+        ret.m_cStackArrange.reset();
+
+        ret.m_cLimitedRotationAllExpected = Conv_MyRotateState90DWidget2D_MyRotateState90DWorld3D(data.m_cLimitedRotationAllExpected);
+        ret.m_cLimitedRotationAllUnexpected = Conv_MyRotateState90DWidget2D_MyRotateState90DWorld3D(data.m_cLimitedRotationAllUnexpected);
+
+        return ret;
+    };
+
+    static inline FMyArrangePointCfgWidget2DCpp Conv_MyArrangePointCfgWorld3D_MyArrangePointCfgWidget2D(const FMyArrangePointCfgWorld3DCpp& data)
+    {
+        FMyArrangePointCfgWidget2DCpp ret;
+
+        ret.m_cCenterPointTransform = Conv_TransformWorld3D_TransformWidget2D(data.m_cCenterPointTransform);
+        ret.m_cAreaBoxExtendFinal = Conv_SizeWorld3D_SizeWidget2D(data.m_cAreaBoxExtendFinal);
+        ret.m_eColAxisType = Conv_AxisTypeWorld3D_AxisTypeWidget2D(data.m_eColAxisType);
+
+        ret.m_cColArrange = data.m_cColArrange.inv();
+        ret.m_cRowArrange = data.m_cRowArrange.inv();
+
+        ret.m_cLimitedRotationAllExpected = Conv_MyRotateState90DWorld3D_MyRotateState90DWidget2D(data.m_cLimitedRotationAllExpected);
+        ret.m_cLimitedRotationAllUnexpected = Conv_MyRotateState90DWorld3D_MyRotateState90DWidget2D(data.m_cLimitedRotationAllUnexpected);
+
+        return ret;
+    };
+
+    static inline FMyArrangeCoordinateWorld3DCpp Conv_MyArrangeCoordinateWidget2D_MyArrangeCoordinateWorld3D(const FMyArrangeCoordinateWidget2DCpp& data)
+    {
+        FMyArrangeCoordinateWorld3DCpp ret;
+
+        ret.m_cLimitedRotation = Conv_MyRotateState90DWidget2D_MyRotateState90DWorld3D(data.m_cLimitedRotation);
+        ret.m_cCol = data.m_cCol;
+        ret.m_cRow = data.m_cRow;
+        ret.m_cStack.reset();
+
+        return ret;
+    };
+
+    static inline FMyArrangeCoordinateWidget2DCpp Conv_MyArrangeCoordinateWorld3D_MyArrangeCoordinateWidget2D(const FMyArrangeCoordinateWorld3DCpp& data)
+    {
+        FMyArrangeCoordinateWidget2DCpp ret;
+
+        ret.m_cLimitedRotation = Conv_MyRotateState90DWorld3D_MyRotateState90DWidget2D(data.m_cLimitedRotation);
+        ret.m_cCol = data.m_cCol;
+        ret.m_cRow = data.m_cRow;
+
+        return ret;
+    };
+
+    static inline FMyModelInfoBoxWorld3DCpp Conv_MyModelInfoBoxWidget2D_MyModelInfoBoxWorld3D(const FMyModelInfoBoxWidget2DCpp& data)
+    {
+        FMyModelInfoBoxWorld3DCpp ret;
+        ret.m_cCenterPointRelativeLocation = Conv_LocWidget2D_LocWorld3D(data.m_cCenterPointRelativeLocation);
+        ret.m_cBoxExtend = Conv_SizeWidget2D_SizeWorld3D(data.m_cBoxExtend);
+        return ret;
+    };
+
+    static inline FMyModelInfoBoxWidget2DCpp Conv_MyModelInfoBoxWorld3D_MyModelInfoBoxWidget2D(const FMyModelInfoBoxWorld3DCpp& data)
+    {
+        FMyModelInfoBoxWidget2DCpp ret;
+        ret.m_cCenterPointRelativeLocation = Conv_LocWorld3D_LocWidget2D(data.m_cCenterPointRelativeLocation);
+        ret.m_cBoxExtend = Conv_SizeWorld3D_SizeWidget2D(data.m_cBoxExtend);
+        return ret;
+    };
+
+    UFUNCTION(BlueprintPure)
+    static inline FMyArrangePointResolvedMetaWorld3DCpp genMyArrangePointResolvedMetaWorld3D_World3D(const FMyArrangePointCfgWorld3DCpp& data, const FMyModelInfoBoxWorld3DCpp& cModelInfo)
+    {
+        FMyArrangePointResolvedMetaWorld3DCpp ret;
+        ret.rebuildFrom(data, cModelInfo);
+        return ret;
+    };
+
+    UFUNCTION(BlueprintPure)
+    static inline FMyArrangePointResolvedMetaWorld3DCpp genMyArrangePointResolvedMetaWorld3D_Widget2D(const FMyArrangePointCfgWidget2DCpp& data, const FMyModelInfoBoxWidget2DCpp& cModelInfo)
+    {
+        return genMyArrangePointResolvedMetaWorld3D_World3D(Conv_MyArrangePointCfgWidget2D_MyArrangePointCfgWorld3D(data), Conv_MyModelInfoBoxWidget2D_MyModelInfoBoxWorld3D(cModelInfo));
+    };
+
+
+    //get the stable size that always same when 2D 3D mapped each other
+    static inline float getUnifiedSize2D3D(const FMyModelInfoBoxWorld3DCpp& modelInfo)
+    {
+        return UMyRenderUtilsLibrary::Conv_SizeWorld3D_SizeWidget2D(modelInfo.m_cBoxExtend).Size();
+    };
+
+
+    //
+    // target model:
+    // U: flip up, D: flip down, ST: flip stand
+    //           ____
+    //          |    |
+    //  ________| ST |
+    // | U or D |    |
+    // |________|____|
+    //
+    // row and stack base line is always aligned
+    // not completely free: all box always arrange at the bottom(model's Z negative after rotation), simulate the box on desk
+    UFUNCTION(BlueprintCallable)
+    static void helperBoxModelResolveTransformWorld3D(const FMyArrangePointResolvedMetaWorld3DCpp& meta,
+                                                      const FMyArrangeCoordinateWorld3DCpp& coordinate,
+                                                      FTransform& outTransform);
+
+    UFUNCTION(BlueprintCallable)
+    static void helperBoxModelResolveTransformWidget2D(const FMyArrangePointResolvedMetaWorld3DCpp& meta,
+                                                       const FMyArrangeCoordinateWidget2DCpp& coordinate,
+                                                       FWidgetTransform& outTransform);
+
+
+
+    static void helperResolveTransformWorld3DFromPointAndCenterMetaOnPlayerScreenConstrained(const UObject* WorldContextObject, const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp &meta,
                                                                                             float targetPosiFromCenterToBorderOnScreenPercent,
                                                                                             const FVector2D& targetPosiFixOnScreenPercent,
                                                                                             float targetVOnScreenPercent,
                                                                                             float targetModelHeightInWorld,
                                                                                             FTransform &outTargetTranform);
 
-    static float helperGetRemainTimePercent(const TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp>& stepDatas);
+    static float helperGetRemainTimePercent(const TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp>& stepDatas);
 
-    static void helperSetupWorldTransformUpdateAnimationStep(const FMyTransformUpdateAnimationMetaWorldTransformCpp& meta,
-                                                             const FMyWithCurveUpdateStepSettingsWorldTransformCpp& stepData,
-                                                             const TArray<FMyWithCurveUpdaterWorldTransformCpp *>& updatersSorted);
+    static void helperUpdatersSetupStep(const FMyWithCurveUpdateStepMetaTransformWorld3DCpp& meta,
+                                        const FMyWithCurveUpdateStepSettingsTransformWorld3DCpp& stepData,
+                                        const TArray<FMyWithCurveUpdaterTransformWorld3DCpp *>& updatersSorted);
 
-    static void helperSetupTransformUpdateAnimationStep(const FMyTransformUpdateAnimationMetaBaseCpp& meta,
-                                                        const FMyWithCurveUpdateStepSettingsBasicCpp& stepData,
-                                                        const TArray<FMyWithCurveUpdaterBasicCpp *>& updatersSorted);
-
-    static void helperSetupTransformUpdateAnimationSteps(const FMyTransformUpdateAnimationMetaBaseCpp& meta,
-                                                         const TArray<const FMyWithCurveUpdateStepSettingsBasicCpp *>& stepDatas,
-                                                         const TArray<FMyWithCurveUpdaterBasicCpp *>& updatersSorted);
+    static void helperUpdatersSetupSteps(const FMyWithCurveUpdateStepMetaTransformWorld3DCpp& meta,
+                                         const TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp>& stepDatas,
+                                         const TArray<FMyWithCurveUpdaterTransformWorld3DCpp *>& updatersSorted);
 
 
 
-    static void helperSetupWorldTransformUpdateAnimationStepsForPoint(const UObject* WorldContextObject,
-                                                                        float totalDur,
-                                                                        const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp& pointAndCenterMeta,
-                                                                        const FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp& pointInfo,
-                                                                        const TArray<FMyWithCurveUpdateStepSettingsWorldTransformCpp>& stepDatas,
-                                                                        float extraDelayDur,
-                                                                        const TArray<IMyWithCurveUpdaterTransformInterfaceCpp *>& updaterInterfaces,
-                                                                        FString debugName,
-                                                                        bool clearPrevSteps);
+    static void helperUpdatersSetupStepsForPointTransformWorld3D(const UObject* WorldContextObject,
+                                                                 float totalDur,
+                                                                 const FMyPointAndCenterMetaOnPlayerScreenConstrainedCpp& pointAndCenterMeta,
+                                                                 const FMyPointFromCenterAndLengthInfoOnPlayerScreenConstrainedCpp& pointInfo,
+                                                                 const TArray<FMyWithCurveUpdateStepSettingsTransformWorld3DCpp>& stepDatas,
+                                                                 float extraDelayDur,
+                                                                 const TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp *>& updaterInterfaces,
+                                                                 FString debugName,
+                                                                 bool clearPrevSteps);
 
     //a step take 100% of time @waitTime, will be added
-    static void helperAddWaitStep(float waitTime, FString debugStr, const TArray<FMyWithCurveUpdaterBasicCpp *>& updaters);
-    static void helperAddWaitStep(float waitTime, FString debugStr, const TArray<IMyWithCurveUpdaterTransformInterfaceCpp *>& updaterInterfaces);
-
+    static void helperUpdatersAddWaitStep(float waitTime, FString debugStr, const TArray<FMyWithCurveUpdaterTransformWorld3DCpp *>& updaters);
+    static void helperUpdatersAddWaitStep(float waitTime, FString debugStr, const TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp *>& updaterInterfaces);
+    //static void helperUpdatersAddWaitStep(float waitTime, FString debugStr, const TArray<IMyWithCurveUpdaterTransformWidget2DInterfaceCpp *>& updaterInterfaces);
 
     UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (SlateBrush)", CompactNodeTitle = "->", BlueprintAutocast), Category = "UMyRenderUtilsLibrary")
     static FString Conv_SlateBrush_String(const FSlateBrush& brush);
@@ -1710,6 +2987,48 @@ public:
 
 
 protected:
+
+    struct FMyArrangeCoordinateResolvedOneDimCpp : public FMyArrangeCoordinateOneDimensionCpp
+    {
+    public:
+        FMyArrangeCoordinateResolvedOneDimCpp() : FMyArrangeCoordinateOneDimensionCpp()
+        {
+            reset(true);
+        };
+
+        inline void reset(bool resetSubClassDataonly = false)
+        {
+            if (!resetSubClassDataonly) {
+                FMyArrangeCoordinateOneDimensionCpp::reset();
+            }
+
+            m_fElemExtend = 0;
+            m_fElemCenter = 0;
+
+            m_fOutAxisValue = 0;
+
+            m_eAxisType = MyAxisTypeCpp::Invalid;
+        };
+
+        inline void rebuildFrom(const FMyArrangeCoordinateOneDimensionCpp& base, MyAxisTypeCpp axisType,
+                                const FMyModelInfoBoxWorld3DCpp& modelInfoThisElem)
+        {
+
+            *StaticCast<FMyArrangeCoordinateOneDimensionCpp *>(this) = base;
+            m_fElemExtend = getAxisFromVectorRefConst(modelInfoThisElem.m_cBoxExtend, axisType);
+            m_fElemCenter = getAxisFromVectorRefConst(modelInfoThisElem.m_cCenterPointRelativeLocation, axisType);
+
+            m_eAxisType = axisType;
+        };
+
+        float m_fElemExtend;
+        float m_fElemCenter;
+
+        float m_fOutAxisValue;
+
+        MyAxisTypeCpp m_eAxisType;
+    };
+ 
 
     // -------------
     // | E   EE   E

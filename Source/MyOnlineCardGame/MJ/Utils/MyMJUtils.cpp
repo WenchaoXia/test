@@ -12,7 +12,7 @@ FString FMyMJCardPosiCpp::genDebugMsg() const
 
 FString FMyMJCardInfoCpp::genDebugMsg() const
 {
-    return FString::Printf(TEXT("[id %d, flip %s]"), m_iId, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyCardGameBoxLikeElemFlipStateCpp"), (uint8)m_eFlipState)) + m_cPosi.genDebugMsg();
+    return FString::Printf(TEXT("[id %d, flip %s]"), m_iId, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyBoxLikeFlipStateCpp"), (uint8)m_eFlipState)) + m_cPosi.genDebugMsg();
 };
 
 void FMyMJCardValuePackCpp::helperVerifyValues() const

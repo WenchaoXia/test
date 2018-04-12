@@ -30,12 +30,12 @@ enum class MyLogVerbosity : uint8
 
 //model always and must facing x axis
 USTRUCT(BlueprintType)
-struct FMyModelInfoBox3DCpp
+struct FMyModelInfoBoxWorld3DCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyModelInfoBox3DCpp()
+    FMyModelInfoBoxWorld3DCpp()
     {
         reset();
     };
@@ -46,34 +46,45 @@ public:
         m_cBoxExtend = FVector::OneVector;
     };
 
+    inline FString ToString() const
+    {
+        return FString::Printf(TEXT("CenterRelative: %s, BoxExtend: %s"), *m_cCenterPointRelativeLocation.ToString(), *m_cBoxExtend.ToString());
+    };
+
     //final size after all actor scale, component scale applied
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "center point final relative location"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "center point final relative location"))
     FVector m_cCenterPointRelativeLocation;
 
     //final size after all actor scale, component scale applied
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "box extend"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "box extend"))
         FVector m_cBoxExtend;
 
 };
 
 USTRUCT(BlueprintType)
-struct FMyModelInfoBox2DCpp
+struct FMyModelInfoBoxWidget2DCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
-    FMyModelInfoBox2DCpp()
+    FMyModelInfoBoxWidget2DCpp()
     {
         reset();
     };
 
     inline void reset()
     {
+        m_cCenterPointRelativeLocation = FVector2D::ZeroVector;
         m_cBoxExtend = FVector2D::UnitVector;
     };
 
+
+    //final size after all actor scale, component scale applied
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "center point final relative location"))
+    FVector2D m_cCenterPointRelativeLocation;
+
     //local size before scale, like the size in design time
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "box extend"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "box extend"))
     FVector2D m_cBoxExtend;
 };
 
@@ -81,75 +92,104 @@ UENUM()
 enum class MyModelInfoType : uint8
 {
     Invalid = 0               UMETA(DisplayName = "invalid"),
-    Box3D = 10               UMETA(DisplayName = "Box3D"),
-    Box2D = 110               UMETA(DisplayName = "Box2D"),
+    BoxWorld3D = 10           UMETA(DisplayName = "BoxWorld3D"),
+    BoxWidget2D = 110         UMETA(DisplayName = "BoxWidget2D"),
 };
 
 //Todo: use union or cast to save memory
 USTRUCT(BlueprintType)
-struct FMyModelInfoCpp
+struct FMyModelInfoWorld3DCpp
 {
     GENERATED_USTRUCT_BODY()
 
 public:
 
-    FMyModelInfoCpp(MyModelInfoType eType = MyModelInfoType::Box3D)
+    FMyModelInfoWorld3DCpp(MyModelInfoType eType = MyModelInfoType::BoxWorld3D)
     {
         reset(eType);
     };
 
-    virtual ~FMyModelInfoCpp()
+    virtual ~FMyModelInfoWorld3DCpp()
     {
 
     };
 
-    inline void reset(MyModelInfoType eType = MyModelInfoType::Box3D)
+    inline void reset(MyModelInfoType eType = MyModelInfoType::BoxWorld3D)
     {
-        m_cBox3D.reset();
-        m_cBox2D.reset();
+        m_cBox.reset();
         m_eType = eType;
     };
 
-    inline const FMyModelInfoBox3DCpp& getBox3DRefConst() const
+    inline const FMyModelInfoBoxWorld3DCpp& getBox3DRefConst() const
     {
-        if (m_eType != MyModelInfoType::Box3D) {
+        if (m_eType != MyModelInfoType::BoxWorld3D) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("type is not 3D box: actually %d."), (int32)m_eType);
         }
 
-        return m_cBox3D;
+        return m_cBox;
     };
 
-    inline FMyModelInfoBox3DCpp& getBox3DRef()
+    inline FMyModelInfoBoxWorld3DCpp& getBox3DRef()
     {
-        return const_cast<FMyModelInfoBox3DCpp&>(getBox3DRefConst());
-    }
-
-    inline const FMyModelInfoBox2DCpp& getBox2DRefConst() const
-    {
-        if (m_eType != MyModelInfoType::Box2D) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("type is not 2D box: actually %d."), (int32)m_eType);
-        }
-
-        return m_cBox2D;
-    };
-
-    inline FMyModelInfoBox2DCpp& getBox2DRef()
-    {
-        return const_cast<FMyModelInfoBox2DCpp&>(getBox2DRefConst());
+        return const_cast<FMyModelInfoBoxWorld3DCpp&>(getBox3DRefConst());
     }
 
 protected:
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "box 3D"))
-    FMyModelInfoBox3DCpp m_cBox3D;
-
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "box 2D"))
-    FMyModelInfoBox2DCpp m_cBox2D;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "box"))
+    FMyModelInfoBoxWorld3DCpp m_cBox;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "type"))
         MyModelInfoType m_eType;
 };
 
+
+//Todo: use union or cast to save memory
+USTRUCT(BlueprintType)
+struct FMyModelInfoWidget2DCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyModelInfoWidget2DCpp(MyModelInfoType eType = MyModelInfoType::BoxWidget2D)
+    {
+        reset(eType);
+    };
+
+    virtual ~FMyModelInfoWidget2DCpp()
+    {
+
+    };
+
+    inline void reset(MyModelInfoType eType = MyModelInfoType::BoxWidget2D)
+    {
+        m_cBox.reset();
+        m_eType = eType;
+    };
+
+    inline const FMyModelInfoBoxWidget2DCpp& getBox2DRefConst() const
+    {
+        if (m_eType != MyModelInfoType::BoxWidget2D) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("type is not 2D box: actually %d."), (int32)m_eType);
+        }
+
+        return m_cBox;
+    };
+
+    inline FMyModelInfoBoxWidget2DCpp& getBox2DRef()
+    {
+        return const_cast<FMyModelInfoBoxWidget2DCpp&>(getBox2DRefConst());
+    }
+
+protected:
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "box"))
+        FMyModelInfoBoxWidget2DCpp m_cBox;
+
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "type"))
+        MyModelInfoType m_eType;
+};
 
 UENUM()
 enum class MyCurveAssetType : uint8
@@ -498,7 +538,7 @@ public:
     static FRotator fixRotatorValuesIfGimbalLock(const FRotator& rotator, float PitchDeltaTolerance = 0.01);
 
     UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
-    static void rotateOriginWithPivot(const FTransform& originCurrentWorldTransform, const FVector& pivot2OriginRelativeLocation, const FRotator& originTargetWorldRotator, FTransform& originResultWorldTransform);
+    static void rotateOriginWithPivot(const FTransform& originCurrentTransformWorld3D, const FVector& pivot2OriginRelativeLocation, const FRotator& originTargetWorldRotator, FTransform& originResultTransformWorld3D);
 
     static FString getDebugStringFromEWorldType(EWorldType::Type t);
     static FString getDebugStringFromENetMode(ENetMode t);
@@ -543,10 +583,10 @@ public:
     static void playerScreenConstrainedVLengthAbsoluteToDistanceFromCamera(const UObject* WorldContextObject, float ConstrainedVLengthAbsoluteInCamera, float ModelInWorldHeight, float &DistanceFromCamera, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection);
 
     UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
-    static void helperResolveWorldTransformFromPlayerCameraByAbsolute(const UObject* WorldContextObject, FVector2D ConstrainedPosiAbsoluteInCamera, float ConstrainedVLengthAbsoluteInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection);
+    static void helperResolveTransformWorld3DFromPlayerCameraByAbsolute(const UObject* WorldContextObject, FVector2D ConstrainedPosiAbsoluteInCamera, float ConstrainedVLengthAbsoluteInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection);
 
     UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary", meta = (WorldContext = "WorldContextObject", UnsafeDuringActorConstruction = "true"))
-    static void helperResolveWorldTransformFromPlayerCameraByPercent(const UObject* WorldContextObject, FVector2D ConstrainedPosiPercentInCamera, float ConstrainedVLengthPercentInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection);
+    static void helperResolveTransformWorld3DFromPlayerCameraByPercent(const UObject* WorldContextObject, FVector2D ConstrainedPosiPercentInCamera, float ConstrainedVLengthPercentInCamera, float ModelInWorldHeight, FTransform& ResultTransform, FVector &CameraCenterWorldPosition, FVector &CameraCenterDirection);
 
     //following is bond to project resource setup
     UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary", meta = (UnsafeDuringActorConstruction = "true"))
@@ -589,11 +629,11 @@ public:
     
     //offset's values are all linear delta
     //UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
-    //static void calcWorldTransformFromWorldOffsetAndDegreeForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, float degree, const FTransform& worldOffset, FTransform& worldTransform,  FVector ringPointLocalOffset = FVector::ZeroVector, FRotator ringPointLocalRotator = FRotator(0, 180, 0));
+    //static void calcTransformWorld3DFromWorldOffsetAndDegreeForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, float degree, const FTransform& worldOffset, FTransform& TransformWorld3D,  FVector ringPointLocalOffset = FVector::ZeroVector, FRotator ringPointLocalRotator = FRotator(0, 180, 0));
     
     //offset's values are all linear delta
     //UFUNCTION(BlueprintCallable, Category = "UMyCommonUtilsLibrary")
-    //static void calcWorldOffsetAndDegreeFromWorldTransformForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, const FTransform& worldTransform, float &degree, FTransform& worldOffset, FVector ringPointLocalOffset = FVector::ZeroVector, FRotator ringPointLocalRotator = FRotator(0, 180, 0));
+    //static void calcWorldOffsetAndDegreeFromTransformWorld3DForRingPointAroundCenterPointZAxis(const FTransform& centerPointTransform, float ringRadius, const FTransform& TransformWorld3D, float &degree, FTransform& worldOffset, FVector ringPointLocalOffset = FVector::ZeroVector, FRotator ringPointLocalRotator = FRotator(0, 180, 0));
 
     //round related calc API, end
 

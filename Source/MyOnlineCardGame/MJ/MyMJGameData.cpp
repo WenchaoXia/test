@@ -118,7 +118,7 @@ int32 FMyMJDataStructCpp::checkPrivateDataInExpect() const
             }
         }
         else {
-            if (cInfo.m_cPosi.m_iIdxAttender == (uint8)m_eRole || cInfo.m_eFlipState == MyCardGameBoxLikeElemFlipStateCpp::Up) {
+            if (cInfo.m_cPosi.m_iIdxAttender == (uint8)m_eRole || cInfo.m_eFlipState == MyBoxLikeFlipStateCpp::Up) {
                 //supposed to know
                 if (value == 0) {
                     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d: unexpected card %s, value %d."), (uint8)m_eRole, *cInfo.genDebugMsg(), value);
@@ -268,7 +268,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
             }
 
             //flip
-            if (cardInfoTarget.m_eFlipState != MyCardGameBoxLikeElemFlipStateCpp::Invalid) {
+            if (cardInfoTarget.m_eFlipState != MyBoxLikeFlipStateCpp::Invalid) {
                 cardInfoSelf.m_eFlipState = cardInfoTarget.m_eFlipState;
 
                 if (pDirtyRecord) {

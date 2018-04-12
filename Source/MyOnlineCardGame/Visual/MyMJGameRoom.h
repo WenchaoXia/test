@@ -42,14 +42,14 @@ public:
     };
 
     /*
-    int32 getVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp &visualPoint)
+    int32 getVisualPointCfgByIdxAttenderAndSlot(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyArrangePointCfgWorld3DCpp &visualPoint)
     {
         MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
         MY_VERIFY((uint8)eSlot < 0xff);
 
         int32 key = ((idxAttender & 0xff) << 8) & ((uint8)eSlot & 0xff);
 
-        const FMyCardGameVisualPointCfgCpp *pV = m_mVisualPointCache.Find(key);
+        const FMyArrangePointCfgWorld3DCpp *pV = m_mVisualPointCache.Find(key);
         if (pV) {
             visualPoint = *pV;
             return 0;
@@ -57,7 +57,7 @@ public:
 
         int32 errCode = retrieveVisualPointByIdxAttenderAndSlot(idxAttender, eSlot, visualPoint);
         if (errCode == 0) {
-            FMyCardGameVisualPointCfgCpp& newAdded = m_mVisualPointCache.Add(key);
+            FMyArrangePointCfgWorld3DCpp& newAdded = m_mVisualPointCache.Add(key);
             newAdded = visualPoint;
         }
         else {
@@ -74,18 +74,18 @@ protected:
 
     //return errcode, 0 means no error
     UFUNCTION(BlueprintNativeEvent, BlueprintPure)
-    FMyErrorCodeMJGameCpp retrieveCardVisualPointCfg(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp &visualPoint) const;
+    FMyErrorCodeMJGameCpp retrieveCardVisualPointCfg(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyArrangePointCfgWorld3DCpp &visualPoint) const;
 
-    FMyErrorCodeMJGameCpp retrieveCardVisualPointCfg_Implementation(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyCardGameVisualPointCfgCpp &visualPoint) const
+    FMyErrorCodeMJGameCpp retrieveCardVisualPointCfg_Implementation(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyArrangePointCfgWorld3DCpp &visualPoint) const
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDeskAreaCpp::retrieveCardVisualPointCfg() must be overrided by blueprint child class!"));
         return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
     };
 
     UFUNCTION(BlueprintNativeEvent, BlueprintPure)
-    FMyErrorCodeMJGameCpp retrieveAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyCardGameVisualPointCfgCpp &visualPoint) const;
+    FMyErrorCodeMJGameCpp retrieveAttenderVisualPointCfg(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyArrangePointCfgWorld3DCpp &visualPoint) const;
 
-    FMyErrorCodeMJGameCpp retrieveAttenderVisualPointCfg_Implementation(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyCardGameVisualPointCfgCpp &visualPoint) const
+    FMyErrorCodeMJGameCpp retrieveAttenderVisualPointCfg_Implementation(int32 idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp eSubtype, FMyArrangePointCfgWorld3DCpp &visualPoint) const
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDeskAreaCpp::retrieveAttenderVisualPointCfg() must be overrided by blueprint child class!"));
         return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
@@ -93,15 +93,15 @@ protected:
 
     //return errcode, 0 means no error, return cfg other than card
     UFUNCTION(BlueprintNativeEvent)
-    FMyErrorCodeMJGameCpp retrieveTrivalVisualPointCfg(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyCardGameVisualPointCfgCpp &visualPoint) const;
+    FMyErrorCodeMJGameCpp retrieveTrivalVisualPointCfg(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyArrangePointCfgWorld3DCpp &visualPoint) const;
 
-    FMyErrorCodeMJGameCpp retrieveTrivalVisualPointCfg_Implementation(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyCardGameVisualPointCfgCpp &visualPoint) const
+    FMyErrorCodeMJGameCpp retrieveTrivalVisualPointCfg_Implementation(MyMJGameDeskVisualElemTypeCpp eElemType, int32 subIdx0, int32 subIdx1, FMyArrangePointCfgWorld3DCpp &visualPoint) const
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameDeskAreaCpp::retrieveTrivalVisualPointCfg() must be overrided by blueprint child class!"));
         return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
     };
 
-    TMap<int32, FMyCardGameVisualPointCfgCpp> m_mVisualPointCache;
+    TMap<int32, FMyArrangePointCfgWorld3DCpp> m_mVisualPointCache;
 };
 
 
