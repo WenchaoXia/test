@@ -30,7 +30,8 @@
 UENUM(BlueprintType)
 enum class MyErrorCodeCommonPartCpp : uint8
 {
-    NoError = 0                     UMETA(DisplayName = "NoError"),
+    Invalid = 0                     UMETA(DisplayName = "Invalid"),
+    NoError = 1                     UMETA(DisplayName = "NoError"),
 
     //common
     NotProcessed = 10                                     UMETA(DisplayName = "NotProcessed"),

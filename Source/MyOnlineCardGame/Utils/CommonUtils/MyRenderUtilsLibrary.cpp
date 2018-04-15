@@ -734,6 +734,29 @@ UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnConstruction m_pMainBox 0x%p, thi
 */
 
 
+MyErrorCodeCommonPartCpp UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::getModelInfo(FMyModelInfoWidget2DCpp& modelInfo, bool verify) const
+{
+    modelInfo.reset(MyModelInfoType::BoxWidget2D);
+    FVector2D localSize = FVector2D::ZeroVector;
+    MyErrorCodeCommonPartCpp ret = IMySizeWidget2DInterfaceCpp::Execute_getLocalSize(this, localSize);
+
+    modelInfo.getBox2DRef().m_cBoxExtend = localSize / 2;
+    //modelInfo.getBox2DRef().m_cCenterPointRelativeLocation = RenderTransformPivot * localSize;
+    modelInfo.getBox2DRef().m_cCenterPointRelativeLocation = FVector2D::ZeroVector;
+
+    if (verify) {
+        MY_VERIFY(ret == MyErrorCodeCommonPartCpp::NoError);
+    }
+
+    FVector2D renderTransformPivotExpected = UMyRenderUtilsLibrary::getRenderTransformPivotByMyModelInfoBoxWidget2D(modelInfo.getBox2DRef());
+    if (!renderTransformPivotExpected.Equals(RenderTransformPivot, 0.01)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("RenderTransformPivot is not as expected: expected %s, now %s. MyModelInfoBoxWidget2D %s."),
+                  *renderTransformPivotExpected.ToString(), *RenderTransformPivot.ToString(), *modelInfo.getBox2DRef().ToString());
+    }
+
+    return ret;
+};
+
 void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);

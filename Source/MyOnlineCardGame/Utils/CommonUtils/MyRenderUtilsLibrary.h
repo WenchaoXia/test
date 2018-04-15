@@ -608,7 +608,6 @@ public:
     virtual ~AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp();
 
     //BP should only use it for test purpose
-    UFUNCTION(BlueprintCallable)
     virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWorld3DCpp& modelInfo, bool verify) const override;
     virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWorld3DEnsured(struct FMyWithCurveUpdaterTransformWorld3DCpp*& outUpdater) override;
 
@@ -740,12 +739,14 @@ public:
 
 
 //a widget support animation setup at runtime, since default widget's animation is static
+//Warn: Center is always zero, which means instances's rotate pivot should always ne center and it's zero transition always making center at canvas position zero
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
 class MYONLINECARDGAME_API UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp : public UUserWidget, public IMyWithCurveUpdaterTransformWidget2DInterfaceCpp, public IMySizeWidget2DInterfaceCpp
 {
     GENERATED_BODY()
 
 public:
+
     UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
     {
         m_cUpdater.m_cCommonUpdateDelegate.BindUObject(this, &UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonUpdate);
@@ -763,18 +764,19 @@ public:
 
     };
 
-
-
-    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWidget2DCpp& modelInfo, bool verify) const override
+    virtual MyErrorCodeCommonPartCpp getLocalSizeFromCache_Implementation(FVector2D& localSize) override final
     {
-        modelInfo.reset(MyModelInfoType::BoxWidget2D);
-        MyErrorCodeCommonPartCpp ret = IMySizeWidget2DInterfaceCpp::Execute_getLocalSize(this, modelInfo.getBox2DRef().m_cBoxExtend);
-
-        if (verify) {
-            MY_VERIFY(ret == MyErrorCodeCommonPartCpp::NoError);
+        MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
+        if (!m_cMySizeWidget2DInterfaceCachedData.m_bValid) {
+            m_cMySizeWidget2DInterfaceCachedData.reset();
+            ret = IMySizeWidget2DInterfaceCpp::Execute_getLocalSize(this, m_cMySizeWidget2DInterfaceCachedData.m_cLocalSize);
+            m_cMySizeWidget2DInterfaceCachedData.m_bValid = ret == MyErrorCodeCommonPartCpp::NoError;
         }
+        localSize = m_cMySizeWidget2DInterfaceCachedData.m_cLocalSize;
         return ret;
     };
+
+    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWidget2DCpp& modelInfo, bool verify) const override;
 
     virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWidget2DEnsured(struct FMyWithCurveUpdaterTransformWidget2DCpp*& outUpdater) override
     {
@@ -803,13 +805,24 @@ public:
 
 protected:
 
-    IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject()
+    IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject_Bp()
+    
+    virtual void OnWidgetRebuilt() override
+    {
+        Super::OnWidgetRebuilt();
 
+        invalidCachedData();
+    };
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
     void updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector);
     void updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data);
     void updaterActivateTick(bool activate, FString debugString);
+
+    void invalidCachedData()
+    {
+        m_cMySizeWidget2DInterfaceCachedData.m_bValid = false;
+    };
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "show when activated"))
         bool m_bShowWhenActivated;
@@ -819,6 +832,8 @@ protected:
 
     FMyWithCurveUpdaterTransformWidget2DCpp m_cUpdater;
     bool m_bUpdaterNeedTick;
+
+    FMySizeWidget2DInterfaceCachedDataCpp m_cMySizeWidget2DInterfaceCachedData;
 };
 
 
@@ -1947,34 +1962,34 @@ public:
     };
 
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "center point transform"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "center point transform"))
         FTransform m_cCenterPointTransform;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "area box extend final"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "area box extend final"))
         FVector m_cAreaBoxExtendFinal;
 
     //Must be valid and can't be sme as RowAxisType
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col axis type"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "col axis type"))
         MyAxisTypeCpp m_eColAxisType;
 
     //Must be valid and can't be same as ColAxisType
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row axis type"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "row axis type"))
         MyAxisTypeCpp m_eRowAxisType;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col arrange"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "col arrange"))
         FMyArrangeCfgOneDimensionCpp m_cColArrange;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row arrange"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "row arrange"))
         FMyArrangeCfgOneDimensionCpp m_cRowArrange;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "stack arrange"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "stack arrange"))
         FMyArrangeCfgOneDimensionCpp m_cStackArrange;
 
     //all elems should have same rotation expected, to calculate col, row, stack position
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation all expected"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "limited rotation all expected"))
         FMyRotateState90DWorld3DCpp m_cLimitedRotationAllExpected;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation all unexpected"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "limited rotation all unexpected"))
         FMyRotateState90DWorld3DCpp m_cLimitedRotationAllUnexpected;
 
 protected:
@@ -2027,17 +2042,17 @@ public:
     void helperSetIdxColRowStackByMyArrangeCoordinateMeta(const struct FMyArrangePointResolvedMetaWorld3DCpp& meta, const struct FMyArrangeCoordinateMetaCpp& myArrangeCoordinateMeta);
 
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "limited rotation"))
         FMyRotateState90DWorld3DCpp m_cLimitedRotation;
 
     //when colInRow Aligment is left or mid, this count from left to right, othwise reverse
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "col"))
         FMyArrangeCoordinateOneDimensionCpp m_cCol;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "row"))
         FMyArrangeCoordinateOneDimensionCpp m_cRow;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "stack"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "stack"))
         FMyArrangeCoordinateOneDimensionCpp m_cStack;
 };
 
@@ -2073,28 +2088,28 @@ public:
     };
 
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "center point transform"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "center point transform"))
         FWidgetTransform m_cCenterPointTransform;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "area box extend final"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "area box extend final"))
         FVector2D m_cAreaBoxExtendFinal;
 
     //Must be valid and can't be sme as RowAxisType
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col axis type"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "col axis type"))
         MyAxisTypeCpp m_eColAxisType;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col arrange"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "col arrange"))
         FMyArrangeCfgOneDimensionCpp m_cColArrange;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row arrange"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "row arrange"))
         FMyArrangeCfgOneDimensionCpp m_cRowArrange;
 
 
     //all elems should have same rotation expected, to calculate col, row, stack position
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation all expected"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "limited rotation all expected"))
         FMyRotateState90DWidget2DCpp m_cLimitedRotationAllExpected;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation all unexpected"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "limited rotation all unexpected"))
         FMyRotateState90DWidget2DCpp m_cLimitedRotationAllUnexpected;
 };
 
@@ -2137,14 +2152,14 @@ public:
 
 
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "limited rotation"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "limited rotation"))
         FMyRotateState90DWidget2DCpp m_cLimitedRotation;
 
     //when colInRow Aligment is left or mid, this count from left to right, othwise reverse
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "col"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "col"))
         FMyArrangeCoordinateOneDimensionCpp m_cCol;
 
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "row"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "row"))
         FMyArrangeCoordinateOneDimensionCpp m_cRow;
 
 };
@@ -2778,6 +2793,12 @@ public:
         return data.ToString();
     };
 
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (MyModelInfoBoxWidget2D)", CompactNodeTitle = "->", BlueprintAutocast))
+        static inline FString Conv_MyModelInfoBoxWidget2D_String(const FMyModelInfoBoxWidget2DCpp& data)
+    {
+        return data.ToString();
+    };
+
     UFUNCTION(BlueprintCallable)
     static inline FMyModelInfoBoxWorld3DCpp applyMyRotateState90D_ModelInfoBox_World3D(const FMyModelInfoBoxWorld3DCpp& old, const FMyRotateState90DWorld3DCpp& state)
     {
@@ -2866,6 +2887,13 @@ public:
         ret.m_cCenterPointRelativeLocation = Conv_LocWorld3D_LocWidget2D(data.m_cCenterPointRelativeLocation);
         ret.m_cBoxExtend = Conv_SizeWorld3D_SizeWidget2D(data.m_cBoxExtend);
         return ret;
+    };
+
+    UFUNCTION(BlueprintPure)
+        static inline FVector2D getRenderTransformPivotByMyModelInfoBoxWidget2D(const FMyModelInfoBoxWidget2DCpp& cModelInfo)
+    {
+        FVector2D pivotTransform = (cModelInfo.m_cBoxExtend - cModelInfo.m_cCenterPointRelativeLocation) / (cModelInfo.m_cBoxExtend * 2);
+        return pivotTransform;
     };
 
     UFUNCTION(BlueprintPure)

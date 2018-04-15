@@ -18,7 +18,8 @@
 UENUM(BlueprintType)
 enum class MyErrorCodeSubPartMJGameCpp : uint8
 {
-    NoError = 0                     UMETA(DisplayName = "NoError"),
+    Invalid = 0                     UMETA(DisplayName = "Invalid"),
+    NoError = 1                     UMETA(DisplayName = "NoError"),
 
     GameRuleTypeNotEqual = 20    UMETA(DisplayName = "GameRuleTypeNotEqual"),
     pusherIdNotEqual = 100       UMETA(DisplayName = "pusherIdNotEqual"),

@@ -61,6 +61,10 @@ public:
 
 };
 
+//Warn: this info require the widget in canvas have same arrangement as actor in world:
+//m_cCenterPointRelativeLocation: when placed at zero, where is the center
+//m_cBoxExtend: the box size
+//rotate is always done around point zero
 USTRUCT(BlueprintType)
 struct FMyModelInfoBoxWidget2DCpp
 {
@@ -78,6 +82,10 @@ public:
         m_cBoxExtend = FVector2D::UnitVector;
     };
 
+    inline FString ToString() const
+    {
+        return FString::Printf(TEXT("CenterRelative: %s, BoxExtend: %s"), *m_cCenterPointRelativeLocation.ToString(), *m_cBoxExtend.ToString());
+    };
 
     //final size after all actor scale, component scale applied
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "center point final relative location"))

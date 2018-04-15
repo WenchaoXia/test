@@ -20,10 +20,20 @@ class IMyWithCurveUpdaterTransformWorld3DInterfaceCpp
 
 public:
 
-    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWorld3DCpp& modelInfo, bool verify) const = NULL;
+    //supposed to be fast, may come from cache
+    UFUNCTION(BlueprintCallable)
+    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWorld3DCpp& modelInfo, bool verify) const
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getModelInfo() not implemented"));
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
+    };
 
     //Never fail, core dump otherwise
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWorld3DEnsured(struct FMyWithCurveUpdaterTransformWorld3DCpp*& outUpdater) = NULL;
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWorld3DEnsured(struct FMyWithCurveUpdaterTransformWorld3DCpp*& outUpdater)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyWithCurveUpdaterTransformWorld3DEnsured() not implemented"));
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
+    };
 
     //Never fail
     inline struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformWorld3DRef()
@@ -60,10 +70,20 @@ class IMyWithCurveUpdaterTransformWidget2DInterfaceCpp
 
 public:
 
-    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWidget2DCpp& modelInfo, bool verify) const = NULL;
+    //supposed to be fast, may come from cache
+    UFUNCTION(BlueprintCallable)
+    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWidget2DCpp& modelInfo, bool verify) const
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getModelInfo() not implemented"));
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
+    };
 
     //Never fail, core dump otherwise
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWidget2DEnsured(struct FMyWithCurveUpdaterTransformWidget2DCpp*& outUpdater) = NULL;
+    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWidget2DEnsured(struct FMyWithCurveUpdaterTransformWidget2DCpp*& outUpdater)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyWithCurveUpdaterTransformWorld3DEnsured() not implemented"));
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
+    };
 
     //Never fail
     inline struct FMyWithCurveUpdaterTransformWidget2DCpp& getMyWithCurveUpdaterTransformWidget2DRef()
@@ -90,7 +110,6 @@ protected:
 
 //BlueprintNativeEvent is better than BlueprintImplementableEvent since it gives C++ code a nice way to report error that
 //BP not implemented it
-
 UINTERFACE()
 class UMySizeWidget2DInterfaceCpp : public UInterface
 {
@@ -101,28 +120,80 @@ class IMySizeWidget2DInterfaceCpp
 {
     GENERATED_BODY()
 
+
+protected:
+
+    struct FMySizeWidget2DInterfaceCachedDataCpp
+    {
+
+    public:
+
+        FMySizeWidget2DInterfaceCachedDataCpp()
+        {
+            reset();
+        };
+
+        virtual ~FMySizeWidget2DInterfaceCachedDataCpp()
+        {
+
+        };
+
+        inline void reset()
+        {
+            m_bValid = false;
+            m_cLocalSize = FVector2D::ZeroVector;
+        };
+
+
+        bool m_bValid;
+        FVector2D m_cLocalSize;
+    };
+
 public:
-    //return the widget size at DESIGN time, like 1920 * 1080
-    //Must be implemented
+
+    //Will try get from cache, or direct from BP if not implemented
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-    MyErrorCodeCommonPartCpp getLocalSize(FVector2D& localSize) const;
+        MyErrorCodeCommonPartCpp getLocalSizeFromCache(FVector2D& localSize);
 
     //if @keepRatioByWidth is true, it keeps ratio by width, and has higher priority than @keepRatioByHeight
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
-    MyErrorCodeCommonPartCpp setLocalSize(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight);
+        MyErrorCodeCommonPartCpp setLocalSize(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight);
+
+protected:
+
+    //return the widget size at DESIGN time, like 1920 * 1080
+    //Must be implemented
+    UFUNCTION(BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp getLocalSize(FVector2D& localSize) const;
+
 };
 
-#define IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject() \
-MyErrorCodeCommonPartCpp getLocalSize_Implementation(FVector2D &localSize) const override \
+#define IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject_Cpp() \
+public: \
+virtual MyErrorCodeCommonPartCpp getLocalSizeFromCache_Implementation(FVector2D& localSize) override final \
+{ \
+    return IMySizeWidget2DInterfaceCpp::Execute_getLocalSize(this, localSize); \
+}; \
+protected:
+
+#define IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject_Bp() \
+public: \
+virtual MyErrorCodeCommonPartCpp setLocalSize_Implementation(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight) override\
 { \
 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize only implemented in C++."), *GetClass()->GetName()); \
 return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
 }; \
-MyErrorCodeCommonPartCpp setLocalSize_Implementation(const FVector2D& localSize, bool keepRatioByWidth, bool keepRatioByHeight) \
+protected: \
+virtual MyErrorCodeCommonPartCpp getLocalSize_Implementation(FVector2D &localSize) const override \
 { \
-UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize only implemented in C++."), *GetClass()->GetName()); \
-return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
-};
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getLocalSize only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+protected:
+
+#define IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject() \
+IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject_Cpp() \
+IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject_Bp()
 
 
 UINTERFACE()
@@ -149,12 +220,12 @@ public:
 };
 
 #define IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject() \
-MyErrorCodeCommonPartCpp canvasAddChild_Implementation(UWidget *childWidget) override \
+virtual MyErrorCodeCommonPartCpp canvasAddChild_Implementation(UWidget *childWidget) override \
 { \
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: canvasAddChild only implemented in C++."), *GetClass()->GetName()); \
     return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
 }; \
-MyErrorCodeCommonPartCpp canvasSetChildPosi_Implementation(UWidget *childWidget, FVector2D centerPosiInParentPecent) override \
+virtual MyErrorCodeCommonPartCpp canvasSetChildPosi_Implementation(UWidget *childWidget, FVector2D centerPosiInParentPecent) override \
 { \
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: canvasSetChildPosi only implemented in C++."), *GetClass()->GetName()); \
     return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \

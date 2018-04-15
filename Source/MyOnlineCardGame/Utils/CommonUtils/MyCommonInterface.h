@@ -57,12 +57,14 @@ class IMyValueInterfaceCpp
 
 public:
 
+    UFUNCTION(BlueprintCallable)
+        virtual MyErrorCodeCommonPartCpp getValueShowing(int32& valueShowing) const;
+
     //@animationTimeMs if < 0, value should be updated at instance instead of animation, otherwise value will be updated by animation if possible
     UFUNCTION(BlueprintCallable)
         virtual MyErrorCodeCommonPartCpp updateValueShowing(int32 newValueShowing, int32 animationTimeMs);
 
-    UFUNCTION(BlueprintCallable)
-        virtual MyErrorCodeCommonPartCpp getValueShowing(int32& valueShowing) const;
+
 };
 
 UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
@@ -78,10 +80,12 @@ class IMyResourceInterfaceCpp
 public:
 
     UFUNCTION(BlueprintCallable)
-        virtual MyErrorCodeCommonPartCpp setResourcePath(const FDirectoryPath& newResPath);
+        virtual MyErrorCodeCommonPartCpp getResourcePath(FDirectoryPath& resPath) const;
 
     UFUNCTION(BlueprintCallable)
-        virtual MyErrorCodeCommonPartCpp getResourcePath(FDirectoryPath& resPath) const;
+        virtual MyErrorCodeCommonPartCpp setResourcePath(const FDirectoryPath& newResPath);
+
+
 };
 
 
