@@ -76,7 +76,7 @@ void FMyArrangeCoordinateWorld3DCpp::helperResolveTransform(const FMyArrangePoin
         idxColInRow = cVisualInfo.m_iHelperIdxColInRowReal;
     }
     int32 idxStackInCol = cVisualInfo.m_cStack.m_iIdxElem;
-    MyBoxLikeFlipStateCpp eFlipState = cVisualInfo.m_eFlipState;
+    MyBoxFlipStateCpp eFlipState = cVisualInfo.m_eFlipState;
     int32 iXRotate90D = cVisualInfo.m_iRotateX90D;
     int32 iXRotate90DBeforeCount = cVisualInfo.m_iRotateX90DBeforeCount;
     int32 iColInRowExtraMarginCount = cVisualInfo.m_iColInRowExtraMarginCount;
@@ -107,9 +107,9 @@ void FMyArrangeCoordinateWorld3DCpp::helperResolveTransform(const FMyArrangePoin
     //}
 
 
-    if (eFlipState == MyBoxLikeFlipStateCpp::Invalid) {
+    if (eFlipState == MyBoxFlipStateCpp::Invalid) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("invalid eflipstate!"));
-        eFlipState = MyBoxLikeFlipStateCpp::Stand;
+        eFlipState = MyBoxFlipStateCpp::Stand;
     }
 
     if (cModelInfo.m_cBoxExtend.IsZero()) {
@@ -149,7 +149,7 @@ void FMyArrangeCoordinateWorld3DCpp::helperResolveTransform(const FMyArrangePoin
 
     FVector localPointOfAttaching2StackPointRelativeLocation(0); //which will combine to stack point after rotate
     FVector localPointOfAttaching2StackPointRelativeLocationFixL2R(0);
-    if (eFlipState == MyBoxLikeFlipStateCpp::Stand) {
+    if (eFlipState == MyBoxFlipStateCpp::Stand) {
         perRowOffsetB2T = forwardV * cModelInfo.m_cBoxExtend.X * 2;
         perStackOffsetB2T = upV * cModelInfo.m_cBoxExtend.Z * 2;
 
@@ -159,7 +159,7 @@ void FMyArrangeCoordinateWorld3DCpp::helperResolveTransform(const FMyArrangePoin
         localRotatorRelative2StackPoint.Yaw = 180;
 
     }
-    else if (eFlipState == MyBoxLikeFlipStateCpp::Up) {
+    else if (eFlipState == MyBoxFlipStateCpp::Up) {
         perRowOffsetB2T = forwardV * cModelInfo.m_cBoxExtend.Z * 2;
         perStackOffsetB2T = upV * cModelInfo.m_cBoxExtend.X * 2;
 
@@ -194,7 +194,7 @@ void FMyArrangeCoordinateWorld3DCpp::helperResolveTransform(const FMyArrangePoin
 
         }
     }
-    else if (eFlipState == MyBoxLikeFlipStateCpp::Down) {
+    else if (eFlipState == MyBoxFlipStateCpp::Down) {
         perRowOffsetB2T = forwardV * cModelInfo.m_cBoxExtend.Z * 2;
         perStackOffsetB2T = upV * cModelInfo.m_cBoxExtend.X * 2;
 
@@ -439,7 +439,7 @@ MyErrorCodeCommonPartCpp AMyCardGameCardActorBaseCpp::updateVisual(bool bForce)
     ret = updateWithCardBasicResources();
 
     rett = updateWithValue(bForce);
-    MyErrorCodePartJoin(ret, rett);
+    MyErrorCodeCommonPartJoin(ret, rett);
 
     return ret;
 }
@@ -609,7 +609,7 @@ MyErrorCodeCommonPartCpp AMyCardGameCardActorBaseCpp::setResourcePath(const FDir
         m_cResPath = oldPath;
     }
 
-    MyErrorCodePartJoin(ret, updateVisual(true));
+    MyErrorCodeCommonPartJoin(ret, updateVisual(true));
 
     return ret;
 }
@@ -762,7 +762,7 @@ MyErrorCodeCommonPartCpp UMyCardGameCardWidgetBaseCpp::updateWithValue(bool bFor
     m_pCardMainTexture = NULL;
     if (!vPrefix.IsEmpty()) {
         MyErrorCodeCommonPartCpp retT = helperTryLoadCardRes(m_cResPath.Path, vPrefix, &m_pCardMainTexture);
-        MyErrorCodePartJoin(ret, retT);
+        MyErrorCodeCommonPartJoin(ret, retT);
     }
 
     UMyButton* pCB = getCenterButton(false);
@@ -774,7 +774,7 @@ MyErrorCodeCommonPartCpp UMyCardGameCardWidgetBaseCpp::updateWithValue(bool bFor
         pCB->SetStyle(pCB->WidgetStyle);
     }
     else {
-        MyErrorCodePartJoin(ret, MyErrorCodeCommonPartCpp::UObjectNotExist);
+        MyErrorCodeCommonPartJoin(ret, MyErrorCodeCommonPartCpp::UObjectNotExist);
     }
 
     return ret;
@@ -820,7 +820,7 @@ MyErrorCodeCommonPartCpp UMyCardGameCardWidgetBaseCpp::helperTryLoadCardRes(cons
         }
         else {
             *ppOutCardValueMainTexture = NULL;
-            MyErrorCodePartJoin(ret, MyErrorCodeCommonPartCpp::AssetLoadFail);
+            MyErrorCodeCommonPartJoin(ret, MyErrorCodeCommonPartCpp::AssetLoadFail);
         }
     }
 

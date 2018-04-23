@@ -29,7 +29,7 @@ FMyErrorCodeMJGameCpp AMyMJGameDeskAreaCpp::retrieveCfgCache(FMyMJGameDeskVisual
     cPointCfgCache.clear();
 
     FMyArrangePointCfgWorld3DCpp temp;
-    FMyErrorCodeMJGameCpp ret;
+    FMyErrorCodeMJGameCpp ret(true);
     for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
         for (uint8 eSlot = ((uint8)MyMJCardSlotTypeCpp::InvalidIterateMin + 1); eSlot < (uint8)MyMJCardSlotTypeCpp::InvalidIterateMax; eSlot++) {
             ret = retrieveCardVisualPointCfg(idxAttender, (MyMJCardSlotTypeCpp)eSlot, temp);
@@ -177,30 +177,34 @@ int32 UMyMJGameDeskResManagerCpp::prepareForVisual(int32 cardActorNum)
 
 FMyErrorCodeMJGameCpp UMyMJGameDeskResManagerCpp::retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const
 {
-    FMyErrorCodeMJGameCpp ret;
+    FMyErrorCodeMJGameCpp ret(true);
 
     cModelInfoCache.clear();
 
-    const AMyMJGameCardActorBaseCpp* pCDO = getCardActorByIdxConst(0);
+    AMyMJGameCardActorBaseCpp* pCDO = getCardActorByIdxConst(0);
     if (!IsValid(pCDO)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card CDO not exist."));
         return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::RuntimeCDONotPrepared);
     }
 
     FMyModelInfoWorld3DCpp modelInfo;
 
-    ret.m_eCommonPart = pCDO->getModelInfo(modelInfo, false);
+    ret.m_eCommonPart = pCDO->getModelInfoForUpdater(modelInfo);
     if (ret.hasError()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("card CDO getModelInfo error: %s."), *ret.ToString());
         return ret;
     }
     cModelInfoCache.m_cCardModelInfo = modelInfo.getBox3DRefConst();
 
-    const AMyMJGameDiceBaseCpp* pDice = getDiceActorByIdxConst(0);
+    AMyMJGameDiceBaseCpp* pDice = getDiceActorByIdxConst(0);
     if (!IsValid(pDice)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("dice CDO not exist."));
         return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::RuntimeCDONotPrepared);
     }
 
     ret = pDice->getDiceModelInfoNotFromCache(cModelInfoCache.m_cDiceModelInfo, false);
     if (ret.hasError()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("dice CDO getModelInfo error: %s."), *ret.ToString());
         return ret;
     }
 
@@ -236,7 +240,7 @@ AMyMJGameTrivalDancingActorBaseCpp* UMyMJGameDeskResManagerCpp::getTrivalDancing
 
         iDebugExitingThisType++;
 
-        bool bIsFree = (pA->getMyWithCurveUpdaterTransformWorld3DRef().getStepsCount() <= 0);
+        bool bIsFree = (pA->getMyWithCurveUpdaterTransformRef().getStepsCount() <= 0);
 
         if (freeActorOnly && !bIsFree) {
             continue;
@@ -358,8 +362,11 @@ void AMyMJGameRoomCpp::startVisual()
     }
 
     if (checkSettings()) {
-        FMyMJGameDeskVisualCfgCacheCpp cCfgCache;
+        FMyMJGameDeskVisualCfgCacheCpp& cCfgCache = m_cCfgCache;
+        cCfgCache.reset();
         if (!retrieveCfg(cCfgCache).hasError()) {
+
+            cCfgCache.m_bValid = true;
 
             UMyMJGameDeskVisualDataObjCpp* pO = m_pDataSuit->getDeskDataObjVerified();
 
@@ -427,6 +434,8 @@ void AMyMJGameRoomCpp::BeginPlay()
 
     Super::BeginPlay();
 
+    m_cCfgCache.reset();
+
     if (!m_pResManager->OnBeginPlay())
     {
         return;
@@ -448,25 +457,29 @@ void AMyMJGameRoomCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 FMyErrorCodeMJGameCpp AMyMJGameRoomCpp::retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache)
 {
-    cCfgCache.clear();
+    cCfgCache.reset();
 
     if (!IsValid(m_pResManager)) {
+        MY_VERIFY(false);
         return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::UComponentNotExist);
     }
 
-    FMyErrorCodeMJGameCpp ret;
+    FMyErrorCodeMJGameCpp ret(true);
     ret = m_pResManager->retrieveCfgCache(cCfgCache.m_cModelInfo);
     if (ret.hasError()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("res manager retrive cfg cache fail: %s"), *ret.ToString());
         return ret;
     }
 
     if (!IsValid(m_pDeskAreaActor)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("desk area not specified"));
         return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::AActorNotExist);
     }
 
     //get card
     ret = m_pDeskAreaActor->retrieveCfgCache(cCfgCache.m_cPointCfg);
     if (ret.hasError()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("desk area actor retrive cfg cache fail: %s"), *ret.ToString());
         return ret;
     }
 
@@ -480,7 +493,7 @@ MyMJGameRuleTypeCpp AMyMJGameRoomCpp::helperGetRuleTypeNow() const
 
 void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
                                         const FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
-                                        const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
+                                        const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecordFiltered,
                                         const TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
                                         const TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices,
                                         bool bIsFullBaseReset,
@@ -516,7 +529,7 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
         //pCardActor->setVisible(false);
         //pCardActor->SetActorTransform(cInfoAndResult.m_cVisualResult.m_cTransform);
 
-        FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &pCardActor->getMyWithCurveUpdaterTransformWorld3DRef();
+        FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &pCardActor->getMyWithCurveUpdaterTransformRef();
         pUpdater->setHelperTransformOrigin(pCardActor->GetTransform());
         pUpdater->setHelperTransformFinal(cInfoAndResult.m_cVisualResult.m_cTransform);
 
@@ -539,7 +552,7 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
         AMyMJGameDiceBaseCpp* pDiceActor = m_pResManager->getDiceActorByIdxEnsured(idDice);
         pDiceActor->SetActorHiddenInGame(false);
 
-        FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &pDiceActor->getMyWithCurveUpdaterTransformWorld3DRef();
+        FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &pDiceActor->getMyWithCurveUpdaterTransformRef();
         pUpdater->setHelperTransformOrigin(pDiceActor->GetTransform());
         pUpdater->setHelperTransformFinal(cInfoAndResult.m_cVisualResult.m_cTransform);
 
@@ -551,6 +564,40 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
         //pDiceActor->addTargetToGoHistory(cInfoAndResult);
 
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("dice %d update transform to: %s."), idDice, *cInfoAndResult.m_cVisualResult.m_cTransform.ToString());
+    }
+
+    const TSet<int32>& sD = cCoreDataDirtyRecordFiltered.getRecordSetRefConst();
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("sd Num %d, in empty %d."), sD.Num(), cNextCoreDataDirtyRecordSincePrev.isEmpty());
+    for (auto& Elem : sD)
+    {
+        int32 v = Elem;
+
+        int32 subIdx0, subIdx1, subIdx2;
+        cCoreDataDirtyRecordFiltered.recordValueToIdxValuesWith3Idxs(v, subIdx0, subIdx1, subIdx2);
+        MyMJGameCoreDataDirtyMainTypeCpp eMainType = MyMJGameCoreDataDirtyMainTypeCpp(subIdx0);
+
+        if (eMainType == MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePublic) {
+            int32 idxAttender = subIdx1;
+            const FMyMJRoleDataAttenderPublicCpp& dataAttenderPublic = cCoreData.getRoleDataAttenderPublicRefConst(idxAttender);
+
+            UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
+            if (IsValid(pUI)) {
+                pUI->showMyMJRoleDataAttenderPublicChanged(idxAttender, dataAttenderPublic, subIdx2);
+            }
+
+        }
+        else if (eMainType == MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate) {
+            int32 idxAttender = subIdx1;
+            const FMyMJRoleDataAttenderPrivateCpp& dataAttenderPrivate = cCoreData.getRoleDataAttenderPrivateRefConst(idxAttender);
+
+            UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
+            if (IsValid(pUI)) {
+                pUI->showMyMJRoleDataAttenderPrivateChanged(idxAttender, dataAttenderPrivate, subIdx2);
+            }
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected dirty main type %d."), (int32)eMainType);
+        }
     }
 };
 
@@ -689,7 +736,7 @@ void AMyMJGameRoomCpp::tipEventApplied(const FMyMJGameDeskVisualCfgCacheCpp& cCf
 
                 UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
                 if (IsValid(pUI)) {
-                    IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_showAttenderWeave(pUI, dur, idxAttender, eWeaveVisualType);
+                    pUI->showAttenderWeave(dur, idxAttender, eWeaveVisualType);
                 }
                 //if (pUI->GetClass()->ImplementsInterface(UMyMJGameInRoomUIMainWidgetInterfaceCpp::StaticClass()))
                 //C++ already implemented it
@@ -869,14 +916,13 @@ AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 idxAtte
     TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp*> aBase;
     FVector finalLocationCenter(0, 0, 0);
     for (int32 i = 0; i < 2; i++) {
-        finalT.Emplace(&aDices[i]->getMyWithCurveUpdaterTransformWorld3DRef().getHelperTransformFinalRefConst());
+        finalT.Emplace(&aDices[i]->getMyWithCurveUpdaterTransformRef().getHelperTransformFinalRefConst());
         finalLocationCenter += finalT[i]->GetLocation();
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("dice final T: %s"), *finalT[i]->ToString());
     }
     finalLocationCenter /= 2;
 
-    FMyModelInfoWorld3DCpp diceModelInfo;
-    aDices[0]->getModelInfo(diceModelInfo, true);
+    FMyModelInfoWorld3DCpp diceModelInfo = aDices[0]->getModelInfoForUpdaterEnsured();
 
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("debugCenterLocation: %s"), *debugCenterLocation.ToString());
 
@@ -945,7 +991,7 @@ AMyMJGameRoomCpp::showAttenderThrowDices_Implementation(float dur, int32 idxAtte
 
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("showAttenderThrowDices_Implementation."));
 
-    return FMyErrorCodeMJGameCpp();
+    return FMyErrorCodeMJGameCpp(true);
 }
 
 FMyErrorCodeMJGameCpp
@@ -1022,7 +1068,7 @@ AMyMJGameRoomCpp::showAttenderCardsDistribute_Implementation(float dur, int32 id
                 int32 idxTemp = pTargetToGo->m_cVisualInfo.m_cCol.m_iIdxElem - cardDistributedBefore;
 
                 if (idxTemp < aCardsTemp.Num()) {
-                    aCardsTemp[idxTemp]->getMyWithCurveUpdaterTransformWorld3DRef().setHelperTransformGroupPoint(pTargetToGo->m_cVisualResult.m_cTransform);
+                    aCardsTemp[idxTemp]->getMyWithCurveUpdaterTransformRef().setHelperTransformGroupPoint(pTargetToGo->m_cVisualResult.m_cTransform);
                     debugGroupSetCount++;
                 }
                 else {
@@ -1066,7 +1112,7 @@ AMyMJGameRoomCpp::showAttenderCardsDistribute_Implementation(float dur, int32 id
 
     }
 
-    return FMyErrorCodeMJGameCpp();
+    return FMyErrorCodeMJGameCpp(true);
 }
 
 FMyErrorCodeMJGameCpp
@@ -1098,7 +1144,7 @@ AMyMJGameRoomCpp::showAttenderTakeCards_Implementation(float dur, int32 idxAtten
         UMyRenderUtilsLibrary::helperUpdatersSetupStepsForPointTransformWorld3D(this, dur, attenderOnScreenMeta, areaCfg.m_cCardShowPoint, *pSteps, 0, aBase, TEXT("take cards focused"), true);
     }
 
-    return FMyErrorCodeMJGameCpp();
+    return FMyErrorCodeMJGameCpp(true);
 }
 
 FMyErrorCodeMJGameCpp
@@ -1207,7 +1253,7 @@ AMyMJGameRoomCpp::showAttenderGiveOutCards_Implementation(float dur, int32 idxAt
         }
     }
 
-    return FMyErrorCodeMJGameCpp();
+    return FMyErrorCodeMJGameCpp(true);
 }
 
 FMyErrorCodeMJGameCpp
@@ -1302,5 +1348,5 @@ AMyMJGameRoomCpp::showAttenderWeave_Implementation(float dur, int32 idxAttender,
         break;
     }
 
-    return FMyErrorCodeMJGameCpp();
+    return FMyErrorCodeMJGameCpp(true);
 }

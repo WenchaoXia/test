@@ -6,6 +6,9 @@
 
 #include "Kismet/GameplayStatics.h"
 
+#include "Runtime/UMG/Public/Blueprint/SlateBlueprintLibrary.h"
+#include "Runtime/UMG/Public/Blueprint/WidgetLayoutLibrary.h"
+
 #include "UnrealNetwork.h"
 #include "Engine/World.h"
 #include "MyMJGameRoomLevelScriptActorCpp.h"
@@ -30,9 +33,9 @@ public:
     {
     };
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             FMyWithCurveUpdateStepDataTransformWorld3DCpp::reset();
         }
 
@@ -105,6 +108,23 @@ AMyMJGameRoomViewerPawnBaseCpp::~AMyMJGameRoomViewerPawnBaseCpp()
 
 };
 
+AMyMJGamePlayerControllerCpp* AMyMJGameRoomViewerPawnBaseCpp::getMJGamePlayerController() const
+{
+    if (this->Controller == NULL) {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Controller is NULL."));
+        return NULL;
+    }
+
+    AMyMJGamePlayerControllerCpp* pC = Cast<AMyMJGamePlayerControllerCpp>(Controller);
+    if (pC == NULL) {
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("failed to cast, it's class is %s."), *Controller->GetClass()->GetName());
+        return NULL;
+    }
+
+    return pC;
+}
+
+
 
 void AMyMJGameRoomViewerPawnBaseCpp::helperGetCameraData(int32 idxDeskPosition, FMyCardGameCameraDataCpp& cameraData) const
 {
@@ -139,7 +159,7 @@ void AMyMJGameRoomViewerPawnBaseCpp::changeInRoomDeskPosition(int32 idxDeskPosit
     bool bAlreadyInRoom = dynDataStart.m_cMyTransformOfZRotation.m_cLocation.m_fRadiusOnXYPlane < (dynDataEnd.m_cMyTransformOfZRotation.m_cLocation.m_fRadiusOnXYPlane * JudgePawnAlreadyInRoomCoOfRadius);
 
 
-    FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &getMyWithCurveUpdaterTransformWorld3DRef();
+    FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &getMyWithCurveUpdaterTransformRef();
     pUpdater->clearSteps();
     pUpdater->setHelperTransformOrigin(GetActorTransform());
 
@@ -244,6 +264,7 @@ void AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepUpdate(const FMyWithCurveUpdat
 
     }
 
+    tryUpdateUI(false);
 };
 
 void AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
@@ -264,33 +285,90 @@ void AMyMJGameRoomViewerPawnBaseCpp::updaterOnStepFinish(const FMyWithCurveUpdat
         //data.m_cEnd.AddTranslations
     }
 
-    if (this->Controller == NULL) {
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("Controller is NULL."));
-        return;
+    tryUpdateUI(true);
+}
+
+MyErrorCodeCommonPartCpp AMyMJGameRoomViewerPawnBaseCpp::getProjectedAttenderPoints(AMyMJGamePlayerControllerCpp& myController, TArray<FVector2D>& aPoints)
+{
+    aPoints.Reset();
+
+    FMyArrangePointCfgWorld3DCpp visualPoint;
+    const FMyMJGameDeskVisualCfgCacheCpp& cfgCache = AMyMJGameRoomLevelScriptActorCpp::helperGetRoomActor(&myController, true)->getCfgCacheRefConst();
+    if (!cfgCache.m_bValid) {
+        return MyErrorCodeCommonPartCpp::InternalError;
     }
 
-    AMyMJGamePlayerControllerCpp* pC = Cast<AMyMJGamePlayerControllerCpp>(Controller);
+    //FGeometry geo = UWidgetLayoutLibrary::GetPlayerScreenWidgetGeometry(&myController);
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("player screen geo local size %s, absolute %s."),
+        //*USlateBlueprintLibrary::GetLocalSize(geo).ToString(),
+        //*USlateBlueprintLibrary::GetAbsoluteSize(geo).ToString());
+    //FVector2D localSize = USlateBlueprintLibrary::GetLocalSize(geo);
+    //float XYRatio = localSize.X / localSize.Y;
+
+
+    for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
+        if (0 != cfgCache.m_cPointCfg.getAttenderVisualPointCfg(idxAttender, MyMJGameDeskVisualElemAttenderSubtypeCpp::OnDeskLocation, visualPoint)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got error when getAttenderVisualPointCfg, idxAttender %d."), idxAttender);
+            return MyErrorCodeCommonPartCpp::InternalError;
+        }
+
+        FVector2D ProjectedPoint;
+        if (!UGameplayStatics::ProjectWorldToScreen(&myController, visualPoint.m_cCenterPointTransform.GetLocation(), ProjectedPoint, true)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got error when project point to screen."));
+            return MyErrorCodeCommonPartCpp::InternalError;
+        }
+
+        aPoints.Emplace(ProjectedPoint);
+
+        /*
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("projected point 0: %s, local %s."), *ProjectedPoint.ToString(), *geo.AbsoluteToLocal(ProjectedPoint).ToString());
+
+        UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(&myController, visualPoint.m_cCenterPointTransform.GetLocation(), ProjectedPoint);
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("projected point 1: %s."), *ProjectedPoint.ToString());
+        */
+    }
+
+
+    return MyErrorCodeCommonPartCpp::NoError;
+};
+
+void AMyMJGameRoomViewerPawnBaseCpp::tryUpdateUI(bool changeModeAndCreate)
+{
+    AMyMJGamePlayerControllerCpp* pC = getMJGamePlayerController();
     if (pC == NULL) {
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("failed to cast, it's class is %s."), *Controller->GetClass()->GetName());
         return;
     }
 
     UMyMJGameUIManagerCpp* pUIManager = pC->getUIManagerVerified();
-    pUIManager->changeUIMode(MyMJGameUIModeCpp::InRoomPlay);
-
-    UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = pUIManager->getInRoomUIMain(true, false);
-
-    if (pUI) {
-        if (pUI->GetClass()->ImplementsInterface(UMyMJGameInRoomUIMainWidgetInterfaceCpp::StaticClass()))
-        {
-            pUI->changeDeskPositionOfIdxScreenPosition0(pData->m_iIdxDeskPositionTarget);
-        }
-        else {
-            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("pUI not implemented interface UMyPawnUIInterfaceCpp."));
-        }
+    if (changeModeAndCreate) {
+        pUIManager->changeUIMode(MyMJGameUIModeCpp::InRoomPlay); //Todo:: use game settings
     }
-    else {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pUI is NULL, check your settings, maybe forgot set it."));
-    }
-}
 
+    UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = pUIManager->getInRoomUIMain(changeModeAndCreate, false);
+    if (pUI == NULL) {
+        if (changeModeAndCreate) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pUI is NULL, check your settings, maybe forgot set it."));
+        }
+        return;
+    }
+
+    TArray<FVector2D> aPoints;
+    if (getProjectedAttenderPoints(*pC, aPoints) != MyErrorCodeCommonPartCpp::NoError) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got error for getProjectedAttenderPoints()."));
+        return;
+    }
+
+    //FGeometry geo = UWidgetLayoutLibrary::GetPlayerScreenWidgetGeometry(&myController);
+    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("player screen geo local size %s, absolute %s."),
+    //*USlateBlueprintLibrary::GetLocalSize(geo).ToString(),
+    //*USlateBlueprintLibrary::GetAbsoluteSize(geo).ToString());
+    //FVector2D localSize = USlateBlueprintLibrary::GetLocalSize(geo);
+    //float XYRatio = localSize.X / localSize.Y;
+
+    FGeometry geo = UWidgetLayoutLibrary::GetPlayerScreenWidgetGeometry(pC);
+    FVector2D localSize = USlateBlueprintLibrary::GetLocalSize(geo);
+    float XYRatio = localSize.X / localSize.Y;
+
+    pUI->updateAttenderPositions(XYRatio, aPoints);
+};

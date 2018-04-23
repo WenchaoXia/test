@@ -15,6 +15,8 @@
 
 //     if (!(cond)) {UE_MY_LOG(LogMyUtilsI, Error, _TEXT("my verify false")); UE_MY_LOG(LogMyUtilsI, Fatal, _TEXT("core dump now")); verify(false);}
 
+//#define UE_MY_LOG_UOBJECT(CategoryName, Verbosity, Format, ...) \
+        //UE_MY_LOG(CategoryName, Verbosity, TEXT("%s: ") Format, *GetName(), ##__VA_ARGS__)
 
 //Some code have relationship with the implemention in UE4's source, when upgrade, search code with "UE4 upgrade" and check
 #define MySelectionUnknown (-1)
@@ -27,14 +29,20 @@
 
 #define MyIdxInvalid (-1)
 
+#define MyCommonMinDelta (0.00001f)
+#define MyDeNominatorAsZeroTolerance MyCommonMinDelta
+
+
 UENUM(BlueprintType)
 enum class MyErrorCodeCommonPartCpp : uint8
 {
     Invalid = 0                     UMETA(DisplayName = "Invalid"),
     NoError = 1                     UMETA(DisplayName = "NoError"),
+    InternalError = 5               UMETA(DisplayName = "InternalError"),
 
     //common
     NotProcessed = 10                                     UMETA(DisplayName = "NotProcessed"),
+    TypeUnexpected = 11                                   UMETA(DisplayName = "TypeUnexpected"),
 
     //Role and Authority
     HaveNoAuthority = 40                                  UMETA(DisplayName = "HaveNoAuthority"),
@@ -53,20 +61,28 @@ enum class MyErrorCodeCommonPartCpp : uint8
     UObjectNotExist = 101                                 UMETA(DisplayName = "UObjectNotExist"),
     UComponentNotExist = 120                              UMETA(DisplayName = "UComponentNotExist"),
     AActorNotExist = 140                                  UMETA(DisplayName = "AActorNotExist"), //not specified or configed
+    AControllerNotExist = 150                             UMETA(DisplayName = "AControllerNotExist"),
+    AControllerTypeUnexpected = 151                       UMETA(DisplayName = "AControllerTypeUnexpected"),
+
 
     //Render: Mesh, material, etc
     ModelSizeIncorrect = 160                              UMETA(DisplayName = "ModelSizeIncorrect"), //model can be box and sphere for mesh, or FVector for material and texture
+    ModelInfoIncorrect = 161                              UMETA(DisplayName = "ModelInfoIncorrect"),
+    UIPanelSlotTypeUnexpected = 170                       UMETA(DisplayName = "UIPanelSlotTypeUnexpected"),
+    UIPanelSlotDataUnexpected = 171                       UMETA(DisplayName = "UIPanelSlotDataUnexpected"),
+
+    RenderDataUnexpected = 176                             UMETA(DisplayName = "RenderDataUnexpected"),
 
     //interfaces
-    InterfaceFunctionNotImplementedByChildClass = 200                UMETA(DisplayName = "InterfaceFunctionNotImplementedByChildClass"),
-    InterfaceFunctionNotImplementedByBlueprint = 201                 UMETA(DisplayName = "InterfaceFunctionNotImplementedByBlueprint"),
-    InterfaceFunctionNotImplementedOnPurPose = 202                   UMETA(DisplayName = "InterfaceFunctionNotImplementedOnPurPose"), //caller should not call it now, not implemented it yet
+    InterfaceFunctionNotImplementedByChildClass = 200     UMETA(DisplayName = "InterfaceFunctionNotImplementedByChildClass"),
+    InterfaceFunctionNotImplementedByBlueprint = 201      UMETA(DisplayName = "InterfaceFunctionNotImplementedByBlueprint"),
+    InterfaceFunctionNotImplementedOnPurPose = 202        UMETA(DisplayName = "InterfaceFunctionNotImplementedOnPurPose"), //caller should not call it now, not implemented it yet
 
 };
 
 //always remember first error
-#define MyErrorCodePartJoin(SourcePart, NewPart) \
-if ((int32)SourcePart == 0) { \
+#define MyErrorCodeCommonPartJoin(SourcePart, NewPart) \
+if (SourcePart == MyErrorCodeCommonPartCpp::NoError) { \
     SourcePart = (NewPart); \
 }
 
@@ -145,7 +161,7 @@ enum class MyContinuousAlignmentTypeCpp : uint8
 
 //same as pitch
 UENUM()
-enum class MyBoxLikeFlipStateCpp : uint8
+enum class MyBoxFlipStateCpp : uint8
 {
     Invalid = 0                    UMETA(DisplayName = "Invalid"),
 

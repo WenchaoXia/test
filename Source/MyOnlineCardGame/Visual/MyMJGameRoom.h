@@ -154,7 +154,7 @@ public:
     UFUNCTION(BlueprintCallable)
     AMyMJGameTrivalDancingActorBaseCpp* getTrivalDancingActorByClass(TSubclassOf<AMyMJGameTrivalDancingActorBaseCpp> classType, bool freeActorOnly);
 
-    //return error code
+    //return error code, always gen log if error happens
     UFUNCTION(BlueprintPure)
     FMyErrorCodeMJGameCpp retrieveCfgCache(FMyMJGameDeskVisualActorModelInfoCacheCpp& cModelInfoCache) const;
 
@@ -205,6 +205,14 @@ public:
 
     bool checkSettings() const;
     void getCameraData(int32 idxDeskPosition, FMyCardGameCameraDataCpp& cameraData) const;
+    inline const FMyMJGameDeskVisualCfgCacheCpp& getCfgCacheRefConst() const
+    {
+        if (!m_cCfgCache.m_bValid) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("cfg cache not valid!"));
+        }
+        return m_cCfgCache;
+    };
+
 
     void startVisual();
     void stopVisual();
@@ -226,7 +234,7 @@ public:
 
     void updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
                           const FMyMJDataStructWithTimeStampBaseCpp& cCoreData,
-                          const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecord,
+                          const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecordFiltered,
                           const TMap<int32, FMyMJGameCardVisualInfoAndResultCpp>& mNewActorDataIdCards,
                           const TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp>& mNewActorDataIdDices,
                           bool bIsFullBaseReset,
@@ -272,7 +280,7 @@ protected:
                                      MyMJGameEventVisualTypeCpp weaveVsualType, const struct FMyMJWeaveCpp& weave,
                                      const TArray<class AMyMJGameCardActorBaseCpp*>& cardActorsWeaved, const TArray<class AMyMJGameCardActorBaseCpp*>& cardActorsOtherMoving) override;
 
-    //return error code
+    //return error code, always gen error log if it have
     FMyErrorCodeMJGameCpp retrieveCfg(FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
 
     //contains all range >= min and <= max
@@ -290,6 +298,8 @@ protected:
     AMyMJGameDeskAreaCpp* m_pDeskAreaActor;
 
     //end
+
+    FMyMJGameDeskVisualCfgCacheCpp m_cCfgCache;
 
     FTimerHandle m_cLoopTimerHandle;
 

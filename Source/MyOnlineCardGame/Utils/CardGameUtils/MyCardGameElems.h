@@ -11,7 +11,7 @@
 
 
 UCLASS(BlueprintType)
-class MYONLINECARDGAME_API AMyCardGameCardActorBaseCpp : public AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp, public IMyIdInterfaceCpp, public IMyValueInterfaceCpp, public IMyResourceInterfaceCpp
+class MYONLINECARDGAME_API AMyCardGameCardActorBaseCpp : public AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp, public IMyIdInterfaceCpp, public IMyValueInterfaceCpp, public IMyResourceInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -119,9 +119,9 @@ public:
         reset(true);
     };
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
 
@@ -150,7 +150,7 @@ protected:
 
 //for simple, dice is not set by value directly, but through world rotation 
 UCLASS(BlueprintType)
-class MYONLINECARDGAME_API AMyCardGameDiceActorBaseCpp : public AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp, public IMyIdInterfaceCpp
+class MYONLINECARDGAME_API AMyCardGameDiceActorBaseCpp : public AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp, public IMyIdInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -196,14 +196,14 @@ public:
     };
 
     //go through cache layer and leave actor untouched, may fail if verify is false
-    inline MyErrorCodeCommonPartCpp getDiceModelInfoNotFromCache(FMyCardGameDiceModelInfoCpp& fullInfo, bool verify) const
+    inline MyErrorCodeCommonPartCpp getDiceModelInfoNotFromCache(FMyCardGameDiceModelInfoCpp& fullInfo, bool verify)
     {
         MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
         while (1) {
 
             FMyModelInfoWorld3DCpp modelInfoAll;
 
-            ret = getModelInfo(modelInfoAll, verify);
+            ret = getModelInfoForUpdater(modelInfoAll);
             if (ret != MyErrorCodeCommonPartCpp::NoError) {
                 break;
             }
@@ -313,7 +313,7 @@ public:
 
 
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyCardGameCardWidgetBaseCpp : public UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp, public IMyWidgetBasicOperationInterfaceCpp, public IMyIdInterfaceCpp, public IMyValueInterfaceCpp, public IMyResourceInterfaceCpp
+class MYONLINECARDGAME_API UMyCardGameCardWidgetBaseCpp : public UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp, public IMyIdInterfaceCpp, public IMyValueInterfaceCpp, public IMyResourceInterfaceCpp, public IMyCardGameCardWidgetBaseInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -385,9 +385,7 @@ public:
 
 protected:
 
-#if WITH_EDITOR
-    virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
-#endif
+    IMyCardGameCardWidgetBaseInterfaceCpp_DefaultImplementationForUObject_Bp()
 
     virtual void OnWidgetRebuilt() override
     {
@@ -397,36 +395,15 @@ protected:
         updateWithValue(true);
     };
 
+#if WITH_EDITOR
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
+#endif
 
-    IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject();
 
     MyErrorCodeCommonPartCpp updateWithValue(bool bForce);
 
     MyErrorCodeCommonPartCpp helperTryLoadCardRes(const FString &modelAssetPath, const FString &valuePrefix, class UTexture** ppOutMainCardTexture);
 
-    UFUNCTION(BlueprintNativeEvent)
-    MyErrorCodeCommonPartCpp getCenterButtonFromBP(UMyButton*& button);
-
-    inline MyErrorCodeCommonPartCpp getCenterButtonFromBP_Implementation(UMyButton*& button)
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getCenterButtonFromBP not implemented in BP!"), *GetClass()->GetName());
-        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint;
-    };
-
-    inline void invalidCachedData()
-    {
-        m_cCachedData.m_bValid = false;
-    };
-
-    inline void refillCachedData()
-    {
-        m_cCachedData.reset();
-        MyErrorCodeCommonPartCpp ret = getCenterButtonFromBP(m_cCachedData.m_pCenterButton);
-
-        if (ret != MyErrorCodeCommonPartCpp::NoError) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getCenterButtonFromBP return fail: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyErrorCodeCommonPartCpp"), (uint8)ret));
-        }
-    };
 
     inline UMyButton* getCenterButton(bool verify = true)
     {
@@ -462,6 +439,23 @@ protected:
 
     FMyCardGameCardWidgetCachedDataCpp m_cCachedData;
 
+
+ private:
+
+    inline void invalidCachedData()
+    {
+        m_cCachedData.reset();
+    };
+
+    inline void refillCachedData()
+    {
+        m_cCachedData.reset();
+        MyErrorCodeCommonPartCpp ret = IMyCardGameCardWidgetBaseInterfaceCpp::Execute_getCenterButtonFromBlueprint(this, m_cCachedData.m_pCenterButton);
+
+        if (ret != MyErrorCodeCommonPartCpp::NoError) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getCenterButtonFromBlueprint return fail: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyErrorCodeCommonPartCpp"), (uint8)ret));
+        }
+    };
 };
 
 

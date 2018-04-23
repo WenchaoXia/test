@@ -12,7 +12,7 @@ FString FMyMJCardPosiCpp::genDebugMsg() const
 
 FString FMyMJCardInfoCpp::genDebugMsg() const
 {
-    return FString::Printf(TEXT("[id %d, flip %s]"), m_iId, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyBoxLikeFlipStateCpp"), (uint8)m_eFlipState)) + m_cPosi.genDebugMsg();
+    return FString::Printf(TEXT("[id %d, flip %s]"), m_iId, *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyBoxFlipStateCpp"), (uint8)m_eFlipState)) + m_cPosi.genDebugMsg();
 };
 
 void FMyMJCardValuePackCpp::helperVerifyValues() const
@@ -1468,7 +1468,7 @@ bool UMyMJUtilsLibrary::checkUniformOfArrayAndMapForHuScoreAttr(const TArray<FMy
             return false;
         }
 
-        if (!pAttrOfArray->equal(*pAttrOfMap)) {
+        if (!pAttrOfArray->equals(*pAttrOfMap)) {
             UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("array and map elem not equal: %s, %s."), *pAttrOfArray->ToString(), *pAttrOfMap->ToString());
             return false;
         }

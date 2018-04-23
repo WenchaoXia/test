@@ -677,21 +677,6 @@ public:
 };
 
 USTRUCT()
-struct FMyMJGameInRoomUIScreenPositionCfgCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-    FMyMJGameInRoomUIScreenPositionCfgCpp()
-    {
-
-    };
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "common event show point"))
-    FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp m_cCommonEventShowPoint;
-};
-
-USTRUCT()
 struct FMyMJGameUICfgCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -701,7 +686,6 @@ public:
     FMyMJGameUICfgCpp()
     {
         m_cInRoomUIMainWidgetClass = NULL;
-        m_aInRoomUIScreenPositionCfgs.AddDefaulted(4);
     };
 
     void fillDefaultData();
@@ -723,10 +707,6 @@ public:
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "in room ui main widget class"))
     TSubclassOf<UMyMJGameInRoomUIMainWidgetBaseCpp> m_cInRoomUIMainWidgetClass;
-
-    UPROPERTY(EditAnywhere, EditFixedSize, meta = (DisplayName = "in room ui screen position cfgs"))
-    TArray<FMyMJGameInRoomUIScreenPositionCfgCpp> m_aInRoomUIScreenPositionCfgs;
-
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "default In Room View Role Style"))
     FMyInRoomViewRoleStyleSettingsCpp m_cDefaultInRoomViewRoleStyle;

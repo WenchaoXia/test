@@ -118,7 +118,7 @@ int32 FMyMJDataStructCpp::checkPrivateDataInExpect() const
             }
         }
         else {
-            if (cInfo.m_cPosi.m_iIdxAttender == (uint8)m_eRole || cInfo.m_eFlipState == MyBoxLikeFlipStateCpp::Up) {
+            if (cInfo.m_cPosi.m_iIdxAttender == (uint8)m_eRole || cInfo.m_eFlipState == MyBoxFlipStateCpp::Up) {
                 //supposed to know
                 if (value == 0) {
                     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("role %d: unexpected card %s, value %d."), (uint8)m_eRole, *cInfo.genDebugMsg(), value);
@@ -268,7 +268,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
             }
 
             //flip
-            if (cardInfoTarget.m_eFlipState != MyBoxLikeFlipStateCpp::Invalid) {
+            if (cardInfoTarget.m_eFlipState != MyBoxFlipStateCpp::Invalid) {
                 cardInfoSelf.m_eFlipState = cardInfoTarget.m_eFlipState;
 
                 if (pDirtyRecord) {
@@ -381,6 +381,7 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
         MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
 
         if (roleDataAttenderDelta.m_aDataPublic.Num() > 0) {
+
             MY_VERIFY(roleDataAttenderDelta.m_aDataPublic.Num() == 1);
             const FMyMJRoleDataAttenderPublicDeltaCpp& roleDataAttenderPubDelta = roleDataAttenderDelta.m_aDataPublic[0];
 
@@ -423,6 +424,10 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
                 const FMyMJHuScoreResultFinalGroupCpp& resultFinalGroup2Add = roleDataAttenderPubDelta.m_aHuScoreResultFinalGroup2Add[0];
 
                 pRDAttenderPubSelf->m_aHuScoreResultFinalGroups.Emplace(resultFinalGroup2Add);
+
+                if (pDirtyRecord) {
+                    pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePublic, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePublic_HuScoreResultFinalGroup, true);
+                }
             }
 
 
@@ -430,14 +435,22 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
             //UMyMJUtilsLibrary::testUpdateFlagAndsetBoolValueToStorageBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateIsStillInGame, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame);
             //UMyMJUtilsLibrary::testUpdateFlagAndsetBoolValueToStorageBitMask(pRDAttenderPubSelf->m_iMask0, roleDataAttenderPubDelta.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_UpdateGangYaoedLocalCS, FMyMJRoleDataAttenderPublicCpp_Mask0_GangYaoedLocalCS);
         
+            bool bTrivalDirty = false;
             if (roleDataAttenderPubDelta.m_bUpdateIsRealAttender) {
                 pRDAttenderPubSelf->m_bIsRealAttender = roleDataAttenderPubDelta.m_bIsRealAttender;
+                bTrivalDirty = true;
             }
             if (roleDataAttenderPubDelta.m_bUpdateIsStillInGame) {
                 pRDAttenderPubSelf->m_bIsStillInGame = roleDataAttenderPubDelta.m_bIsStillInGame;
+                bTrivalDirty = true;
             }
             if (roleDataAttenderPubDelta.m_bUpdateGangYaoedLocalCS) {
                 pRDAttenderPubSelf->m_bGangYaoedLocalCS = roleDataAttenderPubDelta.m_bGangYaoedLocalCS;
+                bTrivalDirty = true;
+            }
+
+            if (pDirtyRecord && bTrivalDirty) {
+                pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePublic, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePublic_TrivalStates, true);
             }
         }
 
@@ -449,20 +462,28 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
             FMyMJRoleDataAttenderPrivateCpp *pRDAttenderPriSelf = getRoleDataAttenderPrivate(idxAttender);
             if (pRDAttenderPriSelf) {
 
-                if (roleDataAttenderPriDelta.m_aHuScoreResultTingGroup.Num() > 0) {
-                    MY_VERIFY(roleDataAttenderPriDelta.m_aHuScoreResultTingGroup.Num() == 1);
-
-                    const FMyMJHuScoreResultTingGroupCpp &resultTingGroup = roleDataAttenderPriDelta.m_aHuScoreResultTingGroup[0];
-
-                    pRDAttenderPriSelf->m_cHuScoreResultTingGroup = resultTingGroup;
-                }
-
                 if (roleDataAttenderPriDelta.m_aActionContainor.Num() > 0) {
                     MY_VERIFY(roleDataAttenderPriDelta.m_aActionContainor.Num() == 1);
 
                     const FMyMJGameActionContainorForBPCpp &aActionContainor = roleDataAttenderPriDelta.m_aActionContainor[0];
 
                     pRDAttenderPriSelf->m_cActionContainor = aActionContainor;
+
+                    if (pDirtyRecord) {
+                        pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePrivate_ActionContainor, true);
+                    }
+                }
+
+                if (roleDataAttenderPriDelta.m_aHuScoreResultTingGroup.Num() > 0) {
+                    MY_VERIFY(roleDataAttenderPriDelta.m_aHuScoreResultTingGroup.Num() == 1);
+
+                    const FMyMJHuScoreResultTingGroupCpp &resultTingGroup = roleDataAttenderPriDelta.m_aHuScoreResultTingGroup[0];
+
+                    pRDAttenderPriSelf->m_cHuScoreResultTingGroup = resultTingGroup;
+
+                    if (pDirtyRecord) {
+                        pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePrivate_HuScoreResultTingGroup, true);
+                    }
                 }
 
             }
@@ -473,7 +494,12 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
             //UMyMJUtilsLibrary::testUpdateFlagAndsetBoolValueToStorageBitMask(pRDAttenderPriSelf->m_iMask0, roleDataAttenderPriDelta.m_iMask0, FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS, FMyMJRoleDataAttenderPrivateCpp_Mask0_BanPaoHuLocalCS);
             if (roleDataAttenderPriDelta.m_bUpdateBanPaoHuLocalCS) {
                 pRDAttenderPriSelf->m_bBanPaoHuLocalCS = roleDataAttenderPriDelta.m_bBanPaoHuLocalCS;
+                if (pDirtyRecord) {
+                    pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePrivate_TrivalStates, true);
+                }
             }
+
+
         
         }
 
@@ -487,13 +513,6 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
     coreDataSelf.m_iPusherIdLast++;
 }
 
-
-void FMyMJDataAccessorCpp::applyDelta(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
-{
-    applyDeltaStep0(delta, pDirtyRecord);
-    applyDeltaStep1(delta, pDirtyRecord);
-
-};
 
 void FMyMJDataAccessorCpp::resetForNewActionLoop()
 {
@@ -711,6 +730,14 @@ void FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordAllDirty(FMyDirtyRecordWi
 
     cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Dice, 0, 0, true);
 
-    //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("helperSetCoreDataDirtyRecordAllDirty, result %d."), cDirtyRecord.getRecordSet().Num());
+    for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
+        cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePublic, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePublic_HuScoreResultFinalGroup, true);
+        cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePublic, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePublic_TrivalStates, true);
 
+        cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePrivate_ActionContainor, true);
+        cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePrivate_HuScoreResultTingGroup, true);
+        cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePrivate_TrivalStates, true);
+    }
+
+    //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("helperSetCoreDataDirtyRecordAllDirty, result %d."), cDirtyRecord.getRecordSet().Num());
 }

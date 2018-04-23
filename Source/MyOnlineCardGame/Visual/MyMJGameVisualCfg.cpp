@@ -308,14 +308,6 @@ bool FMyMJGameInRoomMainActorClassCfgCpp::checkSettings() const
 
 void FMyMJGameUICfgCpp::fillDefaultData()
 {
-    for (int32 i = 0; i < 4; i++)
-    {
-        FMyMJGameInRoomUIScreenPositionCfgCpp& spCfg = m_aInRoomUIScreenPositionCfgs[i];
-
-        spCfg.m_cCommonEventShowPoint.reset();
-        spCfg.m_cCommonEventShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.7;
-
-    }
 };
 
 

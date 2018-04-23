@@ -294,7 +294,7 @@ public:
         m_aSubSelectionsInputed = subSelections;
 
         m_pSelected = sel;
-        return FMyErrorCodeMJGameCpp();
+        return FMyErrorCodeMJGameCpp(true);
     };
 
     void makeRandomSelection(FRandomStream &RS);
@@ -482,7 +482,7 @@ public:
         m_aActionChoices.Reset();
     };
 
-    bool equal(const FMyMJGameActionContainorCpp &other) const
+    bool equals(const FMyMJGameActionContainorCpp &other) const
     {
 
         if (m_iChoiceSelected != other.m_iSelectionPushed) {

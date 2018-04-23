@@ -18,6 +18,8 @@
 #define FMyWithCurveUpdateStepDataTransformWorld3DCpp_Delta_Min (0.1f)
 
 
+#define MyUIWidgetPivotDefault (FVector2D(0.5, 0.5))
+
 //Two ways to store * data in containor: allocator or virtual function.
 //I don't have time to write a clear allocator, so for simple just use virtual functions now.
 
@@ -374,9 +376,9 @@ public:
     };
     */
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
 
@@ -550,7 +552,7 @@ public:
     }
 
 
-    inline FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformWorld3DRef()
+    inline FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRef()
     {
         return m_cUpdater;
     };
@@ -594,22 +596,22 @@ protected:
     bool m_bHideWhenInactivated;
 };
 
-//Note: this can be split into actor and boxlike actor two classes, but now we only need one
+//Note: this can be split into two classes: actor and box, but now we only need one
 //most functions are implemented in C++, so fast and free to call
 UCLASS(Blueprintable)
-class MYONLINECARDGAME_API AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp : public AActor, public IMyWithCurveUpdaterTransformWorld3DInterfaceCpp
+class MYONLINECARDGAME_API AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp : public AActor, public IMyWithCurveUpdaterTransformWorld3DInterfaceCpp
 {
     GENERATED_BODY()
 
 public:
 
-    AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp();
+    AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp();
 
-    virtual ~AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp();
+    virtual ~AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp();
 
-    //BP should only use it for test purpose
-    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWorld3DCpp& modelInfo, bool verify) const override;
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWorld3DEnsured(struct FMyWithCurveUpdaterTransformWorld3DCpp*& outUpdater) override;
+
+    virtual MyErrorCodeCommonPartCpp getModelInfoForUpdater(FMyModelInfoWorld3DCpp& modelInfo) override;
+    virtual struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRef() override;
 
 
     inline UMyWithCurveUpdaterTransformWorld3DComponent* getMyTransformUpdaterComponent() const
@@ -619,7 +621,7 @@ public:
 
 
     UFUNCTION(BlueprintCallable, meta = (UnsafeDuringActorConstruction = "true"))
-        static void helperTestAnimationStep(float time, FString debugStr, const TArray<AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp*>& actors);
+        static void helperTestAnimationStep(float time, FString debugStr, const TArray<AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp*>& actors);
 
 protected:
 
@@ -649,7 +651,11 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "My Helper", meta = (DisplayName = "fake button to update settings"))
         bool m_bFakeUpdateSettings;
 
+
+protected:
+
 private:
+
     void createComponentsForCDO();
 };
 
@@ -672,9 +678,9 @@ public:
     {
     };
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
 
@@ -741,49 +747,45 @@ public:
 //a widget support animation setup at runtime, since default widget's animation is static
 //Warn: Center is always zero, which means instances's rotate pivot should always ne center and it's zero transition always making center at canvas position zero
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp : public UUserWidget, public IMyWithCurveUpdaterTransformWidget2DInterfaceCpp, public IMySizeWidget2DInterfaceCpp
+class MYONLINECARDGAME_API UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp : public UUserWidget, public IMyWithCurveUpdaterTransformWidget2DInterfaceCpp, public IMyContentSizeWidget2DInterfaceCpp, public IMyCachedData_MyModelInfoWidget2D_InterfaceCpp
 {
     GENERATED_BODY()
 
 public:
 
-    UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
     {
-        m_cUpdater.m_cCommonUpdateDelegate.BindUObject(this, &UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonUpdate);
-        m_cUpdater.m_cCommonFinishDelegete.BindUObject(this, &UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonFinish);
-        m_cUpdater.m_cActivateTickDelegate.BindUObject(this, &UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterActivateTick);
+        m_cUpdater.m_cCommonUpdateDelegate.BindUObject(this, &UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::updaterOnCommonUpdate);
+        m_cUpdater.m_cCommonFinishDelegete.BindUObject(this, &UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::updaterOnCommonFinish);
+        m_cUpdater.m_cActivateTickDelegate.BindUObject(this, &UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::updaterActivateTick);
 
         m_bUpdaterNeedTick = false;
 
         m_bShowWhenActivated = false;
         m_bHideWhenInactivated = false;
+
+        m_cPivotExpected = MyUIWidgetPivotDefault;
     };
 
-    virtual ~UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp()
+    virtual ~UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp()
     {
 
     };
 
-    virtual MyErrorCodeCommonPartCpp getLocalSizeFromCache_Implementation(FVector2D& localSize) override final
+
+    //IMyWithCurveUpdaterTransformWidget2DInterfaceCpp start
+
+    virtual MyErrorCodeCommonPartCpp getModelInfoForUpdater(FMyModelInfoWidget2DCpp& modelInfo) override
     {
-        MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
-        if (!m_cMySizeWidget2DInterfaceCachedData.m_bValid) {
-            m_cMySizeWidget2DInterfaceCachedData.reset();
-            ret = IMySizeWidget2DInterfaceCpp::Execute_getLocalSize(this, m_cMySizeWidget2DInterfaceCachedData.m_cLocalSize);
-            m_cMySizeWidget2DInterfaceCachedData.m_bValid = ret == MyErrorCodeCommonPartCpp::NoError;
-        }
-        localSize = m_cMySizeWidget2DInterfaceCachedData.m_cLocalSize;
-        return ret;
+        return IMyCachedData_MyModelInfoWidget2D_InterfaceCpp::getDataByCache_MyModelInfoWidget2D(modelInfo, false);
     };
 
-    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWidget2DCpp& modelInfo, bool verify) const override;
-
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWidget2DEnsured(struct FMyWithCurveUpdaterTransformWidget2DCpp*& outUpdater) override
+    virtual struct FMyWithCurveUpdaterTransformWidget2DCpp& getMyWithCurveUpdaterTransformRef() override
     {
-        outUpdater = &m_cUpdater;
-        return MyErrorCodeCommonPartCpp::NoError;
+        return m_cUpdater;
     };
 
+    //IMyWithCurveUpdaterTransformWidget2DInterfaceCpp end
 
 
     UFUNCTION(BlueprintCallable)
@@ -803,26 +805,35 @@ public:
         return m_cUpdater;
     };
 
+
+    virtual MyErrorCodeCommonPartCpp getDataByCacheRefConst_MyModelInfoWidget2D(const FMyModelInfoWidget2DCpp*& pModelInfo, bool verifyValid) override final;
+    virtual MyErrorCodeCommonPartCpp updateSlotSettingsToComply_MyModelInfoWidget2D() override final;
+
 protected:
 
-    IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject_Bp()
-    
+    IMyContentSizeWidget2DInterfaceCpp_DefaultImplementationForUObject_Bp_Other()
+    IMyContentSizeWidget2DInterfaceCpp_DefaultImplementationForUObject_getContentSizeFromCache_Style0(m_cMyCachedData_MyModelInfoWidget2D, m_cModelInfo.getBox2DRefConst().m_cBoxExtend * 2, refillCachedData_MyModelInfoWidget2D)
+    IMyContentSizeWidget2DInterfaceCpp_DefaultImplementationForUObject_setContentSizeThroughCache_Style0(updateSlotSettingsToComply_MyModelInfoWidget2D)
+
+
     virtual void OnWidgetRebuilt() override
     {
         Super::OnWidgetRebuilt();
 
-        invalidCachedData();
+        invalidCachedData_MyModelInfoWidget2D();
     };
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
 
     void updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector);
     void updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data);
     void updaterActivateTick(bool activate, FString debugString);
 
-    void invalidCachedData()
-    {
-        m_cMySizeWidget2DInterfaceCachedData.m_bValid = false;
-    };
+
+    virtual void invalidCachedData_MyModelInfoWidget2D() override final;
+    virtual MyErrorCodeCommonPartCpp refillCachedData_MyModelInfoWidget2D() override final;
+
+
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "show when activated"))
         bool m_bShowWhenActivated;
@@ -833,7 +844,14 @@ protected:
     FMyWithCurveUpdaterTransformWidget2DCpp m_cUpdater;
     bool m_bUpdaterNeedTick;
 
-    FMySizeWidget2DInterfaceCachedDataCpp m_cMySizeWidget2DInterfaceCachedData;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "pivot expected"))
+    FVector2D m_cPivotExpected;
+
+private:
+
+
+    FMyCachedData_MyModelInfoWidget2D_BaseCpp m_cMyCachedData_MyModelInfoWidget2D;
+
 };
 
 
@@ -939,9 +957,9 @@ public:
     };
     */
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
 
@@ -1010,9 +1028,9 @@ public:
     };
     */
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
     };
@@ -1054,9 +1072,9 @@ public:
 
     };
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
 
@@ -1114,9 +1132,9 @@ public:
 
     };
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
         m_fTargetVLengthOnScreenScreenPercent = 0.1;
@@ -1194,9 +1212,9 @@ public:
     };
     */
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
 
@@ -1230,9 +1248,9 @@ public:
         m_iType = MyTransformTypeTransformWidget2D;
     };
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
 
@@ -1733,7 +1751,7 @@ public:
 
     inline void reset()
     {
-        m_eFlipState = MyBoxLikeFlipStateCpp::Stand;
+        m_eFlipState = MyBoxFlipStateCpp::Stand;
         m_eRollState = MyRotateState90DCpp::Zero;
     };
 
@@ -1745,14 +1763,14 @@ public:
     inline FString ToString() const
     {
         return FString::Printf(TEXT("%s:%s"),
-            *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyBoxLikeFlipStateCpp"), (uint8)m_eFlipState),
+            *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyBoxFlipStateCpp"), (uint8)m_eFlipState),
             *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyRotateState90DCpp"), (uint8)m_eRollState));
     };
 
 
     //same as limited pitch
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "flip state"))
-        MyBoxLikeFlipStateCpp m_eFlipState;
+        MyBoxFlipStateCpp m_eFlipState;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "roll state"))
         MyRotateState90DCpp m_eRollState;
@@ -1784,7 +1802,7 @@ public:
     inline FString ToString() const
     {
         return FString::Printf(TEXT("%s"),
-            *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyBoxLikeFlipStateCpp"), (uint8)m_eAngleState));
+            *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyBoxFlipStateCpp"), (uint8)m_eAngleState));
     };
 
 
@@ -2011,7 +2029,7 @@ public:
     };
 
     //virtual function to allow reset by base pointer
-    virtual void reset(bool resetSubClassDataonly = false)
+    virtual void reset(bool resetSubClassDataOnly = false)
     {
         m_cLimitedRotation.reset();
         m_cCol.reset();
@@ -2020,7 +2038,7 @@ public:
     };
 
 
-    inline bool equal(const FMyArrangeCoordinateWorld3DCpp& other) const
+    inline bool equals(const FMyArrangeCoordinateWorld3DCpp& other) const
     {
         if (&other == this) {
             return true;
@@ -2126,7 +2144,7 @@ public:
     };
 
     //virtual function to allow reset by base pointer
-    virtual void reset(bool resetSubClassDataonly = false)
+    virtual void reset(bool resetSubClassDataOnly = false)
     {
         m_cLimitedRotation.reset();
         m_cCol.reset();
@@ -2134,7 +2152,7 @@ public:
     };
 
 
-    inline bool equal(const FMyArrangeCoordinateWidget2DCpp& other) const
+    inline bool equals(const FMyArrangeCoordinateWidget2DCpp& other) const
     {
         if (&other == this) {
             return true;
@@ -2176,9 +2194,9 @@ public:
         reset(true);
     };
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
 
@@ -2451,7 +2469,95 @@ public:
     bool m_bRowNumMaxLimitEnabled;
 };
 
+//
+// positionInBoxWidget2D:
+// ---------------
+// |      2      |
+// |3           1|
+// |      0      |
+// ---------------
+//
+// degreeInSquareWidget2D:
+//          180
+//    ---------------
+//    |             |
+//    |             |
+// -90|             |90
+//    |             |
+//    |             |
+//    ---------------
+//           0      
 
+
+USTRUCT()
+struct FMyAreaAlignToBorderCfgOneDimCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyAreaAlignToBorderCfgOneDimCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_fMinPercent = 0.1;
+        m_fExpectedCenterPercent = 0.4;
+        m_fMaxPercent = 0.9;
+
+        m_fDeltaMappedDegreeClampPercent = 0.8;
+    };
+
+    //percent of aligned border axis
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "min percent"))
+    float m_fMinPercent;
+
+    //percent of aligned border axis
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "expected center percent"))
+    float m_fExpectedCenterPercent;
+
+    //percent of aligned border axis
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "max percent"))
+    float m_fMaxPercent;
+
+    //in some case we need to map degree to border area, and it is cacluated by how many delta degrees goes. This param can clamp the delta so that delta out of range make result unchanged
+    //valid range [0.1, 1]
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "delta mapped degree clamp percent"))
+    float m_fDeltaMappedDegreeClampPercent;
+};
+
+USTRUCT()
+struct FMyAreaAlignToBorderMappedPointsWidget2DCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyAreaAlignToBorderMappedPointsWidget2DCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_cMin = m_cExpectedCenter = m_cMax = FVector2D::ZeroVector;
+        m_eToBorderAxisType = MyAxisTypeCpp::Invalid;
+        m_eToBorderAlignmentType = MyAxisAlignmentTypeCpp::Invalid;
+
+        m_fDeltaMappedDegreeClampPercent = 1;
+    };
+
+    FVector2D m_cMin;
+    FVector2D m_cExpectedCenter;
+    FVector2D m_cMax;
+
+    MyAxisTypeCpp m_eToBorderAxisType;
+    MyAxisAlignmentTypeCpp m_eToBorderAlignmentType;
+
+    float m_fDeltaMappedDegreeClampPercent;
+};
 
 //Warn: we don't support multiple player screen in one client now!
 UCLASS()
@@ -2482,6 +2588,25 @@ public:
     static inline float& getAxisFromVectorRef(FVector &data, MyAxisTypeCpp type)
     {
         return const_cast<float&>(getAxisFromVectorRefConst(data, type));
+    };
+
+    static inline const float& getAxisFromVector2DRefConst(const FVector2D &data, MyAxisTypeCpp type)
+    {
+        if (type == MyAxisTypeCpp::X) {
+            return data.X;
+        }
+        else if (type == MyAxisTypeCpp::Y) {
+            return data.Y;
+        }
+        else {
+            MY_VERIFY(false);
+            return data.X;
+        }
+    };
+
+    static inline float& getAxisFromVector2DRef(FVector2D &data, MyAxisTypeCpp type)
+    {
+        return const_cast<float&>(getAxisFromVector2DRefConst(data, type));
     };
 
     //@aSorted will have col, row, stack axiss
@@ -2683,15 +2808,15 @@ public:
     };
 
     //quick path for 90D rotate, instead of float calculation
-    static inline FVector applyFlipState(const FVector& old, MyBoxLikeFlipStateCpp state)
+    static inline FVector applyFlipState(const FVector& old, MyBoxFlipStateCpp state)
     {
         FVector ret = old;
-        if (state == MyBoxLikeFlipStateCpp::Up)
+        if (state == MyBoxFlipStateCpp::Up)
         {
             ret.X = -old.Z;
             ret.Z = old.X;
         }
-        else if (state == MyBoxLikeFlipStateCpp::Down)
+        else if (state == MyBoxFlipStateCpp::Down)
         {
             ret.X = old.Z;
             ret.Z = -old.X;
@@ -2733,13 +2858,13 @@ public:
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got unexpected roll state %d."), (uint8)data.m_eRollState);
         }
 
-        if (data.m_eFlipState == MyBoxLikeFlipStateCpp::Down) {
+        if (data.m_eFlipState == MyBoxFlipStateCpp::Down) {
             ret.Pitch = -90;
         }
-        else if (data.m_eFlipState == MyBoxLikeFlipStateCpp::Stand) {
+        else if (data.m_eFlipState == MyBoxFlipStateCpp::Stand) {
 
         }
-        else if (data.m_eFlipState == MyBoxLikeFlipStateCpp::Up) {
+        else if (data.m_eFlipState == MyBoxFlipStateCpp::Up) {
             ret.Pitch = 90;
         }
         else {
@@ -2752,7 +2877,7 @@ public:
     static inline FMyRotateState90DWorld3DCpp Conv_MyRotateState90DWidget2D_MyRotateState90DWorld3D(const FMyRotateState90DWidget2DCpp& data)
     {
         FMyRotateState90DWorld3DCpp ret;
-        ret.m_eFlipState = MyBoxLikeFlipStateCpp::Stand;
+        ret.m_eFlipState = MyBoxFlipStateCpp::Stand;
         ret.m_eRollState = Inv_MyRotateState90D(data.m_eAngleState);
 
         return ret;
@@ -2890,10 +3015,19 @@ public:
     };
 
     UFUNCTION(BlueprintPure)
-        static inline FVector2D getRenderTransformPivotByMyModelInfoBoxWidget2D(const FMyModelInfoBoxWidget2DCpp& cModelInfo)
+        static inline FVector2D getOriginPointRelativeToXYMinByMyModelInfoBoxWidget2D(const FMyModelInfoBoxWidget2DCpp& cModelInfo)
     {
-        FVector2D pivotTransform = (cModelInfo.m_cBoxExtend - cModelInfo.m_cCenterPointRelativeLocation) / (cModelInfo.m_cBoxExtend * 2);
-        return pivotTransform;
+        return (cModelInfo.m_cBoxExtend - cModelInfo.m_cCenterPointRelativeLocation);
+    };
+
+    UFUNCTION(BlueprintPure)
+        static inline FMyModelInfoBoxWidget2DCpp getMyModelInfoBoxByOriginPointRelativeToXYMinWidget2D(const FVector2D& boxExtend, const FVector2D& originPointRelativeToXYMin)
+    {
+        FMyModelInfoBoxWidget2DCpp ret;
+        ret.m_cBoxExtend = boxExtend;
+        ret.m_cCenterPointRelativeLocation = ret.m_cBoxExtend - originPointRelativeToXYMin;
+
+        return ret;
     };
 
     UFUNCTION(BlueprintPure)
@@ -2921,11 +3055,11 @@ public:
     //
     // target model:
     // U: flip up, D: flip down, ST: flip stand
-    //           ____
-    //          |    |
-    //  ________| ST |
-    // | U or D |    |
-    // |________|____|
+    //       ____
+    //      | ST |
+    //  ____|___ |
+    // | U  |    |
+    // |_D__|____|
     //
     // row and stack base line is always aligned
     // not completely free: all box always arrange at the bottom(model's Z negative after rotation), simulate the box on desk
@@ -3014,6 +3148,49 @@ public:
     static void myElemAndGroupCalcDelimiterNumber(const FIntVector &groupWalked, const FIntVector &elemWalked, FIntVector &groupDelimiterNumber, FIntVector &elemDelimiterNumber);
 
 
+    static inline FVector2D Map_BoxWidget2D_BoxWidget2D(const FVector2D& boxExtendA, const FVector2D& boxExtendB, const FVector2D& coordinateInA)
+    {
+        return boxExtendB / boxExtendA * coordinateInA;
+    };
+
+    //Y is kepted unchanged
+    static inline FVector2D Map_BoxWidget2D_SquareWidget2D(float boxXYRatio, const FVector2D& inData)
+    {
+        return FVector2D(inData.X / boxXYRatio, inData.Y); //faster short path
+        //return  Map_BoxWidget2D_BoxWidget2D(FVector2D(boxXYRatio, 1), FVector2D(1, 1), inData);
+    };
+
+    static float getDegreeInSquareFromPointInSquare_Widget2D(const FVector2D& pointFromCenterInSquare);
+
+    //@outDeltas means each point's delta From the expected DegreeInSquare for that position in box, size is always equal to @outPositions's and @pointsInBox's
+    static void helperArrangePointsToPositionsInBoxEvenly_Widget2D(float boxXYRatio, const TArray<FVector2D>& pointsInBox, TArray<int32>& outPositions, TArray<float>& outDeltas);
+
+
+    static void helperGenMappedPointsForMyAreaAlignToBorders_Widget2D(const FVector2D& boxCenter, const FVector2D& boxExtend, const TArray<const FMyAreaAlignToBorderCfgOneDimCpp*>& boxAlignedAreas,
+                                                                      bool alignAtBorderOutside, bool minMaxClockWise,
+                                                                      TArray<FMyAreaAlignToBorderMappedPointsWidget2DCpp>& outAreaMappedPoints);
+
+    //arrange the widget inside the area aligned to one border of a box area
+    static FVector2D helperResolveLocationForMyAreaAlignToBorderMappedPoints_Widget2D(const TArray<FMyAreaAlignToBorderMappedPointsWidget2DCpp>& areaMappedPoints,
+                                                                                      const FMyModelInfoBoxWidget2DCpp& widgetModelInfo, int32 widgetIdxPositionInBox, float widgetDeltaFromExpectedDegreeInSquare);
+
+
+    static MyErrorCodeCommonPartCpp checkUserWidgetInCanvasPanelComplyModelInfo_Base_Widget2D(UUserWidget* childWidget);
+
+    //static MyErrorCodeCommonPartCpp checkUserWidgetInCanvasPanelComplyModelInfo_Widget2D(const FMyModelInfoWidget2DCpp& modelInfo, const FVector2D& widgetRenderTransformPivot);
+
+    //will make the widget obey model info, when a widget want to reshape, it must call this API after changing
+    UFUNCTION(BlueprintCallable)
+    static MyErrorCodeCommonPartCpp updateUserWidgetInCanvasPanelWithModelInfo_Widget2D(UUserWidget* childWidget, const FMyModelInfoWidget2DCpp& modelInfo);
+
+    //Result comes from canvas slot layout, Blueprint should set those data before calling
+    //Now only support left top alignment
+    UFUNCTION(BlueprintPure)
+    static MyErrorCodeCommonPartCpp evaluateUserWidgetInCanvasPanelForModelInfo_Widget2D(UUserWidget* childWidget, FMyModelInfoWidget2DCpp& modelInfo);
+
+    //not using cache, so it is safe to call anywhere
+    static MyErrorCodeCommonPartCpp updateUserWidgetInCanvasPanelWithPivot_Widget2D(UUserWidget* childWidget, const FVector2D& pivot);
+
 protected:
 
     struct FMyArrangeCoordinateResolvedOneDimCpp : public FMyArrangeCoordinateOneDimensionCpp
@@ -3024,9 +3201,9 @@ protected:
             reset(true);
         };
 
-        inline void reset(bool resetSubClassDataonly = false)
+        inline void reset(bool resetSubClassDataOnly = false)
         {
-            if (!resetSubClassDataonly) {
+            if (!resetSubClassDataOnly) {
                 FMyArrangeCoordinateOneDimensionCpp::reset();
             }
 

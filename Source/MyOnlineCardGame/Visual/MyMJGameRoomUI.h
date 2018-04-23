@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include "Utils/CardGameUtils/MyCardGameElems.h"
-
 //#include "MJBPEncap/MyMJGameCoreBP.h"
 
 #include "MyMJGameVisualInterfaces.h"
@@ -82,7 +80,7 @@ public:
 
 protected:
 
-    IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject();
+    IMyWidgetBasicOperationInterfaceCpp_DefaultImplementationForUObject();
 
     // < 0 means invalid, not set
     UPROPERTY(EditAnywhere, BlueprintSetter = setValueShowing2, BlueprintGetter = getValueShowing2, meta = (DisplayName = "value showing"))
@@ -278,11 +276,13 @@ public:
 };
 
 USTRUCT()
-struct FMyPlayerInfoWidgetRuntimeMetaCpp
+struct FMyPlayerInfoWidgetRuntimeDataCpp
 {
     GENERATED_USTRUCT_BODY()
 
-    FMyPlayerInfoWidgetRuntimeMetaCpp()
+public:
+
+    FMyPlayerInfoWidgetRuntimeDataCpp()
     {
         reset();
     };
@@ -290,36 +290,60 @@ struct FMyPlayerInfoWidgetRuntimeMetaCpp
     inline void reset()
     {
         m_iIdxAttender = -1;
-        m_iIdxScreenPosition = 0;
+        m_iIdxPositionInBox = -1;
 
-        m_cPosiSelf = FVector2D::ZeroVector;
-        m_cPosiUICenter = FVector2D::ZeroVector;
+        m_cLocationSelf = FVector2D::ZeroVector;
+        m_cLocationUICenter = FVector2D::ZeroVector;
+        m_cLocationCommonActionShowPoint = FVector2D::ZeroVector;
 
     };
 
     inline FString ToString() const
     {
-        return FString::Printf(TEXT("(idxAttender %d, m_iIdxScreenPosition %d, posiSelf %s, posiUICenter %s, m_cPosiCommonActionShowPoint %s)"), m_iIdxAttender, m_iIdxScreenPosition, *m_cPosiSelf.ToString(), *m_cPosiUICenter.ToString(), *m_cPosiCommonActionShowPoint.ToString());
+        return FString::Printf(TEXT("(idxAttender %d, m_iIdxPositionInBox %d, m_cLocationSelf %s, m_cLocationUICenter %s, m_cLocationCommonActionShowPoint %s)"), m_iIdxAttender, m_iIdxPositionInBox, *m_cLocationSelf.ToString(), *m_cLocationUICenter.ToString(), *m_cLocationCommonActionShowPoint.ToString());
     };
 
     int32 m_iIdxAttender;
-    int32 m_iIdxScreenPosition; //not always continues, may be 0,2; 0,1,3;, 0,1,2,3
+    int32 m_iIdxPositionInBox; //not always continues, may be 0,2; 0,1,3;, 0,1,2,3
 
-    FVector2D m_cPosiSelf;
-    FVector2D m_cPosiUICenter;
-    FVector2D m_cPosiCommonActionShowPoint;
+    FVector2D m_cLocationSelf;
+    FVector2D m_cLocationUICenter;
+    FVector2D m_cLocationCommonActionShowPoint;
+};
+
+USTRUCT()
+struct FMyPlayerInfoWidgetCachedDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyPlayerInfoWidgetCachedDataCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_bValid = false;
+        m_pDynamicAllocationCanvasPanel = NULL;
+    };
 
 
+    bool m_bValid;
+
+    UPROPERTY()
+    class UCanvasPanel* m_pDynamicAllocationCanvasPanel;
 };
 
 
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyMJGameInRoomPlayerInfoWidgetBaseCpp : public UUserWidget, public IMySizeWidget2DInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
+class MYONLINECARDGAME_API UMyMJGameInRoomPlayerInfoWidgetBaseCpp : public UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp, public IMyDynamicAllocationCanvasPannelWidget2DInterfaceCpp
 {
     GENERATED_BODY()
 
 public:
-    UMyMJGameInRoomPlayerInfoWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : UUserWidget(ObjectInitializer)
+    UMyMJGameInRoomPlayerInfoWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
     {
 
     };
@@ -329,27 +353,83 @@ public:
 
     };
 
-    inline FMyPlayerInfoWidgetRuntimeMetaCpp& getRuntimeMetaRef()
+    inline FMyPlayerInfoWidgetRuntimeDataCpp& getRuntimeDataRef()
     {
-        return m_cRuntimeMeta;
+        return m_cRuntimeData;
     };
+
 
     FMyErrorCodeMJGameCpp showAttenderWeave(float dur, MyMJGameEventVisualTypeCpp weaveVisualType);
 
 
 protected:
 
-    IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject()
-    IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject()
+    IMyDynamicAllocationCanvasPannelWidget2DInterfaceCpp_DefaultImplementationForUObject_Bp_Other()
+    IMyDynamicAllocationCanvasPannelWidget2DInterfaceCpp_DefaultImplementationForUObject_Bp_Cached_Style0(m_cCachedData, m_pDynamicAllocationCanvasPanel)
+
+    virtual void OnWidgetRebuilt() override
+    {
+        Super::OnWidgetRebuilt();
+
+        m_cRuntimeData.reset();
+        invalidCachedData();
+    };
+
 
     //if @createIfNotExist, always exist
     UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp * getManagedWidget(int32 key, TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>& widgetClass, bool createIfNotExist = true);
 
-    FMyPlayerInfoWidgetRuntimeMetaCpp m_cRuntimeMeta;
+    FMyPlayerInfoWidgetRuntimeDataCpp m_cRuntimeData;
+
 
     TMap<int32, UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp* > m_mManagedWidgets;
+
+private:
+
+    inline void invalidCachedData() 
+    {
+        m_cCachedData.reset();
+    };
+
+    inline MyErrorCodeCommonPartCpp refillCachedData()
+    {
+        m_cCachedData.reset();
+        MyErrorCodeCommonPartCpp ret = IMyDynamicAllocationCanvasPannelWidget2DInterfaceCpp::Execute_getDynamicAllocationRootCanvasPanel(this, m_cCachedData.m_pDynamicAllocationCanvasPanel);
+        if (ret == MyErrorCodeCommonPartCpp::NoError) {
+            MY_VERIFY(m_cCachedData.m_pDynamicAllocationCanvasPanel);
+            m_cCachedData.m_bValid = true;
+        }
+        else {
+            m_cCachedData.reset();
+        }
+
+        return ret;
+    };
+
+    FMyPlayerInfoWidgetCachedDataCpp m_cCachedData;
 };
 
+
+USTRUCT()
+struct FMyMJGameInRoomUIMainWidgetRuntimeDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameInRoomUIMainWidgetRuntimeDataCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_idxAttenderForIdxPositionInBox0 = -1;
+    };
+
+    //< 0 means unknown
+    int32 m_idxAttenderForIdxPositionInBox0;
+};
 
 USTRUCT()
 struct FMyMJGameInRoomUIMainWidgetCachedDataCpp
@@ -371,42 +451,30 @@ public:
     inline void reset()
     {
         m_bValid = false;
-        m_idxDeskPositionOfCamera = 0;
+        m_cModelInfo.reset();
+        m_pDynamicAllocationCanvasPanel = NULL;
 
-        m_aPlayerInfoWidgetsOnScreen.Reset();
-        m_iAttenderNumber = 0;
-
-        m_cMainUILocalSize = FVector2D::ZeroVector;
-    };
-
-    inline int32 idxAttenderToIdxScreenPosition(int32 idxAttender)
-    {
-        int32 IdxDeskPosition = UMyCardGameUtilsLibrary::idxAttenderToIdxDeskPosition(idxAttender, m_iAttenderNumber);
-        return UMyCardGameUtilsLibrary::idxDeskPositionToIdxScreenPosition(IdxDeskPosition, m_idxDeskPositionOfCamera);
-    };
-
-    inline int32 IdxScreenPositionToIdxAttender(int32 idxScreenPosition)
-    {
-        int32 IdxDeskPosition = UMyCardGameUtilsLibrary::IdxScreenPositionToIdxDeskPosition(idxScreenPosition, m_idxDeskPositionOfCamera);
-        return UMyCardGameUtilsLibrary::idxDeskPositionToIdxAttender(IdxDeskPosition, m_iAttenderNumber);
+        m_cCfg.reset();
+        m_aPlayerInfoWidgets.Reset();
     };
 
 
     bool m_bValid;
-    int32 m_idxDeskPositionOfCamera;
 
-    //size is always 4, idx is screen position
+    FMyModelInfoWidget2DCpp m_cModelInfo; //contains size info
+
     UPROPERTY()
-    TArray<UMyMJGameInRoomPlayerInfoWidgetBaseCpp* > m_aPlayerInfoWidgetsOnScreen;
+    class UCanvasPanel* m_pDynamicAllocationCanvasPanel;
 
-    int32 m_iAttenderNumber;
+    FMyMJGameInRoomUIMainWidgetCfgCpp m_cCfg;
 
-    FVector2D m_cMainUILocalSize;
+    //size is always 4, idx is idx attender
+    UPROPERTY()
+    TArray<UMyMJGameInRoomPlayerInfoWidgetBaseCpp* > m_aPlayerInfoWidgets;
 };
 
-
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
-class MYONLINECARDGAME_API UMyMJGameInRoomUIMainWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomUIMainWidgetInterfaceCpp, public IMySizeWidget2DInterfaceCpp, public IMyWidgetBasicOperationInterfaceCpp
+class MYONLINECARDGAME_API UMyMJGameInRoomUIMainWidgetBaseCpp : public UUserWidget, public IMyContentSizeWidget2DInterfaceCpp, public IMyDynamicAllocationCanvasPannelWidget2DInterfaceCpp, public IMyMJGameInRoomUIMainWidgetInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -421,84 +489,109 @@ public:
 
     };
 
-    
-    virtual FMyErrorCodeMJGameCpp changeDeskPositionOfIdxScreenPosition0(int32 idxDeskPositionOfIdxScreenPosition0) override;
 
-
-    inline void invalidCachedData()
-    {
-        m_cCachedData.m_bValid = false;
-    };
-
-    inline UMyMJGameInRoomPlayerInfoWidgetBaseCpp* getInRoomPlayerInfoWidgetByScreenPosition(int32 idxScreenPosition, bool verifyValid = true)
-    {
-        if (!m_cCachedData.m_bValid) {
-            refillCachedData();
-        }
-
-        UMyMJGameInRoomPlayerInfoWidgetBaseCpp* pRet = m_cCachedData.m_aPlayerInfoWidgetsOnScreen[idxScreenPosition];
-        if (verifyValid) {
-            MY_VERIFY(IsValid(pRet));
-        }
-        return pRet;
-    };
-
-    inline UMyMJGameInRoomPlayerInfoWidgetBaseCpp* getInRoomPlayerInfoWidgetByIdxAttender(int32 idxAttender, bool verifyValid = true)
-    {
-        if (!m_cCachedData.m_bValid) {
-            refillCachedData();
-        }
-
-        UMyMJGameInRoomPlayerInfoWidgetBaseCpp* pRet = m_cCachedData.m_aPlayerInfoWidgetsOnScreen[m_cCachedData.idxAttenderToIdxScreenPosition(idxAttender)];
-        if (verifyValid) {
-            MY_VERIFY(IsValid(pRet));
-        }
-        return pRet;
-    }; 
+    virtual FMyErrorCodeMJGameCpp showAttenderWeave(float dur, int32 idxAttender, MyMJGameEventVisualTypeCpp weaveVisualType) override;
+    virtual FMyErrorCodeMJGameCpp showMyMJRoleDataAttenderPublicChanged(int32 idxAttender, const FMyMJRoleDataAttenderPublicCpp& dataAttenderPublic, int32 subType) override;
+    virtual FMyErrorCodeMJGameCpp showMyMJRoleDataAttenderPrivateChanged(int32 idxAttender, const FMyMJRoleDataAttenderPrivateCpp& dataAttenderPrivate, int32 subType) override;
+    virtual FMyErrorCodeMJGameCpp updateAttenderPositions(float XYRatioOfplayerScreen, const TArray<FVector2D>& projectedPointsInPlayerScreen_unit_absolute) override;
 
 
 protected:
 
-    IMySizeWidget2DInterfaceCpp_DefaultEmptyImplementationForUObject();
-    IMyWidgetBasicOperationInterfaceCpp_DefaultEmptyImplementationForUObject()
+    IMyContentSizeWidget2DInterfaceCpp_DefaultImplementationForUObject_Bp_Other()
+    IMyContentSizeWidget2DInterfaceCpp_DefaultImplementationForUObject_getContentSizeFromCache_Style0(m_cCachedData, m_cModelInfo.getBox2DRefConst().m_cBoxExtend * 2, refillCachedData)
+    IMyContentSizeWidget2DInterfaceCpp_DefaultImplementationForUObject_setContentSizeThroughCache_Style0(invalidCachedData)
+
+    IMyDynamicAllocationCanvasPannelWidget2DInterfaceCpp_DefaultImplementationForUObject_Bp_Other()
+    IMyDynamicAllocationCanvasPannelWidget2DInterfaceCpp_DefaultImplementationForUObject_Bp_Cached_Style0(m_cCachedData, m_pDynamicAllocationCanvasPanel)
+
+    IMyMJGameInRoomUIMainWidgetInterfaceCpp_DefaultImplementationForUObject_Bp()
+
 
     virtual void OnWidgetRebuilt() override
     {
         Super::OnWidgetRebuilt();
 
+        m_cRuntimeData.reset();
         invalidCachedData();
+
+        for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
+            UMyMJGameInRoomPlayerInfoWidgetBaseCpp* pW = NULL;
+            if (getInRoomPlayerInfoWidgetByIdxAttenderFromCache(idxAttender, pW, false).hasError()) {
+                break;
+            }
+
+            pW->updateSlotSettingsToComply_MyModelInfoWidget2D();
+        }
     };
 
 
-    virtual FMyErrorCodeMJGameCpp showImportantGameStateUpdated_Implementation(float dur, MyMJGameStateCpp newGameState) override
+    //error will always be logged, and return OK means @outWidget never NULL
+    FMyErrorCodeMJGameCpp  getInRoomPlayerInfoWidgetByIdxAttenderFromCache(int32 idxAttender, class UMyMJGameInRoomPlayerInfoWidgetBaseCpp*& outWidget, bool verifyValid)
     {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: showImportantGameStateUpdated only implemented in C++."), *GetClass()->GetName());
-        return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
+        MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
+
+        outWidget = NULL;
+
+        FMyErrorCodeMJGameCpp ret(true);
+        if (!m_cCachedData.m_bValid) {
+            ret = refillCachedData();
+        }
+
+        if (ret.hasError()) {
+            if (verifyValid) {
+                MY_VERIFY(false);
+            }
+            return ret;
+        }
+
+        MY_VERIFY(m_cCachedData.m_aPlayerInfoWidgets.Num() >= 4);
+
+        outWidget = m_cCachedData.m_aPlayerInfoWidgets[idxAttender];
+
+        MY_VERIFY(IsValid(outWidget));
+
+        return ret;
     };
 
-    virtual FMyErrorCodeMJGameCpp showAttenderWeave_Implementation(float dur, int32 idxAttender, MyMJGameEventVisualTypeCpp weaveVisualType) override;
 
-    virtual FMyErrorCodeMJGameCpp getInRoomPlayerInfoWidgetByScreenPositionEnsured_Implementation(int32 idxScreenPosition, class UMyMJGameInRoomPlayerInfoWidgetBaseCpp*& outWidget) override
+    FMyErrorCodeMJGameCpp getCfgRefConstFromCache(const FMyMJGameInRoomUIMainWidgetCfgCpp*& pCfg, bool verifyValid)
     {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getInRoomPlayerInfoWidgetByScreenPositionEnsured only implemented in C++."), *GetClass()->GetName());
-        MY_VERIFY(false);
-        return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint);
-    };
+        pCfg = NULL;
 
-    inline UMyMJGameInRoomPlayerInfoWidgetBaseCpp* getInRoomPlayerInfoWidgetByScreenPositionEnsured(int32 i)
-    {
-        UMyMJGameInRoomPlayerInfoWidgetBaseCpp* ret = NULL;
-        IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_getInRoomPlayerInfoWidgetByScreenPositionEnsured(this, i, ret);
+        FMyErrorCodeMJGameCpp ret(true);
+        if (!m_cCachedData.m_bValid) {
+            ret = refillCachedData();
+        }
 
-        MY_VERIFY(ret);
+        if (ret.hasError()) {
+            if (verifyValid) {
+                MY_VERIFY(false);
+            }
+            return ret;
+        }
+
+        pCfg = &m_cCachedData.m_cCfg;
+
         return ret;
     };
 
 
 
-    //if @idxDeskPositionOfCamera < 0, it will use old settings, such as resetted value as 0
-    UFUNCTION(BlueprintCallable)
-    void refillCachedData(int32 idxDeskPositionOfCamera = -1);
+    FMyMJGameInRoomUIMainWidgetRuntimeDataCpp m_cRuntimeData;
+
+
+private:
+
+    //just to comply with update function macro
+    inline MyErrorCodeCommonPartCpp invalidCachedData()
+    {
+        m_cCachedData.reset();
+        return MyErrorCodeCommonPartCpp::NoError;
+    };
+
+    //If error got, always a log will be generated, so caller need NOT log again
+    MyErrorCodeCommonPartCpp refillCachedData();
 
     FMyMJGameInRoomUIMainWidgetCachedDataCpp m_cCachedData;
 };

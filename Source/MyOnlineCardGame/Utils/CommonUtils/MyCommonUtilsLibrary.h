@@ -51,7 +51,7 @@ public:
         return FString::Printf(TEXT("CenterRelative: %s, BoxExtend: %s"), *m_cCenterPointRelativeLocation.ToString(), *m_cBoxExtend.ToString());
     };
 
-    //final size after all actor scale, component scale applied
+    //component scale applied, it is the center point to prigin, only origin keeps unchanged when rotate and scale
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "center point final relative location"))
     FVector m_cCenterPointRelativeLocation;
 
@@ -82,12 +82,20 @@ public:
         m_cBoxExtend = FVector2D::UnitVector;
     };
 
-    inline FString ToString() const
+    inline FMyModelInfoBoxWidget2DCpp operator*(float Scale) const
     {
-        return FString::Printf(TEXT("CenterRelative: %s, BoxExtend: %s"), *m_cCenterPointRelativeLocation.ToString(), *m_cBoxExtend.ToString());
+        FMyModelInfoBoxWidget2DCpp ret;
+        ret.m_cCenterPointRelativeLocation = m_cCenterPointRelativeLocation * Scale;
+        ret.m_cBoxExtend = m_cBoxExtend;
+        return ret;
     };
 
-    //final size after all actor scale, component scale applied
+    bool equals(const FMyModelInfoBoxWidget2DCpp& other, float tolerance) const;
+
+    FString ToString() const;
+
+
+    //component scale applied, it is the center point to prigin, only origin keeps unchanged when rotate and scale
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "center point final relative location"))
     FVector2D m_cCenterPointRelativeLocation;
 
@@ -104,7 +112,7 @@ enum class MyModelInfoType : uint8
     BoxWidget2D = 110         UMETA(DisplayName = "BoxWidget2D"),
 };
 
-//Todo: use union or cast to save memory
+//Model info ignore root scale
 USTRUCT(BlueprintType)
 struct FMyModelInfoWorld3DCpp
 {
@@ -128,6 +136,11 @@ public:
         m_eType = eType;
     };
 
+    inline MyModelInfoType getType() const
+    {
+        return m_eType;
+    };
+
     inline const FMyModelInfoBoxWorld3DCpp& getBox3DRefConst() const
     {
         if (m_eType != MyModelInfoType::BoxWorld3D) {
@@ -147,8 +160,8 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "box"))
     FMyModelInfoBoxWorld3DCpp m_cBox;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "type"))
-        MyModelInfoType m_eType;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "type"))
+    MyModelInfoType m_eType;
 };
 
 
@@ -176,6 +189,11 @@ public:
         m_eType = eType;
     };
 
+    inline MyModelInfoType getType() const
+    {
+        return m_eType;
+    };
+
     inline const FMyModelInfoBoxWidget2DCpp& getBox2DRefConst() const
     {
         if (m_eType != MyModelInfoType::BoxWidget2D) {
@@ -190,12 +208,25 @@ public:
         return const_cast<FMyModelInfoBoxWidget2DCpp&>(getBox2DRefConst());
     }
 
+    inline FMyModelInfoWidget2DCpp operator*(float Scale) const
+    {
+        FMyModelInfoWidget2DCpp ret;
+        ret.m_cBox = m_cBox * Scale;
+        ret.m_eType = m_eType;
+        return ret;
+    }
+
+    bool equals(const FMyModelInfoWidget2DCpp& other, float tolerance) const;
+
+    FString ToString() const;
+
+
 protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "box"))
         FMyModelInfoBoxWidget2DCpp m_cBox;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "type"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "type"))
         MyModelInfoType m_eType;
 };
 
@@ -354,6 +385,26 @@ class UMyCommonUtilsLibrary :
     GENERATED_BODY()
 
 public:
+
+    UFUNCTION(BlueprintPure)
+        static inline MyErrorCodeCommonPartCpp getMyErrorCodeCommonPartNoError()
+    {
+        return MyErrorCodeCommonPartCpp::NoError;
+    };
+
+    //Return true if have error
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToBool (MyErrorCodeCommonPartCpp)", CompactNodeTitle = "->", BlueprintAutocast))
+        static inline bool Conv_MyErrorCodeCommonPartCpp_Bool(MyErrorCodeCommonPartCpp errorCode)
+    {
+        return errorCode != MyErrorCodeCommonPartCpp::NoError;
+    };
+
+    //ToString
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (MyErrorCodeCommonPartCpp)", CompactNodeTitle = "->", BlueprintAutocast))
+        static inline FString Conv_MyErrorCodeCommonPartCpp_String(MyErrorCodeCommonPartCpp errorCode)
+    {
+        return UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyErrorCodeCommonPartCpp"), (uint8)errorCode);
+    };
 
 
     template< class T >

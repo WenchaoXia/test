@@ -518,7 +518,10 @@ UMyMJGameInRoomUIMainWidgetBaseCpp* UMyMJGameUIManagerCpp::getInRoomUIMain(bool 
 
     if (!IsValid(m_pInRoomUIMain))
     {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pInRoomUIMain is invalid: %p."), m_pInRoomUIMain);
+        if (createIfNotExist) {
+            //This is an error case
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_pInRoomUIMain is invalid: %p."), m_pInRoomUIMain);
+        }
         if (verify) {
             MY_VERIFY(false);
         }

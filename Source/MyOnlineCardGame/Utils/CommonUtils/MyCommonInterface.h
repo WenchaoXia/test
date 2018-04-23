@@ -8,8 +8,8 @@
 
 //If a interface function = NULL, it means C++ child class must implement it.
 //If a interface function have default return error code, it means child class can skip implemention and call it ignoring error.
-//Warning:: Any function that maybe implemented by blueprint, can't be directly called, but using I*interface::Execute_*()
-
+//Warning:: Any function that maybe implemented by blueprint, can't be directly called, but using I*interface::Execute_*().
+//If error happens, Error log should always be generated in implemention, and any pointer as output should be set to NULL, ref as output should be resetted.
 
 
 //application level id

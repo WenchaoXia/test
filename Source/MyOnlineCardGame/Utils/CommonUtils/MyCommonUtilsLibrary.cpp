@@ -16,6 +16,47 @@
 //#include "Classes/PaperSprite.h"
 
 
+bool FMyModelInfoBoxWidget2DCpp::equals(const FMyModelInfoBoxWidget2DCpp& other, float tolerance) const
+{
+    return m_cCenterPointRelativeLocation.Equals(other.m_cCenterPointRelativeLocation, tolerance) &&
+            m_cBoxExtend.Equals(other.m_cBoxExtend, tolerance);
+}
+
+FString FMyModelInfoBoxWidget2DCpp::ToString() const
+{
+    return FString::Printf(TEXT("CenterRelative: %s, BoxExtend: %s"), *m_cCenterPointRelativeLocation.ToString(), *m_cBoxExtend.ToString());
+}
+
+
+bool FMyModelInfoWidget2DCpp::equals(const FMyModelInfoWidget2DCpp& other, float tolerance) const
+{
+    if (m_eType != other.m_eType) {
+        return false;
+    }
+
+    if (m_eType == MyModelInfoType::BoxWidget2D) {
+        if (!m_cBox.equals(other.m_cBox, tolerance)) {
+            return false;
+        }
+    }
+    else {
+
+    }
+
+
+    return true;
+}
+
+FString FMyModelInfoWidget2DCpp::ToString() const
+{
+    FString ret = FString::Printf(TEXT("type: %s. "), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyModelInfoType"), (uint8)m_eType));
+    if (m_eType == MyModelInfoType::BoxWidget2D) {
+        ret += m_cBox.ToString();
+    }
+
+    return ret;
+}
+
 
 void FMyLocationOfZRotationAroundPointCoordinateCpp::interp(const FMyLocationOfZRotationAroundPointCoordinateCpp& start, const FMyLocationOfZRotationAroundPointCoordinateCpp& end, float percent, FMyLocationOfZRotationAroundPointCoordinateCpp& result)
 {
@@ -38,8 +79,6 @@ void FMyTransformOfZRotationAroundPointCoordinateCpp::interp(const FMyTransformO
 
     //result.m_cRotatorOffsetFacingCenterPoint = start.m_cRotatorOffsetFacingCenterPoint + (end.m_cRotatorOffsetFacingCenterPoint - start.m_cRotatorOffsetFacingCenterPoint) * percentFixed;
 };
-
-
 
 
 FString
@@ -591,9 +630,9 @@ void UMyCommonUtilsLibrary::playerScreenConstrainedVLengthAbsoluteToDistanceFrom
     float l0 = (worldPosition0 - worldPosition1).Size();
     float deltal = (worldDirection1 - worldDirection0).Size();
 
-    if (deltal < 0.00001) {
+    if (deltal < MyDeNominatorAsZeroTolerance) {
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("delta %f is too small, fixing it."), deltal);
-        deltal = 0.00001;
+        deltal = MyDeNominatorAsZeroTolerance;
     }
 
     DistanceFromCamera = (ModelInWorldHeight - l0) / deltal;

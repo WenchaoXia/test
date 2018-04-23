@@ -545,7 +545,7 @@ void UMyWithCurveUpdaterTransformWorld3DComponent::updaterActivateTick(bool bNew
 
 
 
-AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp() : Super()
+AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp() : Super()
 {
     bNetLoadOnClient = true;
 
@@ -554,48 +554,41 @@ AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::AMyWithCurveUpdaterTrans
     createComponentsForCDO();
 }
 
-AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::~AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp()
+AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::~AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp()
 {
 
 }
 
 
-//Todo:: verify its correctness when root scene scaled
-MyErrorCodeCommonPartCpp AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::getModelInfo(FMyModelInfoWorld3DCpp& modelInfo, bool verify) const
+MyErrorCodeCommonPartCpp AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::getModelInfoForUpdater(FMyModelInfoWorld3DCpp& modelInfo)
 {
     //ignore the root scene/actor's scale, but calc from the box
 
     //FVector actorScale3D = GetActorScale3D();
     //m_pMainBox->GetScaledBoxExtent()
+
     modelInfo.reset(MyModelInfoType::BoxWorld3D);
     modelInfo.getBox3DRef().m_cBoxExtend = m_pMainBox->GetUnscaledBoxExtent() *  m_pMainBox->GetComponentScale();
 
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("name %s, box scale %s."), *GetName(), *m_pMainBox->GetComponentScale().ToString());
     modelInfo.getBox3DRef().m_cCenterPointRelativeLocation = m_pMainBox->RelativeLocation;// * actorScale3D;
 
-    MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
+ 
     if (modelInfo.getBox3DRef().m_cBoxExtend.Size() < 1) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("class %s: model size is too small: %s."), *this->GetClass()->GetName(), *modelInfo.getBox3DRef().m_cBoxExtend.ToString());
-        ret = MyErrorCodeCommonPartCpp::ModelSizeIncorrect;
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("class %s: model size is too small: %s, fixing it now."), *this->GetClass()->GetName(), *modelInfo.getBox3DRef().m_cBoxExtend.ToString());
+        modelInfo.getBox3DRef().m_cBoxExtend = FVector::OneVector;
     }
-
-    if (verify) {
-        MY_VERIFY(ret == MyErrorCodeCommonPartCpp::NoError);
-    }
-
-    return ret;
-}
-
-MyErrorCodeCommonPartCpp AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::getMyWithCurveUpdaterTransformWorld3DEnsured(struct FMyWithCurveUpdaterTransformWorld3DCpp*& outUpdater)
-{
-    MY_VERIFY(IsValid(m_pMyTransformUpdaterComponent));
-
-    outUpdater = &m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformWorld3DRef();
 
     return MyErrorCodeCommonPartCpp::NoError;
 }
 
-void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::createComponentsForCDO()
+struct FMyWithCurveUpdaterTransformWorld3DCpp& AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::getMyWithCurveUpdaterTransformRef()
+{
+    MY_VERIFY(IsValid(m_pMyTransformUpdaterComponent));
+    return m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRef();
+}
+
+void AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::createComponentsForCDO()
 {
 
     USceneComponent* pRootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
@@ -627,12 +620,12 @@ void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::createComponentsFor
 
 #if WITH_EDITOR
 
-void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
+void AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty, %s"), *m_cResPath.Path);
     FName PropertyName = (e.Property != NULL) ? e.Property->GetFName() : NAME_None;
 
-    if (PropertyName == GET_MEMBER_NAME_CHECKED(AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp, m_bFakeUpdateSettings))
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp, m_bFakeUpdateSettings))
     {
         UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("m_bFakeUpdateSettings clicked."));
         updateSettings();
@@ -646,7 +639,7 @@ void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::PostEditChangePrope
 #endif
 
 
-MyErrorCodeCommonPartCpp AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::updateSettings()
+MyErrorCodeCommonPartCpp AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::updateSettings()
 {
     if (!IsValid(m_pMainBox)) {
         UClass* uc = this->GetClass();
@@ -695,7 +688,7 @@ MyErrorCodeCommonPartCpp AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp:
 }
 
 
-void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::helperTestAnimationStep(float time, FString debugStr, const TArray<AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp*>& actors)
+void AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::helperTestAnimationStep(float time, FString debugStr, const TArray<AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp*>& actors)
 {
     FMyWithCurveUpdateStepMetaTransformWorld3DCpp meta;
     FMyWithCurveUpdateStepSettingsTransformWorld3DCpp stepData;
@@ -713,7 +706,7 @@ void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::helperTestAnimation
 
     for (int32 i = 0; i < actors.Num(); i++)
     {
-        FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &actors[i]->getMyWithCurveUpdaterTransformWorld3DRef();
+        FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &actors[i]->getMyWithCurveUpdaterTransformRef();
         FTransform targetT;
         targetT.SetLocation(FVector(0, 0, 100));
         pUpdater->setHelperTransformOrigin(actors[i]->GetActorTransform());
@@ -725,7 +718,7 @@ void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::helperTestAnimation
 }
 
 /*
-void AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp::OnConstruction(const FTransform& Transform)
+void AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::OnConstruction(const FTransform& Transform)
 {
 Super::OnConstruction(Transform);
 
@@ -733,31 +726,7 @@ UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("OnConstruction m_pMainBox 0x%p, thi
 }
 */
 
-
-MyErrorCodeCommonPartCpp UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::getModelInfo(FMyModelInfoWidget2DCpp& modelInfo, bool verify) const
-{
-    modelInfo.reset(MyModelInfoType::BoxWidget2D);
-    FVector2D localSize = FVector2D::ZeroVector;
-    MyErrorCodeCommonPartCpp ret = IMySizeWidget2DInterfaceCpp::Execute_getLocalSize(this, localSize);
-
-    modelInfo.getBox2DRef().m_cBoxExtend = localSize / 2;
-    //modelInfo.getBox2DRef().m_cCenterPointRelativeLocation = RenderTransformPivot * localSize;
-    modelInfo.getBox2DRef().m_cCenterPointRelativeLocation = FVector2D::ZeroVector;
-
-    if (verify) {
-        MY_VERIFY(ret == MyErrorCodeCommonPartCpp::NoError);
-    }
-
-    FVector2D renderTransformPivotExpected = UMyRenderUtilsLibrary::getRenderTransformPivotByMyModelInfoBoxWidget2D(modelInfo.getBox2DRef());
-    if (!renderTransformPivotExpected.Equals(RenderTransformPivot, 0.01)) {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("RenderTransformPivot is not as expected: expected %s, now %s. MyModelInfoBoxWidget2D %s."),
-                  *renderTransformPivotExpected.ToString(), *RenderTransformPivot.ToString(), *modelInfo.getBox2DRef().ToString());
-    }
-
-    return ret;
-};
-
-void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+void UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
 
@@ -766,7 +735,7 @@ void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::NativeTick(const 
     }
 }
 
-void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
+void UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::updaterOnCommonUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector)
 {
     const FMyWithCurveUpdateStepDataTransformWidget2DCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataTransformWidget2DCpp*>(&data);
     MY_VERIFY(pData);
@@ -782,7 +751,7 @@ void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonUp
     SetRenderTransform(wtNow);
 }
 
-void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
+void UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::updaterOnCommonFinish(const FMyWithCurveUpdateStepDataBasicCpp& data)
 {
     const FMyWithCurveUpdateStepDataTransformWidget2DCpp* pData = StaticCast<const FMyWithCurveUpdateStepDataTransformWidget2DCpp*>(&data);
     MY_VERIFY(pData);
@@ -790,7 +759,7 @@ void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterOnCommonFi
     SetRenderTransform(pData->m_cTransformWidget2DEnd);
 }
 
-void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterActivateTick(bool activate, FString debugString)
+void UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::updaterActivateTick(bool activate, FString debugString)
 {
     m_bUpdaterNeedTick = activate;
 
@@ -805,6 +774,58 @@ void UMyWithCurveUpdaterTransformWidget2DBoxLikeWidgetBaseCpp::updaterActivateTi
         }
     }
 }
+
+MyErrorCodeCommonPartCpp UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::getDataByCacheRefConst_MyModelInfoWidget2D(const FMyModelInfoWidget2DCpp*& pModelInfo, bool verifyValid)
+{
+    MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
+    if (!m_cMyCachedData_MyModelInfoWidget2D.m_bValid) {
+        ret = refillCachedData_MyModelInfoWidget2D();
+    }
+    pModelInfo = &m_cMyCachedData_MyModelInfoWidget2D.m_cModelInfo;
+
+    if (pModelInfo->getType() != MyModelInfoType::BoxWidget2D) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: model type is supposed to be BoxWidget2D, but it is  %d."), *GetName(), (uint8)pModelInfo->getType());
+        MyErrorCodeCommonPartJoin(ret, MyErrorCodeCommonPartCpp::TypeUnexpected);
+    }
+
+    if (UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_Bool(ret)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got error in getModelInfoFromCacheRefConst(): %s."), *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret));
+        if (verifyValid) {
+            MY_VERIFY(false);
+        }
+    }
+
+    return ret;
+};
+
+MyErrorCodeCommonPartCpp UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::updateSlotSettingsToComply_MyModelInfoWidget2D()
+{
+    invalidCachedData_MyModelInfoWidget2D();
+    return UMyRenderUtilsLibrary::updateUserWidgetInCanvasPanelWithPivot_Widget2D(this, m_cPivotExpected);
+};
+
+void UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::invalidCachedData_MyModelInfoWidget2D()
+{
+    m_cMyCachedData_MyModelInfoWidget2D.reset();
+};
+
+MyErrorCodeCommonPartCpp UMyWithCurveUpdaterTransformWidget2DBoxWidgetBaseCpp::refillCachedData_MyModelInfoWidget2D()
+{
+    m_cMyCachedData_MyModelInfoWidget2D.reset();
+
+    MyErrorCodeCommonPartCpp ret = UMyRenderUtilsLibrary::evaluateUserWidgetInCanvasPanelForModelInfo_Widget2D(this, m_cMyCachedData_MyModelInfoWidget2D.m_cModelInfo);
+
+    if (ret != MyErrorCodeCommonPartCpp::NoError) {
+        m_cMyCachedData_MyModelInfoWidget2D.reset();
+    }
+    else {
+        m_cMyCachedData_MyModelInfoWidget2D.m_bValid = true;
+    }
+
+    return ret;
+}
+
+
 
 #if WITH_EDITOR
 
@@ -1640,7 +1661,7 @@ void UMyRenderUtilsLibrary::helperUpdatersSetupStepsForPointTransformWorld3D(con
         return;
     }
 
-    pMeta->m_cModelInfo = updaterInterfaces[0]->getModelInfo();
+    pMeta->m_cModelInfo = updaterInterfaces[0]->getModelInfoForUpdaterEnsured();
 
     helperResolveTransformWorld3DFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, pointInfo.m_fShowPosiFromCenterToBorderPercent, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelInfo.getBox3DRefConst().m_cBoxExtend.Size() * 2, pMeta->m_cPointTransform);
     helperResolveTransformWorld3DFromPointAndCenterMetaOnPlayerScreenConstrained(WorldContextObject, pointAndCenterMeta, 1.2, pointInfo.m_cExtraOffsetScreenPercent, pointInfo.m_fTargetVLengthOnScreenScreenPercent, pMeta->m_cModelInfo.getBox3DRefConst().m_cBoxExtend.Size() * 2, pMeta->m_cDisappearTransform);
@@ -1650,7 +1671,7 @@ void UMyRenderUtilsLibrary::helperUpdatersSetupStepsForPointTransformWorld3D(con
     pUpdaters->Reset();
     int32 l = updaterInterfaces.Num();
     for (int32 i = 0; i < l; i++) {
-        FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &updaterInterfaces[i]->getMyWithCurveUpdaterTransformWorld3DRef();
+        FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &updaterInterfaces[i]->getMyWithCurveUpdaterTransformRef();
         pUpdaters->Emplace(pUpdater);
         if (clearPrevSteps) {
             pUpdater->clearSteps();
@@ -1686,7 +1707,7 @@ void UMyRenderUtilsLibrary::helperUpdatersAddWaitStep(float waitTime, FString de
 
     for (int32 i = 0; i < updaterInterfaces.Num(); i++)
     {
-        aUpdaters.Emplace(&updaterInterfaces[i]->getMyWithCurveUpdaterTransformWorld3DRef());
+        aUpdaters.Emplace(&updaterInterfaces[i]->getMyWithCurveUpdaterTransformRef());
     }
 
     UMyRenderUtilsLibrary::helperUpdatersAddWaitStep(waitTime, debugStr, aUpdaters);
@@ -2026,6 +2047,400 @@ void UMyRenderUtilsLibrary::myElemAndGroupCalcDelimiterNumber(const FIntVector &
     elemDelimiterNumber.Z = elemWalked.Z - 1 - groupDelimiterNumber.Z;
     if (elemDelimiterNumber.Z < 0) elemDelimiterNumber.Z = 0;
 }
+
+/*
+FVector2D UMyRenderUtilsLibrary::Map_BoxWidget2D_BoxWidget2D(const FVector2D& boxExtendA, const FVector2D& boxExtendB, const FVector2D& coordinateInA)
+{
+    //MyDeNominatorAsZeroTolerance
+    //FMath::IsNealyEqual();
+};
+*/
+
+float UMyRenderUtilsLibrary::getDegreeInSquareFromPointInSquare_Widget2D(const FVector2D& pointFromCenterInSquare)
+{
+    float d = UKismetMathLibrary::DegAtan2(pointFromCenterInSquare.Y, pointFromCenterInSquare.X);
+    float DegreeInSquare = -d + 90;
+    return FMath::UnwindDegrees(DegreeInSquare);
+}
+
+void UMyRenderUtilsLibrary::helperArrangePointsToPositionsInBoxEvenly_Widget2D(float boxXYRatio, const TArray<FVector2D>& pointsInBox, TArray<int32>& outPositions, TArray<float>& outDeltas)
+{
+    outPositions.Reset();
+    outDeltas.Reset();
+
+    int32 l = pointsInBox.Num();
+    if (l <= 0) {
+        return;
+    }
+
+    FVector2D center = FVector2D::ZeroVector;
+    for (int32 i = 0; i < l; i++) {
+        center += pointsInBox[i];
+    }
+    center /= l;
+
+    TArray<float> aSquareScreenDegrees;
+    for (int32 i = 0; i < l; i++) {
+        FVector2D p = pointsInBox[i] - center;
+        float d = getDegreeInSquareFromPointInSquare_Widget2D(Map_BoxWidget2D_SquareWidget2D(boxXYRatio, p));
+        aSquareScreenDegrees.Emplace(d);
+
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%d: mapped degree in square %f."), i, d);
+    }
+
+    int32 pointArrangedCountMaxPerPosition = l / 4;
+    if ((l % 4) > 0) {
+        pointArrangedCountMaxPerPosition += 1;
+    }
+
+    TArray<int32> aPointArrangedCountForPositions;
+    aPointArrangedCountForPositions.AddZeroed(4);
+
+    //let's arrange them
+    for (int32 i = 0; i < l; i++) {
+        float pointSquareScreenDegree = aSquareScreenDegrees[i];
+        int32 idxScreenPositionFreeAndDeltaAbsMin = -1;
+        float deltaMinSquareScreenDegree = 1000;
+        float deltaAbsMinSquareScreenDegree = 1000;
+        for (int32 j = 0; j < 4; j++) {
+            int32& pointCount = aPointArrangedCountForPositions[j];
+            if (pointCount >= pointArrangedCountMaxPerPosition) {
+                continue;
+            }
+
+            float centerSquareScreenDegree = FMath::UnwindDegrees(90 * j);
+            float deltaSquareScreenDegree = FMath::UnwindDegrees(pointSquareScreenDegree - centerSquareScreenDegree);
+            float deltaAbsSquareScreenDegree = FMath::Abs<float>(deltaSquareScreenDegree);
+            if (deltaAbsSquareScreenDegree < deltaAbsMinSquareScreenDegree) {
+                deltaMinSquareScreenDegree = deltaSquareScreenDegree;
+                deltaAbsMinSquareScreenDegree = deltaAbsSquareScreenDegree;
+                idxScreenPositionFreeAndDeltaAbsMin = j;
+            }
+        }
+
+        MY_VERIFY(idxScreenPositionFreeAndDeltaAbsMin >= 0);
+        outPositions.Emplace(idxScreenPositionFreeAndDeltaAbsMin);
+        outDeltas.Emplace(deltaMinSquareScreenDegree);
+        aPointArrangedCountForPositions[idxScreenPositionFreeAndDeltaAbsMin]++;
+
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%d output: %d, %f."), i, idxScreenPositionFreeAndDeltaAbsMin, deltaMinSquareScreenDegree);
+    }
+
+    return;
+};
+
+void UMyRenderUtilsLibrary::helperGenMappedPointsForMyAreaAlignToBorders_Widget2D(const FVector2D& boxCenter, const FVector2D& boxExtend, const TArray<const FMyAreaAlignToBorderCfgOneDimCpp*>& boxAlignedAreas,
+                                                                                   bool alignAtBorderOutside, bool minMaxClockWise,
+                                                                                   TArray<FMyAreaAlignToBorderMappedPointsWidget2DCpp>& outAreaMappedPoints)
+{
+    MY_VERIFY(boxAlignedAreas.Num() == 4);
+    
+    int32 l = boxAlignedAreas.Num();
+    outAreaMappedPoints.Reset();
+    outAreaMappedPoints.AddDefaulted(l);
+
+    for (int32 i = 0; i < l; i++) {
+
+        const FMyAreaAlignToBorderCfgOneDimCpp* pCfgDim = boxAlignedAreas[i];
+        MY_VERIFY(pCfgDim);
+        const FMyAreaAlignToBorderCfgOneDimCpp& cfgDim = *pCfgDim;
+
+        FMyAreaAlignToBorderMappedPointsWidget2DCpp& outArea = outAreaMappedPoints[i];
+
+        outArea.m_fDeltaMappedDegreeClampPercent = pCfgDim->m_fDeltaMappedDegreeClampPercent;
+
+
+        FVector2D& minP = outArea.m_cMin;
+        FVector2D& centerP = outArea.m_cExpectedCenter;
+        FVector2D& maxP = outArea.m_cMax;
+        MyAxisTypeCpp& eToBorderAxisType = outArea.m_eToBorderAxisType;
+        MyAxisAlignmentTypeCpp& eToBorderAlignmentType = outArea.m_eToBorderAlignmentType;
+
+        //try align inside box border, counterClockWise
+        if (i == 0) {
+
+            eToBorderAxisType = MyAxisTypeCpp::Y;
+            eToBorderAlignmentType = MyAxisAlignmentTypeCpp::Positive;
+
+            float targetY = boxExtend.Y;
+
+            minP.X = -boxExtend.X + cfgDim.m_fMinPercent * boxExtend.X * 2;
+            minP.Y = targetY;
+
+            centerP.X = -boxExtend.X + cfgDim.m_fExpectedCenterPercent * boxExtend.X * 2;
+            centerP.Y = targetY;
+
+            maxP.X = -boxExtend.X + cfgDim.m_fMaxPercent * boxExtend.X * 2;
+            maxP.Y = targetY;
+        }
+        else if (i == 1) {
+
+            eToBorderAxisType = MyAxisTypeCpp::X;
+            eToBorderAlignmentType = MyAxisAlignmentTypeCpp::Positive;
+
+            float targetX = boxExtend.X;
+
+            minP.X = targetX;
+            minP.Y = -boxExtend.Y + cfgDim.m_fMaxPercent * boxExtend.Y * 2;
+
+            centerP.X = targetX;
+            centerP.Y = -boxExtend.Y + cfgDim.m_fExpectedCenterPercent * boxExtend.Y * 2;
+
+            maxP.X = targetX;
+            maxP.Y = -boxExtend.Y + cfgDim.m_fMinPercent * boxExtend.Y * 2;
+        }
+        else if (i == 2) {
+
+            eToBorderAxisType = MyAxisTypeCpp::Y;
+            eToBorderAlignmentType = MyAxisAlignmentTypeCpp::Negative;
+
+            float targetY = -boxExtend.Y;
+
+            minP.X = -boxExtend.X + cfgDim.m_fMaxPercent * boxExtend.X * 2;
+            minP.Y = targetY;
+
+            centerP.X = -boxExtend.X + cfgDim.m_fExpectedCenterPercent * boxExtend.X * 2;
+            centerP.Y = targetY;
+
+            maxP.X = -boxExtend.X + cfgDim.m_fMinPercent * boxExtend.X * 2 ;
+            maxP.Y = targetY;
+        }
+        else if (i == 3) {
+
+            eToBorderAxisType = MyAxisTypeCpp::X;
+            eToBorderAlignmentType = MyAxisAlignmentTypeCpp::Negative;
+
+            float targetX = -boxExtend.X;
+
+            minP.X = targetX;
+            minP.Y = -boxExtend.Y + cfgDim.m_fMinPercent * boxExtend.Y * 2;
+
+            centerP.X = targetX;
+            centerP.Y = -boxExtend.Y + cfgDim.m_fExpectedCenterPercent * boxExtend.Y * 2;
+
+            maxP.X = targetX;
+            maxP.Y = -boxExtend.Y + cfgDim.m_fMaxPercent * boxExtend.Y * 2;
+
+        }
+        else {
+            MY_VERIFY(false);
+        }
+
+        if (alignAtBorderOutside) {
+            eToBorderAlignmentType = Inv_MyAxisAlignmentType(eToBorderAlignmentType);
+        }
+
+        if (minMaxClockWise) {
+            FVector2D t = minP;
+            minP = maxP;
+            maxP = t;
+        }
+
+        minP += boxCenter;
+        centerP += boxCenter;
+        maxP += boxCenter;
+    }
+}
+
+FVector2D UMyRenderUtilsLibrary::helperResolveLocationForMyAreaAlignToBorderMappedPoints_Widget2D(const TArray<FMyAreaAlignToBorderMappedPointsWidget2DCpp>& areaMappedPoints,
+                                                                                                  const FMyModelInfoBoxWidget2DCpp& widgetModelInfo, int32 widgetIdxPositionInBox, float widgetDeltaFromExpectedDegreeInSquare)
+{
+    MY_VERIFY(widgetIdxPositionInBox >= 0 && widgetIdxPositionInBox < 4);
+    MY_VERIFY(areaMappedPoints.Num() == 4);
+
+
+    const FMyAreaAlignToBorderMappedPointsWidget2DCpp& areaMapped= areaMappedPoints[widgetIdxPositionInBox];
+
+    float clampV = 45 * FMath::Clamp<float>(areaMapped.m_fDeltaMappedDegreeClampPercent, 0.1, 1);
+
+    FVector2D targetLocation;
+    if (widgetDeltaFromExpectedDegreeInSquare >= 0) {
+        float dCamped = FMath::Clamp<float>(widgetDeltaFromExpectedDegreeInSquare, 0, clampV);
+        float percent = dCamped / clampV;
+        targetLocation = FMath::Vector2DInterpTo(areaMapped.m_cExpectedCenter, areaMapped.m_cMax, percent, 1);
+
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("1: dCamped %f, percent %f, range (%s, %s), output: %s."), dCamped, percent,
+                   //*areaMapped.m_cExpectedCenter.ToString(), *areaMapped.m_cMax.ToString(), *targetLocation.ToString());
+    }
+    else {
+        float dCamped = FMath::Clamp<float>(widgetDeltaFromExpectedDegreeInSquare, -clampV, 0);
+        float percent = (dCamped - (-clampV)) / clampV;
+        targetLocation = FMath::Vector2DInterpTo(areaMapped.m_cMin, areaMapped.m_cExpectedCenter, percent, 1);
+
+
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("2: dCamped %f, percent %f, range (%s, %s), output: %s."), dCamped, percent,
+                  //*areaMapped.m_cMin.ToString(), *areaMapped.m_cExpectedCenter.ToString(), *targetLocation.ToString());
+    }
+
+    //aligne to center
+    targetLocation -= widgetModelInfo.m_cCenterPointRelativeLocation;
+
+    //algin to border
+    if (areaMapped.m_eToBorderAlignmentType == MyAxisAlignmentTypeCpp::Negative) {
+        getAxisFromVector2DRef(targetLocation, areaMapped.m_eToBorderAxisType) += getAxisFromVector2DRefConst(widgetModelInfo.m_cBoxExtend, areaMapped.m_eToBorderAxisType);
+    }
+    else if (areaMapped.m_eToBorderAlignmentType == MyAxisAlignmentTypeCpp::Mid) {
+
+    }
+    else if (areaMapped.m_eToBorderAlignmentType == MyAxisAlignmentTypeCpp::Positive) {
+        getAxisFromVector2DRef(targetLocation, areaMapped.m_eToBorderAxisType) -= getAxisFromVector2DRefConst(widgetModelInfo.m_cBoxExtend, areaMapped.m_eToBorderAxisType);
+    }
+    else {
+        MY_VERIFY(false);
+    }
+
+    return targetLocation;
+}
+
+
+MyErrorCodeCommonPartCpp UMyRenderUtilsLibrary::checkUserWidgetInCanvasPanelComplyModelInfo_Base_Widget2D(UUserWidget* childWidget)
+{
+    UCanvasPanelSlot* pCPSlot = Cast<UCanvasPanelSlot>(childWidget->Slot);
+    if (pCPSlot == NULL) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: widget slot type is not canvas panel slot, it is %s."), *childWidget->GetName(), *childWidget->Slot->GetClass()->GetName());
+        return MyErrorCodeCommonPartCpp::UIPanelSlotTypeUnexpected;
+    }
+
+    const FAnchorData& ad = pCPSlot->LayoutData;
+
+    if ((!ad.Anchors.Minimum.Equals(FVector2D::ZeroVector)) || (!ad.Anchors.Maximum.Equals(FVector2D::ZeroVector))) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: canvas panel slot anchor unexpected, now only support left top anchor."), *childWidget->GetName());
+        return MyErrorCodeCommonPartCpp::UIPanelSlotDataUnexpected;
+    }
+
+    if (!childWidget->RenderTransformPivot.Equals(ad.Alignment, MyCommonMinDelta)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: require canvas panel slot algnment equal to render transform pivot, %s, %s."),
+            *childWidget->GetName(), *ad.Alignment.ToString(), *childWidget->RenderTransformPivot.ToString());
+        return MyErrorCodeCommonPartCpp::UIPanelSlotDataUnexpected;
+    }
+
+    if ((!FMath::IsNearlyEqual(ad.Offsets.Left, 0.f, MyCommonMinDelta)) || (!FMath::IsNearlyEqual(ad.Offsets.Top, 0.f, MyCommonMinDelta))) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: require offset left top as zero, now is, left %f, top %f."),
+            *childWidget->GetName(), ad.Offsets.Left, ad.Offsets.Top);
+        return MyErrorCodeCommonPartCpp::UIPanelSlotDataUnexpected;
+    }
+
+    return MyErrorCodeCommonPartCpp::NoError;
+
+    /*
+    FVector2D renderTransformPivotExpected = UMyRenderUtilsLibrary::getOriginPointRelativeToXYMinByMyModelInfoBoxWidget2D(modelInfoBox) / (modelInfoBox.m_cBoxExtend * 2);
+    if (!renderTransformPivotExpected.Equals(widgetRenderTransformPivot, MyCommonMinDelta)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("widgetRenderTransformPivot is not as expected: expected %s, now %s. modelInfoBox %s."),
+            *renderTransformPivotExpected.ToString(), *widgetRenderTransformPivot.ToString(), *modelInfoBox.ToString());
+        return false;
+    }
+
+    return true;
+    */
+}
+
+MyErrorCodeCommonPartCpp UMyRenderUtilsLibrary::updateUserWidgetInCanvasPanelWithModelInfo_Widget2D(UUserWidget* childWidget, const FMyModelInfoWidget2DCpp& modelInfo)
+{
+    if (modelInfo.getType() != MyModelInfoType::BoxWidget2D) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("target %s: model type is supposed to be mode2d, but it is  %d."), *childWidget->GetName(), (uint8)modelInfo.getType());
+        return MyErrorCodeCommonPartCpp::TypeUnexpected;
+    }
+
+    UCanvasPanelSlot* pCPSlot = Cast<UCanvasPanelSlot>(childWidget->Slot);
+    if (pCPSlot == NULL) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: widget slot type is not canvas panel slot, it is %s."), *childWidget->GetName(), *childWidget->Slot->GetClass()->GetName());
+        return MyErrorCodeCommonPartCpp::UIPanelSlotTypeUnexpected;
+    }
+
+    const FMyModelInfoBoxWidget2DCpp& modelInfoBox = modelInfo.getBox2DRefConst();
+
+
+    FVector2D originPointRelativeToXYMin = getOriginPointRelativeToXYMinByMyModelInfoBoxWidget2D(modelInfoBox);
+    FVector2D originPercent = originPointRelativeToXYMin / (modelInfoBox.m_cBoxExtend * 2);
+
+
+    FAnchorData ad;
+    
+    ad.Anchors.Minimum = FVector2D::ZeroVector;
+    ad.Anchors.Maximum = FVector2D::ZeroVector;
+    
+    //make origin at zero point
+    ad.Offsets.Left = 0;
+    ad.Offsets.Top = 0;
+    ad.Offsets.Right = modelInfoBox.m_cBoxExtend.X * 2;
+    ad.Offsets.Bottom = modelInfoBox.m_cBoxExtend.Y * 2;
+
+    ad.Alignment = originPercent;
+
+    pCPSlot->SetLayout(ad);
+
+
+    childWidget->SetRenderTransformPivot(originPercent);
+
+    //recheck
+    FMyModelInfoWidget2DCpp modelInfo2;
+    MyErrorCodeCommonPartCpp ret = evaluateUserWidgetInCanvasPanelForModelInfo_Widget2D(childWidget, modelInfo2);
+    if (ret != MyErrorCodeCommonPartCpp::NoError) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: failed to retrieve model info back after update, erroCode %d."), *childWidget->GetName(), *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret));
+    }
+    else {
+        if (!modelInfo.equals(modelInfo2, MyCommonMinDelta)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: modelInfo retrieved not equal after update, in %s. retrieved %s."), *childWidget->GetName(),
+                                                       *modelInfo.ToString(), *modelInfo2.ToString());
+            ret = MyErrorCodeCommonPartCpp::InternalError;
+        }
+    }
+
+    return ret;
+}
+
+MyErrorCodeCommonPartCpp UMyRenderUtilsLibrary::evaluateUserWidgetInCanvasPanelForModelInfo_Widget2D(UUserWidget* childWidget, FMyModelInfoWidget2DCpp& modelInfo)
+{
+    modelInfo.reset(MyModelInfoType::BoxWidget2D);
+
+    MyErrorCodeCommonPartCpp ret = checkUserWidgetInCanvasPanelComplyModelInfo_Base_Widget2D(childWidget);
+    if (ret != MyErrorCodeCommonPartCpp::NoError) {
+        return ret;
+    }
+
+    FMyModelInfoBoxWidget2DCpp& modelInfoBox = modelInfo.getBox2DRef();
+
+
+    UCanvasPanelSlot* pCPSlot = Cast<UCanvasPanelSlot>(childWidget->Slot);
+    const FAnchorData& ad = pCPSlot->LayoutData;
+
+
+    FVector2D boxExtend;
+    boxExtend.X = ad.Offsets.Right / 2;
+    boxExtend.Y = ad.Offsets.Bottom / 2;
+ 
+    const FVector2D& originPercent = ad.Alignment;
+    FVector2D originPointRelativeToXYMin = originPercent * (boxExtend * 2);
+
+    modelInfoBox = getMyModelInfoBoxByOriginPointRelativeToXYMinWidget2D(boxExtend, originPointRelativeToXYMin);
+
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+MyErrorCodeCommonPartCpp UMyRenderUtilsLibrary::updateUserWidgetInCanvasPanelWithPivot_Widget2D(UUserWidget* childWidget, const FVector2D& pivot)
+{
+    if (!childWidget->GetClass()->ImplementsInterface(UMyContentSizeWidget2DInterfaceCpp::StaticClass())) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: did not implements UMyContentSizeWidget2DInterfaceCpp."), *childWidget->GetName());
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
+    }
+
+    FVector2D contentSize;
+    MyErrorCodeCommonPartCpp ret = IMyContentSizeWidget2DInterfaceCpp::Execute_getContentSize(childWidget, contentSize);
+
+    if (MyErrorCodeCommonPartCpp::NoError != ret) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getContentSize() got error: %s."), *childWidget->GetName(), *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret));
+        return ret;
+    }
+
+    FMyModelInfoWidget2DCpp modelInfo(MyModelInfoType::BoxWidget2D);
+    modelInfo.getBox2DRef() = getMyModelInfoBoxByOriginPointRelativeToXYMinWidget2D(contentSize / 2, contentSize * pivot);
+
+
+    ret = updateUserWidgetInCanvasPanelWithModelInfo_Widget2D(childWidget, modelInfo);
+
+    return ret;
+}
+
 
 void UMyRenderUtilsLibrary::myElemAndGroupDynamicArrangeCalcDistanceWalkedBeforeIgnorePadding(const FMyElemAndGroupDynamicArrangeMetaCpp& meta, const FIntVector& groupWalked, const FIntVector& elemWalked, FVector& distanceIgnorePadding)
 {

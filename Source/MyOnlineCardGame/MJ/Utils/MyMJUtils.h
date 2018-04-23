@@ -29,6 +29,11 @@ enum class MyErrorCodeSubPartMJGameCpp : uint8
     choiceSubSelectInvalid = 123 UMETA(DisplayName = "choiceSubSelectInvalid")
 };
 
+//always remember first error
+#define MyErrorCodeSubPartMJGameJoin(SourcePart, NewPart) \
+if (SourcePart == MyErrorCodeSubPartMJGameCpp::NoError) { \
+    SourcePart = (NewPart); \
+}
 
 USTRUCT(BlueprintType)
 struct FMyErrorCodeMJGameCpp
@@ -37,10 +42,26 @@ struct FMyErrorCodeMJGameCpp
 
 public:
 
-    FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp eCommonPart = MyErrorCodeCommonPartCpp::NoError, MyErrorCodeSubPartMJGameCpp eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::NoError)
+    FMyErrorCodeMJGameCpp(bool haveNoError = false)
+    {
+        if (haveNoError) {
+            m_eCommonPart = MyErrorCodeCommonPartCpp::NoError;
+            m_eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::NoError;
+        }
+        else {
+            m_eCommonPart = MyErrorCodeCommonPartCpp::Invalid;
+            m_eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::Invalid;
+        }
+    };
+
+    FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp eCommonPart, MyErrorCodeSubPartMJGameCpp eSubPartMJGame)
     {
         m_eCommonPart = eCommonPart;
         m_eSubPartMJGame = eSubPartMJGame;
+    };
+
+    FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp eCommonPart) : FMyErrorCodeMJGameCpp(eCommonPart, MyErrorCodeSubPartMJGameCpp::NoError)
+    {
     };
 
     FMyErrorCodeMJGameCpp(MyErrorCodeSubPartMJGameCpp eSubPartMJGame) : FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::NoError, eSubPartMJGame)
@@ -63,6 +84,22 @@ public:
         m_eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::NoError;
     };
 
+    inline void join(const FMyErrorCodeMJGameCpp& other)
+    {
+        MyErrorCodeCommonPartJoin(m_eCommonPart, other.m_eCommonPart);
+        MyErrorCodeSubPartMJGameJoin(m_eSubPartMJGame, other.m_eSubPartMJGame);
+    };
+
+    inline void join(const MyErrorCodeCommonPartCpp& other)
+    {
+        MyErrorCodeCommonPartJoin(m_eCommonPart, other);
+    };
+
+    inline void join(const MyErrorCodeSubPartMJGameCpp& other)
+    {
+        MyErrorCodeSubPartMJGameJoin(m_eSubPartMJGame, other);
+    };
+
     FString ToString() const
     {
         return FString::Printf(TEXT("(%s, %s)"), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyErrorCodeCommonPartCpp"), (uint8)m_eCommonPart), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyErrorCodeSubPartMJGameCpp"), (uint8)m_eSubPartMJGame));
@@ -71,11 +108,11 @@ public:
     //we don't combine error code pars, but list them here
 
     //Common Error Code
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "common part"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "common part"))
     MyErrorCodeCommonPartCpp    m_eCommonPart;
 
     //Sub Error Code
-    UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "sub part MJ game"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "sub part MJ game"))
     MyErrorCodeSubPartMJGameCpp m_eSubPartMJGame;
 };
 
@@ -198,20 +235,20 @@ struct FMyMJCardPosiCpp
     };
 
     inline
-    bool equal(const FMyMJCardPosiCpp &other) const
+    bool equals(const FMyMJCardPosiCpp &other) const
     {
         return m_iIdxAttender == other.m_iIdxAttender && m_eSlot == other.m_eSlot && m_iIdxInSlot0 == other.m_iIdxInSlot0 && m_iIdxInSlot1 == other.m_iIdxInSlot1;
     };
 
     //Note: this may not work as expect for sub class, if you use base ponnter*: for example, class A, class B : public A, A* pA0 = new B(), *pA ==
-    //to make it work good, we need to use virtual functon as equal(), and compare double time by this->equal(other) && other.equal(*this)
+    //to make it work good, we need to use virtual functon as equals(), and compare double time by this->equals(other) && other.equals(*this)
     //But for simple, we don't handle that case now, but keep in mind what should happen when programming, esp for pointer use case.
     bool operator==(const FMyMJCardPosiCpp& other) const
     {
         if (this == &other) {
             return true;
         }
-        return equal(other);
+        return equals(other);
     };
 
     bool operator!=(const FMyMJCardPosiCpp& other) const
@@ -251,7 +288,7 @@ struct FMyMJCardInfoCpp
     void reset() {
         m_iId = -1;
 
-        m_eFlipState = MyBoxLikeFlipStateCpp::Invalid;
+        m_eFlipState = MyBoxFlipStateCpp::Invalid;
         m_cPosi.reset();
     };
 
@@ -261,7 +298,7 @@ struct FMyMJCardInfoCpp
         int32 m_iId; // >= 0 means valid
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "flip state"))
-        MyBoxLikeFlipStateCpp m_eFlipState;
+        MyBoxFlipStateCpp m_eFlipState;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "position"))
         FMyMJCardPosiCpp m_cPosi;
@@ -1042,7 +1079,7 @@ struct FMyMJHuScoreAttrCpp
     };
     
     inline
-    bool equal(const FMyMJHuScoreAttrCpp& other) const
+    bool equals(const FMyMJHuScoreAttrCpp& other) const
     {
         return m_eType == other.m_eType && m_iScorePerAttender == other.m_iScorePerAttender;
     };
@@ -2319,7 +2356,7 @@ public:
     };
 
     inline
-    const TSet<int32>& getRecordSet() const
+    const TSet<int32>& getRecordSetRefConst() const
     {
         return m_sRecord;
     };
@@ -2390,7 +2427,28 @@ class UMyMJUtilsLibrary :
         //static bool StartSession();
 
 public:
-    
+
+    UFUNCTION(BlueprintPure)
+    static inline FMyErrorCodeMJGameCpp getMyErrorCodeMJGameNoError()
+    {
+        return FMyErrorCodeMJGameCpp(true);
+    };
+
+    //Return true if have error
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToBool (MyErrorCodeMJGameCpp)", CompactNodeTitle = "->", BlueprintAutocast), Category = "MyMJUtilsLibrary")
+        static bool Conv_MyErrorCodeMJGameCpp_Bool(const FMyErrorCodeMJGameCpp& errorCode)
+    {
+        return errorCode.hasError();
+    };
+
+    //ToString
+    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (MyErrorCodeMJGameCpp)", CompactNodeTitle = "->", BlueprintAutocast), Category = "MyMJUtilsLibrary")
+        static FString Conv_MyErrorCodeMJGameCpp_String(const FMyErrorCodeMJGameCpp& errorCode)
+    {
+        return errorCode.ToString();
+    };
+
+
     //@iMask is the storage, @iTestingBitValue is the value such as 0x02, 0x04, 0x08. multi bit such as 0xff is illegal
     static inline
     bool getBoolValueFromBitMask(int32 iMask, int32 iTestingBitValue)
@@ -2458,19 +2516,6 @@ public:
 
     };
 
-    //Return true if have error
-    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToBool (MyErrorCodeMJGameCpp)", CompactNodeTitle = "->", BlueprintAutocast), Category = "MyMJUtilsLibrary")
-    static bool Conv_MyErrorCodeMJGameCpp_Bool(const FMyErrorCodeMJGameCpp& errorCode)
-    {
-        return errorCode.hasError();
-    };
-
-    //ToString
-    UFUNCTION(BlueprintPure, meta = (DisplayName = "ToString (MyErrorCodeMJGameCpp)", CompactNodeTitle = "->", BlueprintAutocast), Category = "MyMJUtilsLibrary")
-    static FString Conv_MyErrorCodeMJGameCpp_String(const FMyErrorCodeMJGameCpp& errorCode)
-    {
-        return errorCode.ToString();
-    };
 
     static void array2MapForHuScoreAttr(const TArray<FMyMJHuScoreAttrCpp>& aHuBornScoreAttrs, TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp>& mHuBornScoreAttrs);
 

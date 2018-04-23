@@ -27,9 +27,9 @@ public:
         reset(true);
     };
 
-    virtual void reset(bool resetSubClassDataonly = false) override
+    virtual void reset(bool resetSubClassDataOnly = false) override
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             Super::reset();
         }
 
@@ -39,13 +39,13 @@ public:
     };
 
     
-    inline bool equal(const FMyMJGameCardVisualInfoCpp& other) const
+    inline bool equals(const FMyMJGameCardVisualInfoCpp& other) const
     {
         if (&other == this) {
             return true;
         }
 
-        return Super::equal(other) && m_iIdxAttender == other.m_iIdxAttender && m_eSlot == other.m_eSlot && m_iCardValue == other.m_iCardValue;
+        return Super::equals(other) && m_iIdxAttender == other.m_iIdxAttender && m_eSlot == other.m_eSlot && m_iCardValue == other.m_iCardValue;
     };
 
     virtual FString ToString() const override
@@ -188,7 +188,7 @@ reset();
 
 inline void reset()
 {
-m_eFlipState = MyBoxLikeFlipStateCpp::Invalid;
+m_eFlipState = MyBoxFlipStateCpp::Invalid;
 }
 
 UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "dice visual state key"))
@@ -235,7 +235,7 @@ protected:
 
 
 UCLASS(BlueprintType, Blueprintable)
-class MYONLINECARDGAME_API AMyMJGameTrivalDancingActorBaseCpp : public AMyWithCurveUpdaterTransformWorld3DBoxLikeActorBaseCpp
+class MYONLINECARDGAME_API AMyMJGameTrivalDancingActorBaseCpp : public AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp
 {
     GENERATED_BODY()
 

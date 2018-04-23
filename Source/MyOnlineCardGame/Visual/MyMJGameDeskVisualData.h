@@ -94,7 +94,7 @@ struct FMyMJGameDeskVisualCfgCacheCpp
 public:
     FMyMJGameDeskVisualCfgCacheCpp()
     {
-        m_uiStateKey = MyUIntIdDefaultInvalidValue;
+        reset();
     };
 
     virtual ~FMyMJGameDeskVisualCfgCacheCpp()
@@ -102,12 +102,13 @@ public:
 
     };
 
-    void clear()
+    inline void reset()
     {
+        m_bValid = false;
+        m_uiStateKey = MyUIntIdDefaultInvalidValue;
         m_cPointCfg.clear();
         m_cModelInfo.clear();
     };
-
 
     MyErrorCodeCommonPartCpp helperGetMyArrangePointCfgForCard(int32 idxAttender, MyMJCardSlotTypeCpp eSlot, FMyArrangePointCfgWorld3DCpp& outVisualPointCfg) const
     {
@@ -120,7 +121,7 @@ public:
         return MyErrorCodeCommonPartCpp::NoError;
     };
 
-
+    bool m_bValid;
     uint32 m_uiStateKey; //Represent the state, used to compare if it is changed.
     FMyMJGameDeskVisualPointCfgCacheCpp m_cPointCfg;
     FMyMJGameDeskVisualActorModelInfoCacheCpp m_cModelInfo;
@@ -173,7 +174,7 @@ public:
         inline
     void reset()
     {
-        m_cCfgCache.clear();
+        m_cCfgCache.reset();
         m_cCoreData.reset();
         m_cActorData.reset();
 
@@ -249,7 +250,7 @@ public:
     inline void reset()
     {
         m_apNewCoreData.Reset();
-        m_apNewCoreDataDirtyRecord.Reset();
+        m_apNewCoreDataDirtyRecordFiltered.Reset();
         m_mNewActorDataIdCards.Reset();
         m_mNewActorDataIdDices.Reset();
         m_apEventJustApplied.Reset();
@@ -278,7 +279,7 @@ public:
     */
 
     TArray<FMyMJDataStructWithTimeStampBaseCpp> m_apNewCoreData;
-    TArray<FMyDirtyRecordWithKeyAnd4IdxsMapCpp> m_apNewCoreDataDirtyRecord;
+    TArray<FMyDirtyRecordWithKeyAnd4IdxsMapCpp> m_apNewCoreDataDirtyRecordFiltered; //the other direty record except card and dice
 
     TMap<int32, FMyMJGameCardVisualInfoAndResultCpp> m_mNewActorDataIdCards;
     TMap<int32, FMyMJGameDiceVisualInfoAndResultCpp> m_mNewActorDataIdDices;
@@ -638,6 +639,7 @@ protected:
                                                const FMyMJDataStructWithTimeStampBaseCpp& cNextCoreData,
                                                const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cNextCoreDataDirtyRecordSincePrev,
                                                const FMyMJGameDeskVisualActorDatasCpp& cPrevActorData,
+                                               FMyDirtyRecordWithKeyAnd4IdxsMapCpp& outDirtyRecordFiltered,
                                                TMap<int32, FMyMJGameCardVisualInfoCpp>& mOutIdCardVisualInfoAccumulatedChanges,
                                                bool& bDicesAccumulatedChanges);
 

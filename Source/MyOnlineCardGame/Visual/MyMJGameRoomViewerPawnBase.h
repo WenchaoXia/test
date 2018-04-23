@@ -28,23 +28,25 @@ public:
         return m_pCamera;
     };
 
+    class AMyMJGamePlayerControllerCpp* getMJGamePlayerController() const;
+
 
     //IMyWithCurveUpdaterTransformWorld3DInterfaceCpp begin
 
-
-    virtual MyErrorCodeCommonPartCpp getModelInfo(FMyModelInfoWorld3DCpp& modelInfo, bool verify) const override
+    virtual MyErrorCodeCommonPartCpp getModelInfoForUpdater(FMyModelInfoWorld3DCpp& modelInfo) override
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameRoomViewerPawnBaseCpp::getModelInfo() not implemented yet!"));
-        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedOnPurPose;
+        MyErrorCodeCommonPartCpp ret =  MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedOnPurPose;
+
+        return ret;
     };
 
-    virtual MyErrorCodeCommonPartCpp getMyWithCurveUpdaterTransformWorld3DEnsured(struct FMyWithCurveUpdaterTransformWorld3DCpp*& outUpdater) override
+    virtual struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRef() override
     {
         MY_VERIFY(m_pMyTransformUpdaterComponent != NULL);
-        outUpdater = &m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformWorld3DRef();
+        return m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRef();
+    };
 
-        return MyErrorCodeCommonPartCpp::NoError;
-    }
 
     //IMyWithCurveUpdaterTransformWorld3DInterfaceCpp end
 
@@ -73,6 +75,9 @@ protected:
     void updaterOnStepUpdate(const FMyWithCurveUpdateStepDataBasicCpp& data, const FVector& vector);
     void updaterOnStepFinish(const FMyWithCurveUpdateStepDataBasicCpp& data);
 
+    //@aPoints coordinate is in playerscreen with absolute value
+    static MyErrorCodeCommonPartCpp getProjectedAttenderPoints(AMyMJGamePlayerControllerCpp& myController, TArray<FVector2D>& aPoints);
+    void tryUpdateUI(bool changeModeAndCreate);
 
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Instanced, meta = (DisplayName = "root scene"))
     class USceneComponent *m_pRootScene;

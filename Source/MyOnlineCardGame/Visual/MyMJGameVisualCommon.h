@@ -4,11 +4,12 @@
 
 #include "CoreMinimal.h"
 
-#include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
+#include "Utils/CardGameUtils/MyCardGameElems.h"
 
 #include "Kismet/KismetStringLibrary.h"
 
 #include "MyMJGameVisualCommon.generated.h"
+
 
 UENUM(BlueprintType)
 enum class MyMJGameDeskVisualElemTypeCpp : uint8
@@ -61,4 +62,57 @@ public:
     UPROPERTY(BlueprintReadWrite, meta = (DisplayName = "transform"))
     FTransform m_cTransform;
 
+};
+
+
+
+USTRUCT()
+struct FMyCardGameUIBorderCfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyCardGameUIBorderCfgCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_cAreaAlignToBorder.reset();
+        m_cCommonEventShowPoint.reset();
+
+        m_cCommonEventShowPoint.m_fShowPosiFromCenterToBorderPercent = 0.2;
+    };
+
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "area align to border"))
+    FMyAreaAlignToBorderCfgOneDimCpp m_cAreaAlignToBorder;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "common event show point"))
+    FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp m_cCommonEventShowPoint;
+};
+
+USTRUCT(BlueprintType)
+struct FMyMJGameInRoomUIMainWidgetCfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameInRoomUIMainWidgetCfgCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_aBorders.Reset();
+        m_aBorders.AddDefaulted(4);
+    }
+
+    //idx is positionInBoxWidget2D
+    UPROPERTY(EditAnywhere, EditFixedSize, meta = (DisplayName = "borders"))
+    TArray<FMyCardGameUIBorderCfgCpp> m_aBorders;
 };

@@ -367,7 +367,7 @@ bool FMyMJGameCoreCpp::prevApplyPusherResult(const FMyMJGamePusherResultCpp &pus
                         moveCardToNewPosi(cardInfoTarget.m_iId, cardInfoTarget.m_cPosi.m_iIdxAttender, cardInfoTarget.m_cPosi.m_eSlot);
                     }
 
-                    if (cardInfoSelf.m_eFlipState != cardInfoTarget.m_eFlipState && cardInfoTarget.m_eFlipState == MyBoxLikeFlipStateCpp::Up) {
+                    if (cardInfoSelf.m_eFlipState != cardInfoTarget.m_eFlipState && cardInfoTarget.m_eFlipState == MyBoxFlipStateCpp::Up) {
                         int32 idCard = cardInfoTarget.m_iId;
                         int32 valueCard = cardValuePack.getByIdx(idCard);
                         MY_VERIFY(valueCard > 0);
@@ -419,7 +419,7 @@ bool FMyMJGameCoreCpp::verifyDataUniformationAfterPusherAndResultApplied()
             break;
         }
 
-        bool bEqual = attenderDataPrivate.m_cActionContainor.equal(attenderDataLogic.m_cActionContainor);
+        bool bEqual = attenderDataPrivate.m_cActionContainor.equals(attenderDataLogic.m_cActionContainor);
 
         if (!bEqual) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("attender %d's action containor not uniform."), i);

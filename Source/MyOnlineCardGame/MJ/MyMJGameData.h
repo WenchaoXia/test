@@ -1205,7 +1205,17 @@ enum class MyMJGameCoreDataDirtyMainTypeCpp : uint8
     Invalid = 0                        UMETA(DisplayName = "Invalid"),
     Card = 1                           UMETA(DisplayName = "Card"),
     Dice = 2                           UMETA(DisplayName = "Dice"),
+    AttenderStatePublic = 11           UMETA(DisplayName = "AttenderStatePublic"), //Card related change should be skipped
+    AttenderStatePrivate = 12          UMETA(DisplayName = "AttenderStatePrivate"),
 };
+
+#define MyMJGameCoreDataDirtySubType_AttenderStatePublic_HuScoreResultFinalGroup (1)
+#define MyMJGameCoreDataDirtySubType_AttenderStatePublic_TrivalStates (11)
+
+#define MyMJGameCoreDataDirtySubType_AttenderStatePrivate_ActionContainor (1)
+#define MyMJGameCoreDataDirtySubType_AttenderStatePrivate_HuScoreResultTingGroup (2)
+#define MyMJGameCoreDataDirtySubType_AttenderStatePrivate_TrivalStates (11)
+
 
 USTRUCT()
 struct FMyMJDataAccessorCpp
@@ -1309,7 +1319,11 @@ struct FMyMJDataAccessorCpp
     void applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord);
 
     //direct to apply, don't leave a chance for visualize
-    void applyDelta(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord);
+    inline void applyDelta(const FMyMJDataDeltaCpp &delta, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)
+    {
+        applyDeltaStep0(delta, pDirtyRecord);
+        applyDeltaStep1(delta, pDirtyRecord);
+    };
 
 
     void applyPusherResult(const FMyMJGamePusherResultCpp& result, FMyDirtyRecordWithKeyAnd4IdxsMapCpp *pDirtyRecord)

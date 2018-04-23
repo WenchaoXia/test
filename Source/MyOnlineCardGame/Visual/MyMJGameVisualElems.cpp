@@ -64,9 +64,9 @@ public:
     {
     };
 
-    inline void reset(bool resetSubClassDataonly = false)
+    inline void reset(bool resetSubClassDataOnly = false)
     {
-        if (!resetSubClassDataonly) {
+        if (!resetSubClassDataOnly) {
             FMyWithCurveUpdateStepDataTransformWorld3DCpp::reset();
         }
 
