@@ -718,10 +718,8 @@ void FMyMJDataAccessorCpp::moveCardToNewPosi(int32 id, int32 idxAttender, MyMJCa
 };
 
 
-void FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordAllDirty(FMyDirtyRecordWithKeyAnd4IdxsMapCpp &cDirtyRecord)
+void FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordElemsDirty(FMyDirtyRecordWithKeyAnd4IdxsMapCpp &cDirtyRecord)
 {
-    cDirtyRecord.reset();
-
     for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
         for (int32 eSlot = ((int32)MyMJCardSlotTypeCpp::InvalidIterateMin + 1); eSlot < ((int32)MyMJCardSlotTypeCpp::InvalidIterateMax); eSlot++) {
             cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Card, idxAttender, (int32)eSlot, true);
@@ -729,7 +727,10 @@ void FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordAllDirty(FMyDirtyRecordWi
     }
 
     cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::Dice, 0, 0, true);
+}
 
+void FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordDataDirty(FMyDirtyRecordWithKeyAnd4IdxsMapCpp &cDirtyRecord)
+{
     for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
         cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePublic, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePublic_HuScoreResultFinalGroup, true);
         cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePublic, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePublic_TrivalStates, true);
@@ -738,6 +739,13 @@ void FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordAllDirty(FMyDirtyRecordWi
         cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePrivate_HuScoreResultTingGroup, true);
         cDirtyRecord.setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePrivate_TrivalStates, true);
     }
+}
+
+void FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordAllDirty(FMyDirtyRecordWithKeyAnd4IdxsMapCpp &cDirtyRecord)
+{
+    cDirtyRecord.reset();
+    helperSetCoreDataDirtyRecordElemsDirty(cDirtyRecord);
+    helperSetCoreDataDirtyRecordDataDirty(cDirtyRecord);
 
     //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("helperSetCoreDataDirtyRecordAllDirty, result %d."), cDirtyRecord.getRecordSet().Num());
 }

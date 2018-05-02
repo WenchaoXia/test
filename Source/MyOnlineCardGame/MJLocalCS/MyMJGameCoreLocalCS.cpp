@@ -369,8 +369,8 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         int32 idxAttender = actionNoAct.getIdxAttender(true);
         delta.m_iIdxAttenderActionInitiator = idxAttender;
 
-        bool bPassPaoHu = UMyMJUtilsLibrary::getBoolValueFromBitMask(actionNoAct.m_iMask0, (uint8)EMyMJGameActionUnfiedMask0::PassPaoHu);
-        if (bPassPaoHu) {
+        //bool bPassPaoHu = UMyMJUtilsLibrary::getBoolValueFromBitMask(actionNoAct.m_iMask0, (uint8)EMyMJGameActionUnfiedMask0::PassPaoHu);
+        if (actionNoAct.m_bPassPaoHu) {
 
             int32 idx = delta.m_aRoleDataAttender.Emplace();
             FMyMJRoleDataAttenderDeltaCpp &deltaAttender = delta.m_aRoleDataAttender[idx];
@@ -381,7 +381,7 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
             
             //UMyMJUtilsLibrary::setUpdateFlagAndBoolValueToDeltaBitMask(deltaAttenderPrivate.m_iMask0, FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS, FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS, bPassPaoHu);
             deltaAttenderPrivate.m_bUpdateBanPaoHuLocalCS = true;
-            deltaAttenderPrivate.m_bBanPaoHuLocalCS = bPassPaoHu;
+            deltaAttenderPrivate.m_bBanPaoHuLocalCS = actionNoAct.m_bPassPaoHu;
         }
 
     }

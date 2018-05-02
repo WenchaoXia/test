@@ -2361,6 +2361,18 @@ public:
         return m_sRecord;
     };
 
+    inline void join(const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& other)
+    {
+        if (m_uiDebugIdxUsed <= 0) {
+            m_uiDebugIdxUsed = other.m_uiDebugIdxUsed;
+        }
+        else {
+            MY_VERIFY(m_uiDebugIdxUsed == other.m_uiDebugIdxUsed);
+        }
+
+        m_sRecord = m_sRecord.Union(other.m_sRecord);
+    };
+
 protected:
 
     inline

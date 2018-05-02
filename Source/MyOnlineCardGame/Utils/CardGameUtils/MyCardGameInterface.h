@@ -22,12 +22,12 @@ public:
 
     //when calling this, offset = 0 always means the widget is at viewRole's point
     UFUNCTION(BlueprintNativeEvent)
-    MyErrorCodeCommonPartCpp restartMainAnimation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter);
+    MyErrorCodeCommonPartCpp restartMainAnimation(int32 idxScreenPosition, float time, FVector2D offsetToParentCenter, FVector2D offsetShowPoint, FVector2D offsetScreenCenter);
 };
 
 #define IMyCardGameScreenPositionRelatedWidgetInterfaceCpp_DefaultImplementationForUObject() \
 protected: \
-virtual MyErrorCodeCommonPartCpp restartMainAnimation_Implementation(int32 idxScreenPosition, float time, FVector2D offsetShowPoint, FVector2D offsetScreenCenter) override \
+virtual MyErrorCodeCommonPartCpp restartMainAnimation_Implementation(int32 idxScreenPosition, float time, FVector2D offsetToParentCenter, FVector2D offsetShowPoint, FVector2D offsetScreenCenter) override \
 { \
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: restartMainAnimation only implemented in C++."), *GetClass()->GetName()); \
     return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \

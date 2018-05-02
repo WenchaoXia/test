@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 
 #include "Utils/CardGameUtils/MyCardGameElems.h"
+#include "MJBPEncap/utils/MyMJBPUtils.h"
 
 #include "Kismet/KismetStringLibrary.h"
 
@@ -94,6 +95,155 @@ public:
     FMyPointFromCenterInfoOnPlayerScreenConstrainedCpp m_cCommonEventShowPoint;
 };
 
+
+USTRUCT()
+struct FMyInRoomViewRoleEventStyleSettingsCpp
+{
+    GENERATED_USTRUCT_BODY()
+public:
+
+    FMyInRoomViewRoleEventStyleSettingsCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+         m_cWeaveChiWidget = m_cWeavePengWidget = m_cWeaveGangWidget = m_cWeaveBuWidget = m_cTingWidget = m_cHuWidget = NULL;
+    };
+
+    inline bool checkSettings() const
+    {
+        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cWeaveChiWidget, TEXT("weaveChiWidget")))
+        {
+            return false;
+        }
+        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cWeavePengWidget, TEXT("weavePengWidget")))
+        {
+            return false;
+        }
+        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cWeaveGangWidget, TEXT("weaveGangWidget")))
+        {
+            return false;
+        }
+        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cWeaveBuWidget, TEXT("weaveBuWidget")))
+        {
+            return false;
+        }
+        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cTingWidget, TEXT("tingWidget")))
+        {
+            return false;
+        }
+        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cHuWidget, TEXT("huWidget")))
+        {
+            return false;
+        }
+        return true;
+    };
+
+
+    inline TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> getWeaveWidgetByType(MyMJGameEventVisualTypeCpp type) const
+    {
+        if (type == MyMJGameEventVisualTypeCpp::WeaveChi) {
+            return m_cWeaveChiWidget;
+        }
+        else if (type == MyMJGameEventVisualTypeCpp::WeavePeng) {
+            return m_cWeavePengWidget;
+        }
+        else if (type == MyMJGameEventVisualTypeCpp::WeaveGang) {
+            return m_cWeavePengWidget;
+        }
+        else if (type == MyMJGameEventVisualTypeCpp::WeaveBu) {
+            return m_cWeavePengWidget;
+        }
+        else {
+            MY_VERIFY(false);
+            return NULL;
+        }
+    };
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "weave chi Widget"))
+        TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cWeaveChiWidget;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "weave peng Widget"))
+        TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cWeavePengWidget;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "weave gang Widget"))
+        TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cWeaveGangWidget;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "weave bu Widget"))
+        TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cWeaveBuWidget;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "ting Widget"))
+        TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cTingWidget;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "hu Widget"))
+        TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cHuWidget;
+};
+
+
+USTRUCT()
+struct FMyInRoomViewRoleIncidentStyleSettingsCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyInRoomViewRoleIncidentStyleSettingsCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+
+    };
+
+    inline bool checkSettings() const
+    {
+        return true;
+    };
+};
+
+
+USTRUCT()
+struct FMyInRoomViewRoleStyleSettingsCpp
+{
+    GENERATED_USTRUCT_BODY()
+public:
+
+    FMyInRoomViewRoleStyleSettingsCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        m_cEvent.reset();
+        m_cIncident.reset();
+    };
+
+    inline bool checkSettings() const
+    {
+        if (!m_cEvent.checkSettings()) {
+            return false;
+        }
+
+        if (!m_cIncident.checkSettings()) {
+            return false;
+        }
+
+        return true;
+    };
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "event"))
+        FMyInRoomViewRoleEventStyleSettingsCpp m_cEvent;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "incident"))
+        FMyInRoomViewRoleIncidentStyleSettingsCpp m_cIncident;
+};
+
+
 USTRUCT(BlueprintType)
 struct FMyMJGameInRoomUIMainWidgetCfgCpp
 {
@@ -110,9 +260,14 @@ public:
     {
         m_aBorders.Reset();
         m_aBorders.AddDefaulted(4);
+
+        m_cDefaultInRoomViewRoleStyle.reset();
     }
 
     //idx is positionInBoxWidget2D
     UPROPERTY(EditAnywhere, EditFixedSize, meta = (DisplayName = "borders"))
     TArray<FMyCardGameUIBorderCfgCpp> m_aBorders;
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "default In Room View Role Style"))
+        FMyInRoomViewRoleStyleSettingsCpp m_cDefaultInRoomViewRoleStyle;
 };

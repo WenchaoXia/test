@@ -1451,6 +1451,13 @@ public:
     //UPROPERTY(BlueprintAssignable, Category = "Button|MyEvent")
     //FOnButtonReleasedEvent OnReleasedOverride;
 
+    void tryUpdateStylesInUnifiedWay(const FSlateBrush& normalStyle, bool forceUpdate);
+
+    inline void setEnableTransformWidget2DPressed(bool state)
+    {
+        m_bEnableTransformWidget2DPressed = state;
+    };
+
 protected:
 
 #if WITH_EDITOR

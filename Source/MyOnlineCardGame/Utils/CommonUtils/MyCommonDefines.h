@@ -29,7 +29,7 @@
 
 #define MyIdxInvalid (-1)
 
-#define MyCommonMinDelta (0.00001f)
+#define MyCommonMinDelta (0.0001f)
 #define MyDeNominatorAsZeroTolerance MyCommonMinDelta
 
 
@@ -43,6 +43,7 @@ enum class MyErrorCodeCommonPartCpp : uint8
     //common
     NotProcessed = 10                                     UMETA(DisplayName = "NotProcessed"),
     TypeUnexpected = 11                                   UMETA(DisplayName = "TypeUnexpected"),
+    NotSupported = 12                                     UMETA(DisplayName = "NotSupported"),
 
     //Role and Authority
     HaveNoAuthority = 40                                  UMETA(DisplayName = "HaveNoAuthority"),

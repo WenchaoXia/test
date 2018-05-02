@@ -208,7 +208,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionChoices(FMyMJGamePusherIOComponentFul
             pFillInPusher->m_cActionChoices.give(pAction);
 
             FMyMJGameActionNoActCpp *pActionNoAct = new FMyMJGameActionNoActCpp();
-            pActionNoAct->init(getIdx(), 0 | (uint8)EMyMJGameActionUnfiedMask0::PassPaoHu, ActionGenTimeLeft2AutoChooseMsForImportant, bForceActionGenTimeLeft2AutoChooseMsZero);
+            pActionNoAct->init(getIdx(), true, ActionGenTimeLeft2AutoChooseMsForImportant, bForceActionGenTimeLeft2AutoChooseMsZero);
             pFillInPusher->m_cActionChoices.give(pActionNoAct);
         }
 
@@ -529,7 +529,7 @@ void FMyMJGameAttenderLocalCSCpp::genActionAfterGivenOutCards(FMyMJGamePusherFil
 
     if (bHaveValidAction) {
         FMyMJGameActionNoActCpp *pActionNoAct = new FMyMJGameActionNoActCpp();
-        pActionNoAct->init(getIdx(), bCanHu ? (0 | ((uint8)EMyMJGameActionUnfiedMask0::PassPaoHu)) : 0, 0, (pCore->m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero) > 0);
+        pActionNoAct->init(getIdx(), bCanHu, 0, (pCore->m_iTrivalConfigMask & MyMJGameCoreTrivalConfigMaskForceActionGenTimeLeft2AutoChooseMsZero) > 0);
         pFillInPusher->m_cActionChoices.give(pActionNoAct);
     }
 }

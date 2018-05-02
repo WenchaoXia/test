@@ -877,11 +877,11 @@ protected:
 
 //value must equal to (1 << n) style, but the compile not allow direct set it in enum, so check it manually when change it!
 //UENUM(Blueprintable, Meta = (Bitflags))
-UENUM(Meta = (Bitflags))
-enum class EMyMJGameActionUnfiedMask0 : uint8
-{
-    PassPaoHu = 0x01,
-};
+//UENUM(Meta = (Bitflags))
+//enum class EMyMJGameActionUnfiedMask0 : uint8
+//{
+    //PassPaoHu = 0x01,
+//};
 
 //Unified action present for graphic and UI
 //If m_eType is actionBase, it means s stub to hold place
@@ -893,12 +893,19 @@ struct FMyMJGameActionUnfiedForBPCpp : public FMyMJGameActionBaseCpp
 public:
     FMyMJGameActionUnfiedForBPCpp() : Super()
     {
-        m_iMask0 = 0;
+        reset();
     };
 
     virtual ~FMyMJGameActionUnfiedForBPCpp()
     {
 
+    };
+
+    inline void reset()
+    {
+        m_aCardIds.Reset();
+        m_cWeave.reset();
+        m_bPassPaoHu = false;
     };
 
     UPROPERTY(BlueprintReadOnly)
@@ -907,8 +914,11 @@ public:
     UPROPERTY(BlueprintReadOnly)
     FMyMJWeaveCpp m_cWeave;
 
-    UPROPERTY( meta = (DisplayName = "mask0", Bitmask, BitmaskEnum = "EMyMJGameActionUnfiedMask0"))
-    int32 m_iMask0;
+    //UPROPERTY( meta = (DisplayName = "mask0", Bitmask, BitmaskEnum = "EMyMJGameActionUnfiedMask0"))
+    //int32 m_iMask0;
+
+    UPROPERTY(meta = (DisplayName = "pass pao hu"))
+        bool m_bPassPaoHu;
 };
 
 //For visualization, we didn't need all info, but remember we don't use it for base state, only delta
@@ -1004,7 +1014,7 @@ public:
         m_eType = MyMJGamePusherTypeCpp::ActionNoAct;
         m_iPriority = PriMyMJGameActionNoAct;
 
-        m_iMask0 = 0;
+        m_bPassPaoHu = false;
 
     };
 
@@ -1027,33 +1037,40 @@ public:
     {
 
         FString str = Super::ToString();
-        str += FString::Printf(TEXT(" m_iMask0: %d."), m_iMask0);
+        str += FString::Printf(TEXT(" m_bPassPaoHu: %d."), m_bPassPaoHu);
         return str;
     };
 
     virtual bool genActionUnified(FMyMJGameActionUnfiedForBPCpp *poutActionUnified) override
     {
         Super::genActionUnified(poutActionUnified);
+
         if (poutActionUnified) {
-            poutActionUnified->m_iMask0 = m_iMask0;
+            poutActionUnified->m_bPassPaoHu = m_bPassPaoHu;
         }
 
         return true;
     };
 
     inline
-    void init(int32 idxAttender, int32 iMask0, int32 iTimeLeft2AutoChooseMs, bool bForceActionGenTimeLeft2AutoChooseMsZero)
+    void init(int32 idxAttender, bool bPassPaoHu, int32 iTimeLeft2AutoChooseMs, bool bForceActionGenTimeLeft2AutoChooseMsZero)
     {
         m_iIdxAttender = idxAttender;
-        m_iMask0 = iMask0;
+        m_bPassPaoHu = bPassPaoHu;
 
         if (!bForceActionGenTimeLeft2AutoChooseMsZero) {
             m_iTimeLeft2AutoChooseMs = iTimeLeft2AutoChooseMs;
         }
+        else {
+            m_iTimeLeft2AutoChooseMs = 0;
+        }
     };
 
-    UPROPERTY( meta = (DisplayName = "mask0", Bitmask, BitmaskEnum = "EMyMJGameActionUnfiedMask0"))
-    int32 m_iMask0;
+    //UPROPERTY( meta = (DisplayName = "mask0", Bitmask, BitmaskEnum = "EMyMJGameActionUnfiedMask0"))
+    //int32 m_iMask0;
+
+    UPROPERTY(meta = (DisplayName = "pass pao hu"))
+        bool m_bPassPaoHu;
 };
 
 USTRUCT()

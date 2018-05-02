@@ -488,7 +488,7 @@ FMyErrorCodeMJGameCpp AMyMJGameRoomCpp::retrieveCfg(FMyMJGameDeskVisualCfgCacheC
 
 MyMJGameRuleTypeCpp AMyMJGameRoomCpp::helperGetRuleTypeNow() const
 {
-    return getRoomDataSuiteVerified()->getDeskDataObjVerified()->getVisualDataRefConst().getCoreDataRefConst().getCoreDataPublicRefConst().m_cGameCfg.m_eRuleType;
+    return getRoomDataSuiteVerified()->getDeskDataObjVerified()->getDataAllRefConst().m_cDeskVisualDataNow.getCoreDataRefConst().getCoreDataPublicRefConst().m_cGameCfg.m_eRuleType;
 };
 
 void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache,
@@ -566,37 +566,12 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("dice %d update transform to: %s."), idDice, *cInfoAndResult.m_cVisualResult.m_cTransform.ToString());
     }
 
-    const TSet<int32>& sD = cCoreDataDirtyRecordFiltered.getRecordSetRefConst();
-    //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("sd Num %d, in empty %d."), sD.Num(), cNextCoreDataDirtyRecordSincePrev.isEmpty());
-    for (auto& Elem : sD)
-    {
-        int32 v = Elem;
 
-        int32 subIdx0, subIdx1, subIdx2;
-        cCoreDataDirtyRecordFiltered.recordValueToIdxValuesWith3Idxs(v, subIdx0, subIdx1, subIdx2);
-        MyMJGameCoreDataDirtyMainTypeCpp eMainType = MyMJGameCoreDataDirtyMainTypeCpp(subIdx0);
-
-        if (eMainType == MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePublic) {
-            int32 idxAttender = subIdx1;
-            const FMyMJRoleDataAttenderPublicCpp& dataAttenderPublic = cCoreData.getRoleDataAttenderPublicRefConst(idxAttender);
-
-            UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
-            if (IsValid(pUI)) {
-                pUI->showMyMJRoleDataAttenderPublicChanged(idxAttender, dataAttenderPublic, subIdx2);
-            }
-
-        }
-        else if (eMainType == MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate) {
-            int32 idxAttender = subIdx1;
-            const FMyMJRoleDataAttenderPrivateCpp& dataAttenderPrivate = cCoreData.getRoleDataAttenderPrivateRefConst(idxAttender);
-
-            UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
-            if (IsValid(pUI)) {
-                pUI->showMyMJRoleDataAttenderPrivateChanged(idxAttender, dataAttenderPrivate, subIdx2);
-            }
-        }
-        else {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected dirty main type %d."), (int32)eMainType);
+    if (!cCoreDataDirtyRecordFiltered.isEmpty()) {
+        UMyMJGameInRoomUIMainWidgetBaseCpp* pUI = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
+        if (pUI) {
+            pUI->markCoreDataDirty(cCoreDataDirtyRecordFiltered);
+            pUI->updateUI();
         }
     }
 };

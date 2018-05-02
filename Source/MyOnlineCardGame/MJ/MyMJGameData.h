@@ -1338,6 +1338,8 @@ struct FMyMJDataAccessorCpp
     };
 
     //dirty record: idx3: idx0 : type; type-card: idx1 attender, idx2 slot; type-dice: idx1 unused, idx2 unused;
+    static void helperSetCoreDataDirtyRecordElemsDirty(FMyDirtyRecordWithKeyAnd4IdxsMapCpp &cDirtyRecord);
+    static void helperSetCoreDataDirtyRecordDataDirty(FMyDirtyRecordWithKeyAnd4IdxsMapCpp &cDirtyRecord);
     static void helperSetCoreDataDirtyRecordAllDirty(FMyDirtyRecordWithKeyAnd4IdxsMapCpp &cDirtyRecord);
 
     void resetForNewActionLoop();

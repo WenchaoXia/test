@@ -99,135 +99,6 @@ protected:
 
 
 USTRUCT()
-struct FMyInRoomViewRoleEventStyleSettingsCpp
-{
-    GENERATED_USTRUCT_BODY()
-public:
-
-    FMyInRoomViewRoleEventStyleSettingsCpp()
-    {
-
-    };
-
-    inline bool checkSettings() const
-    {
-        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cWeaveChiWidget, TEXT("weaveChiWidget")))
-        {
-            return false;
-        }
-        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cWeavePengWidget, TEXT("weavePengWidget")))
-        {
-            return false;
-        }
-        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cWeaveGangWidget, TEXT("weaveGangWidget")))
-        {
-            return false;
-        }
-        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cWeaveBuWidget, TEXT("weaveBuWidget")))
-        {
-            return false;
-        }
-        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cTingWidget, TEXT("tingWidget")))
-        {
-            return false;
-        }
-        if (!UMyCommonUtilsLibrary::isSubClassValidAndChild<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp>(m_cHuWidget, TEXT("huWidget")))
-        {
-            return false;
-        }
-        return true;
-    };
-
-
-    inline TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> getWeaveWidgetByType(MyMJGameEventVisualTypeCpp type) const
-    {
-        if (type == MyMJGameEventVisualTypeCpp::WeaveChi) {
-            return m_cWeaveChiWidget;
-        }
-        else if (type == MyMJGameEventVisualTypeCpp::WeavePeng) {
-            return m_cWeavePengWidget;
-        }
-        else if (type == MyMJGameEventVisualTypeCpp::WeaveGang) {
-            return m_cWeavePengWidget;
-        }
-        else if (type == MyMJGameEventVisualTypeCpp::WeaveBu) {
-            return m_cWeavePengWidget;
-        }
-        else {
-            MY_VERIFY(false);
-            return NULL;
-        }
-    };
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "weave chi Widget"))
-    TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cWeaveChiWidget;
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "weave peng Widget"))
-    TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cWeavePengWidget;
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "weave gang Widget"))
-    TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cWeaveGangWidget;
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "weave bu Widget"))
-    TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cWeaveBuWidget;
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "ting Widget"))
-    TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cTingWidget;
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "hu Widget"))
-    TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> m_cHuWidget;
-};
-
-USTRUCT()
-struct FMyInRoomViewRoleIncidentStyleSettingsCpp
-{
-    GENERATED_USTRUCT_BODY()
-
-public:
-
-    inline bool checkSettings() const
-    {
-        return true;
-    };
-
-    FMyInRoomViewRoleIncidentStyleSettingsCpp()
-    {
-
-    };
-};
-
-USTRUCT()
-struct FMyInRoomViewRoleStyleSettingsCpp
-{
-    GENERATED_USTRUCT_BODY()
-public:
-
-    FMyInRoomViewRoleStyleSettingsCpp()
-    {
-
-    };
-
-    inline bool checkSettings() const
-    {
-        if (!m_cEvent.checkSettings()) {
-            return false;
-        }
-
-        if (!m_cIncident.checkSettings()) {
-            return false;
-        }
-
-        return true;
-    };
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "event"))
-    FMyInRoomViewRoleEventStyleSettingsCpp m_cEvent;
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "incident"))
-    FMyInRoomViewRoleIncidentStyleSettingsCpp m_cIncident;
-};
-
-USTRUCT()
 struct FMyPlayerInfoBasicCpp
 {
     GENERATED_USTRUCT_BODY()
@@ -410,6 +281,396 @@ private:
 };
 
 
+
+UCLASS(Abstract, editinlinenew, BlueprintType, meta = (DontUseGenericSpawnObject = "True"))
+class MYONLINECARDGAME_API UMyMJGameInRoomChoiceSelectWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomChoiceSelectWidgetInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+    UMyMJGameInRoomChoiceSelectWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_iIdxOfSelection = -1;
+    };
+
+
+    UFUNCTION(BlueprintPure)
+    int32 getIdxOfSelection() const
+    {
+        return m_iIdxOfSelection;
+    };
+
+    UFUNCTION(BlueprintCallable)
+        MyErrorCodeCommonPartCpp updateChoiceDataIgnoreIdxOfSelection(bool haveAnySelection, bool selected, bool InteractiveEnabled)
+    {
+        MyErrorCodeCommonPartCpp ret = MyErrorCodeCommonPartCpp::NoError;
+
+        MyErrorCodeCommonPartJoin(ret, IMyMJGameInRoomChoiceSelectWidgetInterfaceCpp::Execute_setChoiceFillState(this, haveAnySelection));
+        MyErrorCodeCommonPartJoin(ret, IMyMJGameInRoomChoiceSelectWidgetInterfaceCpp::Execute_setChoiceSelectState(this, selected));
+        MyErrorCodeCommonPartJoin(ret, IMyMJGameInRoomChoiceSelectWidgetInterfaceCpp::Execute_setChoiceInteractiveEnableState(this, InteractiveEnabled));
+
+        if (ret != MyErrorCodeCommonPartCpp::NoError) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: updateChoiceDataIgnoreIdxOfSelection got error: %s."), *GetName(), *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret));
+        }
+
+        return ret;
+    };
+
+    UFUNCTION(BlueprintCallable)
+        MyErrorCodeCommonPartCpp updateChoiceData(int32 idxOfSelection, bool selected, bool InteractiveEnabled)
+    {
+        m_iIdxOfSelection = idxOfSelection;
+        return updateChoiceDataIgnoreIdxOfSelection(m_iIdxOfSelection >= 0, selected, InteractiveEnabled);
+    };
+
+protected:
+
+    IMyMJGameInRoomChoiceSelectWidgetInterfaceCpp_DefaultImplementationForUObject_Bp()
+
+
+    int32 m_iIdxOfSelection;
+};
+
+
+UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
+class MYONLINECARDGAME_API UMyMJGameInRoomChoiceSelectCommonWidgetBaseCpp : public UMyMJGameInRoomChoiceSelectWidgetBaseCpp
+{
+    GENERATED_BODY()
+
+public:
+    UMyMJGameInRoomChoiceSelectCommonWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+    };
+
+
+protected:
+
+#if WITH_EDITOR
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
+#endif
+
+    virtual void SynchronizeProperties() override
+    {
+        Super::SynchronizeProperties();
+        tryUpdateCenterButtonStyle();
+        return;
+    }
+
+    inline void tryUpdateCenterButtonStyle()
+    {
+        UMyButton* pButton = NULL;
+        getCenterButton(pButton);
+
+        if (IsValid(pButton)) {
+            pButton->tryUpdateStylesInUnifiedWay(m_cCenterButtonStyleNormal, true);
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: failed get center button as %p."), *GetName(), pButton);
+        }
+    };
+
+    UFUNCTION(BlueprintNativeEvent)
+    MyErrorCodeCommonPartCpp getCenterButton(UMyButton*& outWidget);
+
+    MyErrorCodeCommonPartCpp getCenterButton_Implementation(UMyButton*& outWidget) 
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getCenterButton only implemented in C++."), *GetClass()->GetName());
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+    };
+
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "center button style normal"))
+    FSlateBrush m_cCenterButtonStyleNormal;
+};
+
+UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
+class MYONLINECARDGAME_API UMyMJGameInRoomChoiceSelectChiWidgetBaseCpp : public UMyMJGameInRoomChoiceSelectWidgetBaseCpp
+{
+    GENERATED_BODY()
+
+public:
+    UMyMJGameInRoomChoiceSelectChiWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+    };
+
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+    MyErrorCodeCommonPartCpp updateChoiceDataChi(const FMyMJGameActionChoiceDataChiCpp& dataChi);
+
+protected:
+
+    MyErrorCodeCommonPartCpp updateChoiceDataChi_Implementation(const FMyMJGameActionChoiceDataChiCpp& dataChi)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: updateChoiceDataChi only implemented in C++."), *GetClass()->GetName());
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+    };
+
+};
+
+
+UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
+class MYONLINECARDGAME_API UMyMJGameInRoomOperationLvl1ActionPanelWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+    UMyMJGameInRoomOperationLvl1ActionPanelWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+    };
+
+
+
+protected:
+
+    IMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp_DefaultImplementationForUObject_Bp();
+        //void acceptClientUserSelect(int32 IdxOfSelection);
+};
+
+
+UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
+class MYONLINECARDGAME_API UMyMJGameInRoomOperationLvl2ChiPanelWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomOperationLvl2ChiPanelWidgetInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+    UMyMJGameInRoomOperationLvl2ChiPanelWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+    };
+
+
+
+protected:
+
+    IMyMJGameInRoomOperationLvl2ChiPanelWidgetInterfaceCpp_DefaultImplementationForUObject_Bp();
+
+        //void acceptClientUserSelect(int32 IdxOfSelection);
+};
+
+/*
+USTRUCT()
+struct FMyMJGameInRoomOperationRootPanelWidgetBaseCachedDataCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameInRoomOperationRootPanelWidgetBaseCachedDataCpp()
+    {
+        reset();
+    };
+
+    virtual ~FMyMJGameInRoomOperationRootPanelWidgetBaseCachedDataCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        m_bValid = false;
+
+        m_pLv1ActionPanel = NULL;
+        m_pLv2ChiPanel = NULL;
+    };
+
+
+    bool m_bValid;
+
+    //UPROPERTY()
+    //class UWidgetSwitcher* m_pWidgetSwitcher;
+
+    UPROPERTY()
+        UMyMJGameInRoomOperationLvl1ActionPanelWidgetBaseCpp* m_pLv1ActionPanel;
+
+    UPROPERTY()
+        UMyMJGameInRoomOperationLvl2ChiPanelWidgetBaseCpp* m_pLv2ChiPanel;
+};
+*/
+
+
+UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
+class MYONLINECARDGAME_API UMyMJGameInRoomOperationRootPanelWidgetBaseCpp : public UUserWidget, public IMyMJGameInRoomOperationRootPanelWidgetInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    UMyMJGameInRoomOperationRootPanelWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : Super(ObjectInitializer)
+    {
+        m_iDelayedUIUpdateTimeMs = 0;
+    };
+
+    void updateWithActionContainor(MyMJGameRoleTypeCpp eDataRoleType, MyMJGameRuleTypeCpp eRuleType, int32 iGameId, int32 iActionGroupId, int32 idxAttender,
+                                   const FMyMJCardValuePackCpp& cardValuePack,
+                                   const FMyMJGameActionContainorForBPCpp& actionContainor);
+
+    UFUNCTION(BlueprintCallable)
+        void acceptClientUserSelect(int32 IdxOfSelection)
+    {
+        //Todo:
+    };
+
+
+protected:
+
+    IMyMJGameInRoomOperationRootPanelWidgetInterface_DefaultImplementationForUObject_Bp();
+
+    struct FActionChoicesUpdateStateCpp
+    {
+
+    public:
+
+        FActionChoicesUpdateStateCpp()
+        {
+            reset();
+        };
+
+        inline void reset()
+        {
+            m_iGameId = m_iActionGroupId = m_iIdxAttender = -1;
+            m_eDataRoleType = MyMJGameRoleTypeCpp::Max;
+            m_iIdxOfSelected = -1;
+            m_iCountOfChoices = 0;
+        };
+
+        inline bool equal(const FActionChoicesUpdateStateCpp& other) const
+        {
+            return m_iGameId == other.m_iGameId && m_iActionGroupId == other.m_iActionGroupId && m_iIdxAttender == other.m_iIdxAttender && m_eDataRoleType == other.m_eDataRoleType &&
+                   m_iIdxOfSelected == other.m_iIdxOfSelected && m_iCountOfChoices == other.m_iCountOfChoices;
+        };
+
+        inline FString ToString() const
+        {
+            return FString::Printf(TEXT("m_iGameId %d, m_iActionGroupId %d, m_iIdxAttender %d, m_eDataRoleType %d, m_iIdxOfSelected %d, m_iCountOfChoices %d."),
+                   m_iGameId, m_iActionGroupId, m_iIdxAttender, (uint8)m_eDataRoleType, m_iIdxOfSelected, m_iCountOfChoices);
+        };
+
+        int32 m_iGameId;
+        int32 m_iActionGroupId;
+        int32 m_iIdxAttender;
+        MyMJGameRoleTypeCpp m_eDataRoleType;
+
+        int32 m_iIdxOfSelected;
+        int32 m_iCountOfChoices;
+    };
+
+
+
+    struct FMyMJGameActionChoiceDataOtherCpp
+    {
+    public:
+
+        FMyMJGameActionChoiceDataOtherCpp()
+        {
+            reset();
+        };
+
+        inline void reset()
+        {
+            m_iIdxOfSelection = -1;
+            m_bSelected = false;
+            m_bInteractiveEnabled = false;
+        };
+
+        inline bool isValid() const
+        {
+            return m_iIdxOfSelection >= 0;
+        };
+
+        int32 m_iIdxOfSelection;
+        bool m_bSelected;
+        bool m_bInteractiveEnabled;
+    };
+
+
+    struct FUIUpdateDataCpp : public FActionChoicesUpdateStateCpp
+    {
+    public:
+
+        FUIUpdateDataCpp() : FActionChoicesUpdateStateCpp()
+        {
+            m_bHaveChiSelected = false;
+            m_iCountOfGuoChoices = 0;
+        };
+
+        inline void reset()
+        {
+            FActionChoicesUpdateStateCpp::reset();
+            m_aChiDatas.Reset();
+            m_cPengData.reset();
+            m_cGangData.reset();
+            m_cBuData.reset();
+            m_cHuData.reset();
+            m_cGuoData.reset();
+
+            m_bHaveChiSelected = false;
+            m_iCountOfGuoChoices = 0;
+        };
+
+        void postProcessForInteractiveFlag()
+        {
+            bool bCanBeSelectedLater = m_iIdxOfSelected < 0; //not selected yet
+
+            for (int32 i = 0; i < m_aChiDatas.Num(); i++) {
+                m_aChiDatas[i].m_bInteractiveEnabled = m_aChiDatas[i].m_iIdxOfSelection >= 0 && bCanBeSelectedLater;
+            }
+            m_cPengData.m_bInteractiveEnabled = m_cPengData.m_iIdxOfSelection >= 0 && bCanBeSelectedLater;
+            m_cGangData.m_bInteractiveEnabled = m_cGangData.m_iIdxOfSelection >= 0 && bCanBeSelectedLater;
+            m_cBuData.m_bInteractiveEnabled = m_cBuData.m_iIdxOfSelection >= 0 && bCanBeSelectedLater;
+            m_cHuData.m_bInteractiveEnabled = m_cHuData.m_iIdxOfSelection >= 0 && bCanBeSelectedLater;
+            m_cGuoData.m_bInteractiveEnabled = m_cGuoData.m_iIdxOfSelection >= 0 && bCanBeSelectedLater;
+        };
+
+
+        TArray<FMyMJGameActionChoiceDataChiCpp> m_aChiDatas;
+        FMyMJGameActionChoiceDataOtherCpp m_cPengData;
+        FMyMJGameActionChoiceDataOtherCpp m_cGangData;
+        FMyMJGameActionChoiceDataOtherCpp m_cBuData;
+        FMyMJGameActionChoiceDataOtherCpp m_cHuData;
+        FMyMJGameActionChoiceDataOtherCpp m_cGuoData;
+
+        bool m_bHaveChiSelected;
+        int32 m_iCountOfGuoChoices;
+    };
+
+
+    void delayedUIUpdate();
+    void UIUpdate(const FUIUpdateDataCpp& data);
+
+
+    FActionChoicesUpdateStateCpp m_cUpdateStateLast;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "delayed UI Update time ms"))
+    int32 m_iDelayedUIUpdateTimeMs;
+
+    FTimerHandle m_cDelayedUIUpdateTimerHandle;
+    FUIUpdateDataCpp m_cDelayedUIUpdateData;
+};
+
+
+
 USTRUCT()
 struct FMyMJGameInRoomUIMainWidgetRuntimeDataCpp
 {
@@ -456,6 +717,7 @@ public:
 
         m_cCfg.reset();
         m_aPlayerInfoWidgets.Reset();
+        m_pOperationRootPanelWidget = NULL;
     };
 
 
@@ -471,6 +733,29 @@ public:
     //size is always 4, idx is idx attender
     UPROPERTY()
     TArray<UMyMJGameInRoomPlayerInfoWidgetBaseCpp* > m_aPlayerInfoWidgets;
+
+    UPROPERTY()
+    UMyMJGameInRoomOperationRootPanelWidgetBaseCpp* m_pOperationRootPanelWidget;
+};
+
+
+USTRUCT()
+struct FMyMJGameInRoomUIMainWidgetDirtyRecordsCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+    FMyMJGameInRoomUIMainWidgetDirtyRecordsCpp()
+    {
+
+    };
+
+    inline void reset()
+    {
+        FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordAllDirty(m_cCoreDataDirtyRecord);
+    };
+
+    FMyDirtyRecordWithKeyAnd4IdxsMapCpp m_cCoreDataDirtyRecord;
 };
 
 UCLASS(Abstract, editinlinenew, BlueprintType, Blueprintable, meta = (DontUseGenericSpawnObject = "True"))
@@ -481,12 +766,17 @@ class MYONLINECARDGAME_API UMyMJGameInRoomUIMainWidgetBaseCpp : public UUserWidg
 public:
     UMyMJGameInRoomUIMainWidgetBaseCpp(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()) : UUserWidget(ObjectInitializer)
     {
-
+        reset();
     };
 
     virtual ~UMyMJGameInRoomUIMainWidgetBaseCpp()
     {
 
+    };
+
+    inline void reset()
+    {
+        m_pDataSourceRoomActor = NULL;
     };
 
 
@@ -495,6 +785,42 @@ public:
     virtual FMyErrorCodeMJGameCpp showMyMJRoleDataAttenderPrivateChanged(int32 idxAttender, const FMyMJRoleDataAttenderPrivateCpp& dataAttenderPrivate, int32 subType) override;
     virtual FMyErrorCodeMJGameCpp updateAttenderPositions(float XYRatioOfplayerScreen, const TArray<FVector2D>& projectedPointsInPlayerScreen_unit_absolute) override;
 
+
+    inline void markCoreDataDirty(const FMyDirtyRecordWithKeyAnd4IdxsMapCpp& cCoreDataDirtyRecordFiltered)
+    {
+        m_cDirtyRecords.m_cCoreDataDirtyRecord.join(cCoreDataDirtyRecordFiltered);
+    };
+
+    void updateUI();
+
+    inline void setDataSourceRoomActor(class AMyMJGameRoomCpp* pDataSourceRoomActor)
+    {
+        m_pDataSourceRoomActor = pDataSourceRoomActor;
+    };
+
+
+    FMyErrorCodeMJGameCpp getCfgRefConstFromCache(const FMyMJGameInRoomUIMainWidgetCfgCpp*& pCfg, bool verifyValid)
+    {
+        pCfg = NULL;
+
+        FMyErrorCodeMJGameCpp ret(true);
+        if (!m_cCachedData.m_bValid) {
+            ret = refillCachedData();
+        }
+
+        if (ret.hasError()) {
+            if (verifyValid) {
+                MY_VERIFY(false);
+            }
+            return ret;
+        }
+
+        pCfg = &m_cCachedData.m_cCfg;
+
+        MY_VERIFY(pCfg);
+
+        return ret;
+    };
 
 protected:
 
@@ -555,9 +881,9 @@ protected:
     };
 
 
-    FMyErrorCodeMJGameCpp getCfgRefConstFromCache(const FMyMJGameInRoomUIMainWidgetCfgCpp*& pCfg, bool verifyValid)
+    FMyErrorCodeMJGameCpp getOperationRootPanelWidgetRefFromCache(UMyMJGameInRoomOperationRootPanelWidgetBaseCpp*& pW, bool verifyValid)
     {
-        pCfg = NULL;
+        pW = NULL;
 
         FMyErrorCodeMJGameCpp ret(true);
         if (!m_cCachedData.m_bValid) {
@@ -571,15 +897,20 @@ protected:
             return ret;
         }
 
-        pCfg = &m_cCachedData.m_cCfg;
+        pW = m_cCachedData.m_pOperationRootPanelWidget;
+
+        MY_VERIFY(IsValid(pW));
 
         return ret;
     };
 
 
+    UPROPERTY()
+    class AMyMJGameRoomCpp* m_pDataSourceRoomActor;
 
+
+    FMyMJGameInRoomUIMainWidgetDirtyRecordsCpp m_cDirtyRecords;
     FMyMJGameInRoomUIMainWidgetRuntimeDataCpp m_cRuntimeData;
-
 
 private:
 

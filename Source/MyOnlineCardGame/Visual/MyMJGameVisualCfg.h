@@ -698,18 +698,15 @@ public:
             return false;
         }
 
-        if (!m_cDefaultInRoomViewRoleStyle.checkSettings()) {
-            return false;
-        }
+        //if (!m_cDefaultInRoomViewRoleStyle.checkSettings()) {
+            //return false;
+        //}
 
         return true;
     };
 
     UPROPERTY(EditAnywhere, meta = (DisplayName = "in room ui main widget class"))
     TSubclassOf<UMyMJGameInRoomUIMainWidgetBaseCpp> m_cInRoomUIMainWidgetClass;
-
-    UPROPERTY(EditAnywhere, meta = (DisplayName = "default In Room View Role Style"))
-    FMyInRoomViewRoleStyleSettingsCpp m_cDefaultInRoomViewRoleStyle;
 };
 
 UCLASS()

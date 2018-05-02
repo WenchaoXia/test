@@ -511,6 +511,7 @@ UMyMJGameInRoomUIMainWidgetBaseCpp* UMyMJGameUIManagerCpp::getInRoomUIMain(bool 
             const TSubclassOf<UMyMJGameInRoomUIMainWidgetBaseCpp>& widgetClass = pCfg->m_cUICfg.m_cInRoomUIMainWidgetClass;
             m_pInRoomUIMain = Cast<UMyMJGameInRoomUIMainWidgetBaseCpp>(UWidgetBlueprintLibrary::Create(this, widgetClass, pPC)); //no player controller owns it but let this class manage it
             MY_VERIFY(IsValid(m_pInRoomUIMain));
+            m_pInRoomUIMain->setDataSourceRoomActor(AMyMJGameRoomLevelScriptActorCpp::helperGetRoomActor(this, true));
         }
 
         break;

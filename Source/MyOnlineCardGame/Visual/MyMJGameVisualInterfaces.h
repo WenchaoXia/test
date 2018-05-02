@@ -18,6 +18,7 @@
 //All API here return error code, and 0 is returned if OK, if implementable by blueprint
 
 
+
 UINTERFACE()
 class UMyMJGameInRoomDeskInterfaceCpp : public UInterface
 {
@@ -105,6 +106,11 @@ protected:
     //Must be implemented by Blueprint
     UFUNCTION(BlueprintNativeEvent)
         MyErrorCodeCommonPartCpp getCfg(FMyMJGameInRoomUIMainWidgetCfgCpp& outCfg);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp getOperationRootPanelWidget(class UMyMJGameInRoomOperationRootPanelWidgetBaseCpp*& widget);
+
 };
 
 
@@ -126,4 +132,289 @@ virtual MyErrorCodeCommonPartCpp getCfg_Implementation(FMyMJGameInRoomUIMainWidg
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getCfg only implemented in C++."), *GetClass()->GetName()); \
     return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
 }; \
+virtual MyErrorCodeCommonPartCpp getOperationRootPanelWidget_Implementation(class UMyMJGameInRoomOperationRootPanelWidgetBaseCpp*& widget) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getOperationRootPanelWidget only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
 protected:
+
+
+
+UINTERFACE()
+class UMyMJGameInRoomChoiceSelectWidgetInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMyMJGameInRoomChoiceSelectWidgetInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp setChoiceSelectState(bool state);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp getChoiceSelectState(bool &state);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp setChoiceFillState(bool state);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp getChoiceFillState(bool &state);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp setChoiceInteractiveEnableState(bool state);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp getChoiceInteractiveEnableState(bool &state);
+};
+
+
+#define IMyMJGameInRoomChoiceSelectWidgetInterfaceCpp_DefaultImplementationForUObject_Bp() \
+protected: \
+virtual MyErrorCodeCommonPartCpp setChoiceSelectState_Implementation(bool state) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: setChoiceSelectState only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp getChoiceSelectState_Implementation(bool &state) override \
+{ \
+    state = false; \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getChoiceSelectState only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp setChoiceFillState_Implementation(bool state) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: setChoiceFillState only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp getChoiceFillState_Implementation(bool &state) override \
+{ \
+    state = false; \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getChoiceFillState only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp setChoiceInteractiveEnableState_Implementation(bool state) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: setChoiceInteractiveEnableState only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp getChoiceInteractiveEnableState_Implementation(bool &state) override \
+{ \
+    state = false; \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getChoiceInteractiveEnableState only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+protected:
+
+/*
+UENUM()
+enum class MyMJGameInRoomOperationUIType : uint8
+{
+    None = 0                    UMETA(DisplayName = "None"),
+    lv1Action = 1               UMETA(DisplayName = "lv1Action"),
+    lv2Chi = 10                 UMETA(DisplayName = "lv2Chi"),
+};
+*/
+
+
+USTRUCT(BlueprintType)
+struct FMyMJGameActionChoiceDataChiCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameActionChoiceDataChiCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_aValues.Reset();
+        m_iIdxOfTriggerCardInValues = -1;
+        m_iIdxOfSelection = -1;
+        m_bSelected = false;
+        m_bInteractiveEnabled = false;
+    };
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "values"))
+        TArray<int32> m_aValues;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "idx of trigger card in values"))
+        int32 m_iIdxOfTriggerCardInValues;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "idx of selection"))
+        int32 m_iIdxOfSelection;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "selected"))
+        bool m_bSelected;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "Interactive Enabled"))
+        bool m_bInteractiveEnabled;
+};
+
+
+UINTERFACE()
+class UMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp updateChi(bool haveAnySelection, bool selected, bool InteractiveEnabled);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp updatePeng(int32 idxOfSelection, bool selected, bool InteractiveEnabled);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp updateGang(int32 idxOfSelection, bool selected, bool InteractiveEnabled);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp updateBu(int32 idxOfSelection, bool selected, bool InteractiveEnabled);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp updateHu(int32 idxOfSelection, bool selected, bool InteractiveEnabled);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp updateGuo(int32 idxOfSelection, bool selected, bool InteractiveEnabled);
+
+};
+
+#define IMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp_DefaultImplementationForUObject_Bp() \
+protected: \
+virtual MyErrorCodeCommonPartCpp updateChi_Implementation(bool haveAnySelection, bool selected, bool InteractiveEnabled) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: updateChi only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp updatePeng_Implementation(int32 idxOfSelection, bool selected, bool InteractiveEnabled) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: updatePeng only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp updateGang_Implementation(int32 idxOfSelection, bool selected, bool InteractiveEnabled) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: updateGang only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp updateBu_Implementation(int32 idxOfSelection, bool selected, bool InteractiveEnabled) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: updateBu only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp updateHu_Implementation(int32 idxOfSelection, bool selected, bool InteractiveEnabled) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: updateHu only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp updateGuo_Implementation(int32 idxOfSelection, bool selected, bool InteractiveEnabled) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: updateGuo only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+protected: \
+;
+
+
+UINTERFACE()
+class UMyMJGameInRoomOperationLvl2ChiPanelWidgetInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMyMJGameInRoomOperationLvl2ChiPanelWidgetInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp updateChiChoiceDatas(const TArray<FMyMJGameActionChoiceDataChiCpp>& choiceDatas);
+};
+
+#define IMyMJGameInRoomOperationLvl2ChiPanelWidgetInterfaceCpp_DefaultImplementationForUObject_Bp() \
+protected: \
+virtual MyErrorCodeCommonPartCpp updateChiChoiceDatas_Implementation(const TArray<FMyMJGameActionChoiceDataChiCpp>& choiceDatas) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: updateChiChoiceDatas only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+};
+
+
+//don't go too deep into UI,where BP is good enough to handle
+//C++ try touch data logic only
+
+
+UINTERFACE()
+class UMyMJGameInRoomOperationRootPanelWidgetInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMyMJGameInRoomOperationRootPanelWidgetInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+
+protected:
+
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintNativeEvent)
+    MyErrorCodeCommonPartCpp get1stLvlActionPanelWidget(int32& idxInSwitchPanel, class UMyMJGameInRoomOperationLvl1ActionPanelWidgetBaseCpp*& outWidget);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintNativeEvent)
+    MyErrorCodeCommonPartCpp get2ndLvlChiPanelWidget(int32& idxInSwitchPanel, class UMyMJGameInRoomOperationLvl2ChiPanelWidgetBaseCpp*& outWidget);
+
+    //Must be implemented by Blueprint
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+    MyErrorCodeCommonPartCpp setChoiceFillState(bool haveAnyChoice);
+};
+
+
+#define IMyMJGameInRoomOperationRootPanelWidgetInterface_DefaultImplementationForUObject_Bp() \
+protected: \
+virtual MyErrorCodeCommonPartCpp get1stLvlActionPanelWidget_Implementation(int32& idxInSwitchPanel, class UMyMJGameInRoomOperationLvl1ActionPanelWidgetBaseCpp*& outWidget) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: get1stLvlActionPanelWidget only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp get2ndLvlChiPanelWidget_Implementation(int32& idxInSwitchPanel, class UMyMJGameInRoomOperationLvl2ChiPanelWidgetBaseCpp*& outWidget) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: get2ndLvlChiPanelWidget only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp setChoiceFillState_Implementation(bool haveAnyChoice) override \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: setChoiceFillState only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+protected: \
+;

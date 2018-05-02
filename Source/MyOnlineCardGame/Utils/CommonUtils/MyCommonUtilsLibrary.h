@@ -392,6 +392,14 @@ public:
         return MyErrorCodeCommonPartCpp::NoError;
     };
 
+    UFUNCTION(BlueprintPure)
+        static inline MyErrorCodeCommonPartCpp joinMyErrorCodeCommonPart(MyErrorCodeCommonPartCpp oldError, MyErrorCodeCommonPartCpp newError)
+    {
+        MyErrorCodeCommonPartJoin(oldError, newError);
+        return oldError;
+    };
+
+
     //Return true if have error
     UFUNCTION(BlueprintPure, meta = (DisplayName = "ToBool (MyErrorCodeCommonPartCpp)", CompactNodeTitle = "->", BlueprintAutocast))
         static inline bool Conv_MyErrorCodeCommonPartCpp_Bool(MyErrorCodeCommonPartCpp errorCode)

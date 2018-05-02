@@ -1036,10 +1036,28 @@ void UMyFlipImage::tryNextFrame(int32 idxOfImage, int32 frameOfImage)
 UMyButton::UMyButton(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
-    m_bEnableTransformWidget2DPressed = false;
+    m_bEnableTransformWidget2DPressed = true;
     m_cTransformWidget2DPressed.Scale.X = m_cTransformWidget2DPressed.Scale.Y = 0.8;
 }
 
+void UMyButton::tryUpdateStylesInUnifiedWay(const FSlateBrush& normalStyle, bool forceUpdate)
+{
+    if (!WidgetStyle.Normal.HasUObject() || forceUpdate) {
+        WidgetStyle.Normal = normalStyle;
+    }
+
+    if (!WidgetStyle.Pressed.HasUObject() || forceUpdate) {
+        WidgetStyle.Pressed = normalStyle;
+    }
+    if (!WidgetStyle.Hovered.HasUObject() || forceUpdate) {
+        WidgetStyle.Hovered = normalStyle;
+    }
+    if (!WidgetStyle.Disabled.HasUObject() || forceUpdate) {
+        WidgetStyle.Disabled = normalStyle;
+    }
+}
+
+#if WITH_EDITOR
 void UMyButton::PostEditChangeProperty(FPropertyChangedEvent& e)
 {
     //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty, %s"), *m_cResPath.Path);
@@ -1057,17 +1075,9 @@ void UMyButton::PostEditChangeProperty(FPropertyChangedEvent& e)
     else if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyButton, WidgetStyle))
     {
         if (WidgetStyle.Normal.HasUObject()) {
-            //helper set unused styles
-            if (!WidgetStyle.Pressed.HasUObject()) {
-                WidgetStyle.Pressed = WidgetStyle.Normal;
-            }
-            if (!WidgetStyle.Hovered.HasUObject()) {
-                WidgetStyle.Hovered = WidgetStyle.Normal;
-            }
-            if (!WidgetStyle.Disabled.HasUObject()) {
-                WidgetStyle.Disabled = WidgetStyle.Normal;
-                WidgetStyle.Disabled.SetResourceObject(NULL);
-            }
+
+            FSlateBrush normalStyle = WidgetStyle.Normal;
+            tryUpdateStylesInUnifiedWay(normalStyle, false);
         }
         RenderTransform = m_cTransformWidget2DNormal;
     }
@@ -1075,7 +1085,7 @@ void UMyButton::PostEditChangeProperty(FPropertyChangedEvent& e)
 
     Super::PostEditChangeProperty(e);
 }
-
+#endif
 
 //Warn:: check the code is accomplish with parent's function when UE4 upgrade
 TSharedRef<SWidget> UMyButton::RebuildWidget()

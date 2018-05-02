@@ -713,6 +713,38 @@ public:
     FMyMJServerClientTimeBondCpp m_cLastBond;
 };
 
+
+USTRUCT()
+struct FMyMJGameDeskVisualDataAllCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameDeskVisualDataAllCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_bInFullDataSyncState = false;
+        m_cDeskVisualDataNow.reset();
+        m_cGameProgressData.reset();
+        m_eVisualState = EMyMJGameRoomVisualStateCpp::Invalid;
+        m_uiChangeVisualStateLastClientTime_ms = 0;
+    };
+
+
+    bool m_bInFullDataSyncState;
+
+    FMyMJGameDeskVisualDataCpp m_cDeskVisualDataNow;
+    FMyGameProgressDataCpp m_cGameProgressData;
+    EMyMJGameRoomVisualStateCpp m_eVisualState;
+    uint32 m_uiChangeVisualStateLastClientTime_ms;
+};
+
+
 UCLASS(Blueprintable)
 class MYONLINECARDGAME_API UMyMJGameDeskVisualDataObjCpp : public UObject
 {
@@ -725,19 +757,17 @@ public:
 
     void clearInGame();
 
-    inline bool getInFullDataSyncState() const
+    inline const FMyMJGameDeskVisualDataAllCpp& getDataAllRefConst() const
     {
-        return m_bInFullDataSyncState;
+        return m_cDataAll;
     };
+
 
     void start();
     void stop();
     void loop(uint32 uiClientWorldTimeNow_ms);
 
-    inline const FMyMJGameDeskVisualDataCpp& getVisualDataRefConst() const
-    {
-        return m_cDeskVisualDataNow;
-    };
+
 
     uint32 updateCfgCache(const FMyMJGameDeskVisualCfgCacheCpp& cCfgCache);
 
@@ -755,9 +785,9 @@ protected:
 
     void changeVisualState(EMyMJGameRoomVisualStateCpp eNewState, uint32 uiClientTimeNow_ms, int32 iDebug)
     {
-        if (m_eVisualState != eNewState) {
-            m_eVisualState = eNewState;
-            m_uiVisualStateStartClientTime_ms = uiClientTimeNow_ms;
+        if (m_cDataAll.m_eVisualState != eNewState) {
+            m_cDataAll.m_eVisualState = eNewState;
+            m_cDataAll.m_uiChangeVisualStateLastClientTime_ms = uiClientTimeNow_ms;
         }
 
     };
@@ -771,11 +801,11 @@ protected:
     //TSharedPtr<FMyMJGameDeskVisualCoreDataProcessorCpp> m_pDataProcessor;
     TSharedPtr<FMyThreadControlCpp<FMyMJGameDeskProcessorRunnableCpp>> m_pProcessor;
 
-    bool m_bInFullDataSyncState;
+    //bool m_bInFullDataSyncState;
+    //FMyMJGameDeskVisualDataCpp m_cDeskVisualDataNow;
+    //FMyGameProgressDataCpp m_cGameProgressData;
+    //EMyMJGameRoomVisualStateCpp m_eVisualState;
+    //uint32 m_uiChangeVisualStateLastClientTime_ms;
 
-
-    FMyMJGameDeskVisualDataCpp m_cDeskVisualDataNow;
-    FMyGameProgressDataCpp m_cGameProgressData;
-    EMyMJGameRoomVisualStateCpp m_eVisualState;
-    uint32 m_uiVisualStateStartClientTime_ms;
+    FMyMJGameDeskVisualDataAllCpp m_cDataAll;
 };

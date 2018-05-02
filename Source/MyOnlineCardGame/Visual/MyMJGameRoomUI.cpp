@@ -5,6 +5,7 @@
 #include "MyMJGameRoom.h"
 
 #include "MyMJGameRoomLevelScriptActorCpp.h"
+#include "MyMJGamePlayerController.h"
 
 #include "Public/Blueprint/WidgetBlueprintLibrary.h"
 
@@ -24,8 +25,21 @@ FMyErrorCodeMJGameCpp UMyMJGameInRoomPlayerInfoWidgetBaseCpp::showAttenderWeave(
     TSubclassOf<UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp> widgetClass;
     widgetClass = pTrivalData->m_aAttenderDatas[idxAttender].m_cStyleSettings.m_cEvent.getWeaveWidgetByType(weaveVisualType);
     if (!IsValid(widgetClass)) {
-        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("weave visual type have not set its corresponding widget class, using default one. visual type: %s, meta: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameEventVisualTypeCpp"), (uint8)weaveVisualType), *m_cRuntimeData.ToString());
-        widgetClass = pVisualCfg->m_cUICfg.m_cDefaultInRoomViewRoleStyle.m_cEvent.getWeaveWidgetByType(weaveVisualType);
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("player info widget have not set its corresponding widget class for weave visual type, using default one. visual type: %s, meta: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameEventVisualTypeCpp"), (uint8)weaveVisualType), *m_cRuntimeData.ToString());
+        
+        UMyMJGameInRoomUIMainWidgetBaseCpp* pUIMain = AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(this, false);
+        if (IsValid(pUIMain)) {
+            const FMyMJGameInRoomUIMainWidgetCfgCpp* pCfg = NULL;
+            pUIMain->getCfgRefConstFromCache(pCfg, false);
+            if (pCfg) {
+                widgetClass = pCfg->m_cDefaultInRoomViewRoleStyle.m_cEvent.getWeaveWidgetByType(weaveVisualType);
+            }
+        }
+
+        if (!IsValid(widgetClass)) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("failed to get default widet class, visual type: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGameEventVisualTypeCpp"), (uint8)weaveVisualType));
+            return FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::InternalError);
+        }
     }
 
     MY_VERIFY(IsValid(widgetClass));
@@ -40,7 +54,14 @@ FMyErrorCodeMJGameCpp UMyMJGameInRoomPlayerInfoWidgetBaseCpp::showAttenderWeave(
     FWidgetTransform wt;
     pW->SetRenderTransform(wt);
 
-    IMyCardGameScreenPositionRelatedWidgetInterfaceCpp::Execute_restartMainAnimation(pW, m_cRuntimeData.m_iIdxPositionInBox, dur, m_cRuntimeData.m_cLocationCommonActionShowPoint - m_cRuntimeData.m_cLocationSelf, m_cRuntimeData.m_cLocationUICenter - m_cRuntimeData.m_cLocationSelf);
+    const FMyModelInfoWidget2DCpp* pModelInfo = NULL;
+    pW->getDataByCacheRefConst_MyModelInfoWidget2D(pModelInfo, true);
+    pModelInfo->getBox2DRefConst().m_cCenterPointRelativeLocation;
+
+    FVector2D selfContentSize;
+    IMyContentSizeWidget2DInterfaceCpp::Execute_getContentSizeFromCache(this, selfContentSize, true);
+
+    IMyCardGameScreenPositionRelatedWidgetInterfaceCpp::Execute_restartMainAnimation(pW, m_cRuntimeData.m_iIdxPositionInBox, dur, (selfContentSize / 2 - pModelInfo->getBox2DRefConst().m_cCenterPointRelativeLocation), m_cRuntimeData.m_cLocationCommonActionShowPoint - m_cRuntimeData.m_cLocationSelf, m_cRuntimeData.m_cLocationUICenter - m_cRuntimeData.m_cLocationSelf);
 
     return FMyErrorCodeMJGameCpp(true);
 };
@@ -95,6 +116,217 @@ UMyUserWidgetWithCurveUpdaterCardGameScreenPositionRelatedCpp* UMyMJGameInRoomPl
 
 
 
+#if WITH_EDITOR
+void UMyMJGameInRoomChoiceSelectCommonWidgetBaseCpp::PostEditChangeProperty(FPropertyChangedEvent& e)
+{
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("PostEditChangeProperty, %s"), *m_cResPath.Path);
+
+    FName PropertyName = (e.MemberProperty != NULL) ? e.MemberProperty->GetFName() : NAME_None;
+
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyMJGameInRoomChoiceSelectCommonWidgetBaseCpp, m_cCenterButtonStyleNormal))
+    {
+        tryUpdateCenterButtonStyle();
+    }
+
+
+    Super::PostEditChangeProperty(e);
+}
+#endif
+
+
+void UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::updateWithActionContainor(MyMJGameRoleTypeCpp eDataRoleType, MyMJGameRuleTypeCpp eRuleType, int32 iGameId, int32 iActionGroupId, int32 idxAttender,
+                                                                                const FMyMJCardValuePackCpp& cardValuePack,
+                                                                                const FMyMJGameActionContainorForBPCpp& actionContainor)
+{
+    FUIUpdateDataCpp cUIUpdateData;
+
+    int32 l = actionContainor.m_aActionChoices.Num();
+    for (int32 i = 0; i < l; i++) {
+        const FMyMJGameActionUnfiedForBPCpp& action = actionContainor.m_aActionChoices[i];
+        bool selected = actionContainor.m_iChoiceSelected == i;
+
+        if (action.getType() == MyMJGamePusherTypeCpp::ActionWeave) {
+            if (selected) {
+                cUIUpdateData.m_iIdxOfSelected = i;
+            }
+
+            const FMyMJWeaveCpp& cWeave = action.m_cWeave;
+
+            MyMJGameEventVisualTypeCpp eWeaveVisualType = UMyMJBPUtilsLibrary::helperGetEventVisualTypeFromWeave(eRuleType, cWeave);
+            if (eWeaveVisualType == MyMJGameEventVisualTypeCpp::WeaveChi) {
+
+                int32 idxT = cUIUpdateData.m_aChiDatas.AddDefaulted();
+                FMyMJGameActionChoiceDataChiCpp& chiData = cUIUpdateData.m_aChiDatas[idxT];
+
+                const TArray<int32>& ids = cWeave.getIdsRefConst();
+                for (int32 j = 0; j < ids.Num(); j++) {
+                    int32 idxValues = chiData.m_aValues.Emplace(cardValuePack.getByIdx(ids[j]));
+                    if (ids[j] == cWeave.getIdTriggerCard()) {
+                        chiData.m_iIdxOfTriggerCardInValues = idxValues;
+                    }
+                }
+
+                chiData.m_iIdxOfSelection = i;
+                chiData.m_bSelected = selected;
+                if (selected) {
+                    cUIUpdateData.m_bHaveChiSelected = true;
+                }
+
+                MY_VERIFY(cUIUpdateData.m_aChiDatas.Num() <= 3);
+                cUIUpdateData.m_iCountOfChoices++;
+            }
+            else if (eWeaveVisualType == MyMJGameEventVisualTypeCpp::WeavePeng) {
+                FMyMJGameActionChoiceDataOtherCpp* pD = &cUIUpdateData.m_cPengData;
+
+                MY_VERIFY(!pD->isValid());
+                pD->m_iIdxOfSelection = i;
+                pD->m_bSelected = selected;
+                cUIUpdateData.m_iCountOfChoices++;
+            }
+            else if (eWeaveVisualType == MyMJGameEventVisualTypeCpp::WeaveGang) {
+                FMyMJGameActionChoiceDataOtherCpp* pD = &cUIUpdateData.m_cGangData;
+
+                MY_VERIFY(!pD->isValid());
+                pD->m_iIdxOfSelection = i;
+                pD->m_bSelected = selected;
+                cUIUpdateData.m_iCountOfChoices++;
+            }
+            else if (eWeaveVisualType == MyMJGameEventVisualTypeCpp::WeaveBu) {
+                FMyMJGameActionChoiceDataOtherCpp* pD = &cUIUpdateData.m_cBuData;
+
+                MY_VERIFY(!pD->isValid());
+                pD->m_iIdxOfSelection = i;
+                pD->m_bSelected = selected;
+                cUIUpdateData.m_iCountOfChoices++;
+            }
+            else {
+                MY_VERIFY(false);
+            }
+        }
+        else if (action.getType() == MyMJGamePusherTypeCpp::ActionNoAct) {
+            if (selected) {
+                cUIUpdateData.m_iIdxOfSelected = i;
+            }
+
+            FMyMJGameActionChoiceDataOtherCpp* pD = &cUIUpdateData.m_cGuoData;
+
+            MY_VERIFY(!pD->isValid());
+            pD->m_iIdxOfSelection = i;
+            pD->m_bSelected = selected;
+            cUIUpdateData.m_iCountOfChoices++;
+            cUIUpdateData.m_iCountOfGuoChoices++;
+        }
+        else if (action.getType() == MyMJGamePusherTypeCpp::ActionHu) {
+            if (selected) {
+                cUIUpdateData.m_iIdxOfSelected = i;
+            }
+
+            FMyMJGameActionChoiceDataOtherCpp* pD = &cUIUpdateData.m_cHuData;
+
+            MY_VERIFY(!pD->isValid());
+            pD->m_iIdxOfSelection = i;
+            pD->m_bSelected = selected;
+            cUIUpdateData.m_iCountOfChoices++;
+        }
+        else {
+
+        }
+    }
+
+    cUIUpdateData.m_iGameId = iGameId;
+    cUIUpdateData.m_iActionGroupId = iActionGroupId;
+    cUIUpdateData.m_iIdxAttender = idxAttender;
+    cUIUpdateData.m_eDataRoleType = eDataRoleType;
+
+    cUIUpdateData.postProcessForInteractiveFlag();
+
+    bool delayUpdate = m_cUpdateStateLast.m_iIdxOfSelected >= 0 && (!(cUIUpdateData.m_iCountOfChoices > 0)) &&     //if we have selected before and have no new choices now
+                       cUIUpdateData.m_iGameId == m_cUpdateStateLast.m_iGameId && cUIUpdateData.m_iIdxAttender == m_cUpdateStateLast.m_iIdxAttender && cUIUpdateData.m_eDataRoleType == m_cUpdateStateLast.m_eDataRoleType && //in same game, same view role, same data role
+                       m_iDelayedUIUpdateTimeMs > 0;
+
+    UWorld *world = GetWorld();
+    if (!IsValid(world)) {
+        return;
+    }
+
+
+    if (delayUpdate) {
+        m_cDelayedUIUpdateData = cUIUpdateData;
+        world->GetTimerManager().ClearTimer(m_cDelayedUIUpdateTimerHandle);
+        world->GetTimerManager().SetTimer(m_cDelayedUIUpdateTimerHandle, this, &UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::delayedUIUpdate, (float)m_iDelayedUIUpdateTimeMs / 1000, false);
+    }
+    else{
+        world->GetTimerManager().ClearTimer(m_cDelayedUIUpdateTimerHandle);
+        UIUpdate(cUIUpdateData);
+    }
+
+
+};
+
+void UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::delayedUIUpdate()
+{
+    UIUpdate(m_cDelayedUIUpdateData);
+}
+
+void UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::UIUpdate(const FUIUpdateDataCpp& data)
+{
+    UMyMJGameInRoomOperationLvl1ActionPanelWidgetBaseCpp* pLv1 = NULL;
+    UMyMJGameInRoomOperationLvl2ChiPanelWidgetBaseCpp* pLv2 = NULL;
+    int32 idxInSwitcher = -1;
+    MyErrorCodeCommonPartCpp ret;
+
+    ret = IMyMJGameInRoomOperationRootPanelWidgetInterfaceCpp::Execute_get1stLvlActionPanelWidget(this, idxInSwitcher, pLv1);
+    if (ret != MyErrorCodeCommonPartCpp::NoError || !IsValid(pLv1)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: get1stLvlActionPanelWidget() failed: %s, %p."), *GetClass()->GetName(), *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret), pLv1);
+    }
+    else {
+
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%s: updating chi  : %d, %d."), *GetClass()->GetName(), data.m_aChiDatas.Num() > 0, data.m_bHaveChiSelected);
+        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%s: updating peng : %d, %d."), *GetClass()->GetName(), data.m_cPengData.m_iIdxOfSelection, data.m_cPengData.m_bSelected);
+
+        IMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp::Execute_updateChi(pLv1, data.m_aChiDatas.Num() > 0, data.m_bHaveChiSelected, data.m_aChiDatas.Num() > 0 && data.m_iIdxOfSelected < 0);
+
+        const FMyMJGameActionChoiceDataOtherCpp* pCD;
+
+        pCD = &data.m_cPengData;
+        IMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp::Execute_updatePeng(pLv1, pCD->m_iIdxOfSelection, pCD->m_bSelected, pCD->m_bInteractiveEnabled);
+       
+        pCD = &data.m_cGangData;
+        IMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp::Execute_updateGang(pLv1, pCD->m_iIdxOfSelection, pCD->m_bSelected, pCD->m_bInteractiveEnabled);
+
+        pCD = &data.m_cBuData;
+        IMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp::Execute_updateBu(pLv1, pCD->m_iIdxOfSelection, pCD->m_bSelected, pCD->m_bInteractiveEnabled);
+        
+        pCD = &data.m_cHuData;
+        IMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp::Execute_updateHu(pLv1, pCD->m_iIdxOfSelection, pCD->m_bSelected, pCD->m_bInteractiveEnabled);
+        
+        pCD = &data.m_cGuoData;
+        IMyMJGameInRoomOperationLvl1ActionPanelWidgetInterfaceCpp::Execute_updateGuo(pLv1, pCD->m_iIdxOfSelection, pCD->m_bSelected, pCD->m_bInteractiveEnabled);
+    }
+
+    ret = IMyMJGameInRoomOperationRootPanelWidgetInterfaceCpp::Execute_get2ndLvlChiPanelWidget(this, idxInSwitcher, pLv2);
+    if (ret != MyErrorCodeCommonPartCpp::NoError || !IsValid(pLv2)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: get1stLvlActionPanelWidget() failed: %s, %p."), *GetClass()->GetName(), *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret), pLv2);
+    }
+    else {
+        IMyMJGameInRoomOperationLvl2ChiPanelWidgetInterfaceCpp::Execute_updateChiChoiceDatas(pLv2, data.m_aChiDatas);
+    }
+
+    ret = IMyMJGameInRoomOperationRootPanelWidgetInterfaceCpp::Execute_setChoiceFillState(this, data.m_iCountOfChoices > 0);
+    if (ret != MyErrorCodeCommonPartCpp::NoError) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: setChoiceFillState() failed: %s."), *GetClass()->GetName(), *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret));
+    }
+
+
+    if (m_cUpdateStateLast.equal(data)) {
+        //In normal case this should not happen
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("state equal: new %s, old %s."), *data.ToString(), *m_cUpdateStateLast.ToString());
+    }
+
+    m_cUpdateStateLast = data;
+}
+
+
 
 FMyErrorCodeMJGameCpp UMyMJGameInRoomUIMainWidgetBaseCpp::showAttenderWeave(float dur, int32 idxAttender, MyMJGameEventVisualTypeCpp weaveVsualType)
 {
@@ -106,6 +338,22 @@ FMyErrorCodeMJGameCpp UMyMJGameInRoomUIMainWidgetBaseCpp::showAttenderWeave(floa
 FMyErrorCodeMJGameCpp UMyMJGameInRoomUIMainWidgetBaseCpp::showMyMJRoleDataAttenderPublicChanged(int32 idxAttender, const FMyMJRoleDataAttenderPublicCpp& dataAttenderPublic, int32 subType)
 {
     FMyErrorCodeMJGameCpp ret(true);
+
+    if (m_cRuntimeData.m_idxAttenderForIdxPositionInBox0 < 0 || m_cRuntimeData.m_idxAttenderForIdxPositionInBox0 >= 4) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("m_cRuntimeData.m_idxAttenderForIdxPositionInBox0 not valid yet, now %d."), m_cRuntimeData.m_idxAttenderForIdxPositionInBox0);
+        ret.join(MyErrorCodeCommonPartCpp::ParamInvalid);
+        return ret;
+    }
+
+    if (m_cRuntimeData.m_idxAttenderForIdxPositionInBox0 != idxAttender) {
+        return ret;
+    }
+
+    if (subType == MyMJGameCoreDataDirtySubType_AttenderStatePublic_HuScoreResultFinalGroup) {
+
+    }
+
+
     return ret;
 };
 
@@ -188,7 +436,7 @@ FMyErrorCodeMJGameCpp UMyMJGameInRoomUIMainWidgetBaseCpp::updateAttenderPosition
             idxAttenderForIdxPositionInBox0 = idxAttender;
         }
 
-        UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("setting player info widget %d to location %s."), idxAttender, *location.ToString());
+        //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("setting player info widget %d to location %s."), idxAttender, *location.ToString());
 
         FWidgetTransform& rt = pW->RenderTransform;
         rt.Translation = location;
@@ -202,13 +450,14 @@ FMyErrorCodeMJGameCpp UMyMJGameInRoomUIMainWidgetBaseCpp::updateAttenderPosition
 
 MyErrorCodeCommonPartCpp UMyMJGameInRoomUIMainWidgetBaseCpp::refillCachedData()
 {
-    MyErrorCodeCommonPartCpp ret;
+    MyErrorCodeCommonPartCpp retFinal = MyErrorCodeCommonPartCpp::NoError, ret = MyErrorCodeCommonPartCpp::NoError;
 
     m_cCachedData.reset();
 
     while (1) {
 
         FVector2D contentSizeMainUI;
+
         ret = IMyContentSizeWidget2DInterfaceCpp::Execute_getContentSize(this, contentSizeMainUI);
         if (ret != MyErrorCodeCommonPartCpp::NoError) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getContentSizeFromCache() returned error: %s."), *GetName(), *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret));
@@ -219,7 +468,6 @@ MyErrorCodeCommonPartCpp UMyMJGameInRoomUIMainWidgetBaseCpp::refillCachedData()
         modelInfo.reset(MyModelInfoType::BoxWidget2D);
         modelInfo.getBox2DRef() = UMyRenderUtilsLibrary::getMyModelInfoBoxByOriginPointRelativeToXYMinWidget2D(contentSizeMainUI / 2, contentSizeMainUI * MyUIWidgetPivotDefault);
 
-
         ret = IMyDynamicAllocationCanvasPannelWidget2DInterfaceCpp::Execute_getDynamicAllocationRootCanvasPanel(this, m_cCachedData.m_pDynamicAllocationCanvasPanel);
         if (ret != MyErrorCodeCommonPartCpp::NoError) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getDynamicAllocationRootCanvasPanel() returned error: %s."), *GetName(), *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret));
@@ -228,7 +476,7 @@ MyErrorCodeCommonPartCpp UMyMJGameInRoomUIMainWidgetBaseCpp::refillCachedData()
 
         if (!IsValid(m_cCachedData.m_pDynamicAllocationCanvasPanel)) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getDynamicAllocationRootCanvasPanel() returned OK, but pointer not valid: %p."), *GetName(), m_cCachedData.m_pDynamicAllocationCanvasPanel);
-            ret = MyErrorCodeCommonPartCpp::ObjectNull;
+            MyErrorCodeCommonPartJoin(ret, MyErrorCodeCommonPartCpp::ObjectNull);
             break;
         }
 
@@ -240,17 +488,18 @@ MyErrorCodeCommonPartCpp UMyMJGameInRoomUIMainWidgetBaseCpp::refillCachedData()
 
         break;
     }
+    MyErrorCodeCommonPartJoin(retFinal, ret);
+
 
     m_cCachedData.m_aPlayerInfoWidgets.Reset();
     for (int32 i = 0; i < 4; i++) {
         UMyMJGameInRoomPlayerInfoWidgetBaseCpp* pW = NULL;
-        ret = IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_getInRoomPlayerInfoWidgetByIdxAttender(this, i, pW);
 
+        ret = IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_getInRoomPlayerInfoWidgetByIdxAttender(this, i, pW);
         if (ret != MyErrorCodeCommonPartCpp::NoError) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getInRoomPlayerInfoWidgetByIdxAttender() with idx %d returned error: %s."), *GetName(), i, *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret));
             break;
         }
-
         if (pW == NULL) {
             UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getInRoomPlayerInfoWidgetByIdxAttender() returned OK, but pointer not valid: %p."), *GetName(), pW);
             ret = MyErrorCodeCommonPartCpp::ObjectNull;
@@ -259,13 +508,90 @@ MyErrorCodeCommonPartCpp UMyMJGameInRoomUIMainWidgetBaseCpp::refillCachedData()
 
         m_cCachedData.m_aPlayerInfoWidgets.Emplace(pW);
     }
+    MyErrorCodeCommonPartJoin(retFinal, ret);
 
-    if (ret == MyErrorCodeCommonPartCpp::NoError) {
+
+    while (1) {
+        ret = IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_getOperationRootPanelWidget(this, m_cCachedData.m_pOperationRootPanelWidget);
+        if (ret != MyErrorCodeCommonPartCpp::NoError) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getOperationRootPanelWidget() returned error: %s."), *GetName(), *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret));
+            break;
+        }
+
+        if (m_cCachedData.m_pOperationRootPanelWidget == NULL) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getOperationRootPanelWidget() returned OK, but pointer not valid: %p."), *GetName(), m_cCachedData.m_pOperationRootPanelWidget);
+            ret = MyErrorCodeCommonPartCpp::ObjectNull;
+            break;
+        }
+
+        break;
+    }
+    MyErrorCodeCommonPartJoin(retFinal, ret);
+
+
+    if (retFinal == MyErrorCodeCommonPartCpp::NoError) {
         m_cCachedData.m_bValid = true;
     }
     else {
         m_cCachedData.reset();
     }
 
-    return ret;
+    return retFinal;
+}
+
+
+void UMyMJGameInRoomUIMainWidgetBaseCpp::updateUI()
+{
+    const TSet<int32>& sD = m_cDirtyRecords.m_cCoreDataDirtyRecord.getRecordSetRefConst();
+    
+    if (!IsValid(m_pDataSourceRoomActor)) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: m_pDataSourceRoomActor not valid: %p."), *GetName(), m_pDataSourceRoomActor);
+        return;
+    }
+
+    UMyMJGameDeskVisualDataObjCpp* pDesjVisualDataObj = m_pDataSourceRoomActor->getRoomDataSuiteVerified()->getDeskDataObjVerified();
+    const FMyMJGameDeskVisualDataAllCpp& deskVisualDataAll = pDesjVisualDataObj->getDataAllRefConst();
+    const FMyMJGameDeskVisualDataCpp& deskVisualDataNow = deskVisualDataAll.m_cDeskVisualDataNow;
+    const FMyMJDataStructWithTimeStampBaseCpp& cCoreData = deskVisualDataNow.getCoreDataRefConst();
+
+    for (auto& Elem : sD)
+    {
+        int32 v = Elem;
+
+        int32 subIdx0, subIdx1, subIdx2;
+        m_cDirtyRecords.m_cCoreDataDirtyRecord.recordValueToIdxValuesWith3Idxs(v, subIdx0, subIdx1, subIdx2);
+        MyMJGameCoreDataDirtyMainTypeCpp eMainType = MyMJGameCoreDataDirtyMainTypeCpp(subIdx0);
+
+        if (eMainType == MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePublic) {
+            int32 idxAttender = subIdx1;
+            const FMyMJRoleDataAttenderPublicCpp& dataAttenderPublic = cCoreData.getRoleDataAttenderPublicRefConst(idxAttender);
+
+
+
+        }
+        else if (eMainType == MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate) {
+            int32 idxAttender = subIdx1;
+            const FMyMJRoleDataAttenderPrivateCpp& dataAttenderPrivate = cCoreData.getRoleDataAttenderPrivateRefConst(idxAttender);
+
+            if (subIdx2 == MyMJGameCoreDataDirtySubType_AttenderStatePrivate_ActionContainor) {
+                if (idxAttender != m_cRuntimeData.m_idxAttenderForIdxPositionInBox0) {
+                    continue;
+                }
+
+                UMyMJGameInRoomOperationRootPanelWidgetBaseCpp* pPanelWidget = NULL;
+                getOperationRootPanelWidgetRefFromCache(pPanelWidget, false);
+                if (pPanelWidget) {
+
+                    const FMyMJCoreDataPublicCpp& coreDataPublic = cCoreData.getCoreDataPublicRefConst();
+                    pPanelWidget->updateWithActionContainor(cCoreData.getRole(), coreDataPublic.m_cGameCfg.m_eRuleType, coreDataPublic.m_iGameId, coreDataPublic.m_iActionGroupId,
+                                                            idxAttender, cCoreData.getRoleDataPrivateRefConst().m_cCardValuePack, dataAttenderPrivate.m_cActionContainor);
+                }
+
+            }
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("unexpected dirty main type %d."), (int32)eMainType);
+        }
+    }
+
 }

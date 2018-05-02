@@ -794,6 +794,10 @@ void UMyCardGameCardWidgetBaseCpp::PostEditChangeProperty(FPropertyChangedEvent&
         updateWithValue(false);
         //updateWithValue(m_iValueShowing);
     }
+    else if (PropertyName == GET_MEMBER_NAME_CHECKED(UMyCardGameCardWidgetBaseCpp, m_bEnableTransformWidget2DPressedForInnerButton))
+    {
+        syncExposedProps();
+    }
     else {
         PropertyName = (e.MemberProperty != NULL) ? e.MemberProperty->GetFName() : NAME_None;
 

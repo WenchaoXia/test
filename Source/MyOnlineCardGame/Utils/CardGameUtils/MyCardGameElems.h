@@ -327,6 +327,8 @@ public:
         m_cResPath.Path.Reset();
         m_iMyId = -1;
         m_pCardMainTexture = NULL;
+
+        m_bEnableTransformWidget2DPressedForInnerButton = false;
     };
 
     virtual ~UMyCardGameCardWidgetBaseCpp()
@@ -399,6 +401,26 @@ protected:
     virtual void PostEditChangeProperty(FPropertyChangedEvent& e) override;
 #endif
 
+    virtual void SynchronizeProperties() override
+    {
+        Super::SynchronizeProperties();
+        syncExposedProps();
+        return;
+    };
+
+    inline void syncExposedProps()
+    {
+        UMyButton* pCenterButton = NULL;
+        MyErrorCodeCommonPartCpp ret = IMyCardGameCardWidgetBaseInterfaceCpp::Execute_getCenterButtonFromBlueprint(this, pCenterButton);
+
+        if (IsValid(pCenterButton)) {
+            pCenterButton->setEnableTransformWidget2DPressed(m_bEnableTransformWidget2DPressedForInnerButton);
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: try get center button but invalid: %p."), *GetName(), pCenterButton);
+        }
+    };
+
 
     MyErrorCodeCommonPartCpp updateWithValue(bool bForce);
 
@@ -437,6 +459,11 @@ protected:
     UPROPERTY(BlueprintReadOnly)
         class UTexture *m_pCardMainTexture;
 
+    //If true, that transform will be applied when pressed
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "enable render transform pressed for inner button"))
+    bool m_bEnableTransformWidget2DPressedForInnerButton;
+
+
     FMyCardGameCardWidgetCachedDataCpp m_cCachedData;
 
 
@@ -453,7 +480,13 @@ protected:
         MyErrorCodeCommonPartCpp ret = IMyCardGameCardWidgetBaseInterfaceCpp::Execute_getCenterButtonFromBlueprint(this, m_cCachedData.m_pCenterButton);
 
         if (ret != MyErrorCodeCommonPartCpp::NoError) {
-            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getCenterButtonFromBlueprint return fail: %s."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyErrorCodeCommonPartCpp"), (uint8)ret));
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getCenterButtonFromBlueprint return fail: %s."), *GetName(), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyErrorCodeCommonPartCpp"), (uint8)ret));
+        }
+        else {
+            if (!IsValid(m_cCachedData.m_pCenterButton)) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getCenterButtonFromBlueprint return OK but point invalid: %p."), *GetName(), m_cCachedData.m_pCenterButton);
+                MY_VERIFY(false);
+            }
         }
     };
 };
