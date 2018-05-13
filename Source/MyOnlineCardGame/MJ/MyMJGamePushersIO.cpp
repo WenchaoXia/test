@@ -52,7 +52,7 @@ TSharedPtr<FMyMJGamePusherBaseCpp> FMyMJGamePusherIOComponentFullCpp::tryPullPus
 
 
 int32
-FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections, FRandomStream &RS)
+FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections, MyCardGameAIStrategyTypeCpp &eAIStrategyTypeUsedForSelected, FRandomStream &RS)
 {
     outPriorityMax = m_iPriorityMax;
     outAlwaysCheckDistWhenCalcPri = m_bAlwaysCheckDistWhenCalcPri;
@@ -93,9 +93,19 @@ FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriori
     }
 
     //have choices, not choose yet, try random choose
-    if (m_pSelected.Get() == NULL && (MyMJGameActionContainorCpp_RandomMask_DoRandomSelect & m_iRandomMask) > 0) {
-
-        makeRandomSelection(RS);
+    if (m_pSelected.Get() == NULL && m_eAIStrategyType != MyCardGameAIStrategyTypeCpp::Invalid && m_eAIStrategyType != MyCardGameAIStrategyTypeCpp::Disabled) {
+        //try AI
+        if (m_bWantAIControl) {
+            makeAISelection(RS);
+        }
+        else {
+            if (m_iIdleTimePassed_ms >= m_iIdleTimeToAIControl_ms) {
+                makeAISelection(RS);
+            }
+            else {
+                m_iIdleTimePassed_ms += iTimePassedMs;
+            }
+        }
     }
 
     //check again:
@@ -106,17 +116,24 @@ FMyMJGameActionContainorCpp::collectAction(int32 iTimePassedMs, int32 &outPriori
     outPSelected = m_pSelected;
     outSelection = m_iSelectionInputed;
     outSubSelections = m_aSubSelectionsInputed;
+    eAIStrategyTypeUsedForSelected = m_eAIStrategyTypeUsedForSelected;
     return ActionCollectOK;
 };
 
 void
-FMyMJGameActionContainorCpp::makeRandomSelection(FRandomStream &RS)
+FMyMJGameActionContainorCpp::makeAISelection(FRandomStream &RS)
 {
+    m_eAIStrategyTypeUsedForSelected = m_eAIStrategyType;
+
     int32 l = m_aActionChoices.Num();
     MY_VERIFY(l > 0);
 
-    int32 selection0 = RS.RandRange(0, l - 1);
-    if ((MyMJGameActionContainorCpp_RandomMask_HighPriActionFirst & m_iRandomMask) > 0) {
+    int32 selection0 = -1;
+    if (m_eAIStrategyType == MyCardGameAIStrategyTypeCpp::StrategyRandom) {
+        selection0 = RS.RandRange(0, l - 1);
+    }
+    else if (m_eAIStrategyType == MyCardGameAIStrategyTypeCpp::StrategyBestChanceToWin) {
+        //Todo: improve the logic
         TArray<int32> aSelectionsPriMax;
         int32 priMax = -1;
         for (int32 i = 0; i < l; i++) {
@@ -138,6 +155,7 @@ FMyMJGameActionContainorCpp::makeRandomSelection(FRandomStream &RS)
         int32 idx = RS.RandRange(0, aSelectionsPriMax.Num() - 1);
         selection0 = aSelectionsPriMax[idx];
     }
+    MY_VERIFY(selection0 >= 0 && selection0 < l);
 
     TSharedPtr<FMyMJGameActionBaseCpp> pAction = m_aActionChoices[selection0];
 
@@ -162,22 +180,10 @@ FMyMJGameActionContainorCpp::makeRandomSelection(FRandomStream &RS)
 }
 
 void
-FMyMJGameActionCollectorCpp::reinit(TArray<FMyMJGameActionContainorCpp *> &aActionContainors, int32 iRandomSelectMask)
+FMyMJGameActionCollectorCpp::setWorkingContainors(TArray<FMyMJGameActionContainorCpp *> &aActionContainors)
 {
     //raw pointer can be assigned directly, unlike TSharedPointer
     m_aActionContainors = aActionContainors;
-
-    int32 l = m_aActionContainors.Num();
-    for (int32 i = 0; i < l; i++) {
-        FMyMJGameActionContainorCpp *pContainor = m_aActionContainors[i];
-        int32 idxAttender = pContainor->getIdxAttender();
-        int8 iMask = (iRandomSelectMask >> (8 * idxAttender)) & 0xff;
-
-        pContainor->reinit(iMask);
-    }
-
-    //reinit always happend before game start
-    //setActionGroupId(0);
 };
 
 void
@@ -274,7 +280,8 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iActionGroupId, int32 iTimePass
 
         //now collect all equal to m_iCalcActionCollectedPriMax
         bool bAlwaysCalcDist;
-        int ret = pContainor->collectAction(iTimePassedMs, selectionsPriMax, bAlwaysCalcDist, selected, selection, aSubSelections, RS);
+        MyCardGameAIStrategyTypeCpp eAIStrategyTypeUsedForSelected = MyCardGameAIStrategyTypeCpp::Invalid;
+        int ret = pContainor->collectAction(iTimePassedMs, selectionsPriMax, bAlwaysCalcDist, selected, selection, aSubSelections, eAIStrategyTypeUsedForSelected, RS);
 
         if (ret == ActionCollectOK) {
 
@@ -298,7 +305,7 @@ FMyMJGameActionCollectorCpp::collectAction(int32 iActionGroupId, int32 iTimePass
             FMyMJGamePusherMadeChoiceNotifyCpp *pMadeChoiceNotify = new FMyMJGamePusherMadeChoiceNotifyCpp();
 
             idxAttender = pContainor->getIdxAttender();
-            pMadeChoiceNotify->init(idxAttender, iActionGroupId, selection, aSubSelections);
+            pMadeChoiceNotify->init(idxAttender, iActionGroupId, selection, aSubSelections, eAIStrategyTypeUsedForSelected);
             m_pPusherIO->GivePusher(pMadeChoiceNotify, (void **)&pMadeChoiceNotify);
 
             outHaveProgress = true;

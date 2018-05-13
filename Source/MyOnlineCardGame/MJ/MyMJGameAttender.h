@@ -43,6 +43,11 @@ public:
         resetDatasOwned();
     };
 
+    virtual void reinit(MyCardGameAIStrategyTypeCpp eAIStrategyType, int32 iIdleTimeToAIControl_ms)
+    {
+        m_cDataLogic.reinit(eAIStrategyType, iIdleTimeToAIControl_ms);
+    };
+
     //Only reset data that belong to it, others such as  public attender data will not be reset
     virtual void resetDatasOwned()
     {
@@ -91,6 +96,11 @@ public:
     };
 
     const FMyMJAttenderDataLogicOnlyCpp& getDataLogicRefConst() const
+    {
+        return m_cDataLogic;
+    };
+
+    FMyMJAttenderDataLogicOnlyCpp& getDataLogicRef()
     {
         return m_cDataLogic;
     };

@@ -143,8 +143,6 @@ protected:
 #define ActionCollectEmpty 1
 #define ActionCollectWaiting 2
 
-#define MyMJGameActionContainorCpp_RandomMask_DoRandomSelect 0x01
-#define MyMJGameActionContainorCpp_RandomMask_HighPriActionFirst 0x02
 
 USTRUCT()
 struct FMyMJGameActionContainorCpp
@@ -163,6 +161,7 @@ public:
     FMyMJGameActionContainorCpp(int32 idxAttender)
     {
         setup(idxAttender);
+        m_bWantAIControl = false;
     };
 
     virtual ~FMyMJGameActionContainorCpp()
@@ -171,14 +170,18 @@ public:
     void setup(int32 idxAttender)
     {
         m_iIdxAttedner = idxAttender;
-        reinit(0);
+
+        //reinit(MyCardGameAIStrategyTypeCpp::Invalid, 0);
     };
 
-    void reinit(int8 iRandomMask)
+    void reinit(MyCardGameAIStrategyTypeCpp eAIStrategyType, int32 iIdleTimeToAIControl_ms)
     {
-        m_iRandomMask = iRandomMask;
         resetForNewLoop();
+
+        m_eAIStrategyType = eAIStrategyType;
+        m_iIdleTimeToAIControl_ms = iIdleTimeToAIControl_ms;
     };
+
 
     void resetForNewLoop()
     {
@@ -195,10 +198,17 @@ public:
         m_bAlwaysCheckDistWhenCalcPri =  false;
 
         m_pSelected = NULL;
-
+        m_eAIStrategyTypeUsedForSelected = MyCardGameAIStrategyTypeCpp::Disabled; //By Default we assume action is taken by human not AI
         m_bNeed2Collect = false;
 
+        m_iIdleTimePassed_ms = 0;
+
     };
+
+    void setWantAIControl(bool state)
+    {
+        m_bWantAIControl = state;
+    }
 
     inline
     int32 getIdxAttender() const
@@ -297,7 +307,7 @@ public:
         return FMyErrorCodeMJGameCpp(true);
     };
 
-    void makeRandomSelection(FRandomStream &RS);
+    void makeAISelection(FRandomStream &RS);
 
     //this code path core dump if met any invalid request
     void showSelectionOnNotify(int32 iSelection, const TArray<int32> &subSelections)
@@ -328,7 +338,7 @@ public:
         }
     }
 
-    int32 collectAction(int32 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections, FRandomStream &RS);
+    int32 collectAction(int32 iTimePassedMs, int32 &outPriorityMax, bool &outAlwaysCheckDistWhenCalcPri, TSharedPtr<FMyMJGameActionBaseCpp> &outPSelected, int32 &outSelection, TArray<int32> &outSubSelections, MyCardGameAIStrategyTypeCpp &eAIStrategyTypeUsedForSelected, FRandomStream &RS);
 
     inline
     int32 getPriorityMax() {
@@ -365,11 +375,17 @@ protected:
     bool  m_bAlwaysCheckDistWhenCalcPri; //the max pri action's property
 
     TSharedPtr<FMyMJGameActionBaseCpp> m_pSelected;
+    MyCardGameAIStrategyTypeCpp m_eAIStrategyTypeUsedForSelected;
     bool m_bNeed2Collect;
 
-    int8 m_iRandomMask; //Mainly used for test and one stupid AI
-
     int32 m_iIdxAttedner;
+
+
+    MyCardGameAIStrategyTypeCpp m_eAIStrategyType;
+    int32 m_iIdleTimeToAIControl_ms;
+    bool m_bWantAIControl;
+
+    int32 m_iIdleTimePassed_ms;
 
 };
 
@@ -408,8 +424,8 @@ public:
         m_aActionCollected.Reset();
     };
 
-    //reinit means can be called multiple times, unlike init() which is disigned to be called only one time in its life time
-    void reinit(TArray<FMyMJGameActionContainorCpp *> &aActionContainors, int32 iRandomSelectMask);
+    //can be called multiple times, unlike init() which is disigned to be called only one time in its life time
+    void setWorkingContainors(TArray<FMyMJGameActionContainorCpp *> &aActionContainors);
 
     //Warn: @pPreAction, @pPostAction must allocated on heap and this function will take ownership
     void resetForNewLoopForFullMode(FMyMJGameActionBaseCpp *pPrevAction, FMyMJGameActionBaseCpp *pPostAction, bool bAllowSamePriAction, int32 iIdxAttenderHavePriMax, int32 iExpectedContainorDebug);
@@ -455,8 +471,9 @@ protected:
 
     bool m_bEnQueueDone;
 
-
-    TArray<FMyMJGameActionContainorCpp *> m_aActionContainors; //should be equal to real attender num, and we record it here directly since it make things simple when calculate distance
+    //should be equal to real attender num, and we record it here directly since it make things simple when calculate distance
+    //not null pointer inside, the idx here is NOT idxAttender, may have shallow
+    TArray<FMyMJGameActionContainorCpp *> m_aActionContainors; 
 
     TSharedPtr<FMyMJGamePusherIOComponentFullCpp> m_pPusherIO;
 

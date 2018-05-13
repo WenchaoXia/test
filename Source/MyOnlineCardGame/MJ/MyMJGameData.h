@@ -492,7 +492,11 @@ public:
     {
         m_iIdx = idxAttender;
         m_cActionContainor.setup(idxAttender);
-        m_cActionContainor.reinit(false);
+    };
+
+    void reinit(MyCardGameAIStrategyTypeCpp eAIStrategyType, int32 iIdleTimeToAIControl_ms)
+    {
+        m_cActionContainor.reinit(eAIStrategyType, iIdleTimeToAIControl_ms);
         resetForNewGame();
     };
 
@@ -626,6 +630,7 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Final Group to Add"))
     TArray<FMyMJHuScoreResultFinalGroupCpp> m_aHuScoreResultFinalGroup2Add;
 
+
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "IsRealAttender"))
         uint32 m_bIsRealAttender : 1;
 
@@ -635,6 +640,7 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "GangYaoedLocalCS"))
         uint32 m_bGangYaoedLocalCS : 1;
 
+
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UpdateIsRealAttender"))
         uint32 m_bUpdateIsRealAttender : 1;
 
@@ -643,6 +649,8 @@ public:
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UpdateGangYaoedLocalCS"))
         uint32 m_bUpdateGangYaoedLocalCS : 1;
+
+
 };
 
 //#define FMyMJRoleDataAttenderPrivateCpp_Mask0_BanPaoHuLocalCS         (1 << 0)
@@ -669,6 +677,8 @@ public:
     {
         m_cActionContainor.resetForNewActionLoop();
         m_cHuScoreResultTingGroup.reset();
+        m_eAIStrategyTypeUsedLast = MyCardGameAIStrategyTypeCpp::Invalid;
+
         m_bBanPaoHuLocalCS = false;
     };
 
@@ -683,9 +693,15 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Ting"))
     FMyMJHuScoreResultTingGroupCpp  m_cHuScoreResultTingGroup;
 
+    //whether last action is take by AI, this is the strategy it used
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "AI Strategy Type used last"))
+        MyCardGameAIStrategyTypeCpp m_eAIStrategyTypeUsedLast;
+
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "BanPaoHuLocalCS"))
     uint32 m_bBanPaoHuLocalCS : 1;
+
+
 
 };
 
@@ -699,7 +715,10 @@ public:
 
     FMyMJRoleDataAttenderPrivateDeltaCpp()
     {
-        m_bBanPaoHuLocalCS = m_bUpdateBanPaoHuLocalCS = false;
+        m_eAIStrategyTypeUsedLast = MyCardGameAIStrategyTypeCpp::Invalid;
+        m_bBanPaoHuLocalCS = false;
+
+        m_bUpdateAIStrategyTypeUsedLast = m_bUpdateBanPaoHuLocalCS = false;
     };
 
     //if Num() > 0, it must equal to 1
@@ -710,8 +729,15 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "Hu Score Ting"))
     TArray<FMyMJHuScoreResultTingGroupCpp>  m_aHuScoreResultTingGroup;
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "AI Strategy Type used last"))
+        MyCardGameAIStrategyTypeCpp m_eAIStrategyTypeUsedLast;
+
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "BanPaoHuLocalCS"))
     uint32 m_bBanPaoHuLocalCS : 1;
+
+    
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UpdateAIStrategyTypeUsedLast"))
+        uint32 m_bUpdateAIStrategyTypeUsedLast : 1;
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "UpdateBanPaoHuLocalCS"))
     uint32 m_bUpdateBanPaoHuLocalCS : 1;
@@ -1214,6 +1240,7 @@ enum class MyMJGameCoreDataDirtyMainTypeCpp : uint8
 
 #define MyMJGameCoreDataDirtySubType_AttenderStatePrivate_ActionContainor (1)
 #define MyMJGameCoreDataDirtySubType_AttenderStatePrivate_HuScoreResultTingGroup (2)
+#define MyMJGameCoreDataDirtySubType_AttenderStatePrivate_AIRelated (3)
 #define MyMJGameCoreDataDirtySubType_AttenderStatePrivate_TrivalStates (11)
 
 

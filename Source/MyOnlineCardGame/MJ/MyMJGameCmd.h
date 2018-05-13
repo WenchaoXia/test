@@ -70,7 +70,6 @@ public:
     FMyMJGameCmdRestartGameCpp() : Super()
     {
         m_eType = MyMJGameCmdType::RestartGame;
-        m_iAttendersAllRandomSelectMask = 0;
     };
 
     virtual ~FMyMJGameCmdRestartGameCpp()
@@ -83,8 +82,8 @@ public:
     FMyMJGameRunDataCpp m_cGameRunData;
 
     //every attender takes 8 bit
-    UPROPERTY()
-    int32 m_iAttendersAllRandomSelectMask;
+    //UPROPERTY()
+    //int32 m_iAttendersAllRandomSelectMask;
 };
 
 

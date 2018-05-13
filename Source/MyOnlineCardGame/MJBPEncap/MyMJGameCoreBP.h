@@ -154,7 +154,7 @@ public:
     //return true if changed successfully, eRuleType == MyMJGameRuleTypeCpp::Invalid means destroy but not create new one
     bool tryChangeMode(MyMJGameRuleTypeCpp eRuleType, int32 iTrivalConfigMask);
     
-    bool startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst);
+    bool startGame();
     void stopGame();
 
     //end

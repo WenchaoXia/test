@@ -244,6 +244,15 @@ FMyMJGamePusherResultCpp* FMyMJGameCoreLocalCSCpp::genPusherResultAsSysKeeper(co
         actionContainorForBP.m_iChoiceSelected = pusherMadeChoice.m_iSelection;
         actionContainorForBP.m_aSubDataChoiceSelected = pusherMadeChoice.m_aSubSelections;
 
+        const FMyMJRoleDataAttenderPrivateCpp& rp = getAttenderByIdx(idxAttender)->getRoleDataAttenderPrivateRefConst();
+        if (rp.m_eAIStrategyTypeUsedLast != pusherMadeChoice.m_eAIStrategyTypeUsedForSelected) {
+            deltaAttenderPrivate.m_eAIStrategyTypeUsedLast = pusherMadeChoice.m_eAIStrategyTypeUsedForSelected;
+            deltaAttenderPrivate.m_bUpdateAIStrategyTypeUsedLast = true;
+        }
+        else {
+            deltaAttenderPrivate.m_bUpdateAIStrategyTypeUsedLast = false;
+        }
+
     }
     else if (ePusherType == MyMJGamePusherTypeCpp::PusherCountUpdate)
     {
@@ -1178,7 +1187,7 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
                 if (iGameId < 0) {
                     iGameId = 0;
                 }
-                pPusherReset->init(iGameId, RS, pCmdRestartGame->m_cGameCfg, pCmdRestartGame->m_cGameRunData, pCmdRestartGame->m_iAttendersAllRandomSelectMask);
+                pPusherReset->init(iGameId, RS, pCmdRestartGame->m_cGameCfg, pCmdRestartGame->m_cGameRunData);
 
                 m_pPusherIOFull->GivePusher(pPusherReset, (void**)&pPusherReset);
 
@@ -1216,34 +1225,28 @@ void FMyMJGameCoreLocalCSCpp::genBaseFromPusherResetGame(FMyMJGameResManager& RM
     FMyMJCardInfoPackCpp  *pCardInfoPack = &pD->m_cCardInfoPack;
 
     //let's construct things
-    int32 iRealAttenderNum = pusherReset.m_cGameCfg.m_cTrivialCfg.m_iGameAttenderNum;
+    MY_VERIFY(pusherReset.m_cGameCfg.m_aAttenderCfgs.Num() == 4);
+    int32 realAttenderCount = 0;
 
+    for (int32 i = 0; i < 4; i++) {
+        FMyMJRoleDataAttenderPublicCpp &cRoleDataAttenderPub = const_cast<FMyMJRoleDataAttenderPublicCpp &>(base.getRoleDataAttenderPublicRefConst(i));
 
-    if (iRealAttenderNum == 2) {
-        for (int32 i = 0; i < 2; i++) {
+        //UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender, true);
+        //UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame, true);
+        bool bIsRealAttender = pusherReset.m_cGameCfg.m_aAttenderCfgs[i].m_bIsRealAttender;
+        cRoleDataAttenderPub.m_bIsRealAttender = bIsRealAttender;
+        cRoleDataAttenderPub.m_bIsStillInGame = bIsRealAttender;
 
-            FMyMJRoleDataAttenderPublicCpp &cRoleDataAttenderPub = const_cast<FMyMJRoleDataAttenderPublicCpp &> (base.getRoleDataAttenderPublicRefConst(i * 2));
-            
-            //UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender, true);
-            //UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame, true);
-            cRoleDataAttenderPub.m_bIsRealAttender = true;
-            cRoleDataAttenderPub.m_bIsStillInGame = true;
+        if (bIsRealAttender) {
+            realAttenderCount++;
         }
-    }
-    else if (iRealAttenderNum >= 3 && iRealAttenderNum < 5) {
-        for (int32 i = 0; i < iRealAttenderNum; i++) {
 
-            FMyMJRoleDataAttenderPublicCpp &cRoleDataAttenderPub = const_cast<FMyMJRoleDataAttenderPublicCpp &>  (base.getRoleDataAttenderPublicRefConst(i));
-            
-            //UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsRealAttender, true);
-            //UMyMJUtilsLibrary::setBoolValueToBitMask(cRoleDataAttenderPub.m_iMask0, FMyMJRoleDataAttenderPublicCpp_Mask0_IsStillInGame, true);
-            cRoleDataAttenderPub.m_bIsRealAttender = true;
-            cRoleDataAttenderPub.m_bIsStillInGame = true;
-        }
+        FMyMJRoleDataAttenderPrivateCpp&cRoleDataAttenderPriv = const_cast<FMyMJRoleDataAttenderPrivateCpp &>(base.getRoleDataAttenderPrivateRefConst(i));
+        cRoleDataAttenderPriv.reset();
     }
-    else {
-        MY_VERIFY(false);
-    }
+    
+    MY_VERIFY(realAttenderCount >= 2 && realAttenderCount <= 4);
+
 
     pD->m_iGameId = pusherReset.m_iGameId;
     pD->m_iPusherIdLast = 0;
@@ -1415,34 +1418,29 @@ void FMyMJGameCoreLocalCSCpp::applyPusherResetGame(const FMyMJGamePusherResetGam
         pAttender->resetDatasOwned();
     }
 
+    MY_VERIFY(pusher.m_cGameCfg.m_aAttenderCfgs.Num() == 4);
+
     //let's construct things
-    int32 iRealAttenderNum = pusher.m_cGameCfg.m_cTrivialCfg.m_iGameAttenderNum;
+    //int32 iRealAttenderNum = pusher.m_cGameCfg.m_cTrivialCfg.m_iGameAttenderNum;
 
     TArray<FMyMJGameActionContainorCpp *> aContainors;
-
-    if (iRealAttenderNum == 2) {
-        for (int32 i = 0; i < 2; i++) {
-
-            TSharedPtr<FMyMJGameAttenderCpp> pAttender = m_aAttendersAll[i * 2];
-
+    for (int32 i = 0; i < 4; i++) {
+        const FMyMJGameAttenderCfgCpp& attenderCfg = pusher.m_cGameCfg.m_aAttenderCfgs[i];
+        TSharedPtr<FMyMJGameAttenderCpp> pAttender = m_aAttendersAll[i];
+        pAttender->getDataLogicRef().reinit(attenderCfg.m_eAIStrategyType, attenderCfg.m_iIdleTimeToAIControl_ms);
+        if (pusher.m_cGameCfg.m_aAttenderCfgs[i].m_bIsRealAttender) {
             aContainors.Emplace(&pAttender->getActionContainorRef());
         }
     }
-    else if (iRealAttenderNum >= 3 && iRealAttenderNum < 5) {
-        for (int32 i = 0; i < iRealAttenderNum; i++) {
 
-            TSharedPtr<FMyMJGameAttenderCpp> pAttender = m_aAttendersAll[i];
+   
 
-            aContainors.Emplace(&pAttender->getActionContainorRef());
-        }
-    }
-    else {
-        MY_VERIFY(false);
-    }
+    MY_VERIFY(aContainors.Num() >= 2 && aContainors.Num() <= 4);
+
 
     MY_VERIFY(getRuleType() == pusher.m_cGameCfg.m_eRuleType)
 
-    m_pActionCollector->reinit(aContainors, pusher.m_iAttenderBehaviorRandomSelectMask);
+    m_pActionCollector->setWorkingContainors(aContainors);
 
     m_cDataLogic.m_eActionLoopState = MyMJActionLoopStateCpp::WaitingToGenAction;
     m_cDataLogic.m_iMsLast = UMyCommonUtilsLibrary::nowAsMsFromTick();

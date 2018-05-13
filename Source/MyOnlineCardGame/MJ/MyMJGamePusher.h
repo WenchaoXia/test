@@ -509,7 +509,7 @@ public:
         return str;
     };
      
-    void init(int32 idxAttender, int32 iActionGroupId, int32 iSelection, TArray<int32> &aSubSelections)
+    void init(int32 idxAttender, int32 iActionGroupId, int32 iSelection, TArray<int32> &aSubSelections, MyCardGameAIStrategyTypeCpp eAIStrategyTypeUsedForSelected)
     {
         m_iIdxAttender = idxAttender;
         m_iActionGroupId = iActionGroupId;
@@ -517,6 +517,8 @@ public:
         m_iSelection = iSelection;
         m_aSubSelections = aSubSelections;
         //m_iSelectionSub = iSelectionSub;
+
+        m_eAIStrategyTypeUsedForSelected = eAIStrategyTypeUsedForSelected;
     };
 
     inline
@@ -542,6 +544,8 @@ public:
     UPROPERTY( meta = (DisplayName = "action Group Id"))
     int32 m_iActionGroupId;
 
+    UPROPERTY(meta = (DisplayName = "AI Strategy Type Used For Selected"))
+        MyCardGameAIStrategyTypeCpp m_eAIStrategyTypeUsedForSelected;
 
 protected:
 
@@ -602,7 +606,7 @@ public:
         m_eType = MyMJGamePusherTypeCpp::PusherResetGame;
 
         m_iGameId = -1;
-        m_iAttenderBehaviorRandomSelectMask = 0;
+
     };
 
     virtual ~FMyMJGamePusherResetGameCpp()
@@ -621,7 +625,7 @@ public:
     };
 
     //call this only when m_cGameCfg is set
-    void init(int32 iGameId, FRandomStream &RS, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData, int32 iAttenderBehaviorRandomSelectMask);
+    void init(int32 iGameId, FRandomStream &RS, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData);
 
     // > 0 means valid
     UPROPERTY()
@@ -636,9 +640,8 @@ public:
     UPROPERTY()
     TArray<int32> m_aShuffledValues;
 
-
-    UPROPERTY()
-    int32 m_iAttenderBehaviorRandomSelectMask;
+    //UPROPERTY()
+    //int32 m_iAttenderBehaviorRandomSelectMask;
 
 };
 

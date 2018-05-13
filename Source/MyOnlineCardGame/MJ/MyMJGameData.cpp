@@ -491,6 +491,13 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("tring to apply role attender %d's private delta but target is NULL."), idxAttender);
             }
 
+            if (roleDataAttenderPriDelta.m_bUpdateAIStrategyTypeUsedLast) {
+                pRDAttenderPriSelf->m_eAIStrategyTypeUsedLast = roleDataAttenderPriDelta.m_eAIStrategyTypeUsedLast;
+                if (pDirtyRecord) {
+                    pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePrivate_AIRelated, true);
+                }
+            }
+
             //UMyMJUtilsLibrary::testUpdateFlagAndsetBoolValueToStorageBitMask(pRDAttenderPriSelf->m_iMask0, roleDataAttenderPriDelta.m_iMask0, FMyMJRoleDataAttenderPrivateCpp_Mask0_UpdateBanPaoHuLocalCS, FMyMJRoleDataAttenderPrivateCpp_Mask0_BanPaoHuLocalCS);
             if (roleDataAttenderPriDelta.m_bUpdateBanPaoHuLocalCS) {
                 pRDAttenderPriSelf->m_bBanPaoHuLocalCS = roleDataAttenderPriDelta.m_bBanPaoHuLocalCS;

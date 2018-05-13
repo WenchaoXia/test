@@ -273,7 +273,7 @@ void AMyMJGameCoreDataSourceCpp::startGameCoreTestInSubThread(bool showCoreLog, 
     }
 
     m_pMJDataAll->setShowDebugLog(showDataLog);
-    startGame(true, bAttenderRandomSelectHighPriActionFirst);
+    startGame();
 }
 
 
@@ -338,7 +338,7 @@ bool AMyMJGameCoreDataSourceCpp::tryChangeMode(MyMJGameRuleTypeCpp eRuleType, in
 
 }
 
-bool AMyMJGameCoreDataSourceCpp::startGame(bool bAttenderRandomSelectDo, bool bAttenderRandomSelectHighPriActionFirst)
+bool AMyMJGameCoreDataSourceCpp::startGame()
 {
     if (!getCoreFullPartEnabled())
     {
@@ -356,17 +356,7 @@ bool AMyMJGameCoreDataSourceCpp::startGame(bool bAttenderRandomSelectDo, bool bA
         return false;
     }
 
-    int8 iAttenderRandomMask = 0;
-    if (bAttenderRandomSelectDo) {
-        iAttenderRandomMask |= MyMJGameActionContainorCpp_RandomMask_DoRandomSelect;
-    }
-    if (bAttenderRandomSelectHighPriActionFirst) {
-        iAttenderRandomMask |= MyMJGameActionContainorCpp_RandomMask_HighPriActionFirst;
-    }
-    int32 iAttendersAllRandomSelectMask = MyMJGameDup8BitMaskForSingleAttenderTo32BitMaskForAll(iAttenderRandomMask);
-
     FMyMJGameCmdRestartGameCpp *pCmdReset = new FMyMJGameCmdRestartGameCpp();
-    pCmdReset->m_iAttendersAllRandomSelectMask = iAttendersAllRandomSelectMask;
     UMyMJUtilsLocalCSLibrary::genDefaultCfg(pCmdReset->m_cGameCfg);
     cRunData.getIOGourpAll().m_aGroups[(uint8)MyMJGameRoleTypeCpp::SysKeeper].getCmdInputQueue().Enqueue(pCmdReset);
 

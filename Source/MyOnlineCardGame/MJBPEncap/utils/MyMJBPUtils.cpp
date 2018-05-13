@@ -192,7 +192,7 @@ void UMyMJBPUtilsLibrary::testPusherSerialize0(int32 param)
 
     TArray<int32> aSel;
     aSel.Emplace(1);
-    pPusherNotify->init(4, 3, 2, aSel);
+    pPusherNotify->init(4, 3, 2, aSel, MyCardGameAIStrategyTypeCpp::Invalid);
 
     cPushersIn.giveInLocalThread(pPusherNotify);
 
@@ -234,17 +234,8 @@ void UMyMJBPUtilsLibrary::testGameCoreInLocalThread(int32 seed, bool bAttenderRa
     FMyMJGameIOGroupAllCpp cIOGourpAll;
     pCore->initFullMode(p, &cIOGourpAll);
 
-    int8 iAttenderRandomMask = 0;
-    if (true) {
-        iAttenderRandomMask |= MyMJGameActionContainorCpp_RandomMask_DoRandomSelect;
-    }
-    if (bAttenderRandomSelectHighPriActionFirst) {
-        iAttenderRandomMask |= MyMJGameActionContainorCpp_RandomMask_HighPriActionFirst;
-    }
-    int32 iAttendersAllRandomSelectMask = MyMJGameDup8BitMaskForSingleAttenderTo32BitMaskForAll(iAttenderRandomMask);
 
     FMyMJGameCmdRestartGameCpp *pCmdReset = new FMyMJGameCmdRestartGameCpp();
-    pCmdReset->m_iAttendersAllRandomSelectMask = iAttendersAllRandomSelectMask;
     UMyMJUtilsLocalCSLibrary::genDefaultCfg(pCmdReset->m_cGameCfg);
     cIOGourpAll.m_aGroups[(uint8)MyMJGameRoleTypeCpp::SysKeeper].getCmdInputQueue().Enqueue(pCmdReset);
 

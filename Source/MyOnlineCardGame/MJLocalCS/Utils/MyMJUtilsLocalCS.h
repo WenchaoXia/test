@@ -26,6 +26,7 @@ class UMyMJUtilsLocalCSLibrary :
 
 public:
     
+    UFUNCTION(BlueprintPure)
     static void genDefaultCfg(FMyMJGameCfgCpp &outCfg);
 
     //HaiDi card in Changsha, have its own rules

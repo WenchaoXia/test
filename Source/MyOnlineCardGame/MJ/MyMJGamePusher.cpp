@@ -708,12 +708,11 @@ FMyMJGamePusherResetGameCpp::cloneDeep() const
 }
 
 void
-FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream &RS, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData, int32 iAttenderBehaviorRandomSelectMask)
+FMyMJGamePusherResetGameCpp::init(int32 iGameId, FRandomStream &RS, FMyMJGameCfgCpp &cGameCfg, FMyMJGameRunDataCpp &cGameRunData)
 {
     m_iGameId = iGameId;
     m_cGameCfg = cGameCfg;
     m_cGameRunData = cGameRunData;
-    m_iAttenderBehaviorRandomSelectMask = iAttenderBehaviorRandomSelectMask;
 
     TArray<int32> outValues;
     outValues.Reset(160);

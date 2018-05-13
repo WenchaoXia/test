@@ -141,14 +141,10 @@ public:
 
     void reset()
     {
-        m_iGameAttenderNum = 4;
         m_iCardNumPerStackInUntakenSlot = 2;
         m_iStackNumKeptFromTail = 0;
         m_bGangAnFlipUpCards = false;
     };
-
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "attender num"))
-    int32 m_iGameAttenderNum; //[2, 4]
 
     UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card num per stack in untaken slot"))
     int32 m_iCardNumPerStackInUntakenSlot;
@@ -273,6 +269,41 @@ protected:
     TMap<MyMJHuScoreTypeCpp, FMyMJHuScoreAttrCpp> m_mHuBornScoreAttrs;
 };
 
+
+USTRUCT(BlueprintType)
+struct FMyMJGameAttenderCfgCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameAttenderCfgCpp()
+    {
+        reset();
+    };
+
+    inline void reset()
+    {
+        m_eAIStrategyType = MyCardGameAIStrategyTypeCpp::StrategyBestChanceToWin;
+        m_iIdleTimeToAIControl_ms = 0;
+        m_bIsRealAttender = true;
+    };
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "AI Strategy Type"))
+    MyCardGameAIStrategyTypeCpp m_eAIStrategyType;
+
+    // < 0 means invalid
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "idle time to AI Control ms"))
+        int32 m_iIdleTimeToAIControl_ms;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "IsRealAttender"))
+        uint32 m_bIsRealAttender : 1;
+
+};
+
+
+
+
 USTRUCT(BlueprintType)
 struct FMyMJGameCfgCpp
 {
@@ -292,7 +323,8 @@ public:
     inline void reset()
     {
         m_eRuleType = MyMJGameRuleTypeCpp::Invalid;
-        m_iAttenderNumber = 4;
+        m_aAttenderCfgs.Reset();
+        m_aAttenderCfgs.AddDefaulted(4);
 
         m_cCardPackCfg.reset();
         m_cTrivialCfg.reset();
@@ -325,27 +357,27 @@ public:
         return m_aSubLocalCSCfg[0];
     };
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "rule type"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "rule type"))
     MyMJGameRuleTypeCpp m_eRuleType;
 
-    //we can support 2 - 4 players for one rule type
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "attender number"))
-    int32 m_iAttenderNumber;
+    //always size 4, idx attender have same meaning as desk position
+    UPROPERTY(EditAnywhere, EditFixedSize, BlueprintReadOnly, meta = (DisplayName = "attender cfgs"))
+    TArray<FMyMJGameAttenderCfgCpp> m_aAttenderCfgs;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "card pack cfg"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "card pack cfg"))
     FMyMJGameCardPackCfgCpp m_cCardPackCfg;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "trivial cfg"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "trivial cfg"))
     FMyMJGameTrivialCfgCpp m_cTrivialCfg;
 
-    UPROPERTY(meta = (DisplayName = "hu cfg"))
+    UPROPERTY(EditAnywhere, meta = (DisplayName = "hu cfg"))
     FMyMJHuCfgCpp m_cHuCfg;
 
     //sub cfg, all optional, determined by @m_eRuleType
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "sub guo biao cfg"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "sub guo biao cfg"))
     TArray<FMyMJGameSubGuoBiaoCfgCpp> m_aSubGuoBiaoCfg;
 
-    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "sub local CS cfg"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (DisplayName = "sub local CS cfg"))
     TArray<FMyMJGameSubLocalCSCfgCpp> m_aSubLocalCSCfg;
 };
 
