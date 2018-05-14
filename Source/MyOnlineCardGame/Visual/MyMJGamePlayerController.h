@@ -84,6 +84,9 @@ public:
         return m_bDebugHaltFeedData;
     };
 
+    UFUNCTION(Server, unreliable, WithValidation)
+    void makeSelection(const FMyMJGameCmdMakeSelectionCpp& cmdMakeSelection);
+
 protected:
 
     virtual void Possess(APawn* InPawn) override;

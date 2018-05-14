@@ -1172,6 +1172,8 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
     FMyMJGameCmdBaseCpp *pCmd = &cmd;
     const FMyMJCoreDataPublicCpp *pD = &getCoreDataPublicRefConst();
 
+    pCmd->m_cRespErrorCode.reset(true);
+
     if (pCmd->m_eType == MyMJGameCmdType::RestartGame) {
         if (eRoleTypeOfCmdSrc == MyMJGameRoleTypeCpp::SysKeeper) {
 
@@ -1190,8 +1192,6 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
                 pPusherReset->init(iGameId, RS, pCmdRestartGame->m_cGameCfg, pCmdRestartGame->m_cGameRunData);
 
                 m_pPusherIOFull->GivePusher(pPusherReset, (void**)&pPusherReset);
-
-                pCmd->m_cRespErrorCode.reset(); // = MyErrorCodeSubPartMJGameCpp::None;
             }
             else {
                 UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("requested reset game but type not equal: cfg %d, self %d."), (uint8)pCmdRestartGame->m_cGameCfg.m_eRuleType, (uint8)getRuleType());
@@ -1203,6 +1203,22 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
             pCmd->m_cRespErrorCode = FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp::HaveNoAuthority);
         }
 
+    }
+    else if (pCmd->m_eType == MyMJGameCmdType::MakeSelection) {
+        FMyMJGameCmdMakeSelectionCpp *pCmdMakeSelection = StaticCast<FMyMJGameCmdMakeSelectionCpp *>(pCmd);
+
+        int32 idxAttender = pCmdMakeSelection->m_iIdxAttender;
+        MY_VERIFY(idxAttender >= 0 && idxAttender < 4);
+        MY_VERIFY(idxAttender == (int32)eRoleTypeOfCmdSrc);
+
+        const FMyMJCoreDataPublicCpp& coreDataPublic = getCoreDataPublicRefConst();
+        if (coreDataPublic.m_iGameId != pCmdMakeSelection->m_iGameId || coreDataPublic.m_iActionGroupId != pCmdMakeSelection->m_iActionGroupId) {
+            pCmdMakeSelection->m_cRespErrorCode.m_eCommonPart = MyErrorCodeCommonPartCpp::InputTimePassed;
+            return;
+        }
+
+        FMyMJGameActionContainorCpp& actionContainor = getAttenderByIdx(idxAttender)->getActionContainorRef();
+        pCmdMakeSelection->m_cRespErrorCode = actionContainor.makeSelection(pCmdMakeSelection->m_iSelection, pCmdMakeSelection->m_aSubSelections);
     }
     else {
         MY_VERIFY(false);

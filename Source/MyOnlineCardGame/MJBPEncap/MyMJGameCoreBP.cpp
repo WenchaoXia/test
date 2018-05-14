@@ -358,7 +358,7 @@ bool AMyMJGameCoreDataSourceCpp::startGame()
 
     FMyMJGameCmdRestartGameCpp *pCmdReset = new FMyMJGameCmdRestartGameCpp();
     UMyMJUtilsLocalCSLibrary::genDefaultCfg(pCmdReset->m_cGameCfg);
-    cRunData.getIOGourpAll().m_aGroups[(uint8)MyMJGameRoleTypeCpp::SysKeeper].getCmdInputQueue().Enqueue(pCmdReset);
+    getCmdInputQueueByRole(MyMJGameRoleTypeCpp::SysKeeper, true)->Enqueue(pCmdReset);
 
     m_pCoreFullWithThread->kick();
 
@@ -442,7 +442,32 @@ void AMyMJGameCoreDataSourceCpp::OnRep_MJDataAllContent(MyMJGameRoleTypeCpp eRol
 }
 */
 
-void AMyMJGameCoreDataSourceCpp::coreDataPullLoopInner()
+void AMyMJGameCoreDataSourceCpp::coreDataCmdLoopInner()
+{
+    if (m_pCoreFullWithThread.IsValid()) {
+    }
+    else {
+        //thread not stated yet
+        //UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("thread is not setupped, check your code!"));
+        return;
+    }
+
+    for (int32 i = 0; i < (uint8)MyMJGameRoleTypeCpp::Max; i++)
+    {
+        TQueue<FMyMJGameCmdBaseCpp *, EQueueMode::Spsc>& outQueue = m_pCoreFullWithThread->getRunnableRef().getIOGourpAll().m_aGroups[i].getCmdOutputQueue();
+
+        FMyMJGameCmdBaseCpp* pCmdBase = NULL;
+
+        while (outQueue.Dequeue(pCmdBase)) {
+            //Todo: distribute it
+            delete(pCmdBase);
+        }
+    }
+
+
+}
+
+void AMyMJGameCoreDataSourceCpp::coreDataPusherLoopInner()
 {
     MY_VERIFY(IsValid(m_pMJDataAll));
 
@@ -578,7 +603,8 @@ void AMyMJGameCoreDataSourceCpp::setNeedReboot(bool bNeedReboot, int32 iDebugRea
 void AMyMJGameCoreDataSourceCpp::loop()
 {
     if (UMyMJBPUtilsLibrary::haveServerLogicLayer(this)) {
-        coreDataPullLoopInner();
+        coreDataCmdLoopInner();
+        coreDataPusherLoopInner();
     }
 };
 

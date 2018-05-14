@@ -79,6 +79,8 @@ enum class MyErrorCodeCommonPartCpp : uint8
     InterfaceFunctionNotImplementedByBlueprint = 201      UMETA(DisplayName = "InterfaceFunctionNotImplementedByBlueprint"),
     InterfaceFunctionNotImplementedOnPurPose = 202        UMETA(DisplayName = "InterfaceFunctionNotImplementedOnPurPose"), //caller should not call it now, not implemented it yet
 
+    //interactions
+    InputTimePassed = 220                                 UMETA(DisplayName = "InputTimePassed"),
 };
 
 //always remember first error

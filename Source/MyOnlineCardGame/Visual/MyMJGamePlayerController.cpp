@@ -388,6 +388,25 @@ void AMyMJGamePlayerControllerCommunicationCpp::answerSyncForMJCoreFullDataOnCli
 }
 
 
+void AMyMJGamePlayerControllerCommunicationCpp::makeSelection_Implementation(const FMyMJGameCmdMakeSelectionCpp& cmdMakeSelection)
+{
+    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("debug makeSelection_Implementation with m_eCmdRoleType %d."), (int32)m_eCmdRoleType);
+
+    AMyMJGameCoreDataSourceCpp* pCoreDataSource = AMyMJGameRoomLevelScriptActorCpp::helperGetRoomRootActor(this, true)->getCoreDataSource(true);
+
+
+    FMyMJGameCmdMakeSelectionCpp *pCmdMakeSelectionNew = new FMyMJGameCmdMakeSelectionCpp();
+    *pCmdMakeSelectionNew = cmdMakeSelection;
+
+    pCoreDataSource->getCmdInputQueueByRole(m_eCmdRoleType, true)->Enqueue(pCmdMakeSelectionNew);
+}
+
+bool AMyMJGamePlayerControllerCommunicationCpp::makeSelection_Validate(const FMyMJGameCmdMakeSelectionCpp& cmdMakeSelection)
+{
+    return true;
+}
+
+
 void AMyMJGamePlayerControllerCommunicationCpp::tryFeedDataToConsumerWithFilter()
 {
     UWorld *world = GetWorld();

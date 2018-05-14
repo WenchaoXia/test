@@ -177,6 +177,23 @@ public:
 
     //FMyMJDataSeqReplicatedDelegate m_cReplicateFilteredDelegate;
 
+    //may fail
+    TQueue<FMyMJGameCmdBaseCpp *, EQueueMode::Spsc>* getCmdInputQueueByRole(MyMJGameRoleTypeCpp eRole, bool verifyValid)
+    {
+        TQueue<FMyMJGameCmdBaseCpp *, EQueueMode::Spsc>* ret = NULL;
+        if (m_pCoreFullWithThread.IsValid()) {
+
+            MY_VERIFY((int32)eRole >= 0 && (int32)eRole < (int32)MyMJGameRoleTypeCpp::Max);
+            ret = &m_pCoreFullWithThread->getRunnableRef().getIOGourpAll().m_aGroups[(int32)eRole].getCmdInputQueue();
+        }
+
+        if (verifyValid) {
+            MY_VERIFY(ret);
+        }
+
+        return ret;
+    };
+
     UPROPERTY(Replicated)
         int32 m_iTest0;
 
@@ -194,7 +211,8 @@ protected:
     virtual void PreReplication(IRepChangedPropertyTracker & ChangedPropertyTracker) override;
 
     void loop();
-    void coreDataPullLoopInner();
+    void coreDataCmdLoopInner();
+    void coreDataPusherLoopInner();
     void markDataChanged(uint32 uiServerWorldTime_ms, bool bForceUpdate); //uiServerWorldTime_ms is the key representing the state, and this function encapsule all data notify to clients in any game mode
     //void notifyGameHaveNewProgress(float fWorldRealTime);
     //void fakeReplicationForLocalVisualLayer(float fWorldRealTime, bool bForced);

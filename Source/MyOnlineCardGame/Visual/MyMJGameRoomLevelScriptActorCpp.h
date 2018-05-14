@@ -29,6 +29,15 @@ public:
 
     bool checkSettings() const;
 
+    inline AMyMJGameCoreDataSourceCpp* getCoreDataSource(bool verifyValid)
+    {
+        if (verifyValid) {
+            MY_VERIFY(IsValid(m_pCoreDataSource));
+        }
+
+        return m_pCoreDataSource;
+    };
+
 protected:
 
     friend class AMyMJGamePlayerControllerCommunicationCpp;

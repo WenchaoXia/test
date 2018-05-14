@@ -44,14 +44,7 @@ public:
 
     FMyErrorCodeMJGameCpp(bool haveNoError = false)
     {
-        if (haveNoError) {
-            m_eCommonPart = MyErrorCodeCommonPartCpp::NoError;
-            m_eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::NoError;
-        }
-        else {
-            m_eCommonPart = MyErrorCodeCommonPartCpp::Invalid;
-            m_eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::Invalid;
-        }
+        reset(haveNoError);
     };
 
     FMyErrorCodeMJGameCpp(MyErrorCodeCommonPartCpp eCommonPart, MyErrorCodeSubPartMJGameCpp eSubPartMJGame)
@@ -78,10 +71,16 @@ public:
         return m_eCommonPart != MyErrorCodeCommonPartCpp::NoError || m_eSubPartMJGame != MyErrorCodeSubPartMJGameCpp::NoError;
     };
 
-    inline void reset()
+    inline void reset(bool haveNoError)
     {
-        m_eCommonPart = MyErrorCodeCommonPartCpp::NoError;
-        m_eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::NoError;
+        if (haveNoError) {
+            m_eCommonPart = MyErrorCodeCommonPartCpp::NoError;
+            m_eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::NoError;
+        }
+        else {
+            m_eCommonPart = MyErrorCodeCommonPartCpp::Invalid;
+            m_eSubPartMJGame = MyErrorCodeSubPartMJGameCpp::Invalid;
+        }
     };
 
     inline void join(const FMyErrorCodeMJGameCpp& other)

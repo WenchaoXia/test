@@ -24,7 +24,8 @@ UENUM()
 enum class MyMJGameCmdType : uint8
 {
     Invalid = 0          UMETA(DisplayName = "Invalid"),
-    RestartGame = 10     UMETA(DisplayName = "RestartGame")
+    RestartGame = 10     UMETA(DisplayName = "RestartGame"),
+    MakeSelection = 11     UMETA(DisplayName = "MakeSelection")
 };
 
 
@@ -37,10 +38,16 @@ public:
     FMyMJGameCmdBaseCpp()
     {
         m_eType = MyMJGameCmdType::Invalid;
+        reset();
     };
 
     virtual ~FMyMJGameCmdBaseCpp()
     {};
+
+    inline void reset()
+    {
+        m_cRespErrorCode.reset(true);
+    };
 
     virtual FString ToString() const
     {
@@ -84,6 +91,49 @@ public:
     //every attender takes 8 bit
     //UPROPERTY()
     //int32 m_iAttendersAllRandomSelectMask;
+};
+
+
+USTRUCT()
+struct FMyMJGameCmdMakeSelectionCpp : public FMyMJGameCmdBaseCpp
+{
+    GENERATED_USTRUCT_BODY()
+
+public:
+
+    FMyMJGameCmdMakeSelectionCpp() : Super()
+    {
+        m_eType = MyMJGameCmdType::MakeSelection;
+        reset(true);
+    };
+
+    inline void reset(bool resetSubClassDataOnly = false)
+    {
+        if (!resetSubClassDataOnly) {
+            Super::reset();
+        }
+
+        m_iGameId = -1;
+        m_iActionGroupId = -1;
+        m_iIdxAttender = -1;
+        m_iSelection = -1;
+        m_aSubSelections.Reset();
+    };
+
+    UPROPERTY()
+        int32 m_iGameId;
+
+    UPROPERTY()
+        int32 m_iActionGroupId;
+
+    UPROPERTY()
+        int32 m_iIdxAttender;
+
+    UPROPERTY()
+        int32 m_iSelection;
+
+    UPROPERTY()
+        TArray<int32> m_aSubSelections;
 };
 
 

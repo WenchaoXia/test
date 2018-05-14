@@ -23,6 +23,7 @@ public:
     AMyMJGamePlayerControllerBaseCpp() : Super()
     {
         m_eDataRoleType = MyMJGameRoleTypeCpp::Observer;
+        m_eCmdRoleType = MyMJGameRoleTypeCpp::Observer;
     };
 
     inline
@@ -48,4 +49,7 @@ protected:
 
     UPROPERTY(Replicated)
     MyMJGameRoleTypeCpp m_eDataRoleType;
+
+    UPROPERTY(Replicated)
+    MyMJGameRoleTypeCpp m_eCmdRoleType;
 };
