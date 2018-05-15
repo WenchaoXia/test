@@ -371,4 +371,8 @@ void AMyMJGameRoomViewerPawnBaseCpp::tryUpdateUI(bool changeModeAndCreate)
     float XYRatio = localSize.X / localSize.Y;
 
     pUI->updateAttenderPositions(XYRatio, aPoints);
+    if (changeModeAndCreate) {
+        //we want to create, make sure it is updated
+        //pUI->updateUI(); //for test purpose
+    }
 };

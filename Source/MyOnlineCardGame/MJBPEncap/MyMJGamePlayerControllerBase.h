@@ -32,6 +32,12 @@ public:
         return m_eDataRoleType;
     };
 
+    inline
+    MyMJGameRoleTypeCpp getCmdRoleType() const
+    {
+        return m_eCmdRoleType;
+    };
+
     //Object id, serverWorldTime_ms
     //TMap<uint32, uint32> m_mHelerReplicationServerWorldTimeMap;
 

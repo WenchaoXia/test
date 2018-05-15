@@ -263,6 +263,31 @@ void UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::updateWithActionContainor(M
 
 };
 
+void UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::makeSelection(int32 IdxOfSelection)
+{
+    if (m_cUpdateStateLast.m_iGameId < 0 || m_cUpdateStateLast.m_iActionGroupId < 0 || m_cUpdateStateLast.m_iIdxAttender < 0) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("currently have no valid choice tag."));
+        return;
+    }
+
+    //always succeed, or coredump
+    AMyMJGamePlayerControllerCpp* pC = AMyMJGamePlayerControllerCpp::helperGetLocalController(this);
+    if (m_cUpdateStateLast.m_iIdxAttender != (int32)pC->getCmdRoleType()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("can not give cmd for this attender, action idxAttender %d, player controller cmd role type %d."),
+                  m_cUpdateStateLast.m_iIdxAttender, (int32)pC->getCmdRoleType());
+        return;
+    }
+
+    FMyMJGameCmdMakeSelectionCpp cmdMakeSelection;
+
+    cmdMakeSelection.m_iGameId = m_cUpdateStateLast.m_iGameId;
+    cmdMakeSelection.m_iActionGroupId = m_cUpdateStateLast.m_iActionGroupId;
+    cmdMakeSelection.m_iIdxAttender = m_cUpdateStateLast.m_iIdxAttender;
+    cmdMakeSelection.m_iSelection = IdxOfSelection;
+
+    pC->makeSelection(cmdMakeSelection);
+}
+
 void UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::delayedUIUpdate()
 {
     UIUpdate(m_cDelayedUIUpdateData);
@@ -443,7 +468,20 @@ FMyErrorCodeMJGameCpp UMyMJGameInRoomUIMainWidgetBaseCpp::updateAttenderPosition
         pW->SetRenderTransform(rt);
     }
 
+
+    AMyMJGamePlayerControllerCpp* pC = AMyMJGamePlayerControllerCpp::helperGetLocalController(this);
+
+    bool bCanGiveCmd = idxAttenderForIdxPositionInBox0 == (int32)pC->getCmdRoleType();
+
+    UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("idxAttenderForIdxPositionInBox0 %d, pC->getCmdRoleType() %d, dataRoleType %d."), idxAttenderForIdxPositionInBox0, (int32)pC->getCmdRoleType(), (int32)pC->getDataRoleType());
+
+    if ((!m_cRuntimeData.m_bInited) || m_cRuntimeData.m_bCanGiveCmd != bCanGiveCmd) {
+        changeStateCanGiveCmd(bCanGiveCmd);
+    }
+
     m_cRuntimeData.m_idxAttenderForIdxPositionInBox0 = idxAttenderForIdxPositionInBox0;
+    m_cRuntimeData.m_bCanGiveCmd = bCanGiveCmd;
+    m_cRuntimeData.m_bInited = true;
 
     return FMyErrorCodeMJGameCpp(true);
 };

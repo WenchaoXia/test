@@ -267,7 +267,7 @@ bool FMyMJGameCoreCpp::findAndHandleCmd()
         MyMJGameRoleTypeCpp eRoleType = (MyMJGameRoleTypeCpp)i;
         FMyMJGameCmdIOCpp *pCmdIO = &m_pCmdIO->m_aIOs[i];
         while (pCmdIO->m_pInputQueueRemote->Dequeue(pCmd)) {
-            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("recieved cmd, role %d, cmd %d"), (uint8)eRoleType, (uint8)pCmd->m_eType);
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("recieved cmd, role %d, cmd %d"), (uint8)eRoleType, (uint8)pCmd->getType());
             bNewCmdGot = true;
 
             handleCmd(eRoleType, *pCmd);

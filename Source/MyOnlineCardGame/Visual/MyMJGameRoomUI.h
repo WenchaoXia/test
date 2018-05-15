@@ -527,10 +527,7 @@ public:
                                    const FMyMJGameActionContainorForBPCpp& actionContainor);
 
     UFUNCTION(BlueprintCallable)
-        void acceptClientUserSelect(int32 IdxOfSelection)
-    {
-        //Todo:
-    };
+    void makeSelection(int32 IdxOfSelection);
 
 
 protected:
@@ -686,10 +683,15 @@ public:
     inline void reset()
     {
         m_idxAttenderForIdxPositionInBox0 = -1;
+        m_bCanGiveCmd = false;
+        m_bInited = false;
     };
 
     //< 0 means unknown
     int32 m_idxAttenderForIdxPositionInBox0;
+
+    bool m_bCanGiveCmd;
+    bool m_bInited;
 };
 
 USTRUCT()
@@ -747,12 +749,12 @@ struct FMyMJGameInRoomUIMainWidgetDirtyRecordsCpp
 public:
     FMyMJGameInRoomUIMainWidgetDirtyRecordsCpp()
     {
-
+        reset();
     };
 
     inline void reset()
     {
-        FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordAllDirty(m_cCoreDataDirtyRecord);
+        FMyMJDataAccessorCpp::helperSetCoreDataDirtyRecordDataDirty(m_cCoreDataDirtyRecord);
     };
 
     FMyDirtyRecordWithKeyAnd4IdxsMapCpp m_cCoreDataDirtyRecord;
@@ -849,6 +851,8 @@ protected:
 
             pW->updateSlotSettingsToComply_MyModelInfoWidget2D();
         }
+
+        m_cDirtyRecords.reset();
     };
 
 
@@ -902,6 +906,16 @@ protected:
         MY_VERIFY(IsValid(pW));
 
         return ret;
+    };
+
+
+    UFUNCTION(BlueprintNativeEvent)
+    MyErrorCodeCommonPartCpp changeStateCanGiveCmd(bool canGiveCmd);
+
+    MyErrorCodeCommonPartCpp changeStateCanGiveCmd_Implementation(bool canGiveCmd)
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: changeStateCanGiveCmd only implemented in C++."), *GetClass()->GetName());
+        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint;
     };
 
 

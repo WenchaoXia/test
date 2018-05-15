@@ -338,6 +338,22 @@ void AMyMJGamePlayerControllerCommunicationCpp::setDataRoleTypeWithAuth(MyMJGame
     m_eDataRoleType = eRoleType;
 };
 
+void AMyMJGamePlayerControllerCommunicationCpp::setCmdRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType)
+{
+    if (!HasAuthority()) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("can't set Role Type without auth."));
+        return;
+    }
+
+    if (eRoleType >= MyMJGameRoleTypeCpp::Max) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("eRoleType not valid"));
+        return;
+    }
+
+    m_eCmdRoleType = eRoleType;
+}
+
+
 void AMyMJGamePlayerControllerCommunicationCpp::askSyncForMJCoreFullDataOnServer_Implementation()
 {
     //FPlatformProcess::Sleep(v1);

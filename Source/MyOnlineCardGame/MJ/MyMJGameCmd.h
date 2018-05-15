@@ -60,12 +60,15 @@ public:
         return m_eType;
     };
 
-    UPROPERTY()
-    MyMJGameCmdType m_eType;
-    //int32 m_iIdxAttender; //see MyMJGameRoleTypeCpp
 
     UPROPERTY()
     FMyErrorCodeMJGameCpp m_cRespErrorCode;
+
+
+protected:
+
+    UPROPERTY()
+    MyMJGameCmdType m_eType;
 };
 
 USTRUCT()

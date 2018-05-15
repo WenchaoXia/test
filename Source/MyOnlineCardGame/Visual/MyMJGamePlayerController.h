@@ -65,9 +65,15 @@ public:
 
     };
 
+
     //only with authority it can be changed
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
-    void setDataRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType);
+        void setDataRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType);
+
+    //only with authority it can be changed
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+        void setCmdRoleTypeWithAuth(MyMJGameRoleTypeCpp eRoleType);
+
 
     UFUNCTION(BlueprintCallable)
     void setDebugHaltFeedData(bool bDebugHaltFeedData)

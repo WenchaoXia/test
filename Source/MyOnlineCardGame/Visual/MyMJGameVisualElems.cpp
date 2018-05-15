@@ -100,6 +100,50 @@ public:
 */
 
 
+void AMyMJGameCardActorBaseCpp::setSelected(bool selected)
+{
+    if (m_bSelected == selected) {
+        return;
+    }
+
+    m_bSelected = selected;
+
+    if (m_bSelected) {
+        FTransform t;
+        const FTransform* pTUnselected = NULL;
+        if (m_pMyTransformUpdaterComponent->m_bHelperTransformUpdated) {
+            pTUnselected = &m_pMyTransformUpdaterComponent->m_cHelperTransformUpdated;
+        }
+        else {
+            t = GetActorTransform();
+            pTUnselected = &t;
+        }
+
+        FMyModelInfoWorld3DCpp cModelInfo = getModelInfoForUpdaterEnsured();
+
+        FVector newLocation = pTUnselected->GetLocation();
+        newLocation.Z += cModelInfo.getBox3DRefConst().m_cBoxExtend.Z * 2 * m_fSelectedZOffsetPercent;
+
+        FTransform newT = *pTUnselected;
+        newT.SetLocation(newLocation);
+
+        SetActorTransform(newT);
+        m_cTransformWhenUnselected = *pTUnselected;
+    }
+    else {
+
+        if (m_pMyTransformUpdaterComponent->m_bHelperTransformUpdated) {
+            //If updated, always back to the latest position in case of it is updated after selection
+            SetActorTransform(m_pMyTransformUpdaterComponent->m_cHelperTransformUpdated);
+        }
+        else {
+            SetActorTransform(m_cTransformWhenUnselected);
+        }
+
+    }
+
+}
+
 void AMyMJGameCardActorBaseCpp::helperMyMJGameCardActorBaseToMyTransformUpdaters(const TArray<AMyMJGameCardActorBaseCpp*>& aSub, bool bSort, TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp*> &aBase)
 {
     TArray<AMyMJGameCardActorBaseCpp*> aTemp;
@@ -126,6 +170,11 @@ void AMyMJGameCardActorBaseCpp::helperMyMJGameCardActorBaseToMyTransformUpdaters
     }
 };
 
+void AMyMJGameCardActorBaseCpp::BeginPlay()
+{
+    Super::BeginPlay();
+    m_bSelected = false;
+}
 
 
 AMyMJGameDiceBaseCpp::AMyMJGameDiceBaseCpp() : Super()

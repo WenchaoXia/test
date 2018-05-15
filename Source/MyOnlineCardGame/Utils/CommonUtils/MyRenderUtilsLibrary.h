@@ -529,7 +529,7 @@ public:
     UMyWithCurveUpdaterTransformWorld3DComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
     virtual ~UMyWithCurveUpdaterTransformWorld3DComponent()
     {
-
+        m_bHelperTransformUpdated = false;
     };
 
     //following blueprint functions mainly used for test
@@ -577,10 +577,14 @@ public:
         m_bHideWhenInactivated = bHideWhenInactivated;
     };
 
+
+    FTransform m_cHelperTransformUpdated;
+    bool m_bHelperTransformUpdated;
+
 protected:
 
     //Begin UActorComponent Interface
-    //virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
     //virtual void ApplyWorldOffset(const FVector& InOffset, bool bWorldShift) override;
     virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
     //End UActorComponent Interface

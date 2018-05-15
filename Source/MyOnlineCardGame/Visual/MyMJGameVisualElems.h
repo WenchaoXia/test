@@ -111,7 +111,8 @@ public:
 
     AMyMJGameCardActorBaseCpp() : Super(), m_cTargetToGoHistory(TEXT("card actor TargetToGoHistory"), NULL, NULL, 4)
     {
-
+        m_bSelected = false;
+        m_fSelectedZOffsetPercent = 0.1;
     };
 
     virtual ~AMyMJGameCardActorBaseCpp()
@@ -148,11 +149,31 @@ public:
         return ret;
     };
 
+    UFUNCTION(BlueprintCallable)
+    void setSelected(bool selected);
+    
+    UFUNCTION(BlueprintPure)
+    inline bool getSelected() const
+    {
+        return m_bSelected;
+    };
+
     static void helperMyMJGameCardActorBaseToMyTransformUpdaters(const TArray<AMyMJGameCardActorBaseCpp*>& aSub, bool bSort, TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp*> &aBase);
 
 protected:
+
+    virtual void BeginPlay() override;
+
+
     //where this card should go, but allow it not be there now(should move smoothly there)
     FMyCycleBuffer<FMyMJGameCardVisualInfoAndResultCpp> m_cTargetToGoHistory;
+
+    bool m_bSelected;
+    FTransform m_cTransformWhenUnselected;
+
+    //unit is actor model's Z length
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (DisplayName = "Selected Z Offset Percent"))
+    float m_fSelectedZOffsetPercent;
 };
 
 

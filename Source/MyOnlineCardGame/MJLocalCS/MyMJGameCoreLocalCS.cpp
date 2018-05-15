@@ -1174,7 +1174,7 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
 
     pCmd->m_cRespErrorCode.reset(true);
 
-    if (pCmd->m_eType == MyMJGameCmdType::RestartGame) {
+    if (pCmd->getType() == MyMJGameCmdType::RestartGame) {
         if (eRoleTypeOfCmdSrc == MyMJGameRoleTypeCpp::SysKeeper) {
 
             FMyMJGameCmdRestartGameCpp *pCmdRestartGame = StaticCast<FMyMJGameCmdRestartGameCpp *>(pCmd);
@@ -1204,7 +1204,7 @@ void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, F
         }
 
     }
-    else if (pCmd->m_eType == MyMJGameCmdType::MakeSelection) {
+    else if (pCmd->getType() == MyMJGameCmdType::MakeSelection) {
         FMyMJGameCmdMakeSelectionCpp *pCmdMakeSelection = StaticCast<FMyMJGameCmdMakeSelectionCpp *>(pCmd);
 
         int32 idxAttender = pCmdMakeSelection->m_iIdxAttender;

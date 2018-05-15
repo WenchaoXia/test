@@ -26,7 +26,7 @@ class IMyWithCurveUpdaterTransformWorld3DInterfaceCpp
 
 public:
 
-    //May fail, supposed to be fast, may come from cache and refresh it
+    //May fail, supposed to be fast, may come from cache and refresh it, not consider actor scale now
     UFUNCTION(BlueprintCallable)
         virtual MyErrorCodeCommonPartCpp getModelInfoForUpdater(FMyModelInfoWorld3DCpp& modelInfo)
     {

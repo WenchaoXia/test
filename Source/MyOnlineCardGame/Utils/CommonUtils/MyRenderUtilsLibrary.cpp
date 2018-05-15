@@ -362,6 +362,12 @@ UMyWithCurveUpdaterTransformWorld3DComponent::UMyWithCurveUpdaterTransformWorld3
     m_cUpdater.m_cActivateTickDelegate.BindUObject(this, &UMyWithCurveUpdaterTransformWorld3DComponent::updaterActivateTick);
 }
 
+void UMyWithCurveUpdaterTransformWorld3DComponent::BeginPlay()
+{
+    Super::BeginPlay();
+    m_bHelperTransformUpdated = false;
+}
+
 void UMyWithCurveUpdaterTransformWorld3DComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -406,13 +412,16 @@ void UMyWithCurveUpdaterTransformWorld3DComponent::updaterOnCommonUpdate(const F
 
     MY_VERIFY(IsValid(UpdatedComponent));
 
-    if (pData->m_bLocationEnabledCache || pData->m_bRotatorBasicEnabledCache || pData->m_bRotatorExtraEnabledCache) {
+    bool bHelperTransformUpdated = false;
+    while (pData->m_bLocationEnabledCache || pData->m_bRotatorBasicEnabledCache || pData->m_bRotatorExtraEnabledCache) {
         FVector MoveDelta = FVector::ZeroVector;
         FQuat NewQuat = UpdatedComponent->GetComponentRotation().Quaternion();
         FVector NewLocation = UpdatedComponent->GetComponentLocation();
         if (pData->m_bLocationEnabledCache) {
             NewLocation = UKismetMathLibrary::VLerp(pData->m_cStart.GetLocation(), pData->m_cEnd.GetLocation(), vector.X);
             UpdatedComponent->SetWorldLocation(NewLocation);
+
+            bHelperTransformUpdated = true;
             //FVector CurrentLocation = UpdatedComponent->GetComponentLocation();
             //if (NewLocation != CurrentLocation)
             //{
@@ -426,14 +435,14 @@ void UMyWithCurveUpdaterTransformWorld3DComponent::updaterOnCommonUpdate(const F
             if (r.ContainsNaN())
             {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
-                return;
+                break;
             }
 
             NewQuat = r.Quaternion();
             if (NewQuat.ContainsNaN())
             {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
-                return;
+                break;
             }
             //FQuat quatDelta = pData->m_cRotatorRelativeToStartDelta.Quaternion() * vector.Y;
             //NewQuat = quatDelta * pData->m_cStart.GetRotation();
@@ -465,31 +474,42 @@ void UMyWithCurveUpdaterTransformWorld3DComponent::updaterOnCommonUpdate(const F
             if (r.ContainsNaN())
             {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *r.ToString());
-                return;
+                break;
             }
 
             FQuat q = r.Quaternion();
             if (q.ContainsNaN())
             {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *q.ToString());
-                return;
+                break;
             }
 
             NewQuat = q * NewQuat;
             if (NewQuat.ContainsNaN())
             {
                 UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("got invalid value, %s."), *NewQuat.ToString());
-                return;
+                break;
             }
         }
 
         UpdatedComponent->SetWorldRotation(NewQuat);
+
+        bHelperTransformUpdated = true;
         //MoveUpdatedComponent(MoveDelta, NewQuat, false);
+
+        break;
     }
 
     if (pData->m_bScaleEnabledCache) {
         FVector NewScale = UKismetMathLibrary::VLerp(pData->m_cStart.GetScale3D(), pData->m_cEnd.GetScale3D(), vector.Z);
         UpdatedComponent->SetWorldScale3D(NewScale);
+
+        bHelperTransformUpdated = true;
+    }
+
+    if (bHelperTransformUpdated) {
+        m_bHelperTransformUpdated = bHelperTransformUpdated;
+        m_cHelperTransformUpdated = UpdatedComponent->GetComponentTransform();
     }
 
 }
