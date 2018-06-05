@@ -89,7 +89,8 @@ public:
 };
 
 
-UINTERFACE()
+
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
 class UMyPawnInterfaceCpp : public UInterface
 {
     GENERATED_BODY()
@@ -103,7 +104,57 @@ public:
 
     virtual MyErrorCodeCommonPartCpp OnPossessedByLocalPlayerController(APlayerController* newController) = NULL;
     virtual MyErrorCodeCommonPartCpp OnUnPossessedByLocalPlayerController(APlayerController* oldController) = NULL;
+};
+
+
+
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
+class UMySelectableObjectInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMySelectableObjectInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    UFUNCTION(BlueprintCallable)
+        virtual MyErrorCodeCommonPartCpp setSelected(bool selected);
+
+    UFUNCTION(BlueprintCallable)
+        virtual MyErrorCodeCommonPartCpp getSelected(bool &selected) const;
+
+    UFUNCTION(BlueprintCallable)
+        virtual MyErrorCodeCommonPartCpp setIsSelectable(bool selectable);
+
+    //note if setISSelectable() called before, it is possible got different result from getIsSelectable(), since other condition may be added
+    UFUNCTION(BlueprintCallable)
+        virtual MyErrorCodeCommonPartCpp getIsSelectable(bool &selectable) const;
 
 protected:
 
 };
+
+
+//in most cases, one draggable object must be selectable, and it must implement IMySelectableObjectInterfaceCpp
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint = "true"))
+class UMyDraggableObjectInterfaceCpp : public UInterface
+{
+    GENERATED_BODY()
+};
+
+class IMyDraggableObjectInterfaceCpp
+{
+    GENERATED_BODY()
+
+public:
+
+    UFUNCTION(BlueprintCallable)
+    virtual MyErrorCodeCommonPartCpp markBeginDrag();
+
+    UFUNCTION(BlueprintCallable)
+    virtual MyErrorCodeCommonPartCpp getDataBeginDrag(FTransform& transform, bool& projectionOK, FVector2D& projectedScreenPosition, float& projectedDistance) const;
+};
+

@@ -476,7 +476,7 @@ FMyErrorCodeMJGameCpp UMyMJGameInRoomUIMainWidgetBaseCpp::updateAttenderPosition
     UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("idxAttenderForIdxPositionInBox0 %d, pC->getCmdRoleType() %d, dataRoleType %d."), idxAttenderForIdxPositionInBox0, (int32)pC->getCmdRoleType(), (int32)pC->getDataRoleType());
 
     if ((!m_cRuntimeData.m_bInited) || m_cRuntimeData.m_bCanGiveCmd != bCanGiveCmd) {
-        changeStateCanGiveCmd(bCanGiveCmd);
+        IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_changeStateCanGiveCmd(this, bCanGiveCmd);
     }
 
     m_cRuntimeData.m_idxAttenderForIdxPositionInBox0 = idxAttenderForIdxPositionInBox0;
@@ -625,6 +625,31 @@ void UMyMJGameInRoomUIMainWidgetBaseCpp::updateUI()
                                                             idxAttender, cCoreData.getRoleDataPrivateRefConst().m_cCardValuePack, dataAttenderPrivate.m_cActionContainor);
                 }
 
+                bool bNeedGiveOutCards = false;
+                if (m_cRuntimeData.m_bCanGiveCmd) {
+                    int32 al = dataAttenderPrivate.m_cActionContainor.m_aActionChoices.Num();
+                    for (int32 idxActionChoice = 0; idxActionChoice < al; idxActionChoice++) {
+                        const FMyMJGameActionUnfiedForBPCpp& actionUnified = dataAttenderPrivate.m_cActionContainor.m_aActionChoices[idxActionChoice];
+                        if (actionUnified.getType() == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
+                            bNeedGiveOutCards = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (m_cRuntimeData.m_bNeedGiveOutCards != bNeedGiveOutCards) {
+                    IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_changeStateNeedGiveOutCards(this, bNeedGiveOutCards);
+                    AMyMJGamePlayerControllerCpp* pPC = AMyMJGamePlayerControllerCpp::helperGetLocalController(this);
+                    if (bNeedGiveOutCards) {
+                        pPC->getSelectManagerVerified()->setSelectedActorNumMax(1, true);
+                        pPC->setDragEndActionType(MyMJGamePlayerControllerDragEndActionTypeCpp::GiveOutCards);
+                    }
+                    else {
+                        pPC->getSelectManagerVerified()->setSelectedActorNumMax(0, true);
+                        pPC->setDragEndActionType(MyMJGamePlayerControllerDragEndActionTypeCpp::Invalid);
+                    }
+                }
+                m_cRuntimeData.m_bNeedGiveOutCards = bNeedGiveOutCards;
             }
         }
         else {

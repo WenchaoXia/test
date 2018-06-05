@@ -117,7 +117,7 @@ public:
 
         return enumPtr->GetEnumNameStringByValue((uint8)m_eType) + ". ";
         */
-        return FString::Printf(TEXT("%s, %d."), *UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)m_eType), m_iId);
+        return FString::Printf(TEXT("%s, %d."), *helperPusherTypeToString(m_eType), m_iId);
     };
 
     virtual void onReachedConsumeThread()
@@ -135,6 +135,12 @@ public:
     inline int32 getId() const
     {
         return m_iId;
+    };
+
+
+    static inline FString helperPusherTypeToString(MyMJGamePusherTypeCpp ePusherType)
+    {
+        return UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType);
     };
 
 protected:

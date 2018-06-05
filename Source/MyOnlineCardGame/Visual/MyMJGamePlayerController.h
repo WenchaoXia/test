@@ -231,6 +231,66 @@ protected:
     MyMJGameUIModeCpp m_eUIMode;
 };
 
+
+UCLASS()
+class MYONLINECARDGAME_API UMyMJGameSelectManagerCpp : public UActorComponent
+{
+    GENERATED_BODY()
+
+public:
+
+    UMyMJGameSelectManagerCpp() : Super()
+    {
+        m_iSelectedActorNumMax = 1;
+    };
+
+    virtual ~UMyMJGameSelectManagerCpp()
+    {
+
+    };
+
+    //will call SetSelected() automatically if triggered
+    //UFUNCTION(BlueprintCallable)
+    void addSelectedActor(AActor *pActor);
+
+    //will call SetSelected() automatically if triggered
+    //UFUNCTION(BlueprintCallable)
+    void removeSelectedActor(AActor *pActor);
+    
+    //will call SetSelected() automatically if still valid
+    //UFUNCTION(BlueprintCallable)
+    void clearSelectedActors();
+
+    //UFUNCTION(BlueprintCallable)
+    void setSelectedActorNumMax(int32 iSelectedActorNumMax, bool clearSelected);
+
+    const TArray<AActor *>& getSelectedActorsRefConst() const
+    {
+        return m_aSelectedActors;
+    };
+
+
+protected:
+
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+    void removeOutOfBoundSelectedActors();
+
+
+    UPROPERTY()
+    TArray<AActor *> m_aSelectedActors;
+
+    int32 m_iSelectedActorNumMax;
+
+};
+
+UENUM()
+enum class MyMJGamePlayerControllerDragEndActionTypeCpp : uint8
+{
+    Invalid = 0     UMETA(DisplayName = "Invalid"),
+    GiveOutCards = 1     UMETA(DisplayName = "GiveOutCards"),
+};
+
 UCLASS(Blueprintable)
 class MYONLINECARDGAME_API AMyMJGamePlayerControllerCpp : public AMyMJGamePlayerControllerCommunicationCpp
 {
@@ -246,6 +306,17 @@ public:
     {
         MY_VERIFY(m_pUIManager != NULL);
         return m_pUIManager;
+    };
+
+    inline UMyMJGameSelectManagerCpp* getSelectManagerVerified()
+    {
+        MY_VERIFY(m_pSelectManager != NULL);
+        return m_pSelectManager;
+    };
+
+    inline void setDragEndActionType(MyMJGamePlayerControllerDragEndActionTypeCpp eDragEndActionType)
+    {
+        m_eDragEndActionType = eDragEndActionType;
     };
 
 
@@ -265,8 +336,22 @@ protected:
 
     friend class UMyMJGameUIManagerCpp;
 
+    virtual void SetupInputComponent() override;
+
+    void OnTouchBegin(ETouchIndex::Type FingerIndex, FVector Location);
+    void OnTouchEnd(ETouchIndex::Type FingerIndex, FVector Location);
+    void OnFingerMove(ETouchIndex::Type FingerIndex, FVector Location);
+
+    UPROPERTY()
     UMyMJGameUIManagerCpp* m_pUIManager;
 
+    UPROPERTY(BlueprintReadOnly, meta = (DisplayName = "select manager"))
+    UMyMJGameSelectManagerCpp* m_pSelectManager;
+
     int32 m_iViewRoleWhenNotAttend;
+
+    FVector2D m_cLastTouchDragLocation;
+
+    MyMJGamePlayerControllerDragEndActionTypeCpp m_eDragEndActionType;
 
 };

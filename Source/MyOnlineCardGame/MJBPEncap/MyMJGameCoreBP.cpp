@@ -358,6 +358,10 @@ bool AMyMJGameCoreDataSourceCpp::startGame()
 
     FMyMJGameCmdRestartGameCpp *pCmdReset = new FMyMJGameCmdRestartGameCpp();
     UMyMJUtilsLocalCSLibrary::genDefaultCfg(pCmdReset->m_cGameCfg);
+
+    //set one as human
+    pCmdReset->m_cGameCfg.m_aAttenderCfgs[0].m_eAIStrategyType = MyCardGameAIStrategyTypeCpp::Disabled;
+
     getCmdInputQueueByRole(MyMJGameRoleTypeCpp::SysKeeper, true)->Enqueue(pCmdReset);
 
     m_pCoreFullWithThread->kick();

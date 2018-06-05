@@ -103,7 +103,7 @@ public:
 
 
 UCLASS(BlueprintType, Blueprintable)
-class MYONLINECARDGAME_API AMyMJGameCardActorBaseCpp : public AMyCardGameCardActorBaseCpp
+class MYONLINECARDGAME_API AMyMJGameCardActorBaseCpp : public AMyCardGameCardActorBaseCpp, public IMySelectableObjectInterfaceCpp, public IMyDraggableObjectInterfaceCpp
 {
     GENERATED_BODY()
 
@@ -111,8 +111,20 @@ public:
 
     AMyMJGameCardActorBaseCpp() : Super(), m_cTargetToGoHistory(TEXT("card actor TargetToGoHistory"), NULL, NULL, 4)
     {
+        FTransform t;
+
+        m_bSelectable = true;
         m_bSelected = false;
-        m_fSelectedZOffsetPercent = 0.1;
+        m_cTransformBeforeSelection = t;
+
+
+        m_cTransformBeginDrag = t;
+        m_cProjectedScreenPositionBeginDrag = FVector2D::ZeroVector;
+        m_fProjectedDistanceBeginDrag = 0;
+        m_bProjectionOKBeginDrag = false;
+
+        m_fSelectedZOffsetPercent = 1;
+        m_fDragOutSizeOffsetPercent = 2;
     };
 
     virtual ~AMyMJGameCardActorBaseCpp()
@@ -149,14 +161,19 @@ public:
         return ret;
     };
 
-    UFUNCTION(BlueprintCallable)
-    void setSelected(bool selected);
-    
-    UFUNCTION(BlueprintPure)
-    inline bool getSelected() const
+    float getDragOutSizeOffsetPercent() const
     {
-        return m_bSelected;
+        return m_fDragOutSizeOffsetPercent;
     };
+
+
+    virtual MyErrorCodeCommonPartCpp setSelected(bool selected) override;
+    virtual MyErrorCodeCommonPartCpp getSelected(bool &selected) const override;
+    virtual MyErrorCodeCommonPartCpp setIsSelectable(bool selectable) override;
+    virtual MyErrorCodeCommonPartCpp getIsSelectable(bool &selectable) const override;
+
+    virtual MyErrorCodeCommonPartCpp markBeginDrag() override;
+    virtual MyErrorCodeCommonPartCpp getDataBeginDrag(FTransform& transform, bool& projectionOK, FVector2D& projectedScreenPosition, float& projectedDistance) const override;
 
     static void helperMyMJGameCardActorBaseToMyTransformUpdaters(const TArray<AMyMJGameCardActorBaseCpp*>& aSub, bool bSort, TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp*> &aBase);
 
@@ -164,16 +181,30 @@ protected:
 
     virtual void BeginPlay() override;
 
+    void tryMoveTransformForSelection(const FTransform& targetTransform, float dur);
+
 
     //where this card should go, but allow it not be there now(should move smoothly there)
     FMyCycleBuffer<FMyMJGameCardVisualInfoAndResultCpp> m_cTargetToGoHistory;
 
+
+    bool m_bSelectable;
     bool m_bSelected;
-    FTransform m_cTransformWhenUnselected;
+    FTransform m_cTransformBeforeSelection;
+
+    FTransform m_cTransformBeginDrag;
+    FVector2D m_cProjectedScreenPositionBeginDrag;
+    float m_fProjectedDistanceBeginDrag;
+    bool m_bProjectionOKBeginDrag;
+
 
     //unit is actor model's Z length
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (DisplayName = "Selected Z Offset Percent"))
     float m_fSelectedZOffsetPercent;
+
+    //unit is actor model's size
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (DisplayName = "DragOut Size Offset Percent"))
+    float m_fDragOutSizeOffsetPercent;
 };
 
 

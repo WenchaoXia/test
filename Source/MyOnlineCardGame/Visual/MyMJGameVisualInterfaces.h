@@ -111,6 +111,11 @@ protected:
     UFUNCTION(BlueprintNativeEvent)
         MyErrorCodeCommonPartCpp getOperationRootPanelWidget(class UMyMJGameInRoomOperationRootPanelWidgetBaseCpp*& widget);
 
+    UFUNCTION(BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp changeStateCanGiveCmd(bool canGiveCmd);
+
+    UFUNCTION(BlueprintNativeEvent)
+        MyErrorCodeCommonPartCpp changeStateNeedGiveOutCards(bool needGiveOutCards);
 };
 
 
@@ -135,6 +140,16 @@ virtual MyErrorCodeCommonPartCpp getCfg_Implementation(FMyMJGameInRoomUIMainWidg
 virtual MyErrorCodeCommonPartCpp getOperationRootPanelWidget_Implementation(class UMyMJGameInRoomOperationRootPanelWidgetBaseCpp*& widget) override \
 { \
     UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getOperationRootPanelWidget only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp changeStateCanGiveCmd_Implementation(bool canGiveCmd) \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: changeStateCanGiveCmd only implemented in C++."), *GetClass()->GetName()); \
+    return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
+}; \
+virtual MyErrorCodeCommonPartCpp changeStateNeedGiveOutCards_Implementation(bool needGiveOutCards) \
+{ \
+    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: changeStateNeedGiveOutCards only implemented in C++."), *GetClass()->GetName()); \
     return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint; \
 }; \
 protected:

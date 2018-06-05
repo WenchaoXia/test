@@ -2,6 +2,8 @@
 
 #include "MyMJGameVisualElems.h"
 
+#include "Kismet/GameplayStatics.h"
+
 #include "Utils/CommonUtils/MyCommonUtilsLibrary.h"
 #include "MJ/Utils/MyMJUtils.h"
 #include "MJBPEncap/utils/MyMJBPUtils.h"
@@ -100,15 +102,24 @@ public:
 */
 
 
-void AMyMJGameCardActorBaseCpp::setSelected(bool selected)
+MyErrorCodeCommonPartCpp AMyMJGameCardActorBaseCpp::setSelected(bool selected)
 {
     if (m_bSelected == selected) {
-        return;
+        return MyErrorCodeCommonPartCpp::NoError;
     }
 
     m_bSelected = selected;
 
+
     if (m_bSelected) {
+
+        bool selectable;
+        getIsSelectable(selectable);
+        if (!selectable) {
+            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: card is not selectable now, can't be set selected."), *GetName());
+            return MyErrorCodeCommonPartCpp::InternalError;
+        }
+
         FTransform t;
         const FTransform* pTUnselected = NULL;
         if (m_pMyTransformUpdaterComponent->m_bHelperTransformUpdated) {
@@ -119,30 +130,114 @@ void AMyMJGameCardActorBaseCpp::setSelected(bool selected)
             pTUnselected = &t;
         }
 
+        m_cTransformBeforeSelection = *pTUnselected;
+
         FMyModelInfoWorld3DCpp cModelInfo = getModelInfoForUpdaterEnsured();
 
         FVector newLocation = pTUnselected->GetLocation();
         newLocation.Z += cModelInfo.getBox3DRefConst().m_cBoxExtend.Z * 2 * m_fSelectedZOffsetPercent;
 
-        FTransform newT = *pTUnselected;
-        newT.SetLocation(newLocation);
+        FTransform cTransformBeginSelection = *pTUnselected;
+        cTransformBeginSelection.SetLocation(newLocation);
 
-        SetActorTransform(newT);
-        m_cTransformWhenUnselected = *pTUnselected;
+        tryMoveTransformForSelection(cTransformBeginSelection, 0.05);
+
     }
     else {
 
+        tryMoveTransformForSelection(m_cTransformBeforeSelection, 0.1);
+
+        /*
         if (m_pMyTransformUpdaterComponent->m_bHelperTransformUpdated) {
             //If updated, always back to the latest position in case of it is updated after selection
-            SetActorTransform(m_pMyTransformUpdaterComponent->m_cHelperTransformUpdated);
+            tryMoveTransformForSelection(m_pMyTransformUpdaterComponent->m_cHelperTransformUpdated, 0.5);
         }
         else {
-            SetActorTransform(m_cTransformWhenUnselected);
+            tryMoveTransformForSelection(m_cTransformBeforeSelection, 0.5);
+        }
+        */
+
+    }
+
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+MyErrorCodeCommonPartCpp AMyMJGameCardActorBaseCpp::getSelected(bool &selected) const
+{
+    selected = m_bSelected;
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+
+MyErrorCodeCommonPartCpp AMyMJGameCardActorBaseCpp::setIsSelectable(bool selectable)
+{
+    if (m_bSelectable != selectable) {
+        m_bSelectable = selectable;
+
+        if (m_bSelectable == false) {
+            setSelected(false);
         }
 
     }
 
+    return MyErrorCodeCommonPartCpp::NoError;
 }
+
+MyErrorCodeCommonPartCpp AMyMJGameCardActorBaseCpp::getIsSelectable(bool &selectable) const
+{
+    //AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::getMyWithCurveUpdaterTransformRef()->get
+    const FMyWithCurveUpdaterTransformWorld3DCpp& updater = getMyWithCurveUpdaterTransformRefConst();
+
+    selectable = m_bSelectable && updater.getStepsCount() == 0;
+
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+MyErrorCodeCommonPartCpp AMyMJGameCardActorBaseCpp::markBeginDrag()
+{
+    APlayerController *pC = UGameplayStatics::GetPlayerController(this, 0);
+    MY_VERIFY(pC != NULL);
+
+    m_bProjectionOKBeginDrag = false;
+    m_cTransformBeginDrag = GetActorTransform();
+    FVector locationBeginDrag = m_cTransformBeginDrag.GetLocation();
+    if (UGameplayStatics::ProjectWorldToScreen(pC, locationBeginDrag, m_cProjectedScreenPositionBeginDrag)) {
+        FVector worldPosition, worldDirection;
+        if (UGameplayStatics::DeprojectScreenToWorld(pC, m_cProjectedScreenPositionBeginDrag, worldPosition, worldDirection)) {
+            m_fProjectedDistanceBeginDrag = (locationBeginDrag - worldPosition).Size();
+            m_bProjectionOKBeginDrag = true;
+
+            FVector debugLocationRecal = worldPosition + worldDirection * m_fProjectedDistanceBeginDrag;
+
+            UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("%s: debug locationBeginDrag %s, worldPosition %s, worldDirection %s, debugLocationRecal %s."), *GetName(), *locationBeginDrag.ToString(), *worldPosition.ToString(), *worldDirection.ToString(), *debugLocationRecal.ToString());
+        }
+    }
+
+    if (!m_bProjectionOKBeginDrag) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: markBeginDrag() failed in screen projection."), *GetName());
+    }
+
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
+MyErrorCodeCommonPartCpp AMyMJGameCardActorBaseCpp::getDataBeginDrag(FTransform& transform, bool& projectionOK, FVector2D& projectedScreenPosition, float& projectedDistance) const
+{
+    transform = m_cTransformBeginDrag;
+    projectionOK = m_bProjectionOKBeginDrag;
+    projectedScreenPosition = m_cProjectedScreenPositionBeginDrag;
+    projectedDistance = m_fProjectedDistanceBeginDrag;
+
+    bool selected;
+    getSelected(selected);
+    if (!selected) {
+        projectionOK = false;
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: card is not selected, can't getDataBeginSelection()."), *GetName());
+        return MyErrorCodeCommonPartCpp::InternalError;
+    }
+
+    return MyErrorCodeCommonPartCpp::NoError;
+}
+
 
 void AMyMJGameCardActorBaseCpp::helperMyMJGameCardActorBaseToMyTransformUpdaters(const TArray<AMyMJGameCardActorBaseCpp*>& aSub, bool bSort, TArray<IMyWithCurveUpdaterTransformWorld3DInterfaceCpp*> &aBase)
 {
@@ -175,6 +270,24 @@ void AMyMJGameCardActorBaseCpp::BeginPlay()
     Super::BeginPlay();
     m_bSelected = false;
 }
+
+void AMyMJGameCardActorBaseCpp::tryMoveTransformForSelection(const FTransform& targetTransform, float dur)
+{
+    FMyWithCurveUpdaterTransformWorld3DCpp* pUpdater = &getMyWithCurveUpdaterTransformRef();
+    if (pUpdater->getStepsCount() > 0) {
+        SetActorTransform(targetTransform);
+    }
+    else {
+        UCurveVector* pCurve = UMyCommonUtilsLibrary::getCurveVectorByType(MyCurveAssetType::DefaultLinear);
+
+        FMyWithCurveUpdateStepDataTransformWorld3DCpp data;
+        data.helperSetDataBySrcAndDst(dur, pCurve, GetTransform(), targetTransform);
+        pUpdater->clearSteps();
+        pUpdater->addStepToTail(data);
+    }
+}
+
+
 
 
 AMyMJGameDiceBaseCpp::AMyMJGameDiceBaseCpp() : Super()

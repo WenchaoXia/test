@@ -1,15 +1,15 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MyMJGamePlayerController.h"
+
 #include "MyMJGameRoomViewerPawnBase.h"
-
 #include "MyMJGameVisualInterfaces.h"
-
-#include "UnrealNetwork.h"
-#include "Engine/World.h"
 #include "MyMJGameRoomLevelScriptActorCpp.h"
 #include "MyMJGameDeskVisualData.h"
 
+#include "UnrealNetwork.h"
+#include "Engine/World.h"
+#include "Components/PrimitiveComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Public/Blueprint/WidgetBlueprintLibrary.h"
 
@@ -567,10 +567,109 @@ UMyMJGameInRoomUIMainWidgetBaseCpp* UMyMJGameUIManagerCpp::getInRoomUIMain(bool 
 };
 
 
+void UMyMJGameSelectManagerCpp::addSelectedActor(AActor *pActor)
+{
+    int32 existingIdx;
+    if (m_aSelectedActors.Find(pActor, existingIdx)) {
+        return;
+    }
+
+
+    IMySelectableObjectInterfaceCpp* pSI = Cast<IMySelectableObjectInterfaceCpp>(pActor);
+    if (!pSI) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: does not implement IMySelectableObjectInterfaceCpp."), *pActor->GetName());
+    }
+
+    //add it
+    m_aSelectedActors.Emplace(pActor);
+
+    if (pSI) {
+        pSI->setSelected(true);
+    }
+
+    removeOutOfBoundSelectedActors();
+};
+
+void UMyMJGameSelectManagerCpp::removeSelectedActor(AActor *pActor)
+{
+    int32 existingIdx;
+    if (!m_aSelectedActors.Find(pActor, existingIdx)) {
+        return;
+    }
+
+    m_aSelectedActors.RemoveAt(existingIdx);
+
+    IMySelectableObjectInterfaceCpp* pSI = Cast<IMySelectableObjectInterfaceCpp>(pActor);
+    if (pSI) {
+        pSI->setSelected(false);
+    }
+};
+
+void UMyMJGameSelectManagerCpp::clearSelectedActors()
+{
+    int32 l = m_aSelectedActors.Num();
+
+    for (int32 i = 0; i < l; i++) {
+        if (IsValid(m_aSelectedActors[i])) {
+            IMySelectableObjectInterfaceCpp* pSI = Cast<IMySelectableObjectInterfaceCpp>(m_aSelectedActors[i]);
+            if (pSI) {
+                pSI->setSelected(false);
+            }
+        }
+        else {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("clear selected actors but actor is invalid: %p."), m_aSelectedActors[i]);
+        }
+    }
+
+    m_aSelectedActors.Reset();
+};
+
+void UMyMJGameSelectManagerCpp::setSelectedActorNumMax(int32 iSelectedActorNumMax, bool clearSelected)
+{
+    if (clearSelected) {
+        clearSelectedActors();
+    }
+
+    m_iSelectedActorNumMax = iSelectedActorNumMax;
+
+    removeOutOfBoundSelectedActors();
+}
+
+void UMyMJGameSelectManagerCpp::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    Super::EndPlay(EndPlayReason);
+
+    clearSelectedActors();
+};
+
+void UMyMJGameSelectManagerCpp::removeOutOfBoundSelectedActors()
+{
+    int32 cardNumToRemove = m_aSelectedActors.Num() - m_iSelectedActorNumMax;
+    if (cardNumToRemove > 0) {
+
+        for (int32 i = 0; i < cardNumToRemove; i++) {
+            IMySelectableObjectInterfaceCpp* pSI = Cast<IMySelectableObjectInterfaceCpp>(m_aSelectedActors[i]);
+            if (pSI) {
+                pSI->setSelected(false);
+            }
+        }
+        m_aSelectedActors.RemoveAt(0, cardNumToRemove);
+
+    }
+};
+
+
 AMyMJGamePlayerControllerCpp::AMyMJGamePlayerControllerCpp() : Super()
 {
     m_pUIManager = CreateDefaultSubobject<UMyMJGameUIManagerCpp>(TEXT("UI manager"));
+    m_pSelectManager = CreateDefaultSubobject<UMyMJGameSelectManagerCpp>(TEXT("Select manager"));
+
     m_iViewRoleWhenNotAttend = -1;
+
+
+    bEnableTouchEvents = bEnableTouchOverEvents = bEnableClickEvents = bEnableMouseOverEvents = false;
+
+    m_eDragEndActionType = MyMJGamePlayerControllerDragEndActionTypeCpp::Invalid;
 };
 
 AMyMJGamePlayerControllerCpp::~AMyMJGamePlayerControllerCpp()
@@ -644,4 +743,253 @@ AMyMJGamePlayerControllerCpp* AMyMJGamePlayerControllerCpp::helperGetLocalContro
 UMyMJGameInRoomUIMainWidgetBaseCpp* AMyMJGamePlayerControllerCpp::helperGetInRoomUIMain(const UObject* WorldContextObject, bool verify)
 {
     return helperGetLocalController(WorldContextObject)->getUIManagerVerified()->getInRoomUIMain(false, verify);
+};
+
+void AMyMJGamePlayerControllerCpp::SetupInputComponent()
+{
+    Super::SetupInputComponent();
+
+    MY_VERIFY(InputComponent);
+
+    InputComponent->BindTouch(IE_Pressed, this, &AMyMJGamePlayerControllerCpp::OnTouchBegin);
+    InputComponent->BindTouch(IE_Released, this, &AMyMJGamePlayerControllerCpp::OnTouchEnd);
+    InputComponent->BindTouch(IE_Repeat, this, &AMyMJGamePlayerControllerCpp::OnFingerMove);
+
+    m_cLastTouchDragLocation = FVector2D::ZeroVector;
+};
+
+
+void AMyMJGamePlayerControllerCpp::OnTouchBegin(ETouchIndex::Type FingerIndex, FVector Location)
+{
+    if (FingerIndex != ETouchIndex::Touch1)
+    {
+        //only support one touch now, so mouse can do anything
+        return;
+    }
+
+    if (bEnableTouchEvents || bEnableTouchOverEvents || bEnableClickEvents || bEnableMouseOverEvents) {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: we use custom touch code, so default touch or mouse code path should be disabled for performance, current setting: bEnableTouchEvents %d, bEnableTouchOverEvents %d, bEnableClickEvents %d, bEnableMouseOverEvents %d."), *GetName(), bEnableTouchEvents, bEnableTouchOverEvents, bEnableClickEvents, bEnableMouseOverEvents);
+        return;
+    }
+
+    m_cLastTouchDragLocation = FVector2D(Location);
+
+    FHitResult HitResult;
+    const bool bHit = GetHitResultAtScreenPosition(m_cLastTouchDragLocation, CurrentClickTraceChannel, true, HitResult);
+
+    UPrimitiveComponent* CurrentComponent = (bHit ? HitResult.Component.Get() : NULL);
+
+    //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("CurrentComponent %p."), CurrentComponent);
+
+    AActor* hittedSelectableActor = NULL;
+    while (CurrentComponent) {
+        AActor* pA = CurrentComponent->GetOwner();
+        if (!IsValid(pA)) {
+            UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("hittedActor pA not valid: %p."), pA);
+            break;
+        }
+
+        UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("hittedActor pA %s."), *pA->GetName());
+
+        IMySelectableObjectInterfaceCpp* pSI = Cast<IMySelectableObjectInterfaceCpp>(pA);
+        if (!pSI) {
+            break;
+        }
+
+        hittedSelectableActor = pA;
+        break;
+    }
+
+    if (hittedSelectableActor) {
+        while (1) {
+
+            IMySelectableObjectInterfaceCpp* pSI = Cast<IMySelectableObjectInterfaceCpp>(hittedSelectableActor);
+            if (!pSI) {
+                break;
+            }
+
+            bool bSelectable = false;
+            bool bSelected = false;
+            if (pSI->getIsSelectable(bSelectable) != MyErrorCodeCommonPartCpp::NoError || pSI->getSelected(bSelected) != MyErrorCodeCommonPartCpp::NoError) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: get error when callling getIsSelectable() and getSelected()."), *hittedSelectableActor->GetName());
+                break;
+            }
+
+            if (!bSelectable) {
+                break;
+            }
+
+            getSelectManagerVerified()->addSelectedActor(hittedSelectableActor);
+
+            IMyDraggableObjectInterfaceCpp* pDI = Cast<IMyDraggableObjectInterfaceCpp>(hittedSelectableActor);
+            if (!pDI) {
+                break;
+            }
+
+            pDI->markBeginDrag();
+
+            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("hitted actor handled: %s."), *hittedActor->GetName());
+
+            break;
+        }
+
+    }
+    else {
+        getSelectManagerVerified()->clearSelectedActors();
+    }
+};
+
+void AMyMJGamePlayerControllerCpp::OnTouchEnd(ETouchIndex::Type FingerIndex, FVector Location)
+{
+    if (FingerIndex == ETouchIndex::Touch1)
+    {
+        m_cLastTouchDragLocation = FVector2D::ZeroVector;
+
+        int32 idxAttender = (int32)m_eCmdRoleType;
+        bool bCanGiveCmd = idxAttender >= 0 && idxAttender < 4;
+
+        if (m_eDragEndActionType == MyMJGamePlayerControllerDragEndActionTypeCpp::GiveOutCards) {
+
+            TArray<AMyMJGameCardActorBaseCpp*> aGiveOutCards;
+            bool bHaveCardsGiveOut = false;
+
+            FTransform transform;
+            bool projectionOK;
+            FVector2D projectedScreenPosition;
+            float projectedDistance;
+
+            FMyModelInfoWorld3DCpp cardModelInfo;
+            float fDragOutSizeOffsetPercent = 1;
+            bool cardModelInfoGot = false;
+
+            const TArray<AActor *>& aSelectedActors = m_pSelectManager->getSelectedActorsRefConst();
+            int32 l = aSelectedActors.Num();
+            for (int32 i = 0; i < l; i++) {
+                AActor* pActor = aSelectedActors[i];
+                AMyMJGameCardActorBaseCpp* pCard = Cast<AMyMJGameCardActorBaseCpp>(pActor);
+                if (!IsValid(pCard)) {
+                    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("want to giveout card but selected actor is not valid card: %p, %s."), pCard, *pActor->GetName());
+                    continue;
+                }
+
+                MyErrorCodeCommonPartCpp ret = pCard->getDataBeginDrag(transform, projectionOK, projectedScreenPosition, projectedDistance);
+
+                if (MyErrorCodeCommonPartCpp::NoError != ret) {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: getDataBeginDrag() returned error as %s."),
+                              *pCard->GetName(),
+                              *UMyCommonUtilsLibrary::Conv_MyErrorCodeCommonPartCpp_String(ret));
+                    continue;
+                }
+
+                FVector movedLocation = pCard->GetActorLocation() - transform.GetLocation();
+
+                if (!cardModelInfoGot) {
+                    cardModelInfo = pCard->getModelInfoForUpdaterEnsured();
+                    fDragOutSizeOffsetPercent = pCard->getDragOutSizeOffsetPercent();
+                    cardModelInfoGot = true;
+                }
+
+                float modelBoxSize = cardModelInfo.getBox3DRefConst().m_cBoxExtend.Size();
+                float movedLocationSize = movedLocation.Size();
+
+                if (movedLocationSize >= modelBoxSize * fDragOutSizeOffsetPercent) {
+                    bHaveCardsGiveOut = true;
+                }
+
+                aGiveOutCards.Emplace(pCard);
+            }
+
+            if (bHaveCardsGiveOut) {
+                AMyMJGameRoomCpp* pRoom = AMyMJGameRoomLevelScriptActorCpp::helperGetRoomActor(this, false);
+                if (IsValid(pRoom)) {
+                    const FMyMJGameDeskVisualDataCpp& dataNow = pRoom->getRoomDataSuiteVerified()->getDeskDataObjVerified()->getDataAllRefConst().m_cDeskVisualDataNow;
+                    const FMyMJDataStructWithTimeStampBaseCpp& coreData = dataNow.getCoreDataRefConst();
+                    const FMyMJRoleDataAttenderPrivateCpp& dataPrivate = coreData.getRoleDataAttenderPrivateRefConst(idxAttender);
+
+                    if (dataPrivate.m_cActionContainor.m_aActionChoices.Num() > 0) {
+                        const FMyMJGameActionUnfiedForBPCpp& actionUnified0 = dataPrivate.m_cActionContainor.m_aActionChoices[0];
+                        if (actionUnified0.getType() == MyMJGamePusherTypeCpp::ActionGiveOutCards) {
+                            FMyMJGameCmdMakeSelectionCpp cmdMakeSelection;
+                            cmdMakeSelection.m_iGameId = coreData.getCoreDataPublicRefConst().m_iGameId;
+                            cmdMakeSelection.m_iIdxAttender = idxAttender;
+                            cmdMakeSelection.m_iActionGroupId = coreData.getCoreDataPublicRefConst().m_iActionGroupId;
+                            cmdMakeSelection.m_iSelection = 0;
+
+                            for (int32 idxCard = 0; idxCard < aGiveOutCards.Num(); idxCard++) {
+                                int32 cardId = aGiveOutCards[idxCard]->getMyId2();
+                                if (cardId >= 0) {
+                                    cmdMakeSelection.m_aSubSelections.Emplace(cardId);
+                                }
+                                else {
+                                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("want giveout cards but cardId < 0: %s: %d."), *aGiveOutCards[idxCard]->GetName(), cardId);
+                                }
+                            }
+
+                            makeSelection(cmdMakeSelection);
+                        }
+                        else {
+                            UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("want giveout cards but actionChoices0 is not GiveOutCards, it is %s."), *FMyMJGamePusherBaseCpp::helperPusherTypeToString(actionUnified0.getType()));
+                        }
+                    }
+                    else {
+                        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("want giveout cards but actionChoices num is 0"));
+                    }
+
+                }
+                else {
+                    UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("pRoom not valid: %p."), pRoom);
+                }
+            }
+
+        }
+
+
+    }
+};
+
+void AMyMJGamePlayerControllerCpp::OnFingerMove(ETouchIndex::Type FingerIndex, FVector Location)
+{
+    if ((FingerIndex == ETouchIndex::Touch1) && (!m_cLastTouchDragLocation.IsZero()))
+    {
+        float TouchDragRotationScale = 1;
+        FVector2D const DragDelta = (FVector2D(Location) - m_cLastTouchDragLocation) * TouchDragRotationScale;
+
+        FTransform transformBeginSelection;
+        bool projectionOKBeginSelection;
+        FVector2D projectedScreenPositionBeginSelection;
+        float projectedDistanceBeginSelection;
+
+        const TArray<AActor *>& aSelectedActors = m_pSelectManager->getSelectedActorsRefConst();
+        int32 l = aSelectedActors.Num();
+        for (int32 i = 0; i < l; i++) {
+            AActor* pActor = aSelectedActors[i];
+
+            IMyDraggableObjectInterfaceCpp* pDI = Cast<IMyDraggableObjectInterfaceCpp>(pActor);
+            if (!pDI) {
+                UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("%s: clicked actor have not implement IMyDraggableObjectInterfaceCpp."), *pActor->GetName());
+                continue;
+            }
+
+            MyErrorCodeCommonPartCpp ret = pDI->getDataBeginDrag(transformBeginSelection, projectionOKBeginSelection, projectedScreenPositionBeginSelection, projectedDistanceBeginSelection);
+            if (ret != MyErrorCodeCommonPartCpp::NoError || projectionOKBeginSelection == false) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: failed get projection data at drag begin: %d, %d."), *pActor->GetName(), (int32)ret, projectionOKBeginSelection);
+                continue;
+            }
+
+            FVector2D actorScreenPositionNow = projectedScreenPositionBeginSelection + DragDelta;
+
+            FVector worldPosition, worldDirection;
+            if (!UGameplayStatics::DeprojectScreenToWorld(this, actorScreenPositionNow, worldPosition, worldDirection)) {
+                UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: failed deproject back, screen position %s."), *pActor->GetName(), *actorScreenPositionNow.ToString());
+                continue;
+            }
+
+            FVector actorLocationNow = worldPosition + worldDirection * projectedDistanceBeginSelection;
+            pActor->SetActorLocation(actorLocationNow);
+
+            //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("selected actor handled: %s."), *pActor->GetName());
+        }
+
+        //LastTouchDragLocation = FVector2D(Location);
+    }
 };

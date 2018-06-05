@@ -557,6 +557,11 @@ public:
         return m_cUpdater;
     };
 
+    inline const FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRefConst() const
+    {
+        return m_cUpdater;
+    };
+
     inline bool getShowWhenActivated() const
     {
         return m_bShowWhenActivated;
@@ -615,8 +620,11 @@ public:
 
 
     virtual MyErrorCodeCommonPartCpp getModelInfoForUpdater(FMyModelInfoWorld3DCpp& modelInfo) override;
-    virtual struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRef() override;
-
+    virtual const struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRefConst() const override
+    {
+        MY_VERIFY(IsValid(m_pMyTransformUpdaterComponent));
+        return m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRefConst();
+    };
 
     inline UMyWithCurveUpdaterTransformWorld3DComponent* getMyTransformUpdaterComponent() const
     {
@@ -784,7 +792,7 @@ public:
         return IMyCachedData_MyModelInfoWidget2D_InterfaceCpp::getDataByCache_MyModelInfoWidget2D(modelInfo, false);
     };
 
-    virtual struct FMyWithCurveUpdaterTransformWidget2DCpp& getMyWithCurveUpdaterTransformRef() override
+    virtual const struct FMyWithCurveUpdaterTransformWidget2DCpp& getMyWithCurveUpdaterTransformRefConst() const override
     {
         return m_cUpdater;
     };

@@ -36,11 +36,17 @@ public:
     }
 
     //Never fail
-    virtual struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRef()
+    struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRef()
     {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyWithCurveUpdaterTransformRef() not implemented"));
+        return const_cast<struct FMyWithCurveUpdaterTransformWorld3DCpp&>(getMyWithCurveUpdaterTransformRefConst());
+    };
+
+    //Never fail
+    virtual const struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRefConst() const
+    {
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyWithCurveUpdaterTransformRefConst() not implemented"));
         MY_VERIFY(false);
-        return *(struct FMyWithCurveUpdaterTransformWorld3DCpp *)(NULL);
+        return *(const struct FMyWithCurveUpdaterTransformWorld3DCpp *)(NULL);
     };
 
     //Never fail
@@ -76,12 +82,17 @@ public:
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getModelInfoForUpdater() not implemented"));
         MY_VERIFY(false);
         return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByChildClass;
-    }
+    };
+
+    struct FMyWithCurveUpdaterTransformWidget2DCpp& getMyWithCurveUpdaterTransformRef()
+    {
+        return const_cast<struct FMyWithCurveUpdaterTransformWidget2DCpp&>(getMyWithCurveUpdaterTransformRefConst());
+    };
 
     //Never fail
-    virtual struct FMyWithCurveUpdaterTransformWidget2DCpp& getMyWithCurveUpdaterTransformRef()
+    virtual const struct FMyWithCurveUpdaterTransformWidget2DCpp& getMyWithCurveUpdaterTransformRefConst() const
     {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyWithCurveUpdaterTransformRef() not implemented"));
+        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("getMyWithCurveUpdaterTransformRefConst() not implemented"));
         MY_VERIFY(false);
         return *(struct FMyWithCurveUpdaterTransformWidget2DCpp *)(NULL);
     };

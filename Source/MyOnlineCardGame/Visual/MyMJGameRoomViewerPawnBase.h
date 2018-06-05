@@ -36,15 +36,15 @@ public:
     virtual MyErrorCodeCommonPartCpp getModelInfoForUpdater(FMyModelInfoWorld3DCpp& modelInfo) override
     {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("AMyMJGameRoomViewerPawnBaseCpp::getModelInfo() not implemented yet!"));
-        MyErrorCodeCommonPartCpp ret =  MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedOnPurPose;
+        MyErrorCodeCommonPartCpp ret =  MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedOnPurpose;
 
         return ret;
     };
 
-    virtual struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRef() override
+    virtual const struct FMyWithCurveUpdaterTransformWorld3DCpp& getMyWithCurveUpdaterTransformRefConst() const override
     {
         MY_VERIFY(m_pMyTransformUpdaterComponent != NULL);
-        return m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRef();
+        return m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRefConst();
     };
 
 

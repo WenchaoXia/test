@@ -32,10 +32,17 @@ public:
         return m_eDataRoleType;
     };
 
-    inline
+    UFUNCTION(BlueprintPure)
     MyMJGameRoleTypeCpp getCmdRoleType() const
     {
         return m_eCmdRoleType;
+    };
+
+
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    void setCmdRoleType(MyMJGameRoleTypeCpp eCmdRoleType)
+    {
+        m_eCmdRoleType = eCmdRoleType;
     };
 
     //Object id, serverWorldTime_ms

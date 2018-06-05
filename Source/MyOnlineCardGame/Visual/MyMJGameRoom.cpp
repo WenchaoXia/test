@@ -517,6 +517,11 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
 
     //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("updateVisualData, mIdCardMap.Num() %d, role %d, pusherIdLast %d, bIsFullBaseReset %d, uiFullBaseResetDur_ms %u."), mIdCardMap.Num(), (uint8)cCoreData.getRole(), cCoreData.getCoreDataPublicRefConst().m_iPusherIdLast, bIsFullBaseReset, uiFullBaseResetDur_ms);
 
+    AMyMJGamePlayerControllerCpp* pC = AMyMJGamePlayerControllerCpp::helperGetLocalController(this);
+    pC->getSelectManagerVerified()->clearSelectedActors();
+    pC->setDragEndActionType(MyMJGamePlayerControllerDragEndActionTypeCpp::Invalid);
+    MyMJGameRoleTypeCpp cmdRoleType = pC->getCmdRoleType();
+
     for (auto& Elem : mIdCardMap)
     {
         int32 idCard = Elem.Key;
@@ -540,6 +545,11 @@ void AMyMJGameRoomCpp::updateVisualData(const FMyMJGameDeskVisualCfgCacheCpp& cC
 
         pCardActor->addTargetToGoHistory(cInfoAndResult);
    
+        bool canBeSelected = cInfoAndResult.m_cVisualInfo.m_iIdxAttender == (int32)cmdRoleType &&
+            (cInfoAndResult.m_cVisualInfo.m_eSlot == MyMJCardSlotTypeCpp::JustTaken || cInfoAndResult.m_cVisualInfo.m_eSlot == MyMJCardSlotTypeCpp::InHand);
+     
+        pCardActor->setIsSelectable(canBeSelected);
+
         //UE_MY_LOG(LogMyUtilsInstance, Display, TEXT("actor %03d updated: %s."), idCard, *cInfoAndResult.ToString());
     }
 

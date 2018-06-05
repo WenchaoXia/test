@@ -602,12 +602,6 @@ MyErrorCodeCommonPartCpp AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::get
     return MyErrorCodeCommonPartCpp::NoError;
 }
 
-struct FMyWithCurveUpdaterTransformWorld3DCpp& AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::getMyWithCurveUpdaterTransformRef()
-{
-    MY_VERIFY(IsValid(m_pMyTransformUpdaterComponent));
-    return m_pMyTransformUpdaterComponent->getMyWithCurveUpdaterTransformRef();
-}
-
 void AMyWithCurveUpdaterTransformWorld3DBoxActorBaseCpp::createComponentsForCDO()
 {
 

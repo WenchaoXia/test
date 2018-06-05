@@ -684,6 +684,7 @@ public:
     {
         m_idxAttenderForIdxPositionInBox0 = -1;
         m_bCanGiveCmd = false;
+        m_bNeedGiveOutCards = false;
         m_bInited = false;
     };
 
@@ -691,6 +692,7 @@ public:
     int32 m_idxAttenderForIdxPositionInBox0;
 
     bool m_bCanGiveCmd;
+    bool m_bNeedGiveOutCards;
     bool m_bInited;
 };
 
@@ -906,16 +908,6 @@ protected:
         MY_VERIFY(IsValid(pW));
 
         return ret;
-    };
-
-
-    UFUNCTION(BlueprintNativeEvent)
-    MyErrorCodeCommonPartCpp changeStateCanGiveCmd(bool canGiveCmd);
-
-    MyErrorCodeCommonPartCpp changeStateCanGiveCmd_Implementation(bool canGiveCmd)
-    {
-        UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: changeStateCanGiveCmd only implemented in C++."), *GetClass()->GetName());
-        return MyErrorCodeCommonPartCpp::InterfaceFunctionNotImplementedByBlueprint;
     };
 
 
