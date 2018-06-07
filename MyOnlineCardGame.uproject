@@ -3,14 +3,30 @@
 	"EngineAssociation": "{93D7EB7B-4A0D-FF11-C7BF-74944512ECA2}",
 	"Category": "",
 	"Description": "",
-	"Modules": [
-		{
-			"Name": "MyOnlineCardGame",
-			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"AdditionalDependencies": [
-				"Engine"
-			]
-		}
-	]
+  "Modules": [
+    {
+      "Name": "MyOnlineCardGame",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "AdditionalDependencies": [
+        "Engine"
+      ]
+    },
+    {
+      "Name": "MyOnlineCardGameCore",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "AdditionalDependencies": [
+        "Engine"
+      ]
+    },
+    {
+      "Name": "MyOnlineCardGameClient",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "AdditionalDependencies": [
+        "Engine"
+      ]
+    }
+  ]
 }

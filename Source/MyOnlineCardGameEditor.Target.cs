@@ -9,7 +9,7 @@ public class MyOnlineCardGameEditorTarget : TargetRules
 	{
 		Type = TargetType.Editor;
 
-		ExtraModuleNames.AddRange( new string[] { "MyOnlineCardGame" } );
+		ExtraModuleNames.AddRange( new string[] { "MyOnlineCardGame", "MyOnlineCardGameCore", "MyOnlineCardGameClient" } );
 
         //bFasterWithoutUnity = true;
 

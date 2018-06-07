@@ -9,6 +9,6 @@ public class MyOnlineCardGameTarget : TargetRules
 	{
 		Type = TargetType.Game;
 
-		ExtraModuleNames.AddRange( new string[] { "MyOnlineCardGame" } );
+		ExtraModuleNames.AddRange( new string[] { "MyOnlineCardGame", "MyOnlineCardGameCore", "MyOnlineCardGameClient" });
 	}
 }
