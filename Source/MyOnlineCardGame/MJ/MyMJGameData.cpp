@@ -512,6 +512,23 @@ void FMyMJDataAccessorCpp::applyDeltaStep1(const FMyMJDataDeltaCpp &delta, FMyDi
 
     }
 
+    //if valid action, we should clear any selection, since no more choice now
+    if ((int32)delta.getType() > (int32)MyMJGamePusherTypeCpp::ActionStateUpdate) {
+        for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
+            FMyMJRoleDataAttenderPrivateCpp *pRDAttenderPriSelf = getRoleDataAttenderPrivate(idxAttender);
+            if (pRDAttenderPriSelf == NULL) {
+                continue;
+            }
+
+            if (pRDAttenderPriSelf->m_cActionContainor.m_aActionChoices.Num() > 0) {
+                if (pDirtyRecord) {
+                    pDirtyRecord->setDirtyWith3Idxs((int32)MyMJGameCoreDataDirtyMainTypeCpp::AttenderStatePrivate, idxAttender, MyMJGameCoreDataDirtySubType_AttenderStatePrivate_ActionContainor, true);
+                }
+            }
+
+            pRDAttenderPriSelf->m_cActionContainor.reset();
+        }
+    }
 
     //We may need to apply role private data, but now we didn't have any except thos applied in step 1
 
@@ -534,7 +551,7 @@ void FMyMJDataAccessorCpp::resetForNewActionLoop()
             continue;
         }
 
-        pRoleDataAttenderPriv->m_cActionContainor.resetForNewActionLoop();
+        pRoleDataAttenderPriv->m_cActionContainor.reset();
     }
 };
 

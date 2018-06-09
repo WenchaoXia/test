@@ -522,7 +522,7 @@ public:
         m_iDelayedUIUpdateTimeMs = 0;
     };
 
-    void updateWithActionContainor(MyMJGameRoleTypeCpp eDataRoleType, MyMJGameRuleTypeCpp eRuleType, int32 iGameId, int32 iActionGroupId, int32 idxAttender,
+    void updateWithActionContainor(bool bCanGiveCmd, MyMJGameRoleTypeCpp eDataRoleType, MyMJGameRuleTypeCpp eRuleType, int32 iGameId, int32 iActionGroupId, int32 idxAttender,
                                    const FMyMJCardValuePackCpp& cardValuePack,
                                    const FMyMJGameActionContainorForBPCpp& actionContainor);
 

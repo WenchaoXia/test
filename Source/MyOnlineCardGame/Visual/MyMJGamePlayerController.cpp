@@ -569,6 +569,10 @@ UMyMJGameInRoomUIMainWidgetBaseCpp* UMyMJGameUIManagerCpp::getInRoomUIMain(bool 
 
 void UMyMJGameSelectManagerCpp::addSelectedActor(AActor *pActor)
 {
+    if (getSelectedActorNumMax() <= 0) {
+        return;
+    }
+
     int32 existingIdx;
     if (m_aSelectedActors.Find(pActor, existingIdx)) {
         return;
@@ -769,6 +773,11 @@ void AMyMJGamePlayerControllerCpp::OnTouchBegin(ETouchIndex::Type FingerIndex, F
 
     if (bEnableTouchEvents || bEnableTouchOverEvents || bEnableClickEvents || bEnableMouseOverEvents) {
         UE_MY_LOG(LogMyUtilsInstance, Error, TEXT("%s: we use custom touch code, so default touch or mouse code path should be disabled for performance, current setting: bEnableTouchEvents %d, bEnableTouchOverEvents %d, bEnableClickEvents %d, bEnableMouseOverEvents %d."), *GetName(), bEnableTouchEvents, bEnableTouchOverEvents, bEnableClickEvents, bEnableMouseOverEvents);
+        return;
+    }
+
+    UMyMJGameSelectManagerCpp* pSM = getSelectManagerVerified();
+    if (pSM->getSelectedActorNumMax() <= 0) {
         return;
     }
 

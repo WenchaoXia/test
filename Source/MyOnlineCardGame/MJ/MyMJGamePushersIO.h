@@ -489,10 +489,10 @@ public:
 
     FMyMJGameActionContainorForBPCpp()
     {
-        resetForNewActionLoop();
+        reset();
     };
 
-    void resetForNewActionLoop()
+    inline void reset()
     {
         m_iChoiceSelected = -1;
         m_aSubDataChoiceSelected.Reset();

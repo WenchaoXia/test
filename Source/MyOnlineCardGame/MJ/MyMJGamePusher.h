@@ -29,6 +29,7 @@ enum class MyMJGameStateUpdateReasonCpp : uint8
     DismissedByCmd = 50                     UMETA(DisplayName = "DismissedByCmd"),
 };
 
+//warning: the code use actionBase's and ActionStateUpdate's value as condition, change the value carefully
 UENUM()
 enum class MyMJGamePusherTypeCpp : uint8
 {

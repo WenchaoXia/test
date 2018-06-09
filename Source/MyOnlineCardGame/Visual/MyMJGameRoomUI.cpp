@@ -134,7 +134,7 @@ void UMyMJGameInRoomChoiceSelectCommonWidgetBaseCpp::PostEditChangeProperty(FPro
 #endif
 
 
-void UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::updateWithActionContainor(MyMJGameRoleTypeCpp eDataRoleType, MyMJGameRuleTypeCpp eRuleType, int32 iGameId, int32 iActionGroupId, int32 idxAttender,
+void UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::updateWithActionContainor(bool bCanGiveCmd, MyMJGameRoleTypeCpp eDataRoleType, MyMJGameRuleTypeCpp eRuleType, int32 iGameId, int32 iActionGroupId, int32 idxAttender,
                                                                                 const FMyMJCardValuePackCpp& cardValuePack,
                                                                                 const FMyMJGameActionContainorForBPCpp& actionContainor)
 {
@@ -240,7 +240,7 @@ void UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::updateWithActionContainor(M
 
     cUIUpdateData.postProcessForInteractiveFlag();
 
-    bool delayUpdate = m_cUpdateStateLast.m_iIdxOfSelected >= 0 && (!(cUIUpdateData.m_iCountOfChoices > 0)) &&     //if we have selected before and have no new choices now
+    bool delayUpdate = (!bCanGiveCmd) && m_cUpdateStateLast.m_iIdxOfSelected >= 0 && (!(cUIUpdateData.m_iCountOfChoices > 0)) &&     //if we have selected before and have no new choices now
                        cUIUpdateData.m_iGameId == m_cUpdateStateLast.m_iGameId && cUIUpdateData.m_iIdxAttender == m_cUpdateStateLast.m_iIdxAttender && cUIUpdateData.m_eDataRoleType == m_cUpdateStateLast.m_eDataRoleType && //in same game, same view role, same data role
                        m_iDelayedUIUpdateTimeMs > 0;
 
@@ -251,11 +251,17 @@ void UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::updateWithActionContainor(M
 
 
     if (delayUpdate) {
+        
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("delayed update, bCanGiveCmd %d."), bCanGiveCmd);
+
         m_cDelayedUIUpdateData = cUIUpdateData;
         world->GetTimerManager().ClearTimer(m_cDelayedUIUpdateTimerHandle);
         world->GetTimerManager().SetTimer(m_cDelayedUIUpdateTimerHandle, this, &UMyMJGameInRoomOperationRootPanelWidgetBaseCpp::delayedUIUpdate, (float)m_iDelayedUIUpdateTimeMs / 1000, false);
     }
     else{
+
+        //UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("instantly update, bCanGiveCmd %d."), bCanGiveCmd);
+
         world->GetTimerManager().ClearTimer(m_cDelayedUIUpdateTimerHandle);
         UIUpdate(cUIUpdateData);
     }
@@ -483,6 +489,8 @@ FMyErrorCodeMJGameCpp UMyMJGameInRoomUIMainWidgetBaseCpp::updateAttenderPosition
     m_cRuntimeData.m_bCanGiveCmd = bCanGiveCmd;
     m_cRuntimeData.m_bInited = true;
 
+    updateUI();
+
     return FMyErrorCodeMJGameCpp(true);
 };
 
@@ -621,7 +629,7 @@ void UMyMJGameInRoomUIMainWidgetBaseCpp::updateUI()
                 if (pPanelWidget) {
 
                     const FMyMJCoreDataPublicCpp& coreDataPublic = cCoreData.getCoreDataPublicRefConst();
-                    pPanelWidget->updateWithActionContainor(cCoreData.getRole(), coreDataPublic.m_cGameCfg.m_eRuleType, coreDataPublic.m_iGameId, coreDataPublic.m_iActionGroupId,
+                    pPanelWidget->updateWithActionContainor(m_cRuntimeData.m_bCanGiveCmd, cCoreData.getRole(), coreDataPublic.m_cGameCfg.m_eRuleType, coreDataPublic.m_iGameId, coreDataPublic.m_iActionGroupId,
                                                             idxAttender, cCoreData.getRoleDataPrivateRefConst().m_cCardValuePack, dataAttenderPrivate.m_cActionContainor);
                 }
 
@@ -640,6 +648,7 @@ void UMyMJGameInRoomUIMainWidgetBaseCpp::updateUI()
                 if (m_cRuntimeData.m_bNeedGiveOutCards != bNeedGiveOutCards) {
                     IMyMJGameInRoomUIMainWidgetInterfaceCpp::Execute_changeStateNeedGiveOutCards(this, bNeedGiveOutCards);
                     AMyMJGamePlayerControllerCpp* pPC = AMyMJGamePlayerControllerCpp::helperGetLocalController(this);
+                    UE_MY_LOG(LogMyUtilsInstance, Warning, TEXT("update bNeedGiveOutCards: %d."), bNeedGiveOutCards);
                     if (bNeedGiveOutCards) {
                         pPC->getSelectManagerVerified()->setSelectedActorNumMax(1, true);
                         pPC->setDragEndActionType(MyMJGamePlayerControllerDragEndActionTypeCpp::GiveOutCards);

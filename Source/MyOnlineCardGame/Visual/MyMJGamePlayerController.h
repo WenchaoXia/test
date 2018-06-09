@@ -264,6 +264,11 @@ public:
     //UFUNCTION(BlueprintCallable)
     void setSelectedActorNumMax(int32 iSelectedActorNumMax, bool clearSelected);
 
+    inline int32 getSelectedActorNumMax() const
+    {
+        return m_iSelectedActorNumMax;
+    };
+
     const TArray<AActor *>& getSelectedActorsRefConst() const
     {
         return m_aSelectedActors;

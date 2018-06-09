@@ -675,7 +675,7 @@ public:
 
     void reset()
     {
-        m_cActionContainor.resetForNewActionLoop();
+        m_cActionContainor.reset();
         m_cHuScoreResultTingGroup.reset();
         m_eAIStrategyTypeUsedLast = MyCardGameAIStrategyTypeCpp::Invalid;
 

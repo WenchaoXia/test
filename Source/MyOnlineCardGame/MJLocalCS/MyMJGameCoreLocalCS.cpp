@@ -1165,6 +1165,18 @@ void FMyMJGameCoreLocalCSCpp::applyPusher(const FMyMJGamePusherBaseCpp &pusher)
     }
 
 
+    //if valid action, we should clear any selection, since no more choice now
+    if ((int32)ePusherType > (int32)MyMJGamePusherTypeCpp::ActionStateUpdate) {
+        for (int32 idxAttender = 0; idxAttender < 4; idxAttender++) {
+
+            FMyMJGameActionContainorCpp& cContainor = m_aAttendersAll[idxAttender]->getActionContainorRef();
+
+            if (cContainor.getActionChoiceUnitCount() > 0) {
+                cContainor.resetForNewLoop();
+            }
+           
+        }
+    }
 }
 
 void FMyMJGameCoreLocalCSCpp::handleCmd(MyMJGameRoleTypeCpp eRoleTypeOfCmdSrc, FMyMJGameCmdBaseCpp &cmd)
