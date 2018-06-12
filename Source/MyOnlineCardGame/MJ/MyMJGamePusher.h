@@ -93,6 +93,8 @@ public:
     {
         m_eType = MyMJGamePusherTypeCpp::PusherBase;
         m_iId = -1;
+
+        m_iTestValue = 0;
     };
 
     virtual ~FMyMJGamePusherBaseCpp()
@@ -118,7 +120,7 @@ public:
 
         return enumPtr->GetEnumNameStringByValue((uint8)m_eType) + ". ";
         */
-        return FString::Printf(TEXT("%s, %d."), *helperPusherTypeToString(m_eType), m_iId);
+        return FString::Printf(TEXT("%s, %d, %d."), *helperPusherTypeToString(m_eType), m_iId, m_iTestValue);
     };
 
     virtual void onReachedConsumeThread()
@@ -143,6 +145,10 @@ public:
     {
         return UMyCommonUtilsLibrary::getStringFromEnum(TEXT("MyMJGamePusherTypeCpp"), (uint8)ePusherType);
     };
+
+
+    UPROPERTY(meta = (DisplayName = "test value"))
+        int32 m_iTestValue;
 
 protected:
 
@@ -1510,6 +1516,7 @@ public:
     virtual FString ToString() const override
     {
         FString str = Super::ToString();
+        str += FString::Printf(TEXT(" m_bEndGame: %d, "), m_bEndGame);
         str += m_cHuScoreResultFinalGroup.ToString();
 
         return str;

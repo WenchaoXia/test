@@ -133,6 +133,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
     static void testArrayPointerSerialize(AMyTestParentClass0 *pInParent, AMyTestChildClass0 *pInChild, AMyTestParentClass0 *pOutParent, int32 param);
 
+    UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
+        static void testSerialize(int32 randomSeed);
 
     UFUNCTION(BlueprintCallable, Category = "MyMJBPUtilsLibrary")
     static void testPusherSerialize0(int32 param);
